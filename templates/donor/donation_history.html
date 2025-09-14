@@ -1,0 +1,135 @@
+{% extends 'donor/donorbase.html' %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block content %}
+<style>
+  .history-container { max-width: 900px; margin: 40px auto; padding: 0 15px; }
+  h4.title { font-size: 1.7rem; color: #ff4b1f; font-weight: 800; letter-spacing: 1px; margin-bottom: 24px;
+             display: flex; align-items: center; gap: 10px; }
+  .donation-card { background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.14); padding: 20px; }
+  table.donation-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+  thead tr { background: linear-gradient(90deg, #ff4b1f 60%, #1fddff 120%); color: white; }
+  thead th { padding: 12px 10px; font-weight: 700; font-size: 1rem; border: none; }
+  tbody tr { background: #fdfdfd; border-radius: 10px; transition: background 0.2s; }
+  tbody tr:hover { background: #f6f9fa; }
+  tbody td { padding: 12px 10px; vertical-align: middle; }
+  .badge-status { min-width: 90px; text-transform: uppercase; font-weight: 600; font-size: 0.85rem;
+                  padding: 5px 16px; border-radius: 18px; color: white; display: inline-flex;
+                  align-items: center; gap: 6px; justify-content: center; }
+  .badge-pending { background-color: #ffc107; }
+  .badge-approved { background-color: #28a745; }
+  .badge-rejected { background-color: #dc3545; }
+  .badge-cancelled { background-color: #6c757d; }
+  .badge-completed { background-color: #1f7a1f; }
+  .badge-secondary { background-color: #6c757d; }
+  .role-info { font-size: 0.85rem; color: #555; margin-top: 4px; }
+  .empty-state { background: #f0f8ff; border-radius: 12px; padding: 50px 30px; text-align: center;
+                 box-shadow: 0 6px 18px rgba(31,221,255,0.1); }
+  .empty-state h5 { color: #ff4b1f; font-weight: 700; font-size: 1.3rem; margin-bottom: 15px; }
+  .empty-state p { font-size: 1rem; color: #555; }
+  .empty-state .btn { margin-top: 24px; padding: 12px 30px; border-radius: 32px;
+                      font-weight: 700; font-size: 1.1rem;
+                      background: linear-gradient(90deg, #ff4b1f, #1fddff); border: none; }
+  @media (max-width: 576px) {
+    .table-responsive { font-size: 0.85rem; }
+    thead th, tbody td { padding: 8px 6px; }
+    .badge-status { min-width: 70px; padding: 4px 12px; font-size: 0.75rem; }
+  }
+</style>
+
+<div class="history-container" role="region" aria-label="Donor's Donation History">
+  <h4 class="title"><i class="fas fa-history" aria-hidden="true"></i> My Donation History</h4>
+
+  {% if has_donations %}
+  <div class="donation-card table-responsive">
+    <table class="donation-table" aria-describedby="donationHistoryDescription">
+      <caption id="donationHistoryDescription" class="sr-only">
+        List of past blood donations, their details, statuses, and appointment information.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Donor Name</th>
+          <th scope="col">Date</th>
+          <th scope="col">Donor Age</th>
+          <th scope="col">Blood Group</th>
+          <th scope="col">Units (ml)</th>
+          <th scope="col">Status</th>
+          <th scope="col">Appointment Details</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for donation in donations %}
+        <tr>
+          <td>{{ donation.donor.user.get_full_name|default:donation.donor.user.username }}</td>
+          <td><time datetime="{{ donation.date }}">{{ donation.date|date:"M d, Y" }}</time></td>
+          <td>{{ donation.donor_age|default:"-" }}</td>
+          <td>{{ donation.bloodgroup }}</td>
+          <td>{{ donation.unit }}</td>
+          <td>
+            {% with status=donation.display_status|lower %}
+              {% if status == 'approved' %}
+                <span class="badge-status badge-approved"><i class="fas fa-check-circle"></i> Approved</span>
+              {% elif status == 'completed' %}
+                <span class="badge-status badge-completed"><i class="fas fa-check-double"></i> Completed</span>
+              {% elif status == 'rejected' %}
+                <span class="badge-status badge-rejected"><i class="fas fa-times-circle"></i> Rejected</span>
+              {% elif status == 'pending' %}
+                <span class="badge-status badge-pending"><i class="fas fa-hourglass-half"></i> Pending</span>
+              {% elif status == 'cancelled' %}
+                <span class="badge-status badge-cancelled"><i class="fas fa-ban"></i> Cancelled
+                  {% if donation.appointment and donation.appointment.cancelled_by %}
+                    (by {{ donation.appointment.cancelled_by }})
+                  {% endif %}
+                </span>
+              {% else %}
+                <span class="badge-status badge-secondary"><i class="fas fa-info-circle"></i> {{ status|default:"Unknown" }}</span>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            {% if donation.appointment %}
+              <strong>Date:</strong> <time datetime="{{ donation.appointment.date }}">{{ donation.appointment.date|date:"M d, Y H:i" }}</time><br>
+              <strong>Nurse:</strong> {{ donation.appointment.nurse.first_name }} {{ donation.appointment.nurse.last_name }}<br>
+              <strong>Status:</strong> {{ donation.appointment.status|capfirst }}<br>
+              {% if donation.appointment.status == 'cancelled' and donation.appointment.cancelled_by_user %}
+                <small>Cancelled by: {{ donation.appointment.cancelled_by_user.get_full_name|default:"Unknown" }}<br>
+                At: <time datetime="{{ donation.appointment.cancelled_at }}">{{ donation.appointment.cancelled_at|date:"M d, Y H:i" }}</time></small>
+              {% endif %}
+            {% else %}
+              <em>No appointment</em>
+            {% endif %}
+          </td>
+          <td>
+            {% if donation.appointment and
+                  (donation.appointment.status|lower in ['pending', 'approved']) and
+                  (donation.display_status|lower in ['pending', 'approved']) %}
+              <form method="post" action="{% url 'cancel-donation-request' donation.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger"
+                  onclick="return confirm('Are you sure you want to cancel this appointment?');">
+                  Cancel
+                </button>
+              </form>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="empty-state" role="alert" aria-live="polite">
+    <h5><i class="fas fa-hand-holding-heart"></i> No Donation History Yet</h5>
+    <p>Start donating today and save lives!</p>
+    <a href="{% url 'donate-blood' %}" class="btn btn-primary">
+      <i class="fas fa-hand-holding-medical mr-1"></i> Donate Blood Now
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

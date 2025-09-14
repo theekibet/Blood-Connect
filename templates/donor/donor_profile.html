@@ -1,0 +1,107 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+{% block content %}
+
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card shadow-lg rounded">
+        <div class="card-header bg-primary text-white text-center">
+          <h4><i class="fas fa-user"></i> Your Profile</h4>
+        </div>
+        <div class="card-body">
+          <!-- Profile Picture -->
+          <div class="text-center mb-4">
+            {% if donor.profile_pic %}
+              <img src="{{ donor.profile_pic.url }}" alt="{{ user.get_full_name }}" class="rounded-circle border border-3" width="150" height="150" style="object-fit: cover;">
+            {% else %}
+              <img src="{% static 'images/default-profile.png' %}" alt="Default profile" class="rounded-circle border border-3" width="150" height="150">
+            {% endif %}
+          </div>
+
+          <!-- Full Name -->
+          <h3 class="text-center mb-3">{{ user.get_full_name }}</h3>
+
+          <!-- Details List -->
+          <ul class="list-group list-group-flush mx-auto" style="max-width: 400px;">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Blood Group:</strong>
+              <span>{{ donor.bloodgroup|default:"Not Provided" }}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Address:</strong>
+              <span>{% if donor.address %}{{ donor.address|linebreaksbr }}{% else %}Not Provided{% endif %}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Mobile:</strong>
+              <span>{{ donor.mobile|default:"Not Provided" }}</span>
+            </li>
+            
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>National ID:</strong>
+              <span>{{ donor.national_id|default:"Not Provided" }}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Date of Birth:</strong>
+              <span>{% if donor.dob %}{{ donor.dob|date:"M d, Y" }}{% else %}Not Provided{% endif %}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Points Earned:</strong>
+              <span>{{ donor.points }}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Last Donation Date:</strong>
+              <span>{% if donor.last_donation_date %}{{ donor.last_donation_date|date:"M d, Y" }}{% else %}N/A{% endif %}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Next Eligible Donation Date:</strong>
+              <span>{% if next_donation_date %}{{ next_donation_date|date:"M d, Y" }}{% else %}N/A{% endif %}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Days Until Next Donation:</strong>
+              <span>{{ days_until_next }}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Latitude:</strong>
+              <span>{% if donor.latitude %}{{ donor.latitude }}{% else %}Not Provided{% endif %}</span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <strong>Longitude:</strong>
+              <span>{% if donor.longitude %}{{ donor.longitude }}{% else %}Not Provided{% endif %}</span>
+            </li>
+          </ul>
+
+          <div class="text-center mt-4">
+            <a href="{% url 'donor-edit-profile' %}" class="btn btn-primary">
+              <i class="fas fa-edit"></i> Edit Profile
+            </a>
+          </div>
+          
+        </div>    
+      </div>
+    </div>    
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Load Font Awesome CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" />
+
+<style>
+  /* Existing styles kept same... */
+  .welcome-card { border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); transition: transform 0.3s; padding: 1rem; margin-bottom: 1rem; background: #fff; }
+  .welcome-card:hover { transform: scale(1.05); }
+  .dashboard-card { border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); text-align: center; transition: transform 0.2s ease-in-out; background: linear-gradient(to right, #ffffff, #f8f8f8); }
+  .dashboard-card:hover { transform: translateY(-5px); }
+  .dashboard-card-body { padding: 1.5rem; }
+  .dashboard-icon { font-size: 3.5ex; margin-bottom: 15px; }
+  .requests-made-icon { color: #E44D26; }
+  .pending-requests-icon { color: #29ABE2; }
+  .approved-requests-icon { color: #2ECC71; }
+  .rejected-requests-icon { color: #95A5A6; }
+  .section-header { font-size: 1.25rem; font-weight: bold; margin-bottom: 20px; }
+  .card-section { margin-bottom: 30px; }
+  .wave { display: inline-block; transform-origin: 70% 70%; animation: wave-animation 2.5s infinite ease-in-out; }
+  @keyframes wave-animation { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60%, 100% { transform: rotate(0deg); } }
+  #countdown { color: #dc3545; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px; }
+  .btn-impact { color: #d32f2f; background-color: #fff; font-weight: 700; font-size: 1.125rem; border-radius: 50rem; padding-left: 3rem; padding-right: 3rem; box-shadow: 0 0.25rem 1.25rem rgba(211,47,47,0.2); transition: background-color 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; }
+  .btn-impact:hover, .btn-impact:focus { background-color: #f8d7da; color: #b71c1c; text-decoration: none; }
+  .donor-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #e9ecef; margin-right: 1rem; }
+  .avatar-placeholder { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; color: #6c757d; background: #e9ecef; border-radius: 50%; margin-right: 1rem; font-size: 3.5rem; }
+  .location-info { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 0.95rem; color: #555; flex-wrap: wrap; }
+  .location-info i { color: #007bff; }
+  #updateLocationBtn { font-size: 0.85rem; white-space: nowrap; }
+</style>
+<div class="container mt-4">
+
+  <!-- Welcome Section -->
+  <div class="welcome-card d-flex align-items-center">
+    {% if donor.profile_pic %}
+      <img src="{{ donor.profile_pic.url }}" alt="Profile Picture" class="donor-avatar">
+    {% else %}
+      <div class="avatar-placeholder"><i class="fas fa-user-circle"></i></div>
+    {% endif %}
+    <div>
+      <h3>Welcome, <strong>{{ user.first_name }}</strong></h3>
+      <div>{% if donor.bloodgroup %}<span class="badge bg-primary">{{ donor.bloodgroup }}</span>{% endif %}</div>
+
+      <!-- Location -->
+      <div class="location-info" id="locationDisplay">
+        <i class="fas fa-map-marker-alt"></i>
+        {% if donor.address %}{{ donor.address|truncatechars:30 }},{% endif %}
+        Lat: <span id="latText">{{ donor.latitude|default:"N/A" }}</span>,
+        Lon: <span id="lonText">{{ donor.longitude|default:"N/A" }}</span>
+        {% if donor.location_name %}
+          <br>
+          <small>Location: <span id="locationName">{{ donor.location_name }}</span></small>
+        {% endif %}
+        <button id="updateLocationBtn" class="btn btn-sm btn-outline-primary ms-3" type="button">
+          <i class="fas fa-location-arrow"></i> Update Current Location
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Stats -->
+  <div class="row mt-4">
+    {% for item in dashboard_stats %}
+      <div class="col-sm-3">
+        <div class="card bg-light dashboard-card">
+          <div class="card-body dashboard-card-body">
+            <i class="fas {{ item.icon }} dashboard-icon {{ item.color }}"></i><br>
+            <strong>{{ item.label }}</strong><br>{{ item.count }}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Points & Next Donation -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card dashboard-card">
+        <div class="card-body dashboard-card-body">
+          <h5><i class="fas fa-trophy text-warning"></i> Points Earned</h5>
+          {% if points > 0 %}
+            <p style="font-size: 1.5em; font-weight: 700; color: #28a745;">
+              {{ points }} point{{ points|pluralize }} — from {{ total_donations }} approved donation{{ total_donations|pluralize }}
+            </p>
+          {% else %}
+            <p style="font-size: 1.2em; font-weight: 600; color: #dc3545;">
+              0 points — donate your first unit to start earning rewards!
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card dashboard-card">
+        <div class="card-body dashboard-card-body">
+          <h5><i class="fas fa-hourglass-start text-danger"></i> Next Eligible Donation</h5>
+          {% if next_donation_date %}
+            <p>You can donate again on <strong>{{ next_donation_date }}</strong></p>
+            <p id="countdown">Loading countdown...</p>
+            <a href="{% url 'sickle_cell' %}" class="btn-impact">See the impact of your donation <i class="fas fa-heartbeat"></i></a>
+          {% else %}
+            <p>No previous donation recorded.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nearby Buttons -->
+  <div class="text-center mt-4 d-flex justify-content-center gap-3">
+    <a href="{% url 'nearby-compatible-patients' %}" class="btn btn-primary">
+      Find Nearby Compatible Patients
+    </a>
+    <a href="{% url 'nearby-centers' %}" class="btn btn-success">
+      Find Nearby Donation Centres
+    </a>
+  </div>
+
+  <!-- Progress Circle -->
+  <div class="row mt-4 justify-content-center">
+    <div class="col-md-6 text-center">
+      <div style="position: relative; width: 150px; height: 150px; margin: auto;">
+        <svg width="150" height="150" role="img">
+          <circle cx="75" cy="75" r="65" stroke="#e6e6e6" stroke-width="10" fill="none" />
+          <circle cx="75" cy="75" r="65" stroke="#28a745" stroke-width="10" fill="none"
+                  stroke-dasharray="408" stroke-dashoffset="{{ stroke_dashoffset }}"
+                  transform="rotate(-90 75 75)" />
+        </svg>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+          <strong>{{ total_donations }}/{{ goal }}</strong><br>Donations
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Cards -->
+  <div class="row mt-5">
+    {% for item in info_cards %}
+      <div class="col-sm-3">
+        <div class="card bg-light dashboard-card card-section">
+          <div class="card-body dashboard-card-body">
+            <div class="section-header"><i class="fas {{ item.icon }}"></i> {{ item.title }}</div>
+            <p>{{ item.desc }}</p>
+            <a href="{% url item.url %}" class="btn btn-sm btn-info">Explore</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const nextDonationIso = "{{ next_donation_date_iso|default:'' }}";
+
+  if (nextDonationIso) {
+    const countdownElem = document.getElementById("countdown");
+    const countDownDate = new Date(nextDonationIso).getTime();
+    const timerInterval = setInterval(function() {
+      const now = new Date().getTime();
+      const distance = countDownDate - now;
+      if (distance <= 0) {
+        clearInterval(timerInterval);
+        countdownElem.innerHTML = "You are eligible to donate now!";
+        return;
+      }
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      countdownElem.innerHTML = days + "d " + hours + "h " + minutes + "m " + seconds + "s remaining";
+    }, 1000);
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const updateBtn = document.getElementById('updateLocationBtn');
+  if (updateBtn) {
+    updateBtn.addEventListener('click', function() {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(function(position) {
+        document.getElementById('latText').textContent = position.coords.latitude.toFixed(6);
+        document.getElementById('lonText').textContent = position.coords.longitude.toFixed(6);
+        const data = new URLSearchParams();
+        data.append('latitude', position.coords.latitude);
+        data.append('longitude', position.coords.longitude);
+        fetch("{% url 'save-user-location' %}", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken') },
+          body: data.toString()
+        })
+        .then(res => res.json())
+        .then(json => {
+          console.log('Location update response:', json);
+          if (json.status === 'success' && json.location_name) {
+            let locNameElem = document.getElementById('locationName');
+            if (!locNameElem) {
+              const locationDisplay = document.getElementById('locationDisplay');
+              const br = document.createElement('br');
+              const small = document.createElement('small');
+              small.innerHTML = 'Location: <span id="locationName">' + json.location_name + '</span>';
+              locationDisplay.appendChild(br);
+              locationDisplay.appendChild(small);
+            } else {
+              locNameElem.textContent = json.location_name;
+            }
+          }
+          alert(json.message);
+        })
+        .catch(err => {
+          console.error('Fetch error:', err);
+          alert("Failed to update location.");
+        });
+      }, function(error) {
+        alert("Error getting location: " + error.message);
+      });
+    });
+  }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  .container { max-width: 1100px; margin: auto; padding-top: 40px; }
+  h1 { color: #dc3545; font-weight: 700; margin-bottom: 20px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(220,53,69,0.15);
+    overflow: hidden;
+  }
+  th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  thead th {
+    background: linear-gradient(90deg, #dc3545 60%, #e17055 100%);
+    color: white;
+    font-weight: 700;
+  }
+  tbody tr:hover {
+    background-color: #ffe6e6;
+  }
+  .badge {
+    font-size: 0.85rem;
+    padding: 5px 12px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    user-select: none;
+  }
+  .btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+    border: none;
+  }
+  .btn-warning:hover {
+    background-color: #e0a800;
+  }
+  .cancel-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 4px;
+  }
+  @media (max-width:768px) {
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { display: none; }
+    tbody tr {
+      margin-bottom: 20px;
+      border-radius: 12px;
+      background: #fff5f5;
+      box-shadow: 0 6px 18px rgba(220,53,69,0.1);
+      padding: 15px;
+    }
+    tbody td {
+      padding-left: 50%;
+      position: relative;
+      text-align: left;
+      border-bottom: none;
+      white-space: normal;
+    }
+    tbody td::before {
+      content: attr(data-label);
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #dc3545;
+      white-space: nowrap;
+    }
+  }
+  /* Activity log entries line style */
+  .activity-log-entry {
+    display: block;
+    font-size: 0.85rem;
+    color: #444;
+    white-space: nowrap;
+    margin-bottom: 3px;
+  }
+</style>
+
+<div class="container">
+  <h1>My Blood Requests</h1>
+
+  {% if blood_requests and blood_requests|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>Applicant</th>
+          <th>Blood Group</th>
+          <th>Units</th>
+          <th>Center</th>
+          <th>Request Date</th>
+          <th>Status</th>
+          <th>Activity Log</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for request in blood_requests %}
+          <tr>
+            <td data-label="Applicant">{{ request.get_applicant_display }}</td>
+            <td data-label="Blood Group">{{ request.bloodgroup }}</td>
+            <td data-label="Units">{{ request.unit }}</td>
+            <td data-label="Center">{{ request.donation_center.name }}</td>
+            <td data-label="Request Date">{{ request.created_at|date:"M d, Y" }}</td>
+            <td data-label="Status" style="white-space: nowrap;">
+              {% if request.status == 'pending' %}
+                <span class="badge" style="background-color: #ffc107; color:#212529;">Pending</span>
+              {% elif request.status == 'approved' %}
+                <span class="badge" style="background-color: #28a745;">Approved</span>
+              {% elif request.status == 'rejected' %}
+                <span class="badge" style="background-color: #dc3545;">Rejected</span>
+              {% elif request.status == 'completed' %}
+                <span class="badge" style="background-color: #17a2b8;">Completed</span>
+              {% elif request.status == 'cancelled' %}
+                <span class="badge" style="background-color: #6c757d;">Cancelled</span>
+              {% else %}
+                <span class="badge" style="background-color: #6c757d;">{{ request.status }}</span>
+              {% endif %}
+            </td>
+
+            <td data-label="Activity Log" style="white-space: normal; max-width: 220px;">
+              {% if request.approved_by_admin %}
+                <span class="activity-log-entry">Admin approved ({{ request.approved_at_admin|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if request.approved_by_nurse %}
+                <span class="activity-log-entry">Nurse approved ({{ request.approved_at_nurse|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if request.completed_by_admin %}
+                <span class="activity-log-entry">Admin completed ({{ request.completed_at_admin|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if request.completed_by_nurse %}
+                <span class="activity-log-entry">Nurse completed ({{ request.completed_at_nurse|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if request.status == 'cancelled' and request.cancelled_by %}
+                <span class="activity-log-entry">Cancelled by {{ request.cancelled_by|capfirst }}{% if request.cancelled_at %} ({{ request.cancelled_at|date:"M d H:i" }}){% endif %}</span>
+              {% endif %}
+              {% if request.status == 'rejected' and request.rejected_by %}
+                <span class="activity-log-entry">Rejected by {{ request.rejected_by|capfirst }}{% if request.rejected_at %} ({{ request.rejected_at|date:"M d H:i" }}){% endif %}</span>
+              {% endif %}
+              {% if not request.approved_by_admin and not request.approved_by_nurse and not request.completed_by_admin and not request.completed_by_nurse and request.status != 'cancelled' and request.status != 'rejected' %}
+                <em>No activity yet</em>
+              {% endif %}
+            </td>
+
+            <td data-label="Actions" style="min-width: 110px;">
+              {% if request.status|lower == 'pending' or request.status|lower == 'approved' %}
+                {% if request.request_by_donor and request.request_by_donor.user == user %}
+                  <form method="POST" action="{% url 'cancel-request' request.id %}" onsubmit="return confirm('Are you sure you want to cancel this request?');" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-sm" title="Cancel Request">
+                      <i class="fas fa-times-circle"></i> Cancel
+                    </button>
+                  </form>
+                {% elif request.request_by_patient and request.request_by_patient.user == user %}
+                  <form method="POST" action="{% url 'cancel-request' request.id %}" onsubmit="return confirm('Are you sure you want to cancel this request?');" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-sm" title="Cancel Request">
+                      <i class="fas fa-times-circle"></i> Cancel
+                    </button>
+                  </form>
+                {% else %}
+                  <em>No actions</em>
+                {% endif %}
+              {% else %}
+                <em>No actions</em>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-muted">You have no blood requests yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted">You have no blood requests yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

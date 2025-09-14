@@ -1,0 +1,44 @@
+{% extends "nurse/nursebase.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3"><i class="fas fa-boxes"></i> Stock Deduction Details</h2>
+
+    {% if deductions %}
+        <p>The following blood units were deducted for <strong>Appointment #{{ appointment_id }}</strong>:</p>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Stock Barcode</th>
+                        <th>Quantity Deducted (ml)</th>
+                        <th>Expiry Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in deductions %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ d.barcode }}</td>
+                        <td>{{ d.quantity }}</td>
+                        <td>{{ d.expiry_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="{% url 'nurse-dashboard' %}" class="btn btn-primary mt-3">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    {% else %}
+        <div class="alert alert-warning" role="alert">
+            No stock deductions found for this appointment.
+        </div>
+        <a href="{% url 'nurse-dashboard' %}" class="btn btn-primary">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    {% endif %}
+</div>
+{% endblock %}

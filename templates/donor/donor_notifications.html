@@ -1,0 +1,37 @@
+{% extends 'donor/donorbase.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-bell"></i> Notifications</h6>
+    </div>
+    <div class="card-body">
+      <ul class="list-group">
+        {% for notification in notifications %}
+          <li class="list-group-item d-flex justify-content-between align-items-start {% if not notification.read %}list-group-item-warning{% endif %}">
+            <div>
+              <h5 class="mb-1">{{ notification.title }}</h5>
+              <p class="mb-1">{{ notification.message }}</p>
+              <small class="text-muted">Posted at: {{ notification.created_at|date:"M d, Y H:i" }}</small>
+            </div>
+            <div class="text-end">
+              {% if notification.read %}
+                <span class="badge bg-success mb-2">Read</span>
+              {% else %}
+                <span class="badge bg-danger mb-2">Unread</span>
+              {% endif %}
+              <br>
+              <a href="{% url 'mark-notification-read' notification.id %}" class="btn btn-sm btn-outline-primary">
+                Mark as Read
+              </a>
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-center">You have no notifications.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

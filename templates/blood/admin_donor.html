@@ -1,0 +1,199 @@
+{% extends 'blood/adminbase.html' %}
+{% block content %}
+{% load widget_tweaks %}
+{% load static %}
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        html, body {
+            min-height: 100vh;
+            background-color: #f8f8f8;
+            background-image: url("data:image/svg+xml;utf8,<svg width='60' height='60' ... </svg>");
+            background-repeat: repeat;
+            background-size: 120px 120px;
+        }
+
+        .container {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .table {
+            font-family: 'Arial Black', sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+        }
+
+        .table thead {
+            background: linear-gradient(to right, #ff4b1f, #1fddff);
+            color: white;
+            text-shadow: 2px 2px 4px #000000;
+        }
+
+        .table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .table tbody tr:hover {
+            background-color: #e6f7ff;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary.badge-pill,
+        .btn-danger.badge-pill {
+            border-radius: 20px;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary.badge-pill {
+            background-color: #007bff;
+        }
+
+        .btn-primary.badge-pill:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-danger.badge-pill {
+            background-color: #dc3545;
+        }
+
+        .btn-danger.badge-pill:hover {
+            background-color: #c82333;
+        }
+
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .action-column {
+            text-align: center;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<div class="container mt-5">
+    <h4 class="text-center">
+      <li><i class="fas fa-user-injured" style="color: #007bff;"></i> Donor Details</li>
+    </h4>
+  
+    {% if message %}
+    <div class="alert alert-success text-center" role="alert">
+      {{ message }}
+    </div>
+    {% endif %}
+  
+    <form method="get" class="mb-3" role="search" aria-label="Donor search form">
+      <div class="input-group">
+        <input
+          type="search"
+          name="q"
+          class="form-control"
+          placeholder="Search donors by name, blood group, email, or national ID"
+          aria-label="Search donors"
+          value="{{ request.GET.q|default:'' }}"
+        />
+        <button class="btn btn-primary" type="submit" aria-label="Search donors">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+    </form>
+  
+    <div class="table-responsive">
+      <table class="table table-light table-hover table-bordered table-striped">
+        <thead class="bg-info">
+          <tr>
+            <th>Name</th>
+            <th>Profile</th>
+            <th>Blood Group</th>
+            <th>Age</th>
+            <th>Email</th>
+            <th>National ID</th>
+            <th>Donations</th>
+            <th>Eligibility Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for donor in donors %}
+            {% for eligibility in eligibilities %}
+              {% if eligibility.donor == donor %}
+                <tr {% if eligibility.approved %}class="table-success"{% endif %}>
+                  <td>{{ donor.user.first_name }} {{ donor.user.last_name }}</td>
+  
+                  <td>
+                    {% if donor.profile_pic %}
+                      <img src="{{ donor.profile_pic.url }}" alt="Profile Picture" class="profile-pic">
+                    {% else %}
+                      <img src="{% static 'images/default-profile-pic.png' %}" alt="Default Profile Picture" class="profile-pic">
+                    {% endif %}
+                  </td>
+  
+                  <td>{{ donor.bloodgroup }}</td>
+  
+                  <td>{{ eligibility.age }}</td>
+  
+                  <td>
+                    <a href="mailto:{{ donor.user.email }}">{{ donor.user.email }}</a>
+                  </td>
+  
+                  <td>{{ donor.national_id }}</td>
+  
+                  <td>{{ donor.blooddonate_set.count }}</td>
+  
+                  <td>
+                    {% if eligibility.approved %}
+                      <span class="badge bg-success">Qualified</span>
+                    {% else %}
+                      <span class="badge bg-danger">Not Qualified</span>
+                    {% endif %}
+                  </td>
+  
+                  <td class="action-column">
+                    <a href="{% url 'update-donor' donor.id %}">Edit</a>
+                    <a href="{% url 'delete-donor' donor.id %}" class="btn btn-danger badge-pill" onclick="return confirmDelete();">Delete</a>
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted">No donors found matching the search criteria.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+  function confirmDelete() {
+      return confirm("Are you sure you want to delete this donor? This action cannot be undone.");
+  }
+  </script>
+  
+  {% endblock content %}
+  

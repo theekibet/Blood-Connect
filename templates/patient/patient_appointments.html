@@ -1,0 +1,196 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+{% block content %}
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+    <style>
+        label { color: white; padding: 8px; border-radius: 5px; }
+        .success {background-color: #28a745;}
+        .info {background-color: #17a2b8;}
+        .warning {background-color: #ffc107; color: black;}
+        .danger {background-color: #dc3545;}
+        .container { animation: fadeIn 1s ease-in-out; max-width: 1200px; margin: 40px auto; }
+        .section { background: #fff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); margin-bottom: 40px; padding: 30px; }
+        .section h4 { margin-bottom: 30px; color: #ff4b1f; font-weight: 700; }
+        .table { font-family: 'Arial Black', sans-serif; border-collapse: separate; width: 100%; border-spacing: 0; margin-bottom: 0; }
+        .table th, .table td { padding: 12px; text-align: left; border: none; vertical-align: middle; }
+        .table thead { background: linear-gradient(to right, #ff4b1f, #1fddff); color: white; text-shadow: 2px 2px 4px #000000; }
+        .table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .table tbody tr:hover { background-color: #e6f7ff; transition: background-color 0.3s ease; }
+        .btn-sm { padding: 6px 14px; border-radius: 6px; font-size: 0.95rem; cursor: pointer; }
+        .btn-danger { background-color: #dc3545; color: white; border: none; }
+        .btn-danger:hover { background-color: #b52a36; }
+        .label { padding: 5px 10px; border-radius: 5px; font-weight: bold; }
+        .text-center { text-align: center; }
+        .text-muted { color: #888; }
+        #toggle-past-btn { cursor: pointer; }
+        @media (max-width: 900px) {
+            .section { padding: 16px 4px; }
+            .container { padding: 0 2vw; }
+            .table th, .table td {
+                font-size: 0.9rem;
+            }
+            .btn-sm {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+
+<div class="container">
+    <div class="section">
+        <div class="section-title">
+            <i class="fas fa-calendar-check"></i> My Upcoming Appointments
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} text-center" role="alert">
+                    {{ message|safe }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <table class="table table-light table-hover table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th><i class="fas fa-user-nurse"></i> Nurse</th>
+                    <th><i class="fas fa-hospital"></i> Center</th>
+                    <th><i class="fas fa-calendar"></i> Date & Time</th>
+                    <th><i class="fas fa-info-circle"></i> Status</th>
+                    <th><i class="fas fa-map-marker-alt"></i> Directions</th>
+                    <th><i class="fas fa-ban"></i> Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in upcoming_appointments %}
+                <tr>
+                    <td>
+                        Nurse {{ appt.nurse.first_name }} {{ appt.nurse.last_name }}
+                        {% if appt.nurse.specialization %}<br><small>{{ appt.nurse.specialization }}</small>{% endif %}
+                    </td>
+                    <td>{{ appt.nurse.donation_center.name }}</td>
+                    <td>{{ appt.date|date:"d M Y H:i" }}</td>
+                    <td>
+                        {% if appt.status|lower == 'approved' %}
+                            <span class="label success">Approved</span>
+                        {% elif appt.status|lower == 'pending' %}
+                            <span class="label warning">Pending</span>
+                        {% elif appt.status|lower == 'cancelled' %}
+                            <span class="label danger">Cancelled</span>
+                        {% else %}
+                            <span class="label info">{{ appt.status|capfirst }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if appt.nurse.donation_center.latitude and appt.nurse.donation_center.longitude %}
+                            <a href="https://www.google.com/maps?q={{ appt.nurse.donation_center.latitude }},{{ appt.nurse.donation_center.longitude }}"
+                               target="_blank" class="btn btn-sm btn-primary">
+                                <i class="fas fa-map-marker-alt"></i> Get Directions
+                            </a>
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if appt.status|lower in allowed_statuses and appt.date > now %}
+                        <form method="POST" action="{% url 'cancel-request' appt.id %}" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-ban"></i> Cancel
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted">---</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No upcoming appointments.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <hr>
+
+        <div id="toggle-past-btn" class="btn btn-outline-secondary mb-3">
+            <i class="fas fa-chevron-down"></i> Show Previous Appointments
+        </div>
+
+        <div id="past-appointments" style="display:none;">
+            <div class="section-title">
+                <i class="fas fa-history"></i> Previous Appointments
+            </div>
+            <table class="table table-light table-hover table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-user-nurse"></i> Nurse</th>
+                        <th><i class="fas fa-hospital"></i> Center</th>
+                        <th><i class="fas fa-calendar"></i> Date & Time</th>
+                        <th><i class="fas fa-info-circle"></i> Status</th>
+                        <th><i class="fas fa-map-marker-alt"></i> Directions</th>
+                        <th><i class="fas fa-ban"></i> Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for appt in past_appointments %}
+                    <tr>
+                        <td>
+                            Nurse {{ appt.nurse.first_name }} {{ appt.nurse.last_name }}
+                            {% if appt.nurse.specialization %}<br><small>{{ appt.nurse.specialization }}</small>{% endif %}
+                        </td>
+                        <td>{{ appt.nurse.donation_center.name }}</td>
+                        <td>{{ appt.date|date:"d M Y H:i" }}</td>
+                        <td>
+                            {% if appt.status|lower == 'approved' %}
+                                <span class="label success">Approved</span>
+                            {% elif appt.status|lower == 'rejected' %}
+                                <span class="label danger">Rejected</span>
+                            {% elif appt.status|lower == 'cancelled' %}
+                                <span class="label danger">Cancelled</span>
+                            {% else %}
+                                <span class="label info">{{ appt.status|capfirst }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if appt.nurse.donation_center.latitude and appt.nurse.donation_center.longitude %}
+                                <a href="https://www.google.com/maps?q={{ appt.nurse.donation_center.latitude }},{{ appt.nurse.donation_center.longitude }}"
+                                   target="_blank" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-map-marker-alt"></i> Get Directions
+                                </a>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-muted">---</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No previous appointments.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('toggle-past-btn').addEventListener('click', function() {
+        var pastSection = document.getElementById('past-appointments');
+        if (pastSection.style.display === 'none') {
+            pastSection.style.display = 'block';
+            this.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Previous Appointments';
+        } else {
+            pastSection.style.display = 'none';
+            this.innerHTML = '<i class="fas fa-chevron-down"></i> Show Previous Appointments';
+        }
+    });
+</script>
+
+{% endblock %}

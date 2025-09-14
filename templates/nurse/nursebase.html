@@ -1,0 +1,221 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NURSE</title>
+
+  <!-- Bootstrap 4 & Font Awesome CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" />
+
+  <!-- Google Fonts: Roboto -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      list-style: none;
+      text-decoration: none;
+      font-family: 'Roboto', sans-serif;
+    }
+    body {
+      background-color: #f3f5f9;
+    }
+    .bg-danger {
+      background-color: #ff0018 !important;
+    }
+    .wrapper {
+      display: flex;
+      position: relative;
+    }
+    .wrapper .sidebar {
+      width: 250px;
+      height: 100vh;
+      background: #343a40;
+      padding: 30px 0;
+      position: fixed;
+      top: 60px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+      overflow-y: auto;
+    }
+    .wrapper .sidebar h2 {
+      color: #fff;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .wrapper .sidebar ul li {
+      padding: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .wrapper .sidebar ul li a {
+      color: #fff;
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      transition: color 0.3s ease;
+    }
+    .wrapper .sidebar ul li a .fas {
+      color: #ff0018;
+      font-size: 20px;
+      margin-right: 10px;
+      min-width: 20px;
+      text-align: center;
+    }
+    .wrapper .sidebar ul li:hover {
+      background-color: #594f8d;
+    }
+    .wrapper .sidebar ul li a:hover {
+      color: #ffa3a3;
+    }
+    .wrapper .main_content {
+      width: calc(100% - 250px);
+      margin-left: 250px;
+      padding: 100px 20px 20px; /* ⬅ pushes content below navbar */
+      min-height: 100vh;
+      background-color: #fff;
+    }
+    .wrapper .main_content .header {
+      padding: 20px;
+      background: #fff;
+      color: #717171;
+      border-bottom: 1px solid #e0e4e8;
+    }
+    .nav-item .badge {
+      font-size: 0.7rem;
+      margin-left: 4px;
+    }
+    /* Responsive sidebar scrolling on smaller screens */
+    @media (max-height: 600px) {
+      .wrapper .sidebar {
+        position: fixed;
+        overflow-y: scroll;
+      }
+    }
+    /* Fix for dropdown image and text alignment */
+    .navbar-nav .dropdown-toggle img {
+      vertical-align: middle;
+    }
+    @keyframes shake {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg); }
+      50% { transform: rotate(10deg); }
+      75% { transform: rotate(-10deg); }
+      100% { transform: rotate(0deg); }
+    }
+    
+    .animate-shake {
+      animation: shake 0.6s ease-in-out infinite;
+    }
+    
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top bg-danger">
+  <a class="navbar-brand text-white" href="/">
+    <i class="fas fa-user-md"></i>&nbsp;
+    <span style="font-family: 'Comic Sans MS', cursive;">NURSE ACCOUNT</span>
+  </a>
+
+  <div class="collapse navbar-collapse justify-content-end">
+    <ul class="navbar-nav align-items-center">
+
+      <!-- Notifications icon -->
+      <!-- Notifications icon -->
+<li class="nav-item mr-3">
+  <a class="nav-link text-white position-relative" href="{% url 'nurse-notifications' %}" title="Notifications">
+    <i class="fas fa-bell {% if unread_count > 0 %}animate-shake{% endif %}"></i>
+    {% if unread_count > 0 %}
+      <span class="badge badge-success notification-badge" 
+            style="position:absolute; top:0; right:0; font-size:0.7rem;">
+        {{ unread_count }}
+      </span>
+    {% endif %}
+  </a>
+</li>
+
+      {% if user.is_authenticated %}
+      <!-- Profile dropdown -->
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle d-flex align-items-center text-white p-0" href="#" id="navbarDropdown" role="button"
+          data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="width: 38px; height: 38px;">
+          {% if user.nurse.profile_pic %}
+            <img src="{{ user.nurse.profile_pic.url }}" alt="Profile Picture"
+                 class="rounded-circle" style="width: 38px; height: 38px; object-fit: cover;">
+          {% else %}
+            <img src="{% static 'images/default-profile.png' %}" alt="No Profile Picture"
+                 class="rounded-circle" style="width: 38px; height: 38px; object-fit: cover;">
+          {% endif %}
+        </a>
+
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="{% url 'nurse-profile' user.nurse.pk %}">
+            <i class="fas fa-user mr-2"></i> View Profile
+          </a>
+          <a class="dropdown-item" href="{% url 'nurse-profile-edit' user.nurse.pk %}">
+            <i class="fas fa-edit mr-2"></i> Edit Profile
+          </a>
+          <a class="dropdown-item" href="{% url 'password_change' %}">
+            <i class="fas fa-key mr-2"></i> Change Password
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="/logout">
+            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+          </a>
+        </div>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+
+<!-- Sidebar and Content -->
+<div class="wrapper">
+  <div class="sidebar">
+    <h2>Menu</h2>
+    <ul>
+      <li><a href="{% url 'nurse-dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li><a href="{% url 'blood-requests-list' %}"><i class="fas fa-clipboard-list"></i> Your Request List</a></li>
+      <li><a href="{% url 'nurse-blood-request-bookings' %}"><i class="fas fa-calendar-check"></i> Blood Requests Bookings</a></li>
+      <li><a href="{% url 'nurse-donation-bookings' %}"><i class="fas fa-calendar-check"></i> Donation Requests Bookings</a></li>
+      <li><a href="{% url 'nurse_stockunit_list' %}"><i class="fas fa-tint"></i>  Stock units</a></li>
+      <li><a href="{% url 'nurse-blood-stock' %}"><i class="fas fa-tint"></i> Blood Stock</a></li>
+      
+    </ul>
+  </div>
+
+  <div class="main_content">
+    <!-- Messages Alert -->
+    {% if messages %}
+    <div class="messages mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message|safe }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}
+    {% endblock content %}
+  </div>
+</div>
+
+<!-- JS Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

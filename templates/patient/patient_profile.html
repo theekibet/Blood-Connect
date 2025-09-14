@@ -1,0 +1,120 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+
+{% block content %}
+
+<!-- Display Django messages -->
+{% if messages %}
+  <div class="container mt-3">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="container">
+  <div class="profile-container">
+    <!-- Welcome Header -->
+    <div class="welcome-header d-flex align-items-center">
+      {% if patient.profile_pic %}
+        <img src="{{ patient.profile_pic.url }}" alt="Profile Picture" class="rounded-circle" 
+             style="width:80px; height:80px; object-fit:cover; border:2px solid #007bff;">
+      {% else %}
+        <img src="{% static 'images/default-avatar.jpg' %}" alt="Default Profile" class="rounded-circle" 
+             style="width:80px; height:80px; object-fit:cover; border:2px solid #007bff;">
+      {% endif %}
+      <div class="ml-3">
+        <h4>Welcome, <strong>{{ user.first_name }}</strong> 
+          {% if patient.bloodgroup %}
+            <small class="text-muted">({{ patient.bloodgroup }})</small>
+          {% endif %}
+        </h4>
+        <p style="margin: 0; font-size: 0.95rem;">Manage and view your profile information</p>
+      </div>
+    </div>
+
+    <!-- Personal Information -->
+    <div class="form-section">
+      <h5>Personal Information</h5>
+      <p><strong>Date of Birth:</strong> {{ patient.dob|date:"F j, Y" | default:"Not specified" }}</p>
+      <p><strong>Age:</strong> {{ patient.age|default:"Not specified" }}</p>
+      <p><strong>Blood Group:</strong> {{ patient.bloodgroup|default:"Not specified" }}</p>
+      <p><strong>Gender:</strong> 
+        {% if patient.gender == 'M' %}Male
+        {% elif patient.gender == 'F' %}Female
+        {% elif patient.gender == 'O' %}Other
+        {% else %}Not specified
+        {% endif %}
+      </p>
+      <p><strong>National ID:</strong> {{ patient.national_id|default:"Not specified" }}</p>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="form-section">
+      <h5>Contact & Emergency Info</h5>
+      <p><strong>Address:</strong> {{ patient.address|default:"Not specified" }}</p>
+      <p><strong>Mobile:</strong> {{ patient.mobile|default:"Not specified" }}</p>
+      <p><strong>Emergency Contact:</strong> {{ patient.emergency_contact|default:"Not specified" }}</p>
+    </div>
+
+    <!-- Location -->
+    <div class="form-section">
+      <h5>Location Coordinates</h5>
+      <p><strong>Latitude:</strong> {{ patient.latitude|default:"Not available" }}</p>
+      <p><strong>Longitude:</strong> {{ patient.longitude|default:"Not available" }}</p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-right mt-4">
+      <a href="{% url 'patient-edit-profile' patient_id=patient.id %}" class="btn btn-primary mr-2">Edit Profile</a>
+      <a href="{% url 'patient-change-password' %}" class="btn btn-secondary">Change Password</a>
+    </div>
+  </div>
+</div>
+
+<!-- Inline Styles (optional, can be moved to your CSS) -->
+<style>
+  .profile-container { 
+    max-width: 900px; 
+    margin: 40px auto; 
+    background: #fff; 
+    border-radius: 12px; 
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); 
+    padding: 30px; 
+  }
+  .welcome-header { 
+    display: flex; 
+    align-items: center; 
+    margin-bottom: 30px; 
+    gap: 15px; 
+  }
+  .form-section { 
+    margin-bottom: 30px; 
+  }
+  .form-section h5 { 
+    font-size: 18px; 
+    border-bottom: 2px solid #ddd; 
+    padding-bottom: 10px; 
+    margin-bottom: 15px; 
+    color: #444; 
+  }
+  label { 
+    font-weight: bold; 
+    display: block; 
+    margin-bottom: 6px; 
+  }
+  p {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  .ml-3 {
+    margin-left: 1rem;
+  }
+</style>
+
+{% endblock %}

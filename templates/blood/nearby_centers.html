@@ -1,0 +1,79 @@
+{% block content %}
+  <style>
+    .center-card {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border: 2px solid #28a745; /* Bootstrap success green */
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: #fff;
+      transition: transform 0.2s ease-in-out;
+    }
+    .center-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    .icon {
+      width: 20px;
+      margin-right: 8px;
+      color: #007bff;
+    }
+    .hotline {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #dc3545; /* Bootstrap danger red */
+      letter-spacing: 2px;
+    }
+    .hotline i {
+      margin-right: 10px;
+    }
+    a.text-decoration-none:hover {
+      text-decoration: underline;
+      color: #0056b3;
+    }
+  </style>
+
+  <div class="container mt-4">
+    <h2 class="text-danger mb-4">
+      <i class="fas fa-ambulance"></i> Emergency? Locate Nearby Donation Centers
+    </h2>
+
+    {% if nearby_centers %}
+      <div class="list-group">
+        {% for center, distance in nearby_centers %}
+          <div class="center-card">
+            <h5 class="mb-3">
+              <i class="fas fa-tint text-danger icon"></i> {{ center.name }}
+              <small class="text-muted">({{ center.city }})</small>
+            </h5>
+            <p><i class="fas fa-map-marker-alt icon"></i><strong>Address:</strong> {{ center.address }}</p>
+            <p><i class="fas fa-road icon"></i><strong>Distance:</strong> {{ distance }} km</p>
+            <p>
+              <i class="fas fa-phone-alt icon"></i><strong>Contact:</strong>
+              <a href="tel:{{ center.contact_number }}" class="text-decoration-none">{{ center.contact_number }}</a>
+            </p>
+            <p><i class="fas fa-clock icon"></i><strong>Opening Hours:</strong> {{ center.open_hours }}</p>
+            <p>
+              <a 
+                href="https://www.google.com/maps/dir/?api=1&destination={{ center.address|urlencode }}" 
+                target="_blank" 
+                rel="noopener" 
+                class="btn btn-outline-primary btn-sm"
+              >
+                <i class="fas fa-route"></i> Get Directions
+              </a>
+            </p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-warning text-center" role="alert">
+        <h4 class="mb-3"><i class="fas fa-exclamation-triangle"></i> No donation centers found within 50 km.</h4>
+        <p class="mb-3">Please call our <strong>24/7 Emergency Hotline</strong> for immediate support:</p>
+        <p class="hotline">
+          <i class="fas fa-phone-alt"></i> +254 700 123 456
+        </p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

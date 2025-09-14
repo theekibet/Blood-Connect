@@ -1,0 +1,324 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
+<style>
+  body { background: linear-gradient(135deg, #ff4b1f, #1fddff); font-family: 'Segoe UI', Tahoma, sans-serif; color: #333; }
+  .card { border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); padding: 25px; }
+  .title { font-size: 1.6rem; margin-bottom: 20px; color: #ff4b1f; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .input-icon { position: relative; }
+  .input-icon i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #ff4b1f; }
+  .input-icon input, .input-icon select { padding-left: 35px; }
+  .btn-primary { background: linear-gradient(135deg, #ff4b1f, #ff9068); border: none; font-weight: 700; }
+  .btn-primary:hover { background: linear-gradient(135deg, #e03e16, #ff7043); }
+  #timeSlots label { display: inline-block; margin: 5px 8px 0 0; cursor: pointer; font-weight: 600; color: #555; }
+  #timeSlots input[type="radio"] { margin-right: 6px; accent-color: #ff4b1f; cursor: pointer; }
+  @media (max-width: 767px) { .row { flex-direction: column; } }
+</style>
+<div class="container my-5">
+  <div class="row g-4">
+    <!-- Form Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm p-3">
+        <h4 class="title mb-3"><i class="fa-solid fa-hand-holding-medical"></i> Donate Blood</h4>
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+              <i class="fa-solid fa-circle-exclamation"></i> {{ message|safe }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if active_donation %}
+          <div class="alert alert-warning">
+            <i class="fa-solid fa-clock"></i> 
+            You already have a <strong>{{ active_donation.status|title }}</strong> donation request 
+            (created on {{ active_donation.date }}).
+            <br>
+            Please wait until it is resolved before making a new request.
+          </div>
+        {% else %}
+          <form method="POST" novalidate>
+            {% csrf_token %}
+
+            {# Display non-field errors at the top of the form #}
+            {% if donation_form.non_field_errors %}
+              <div class="alert alert-danger">
+                <ul class="mb-0">
+                  {% for error in donation_form.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            {% for field in donation_form %}
+              {% if field.name != 'appointment_time' %}
+                <div class="mb-3 {% if field.errors %}was-validated{% endif %}">
+                  <label for="{{ field.id_for_label }}" class="form-label">
+                    {{ field.label }}{% if field.field.required %} *{% endif %}
+                  </label>
+                  <div class="input-icon">
+                    {% if field.name == 'first_name' or field.name == 'last_name' %}
+                      <i class="fa-solid fa-user"></i>
+                    {% elif field.name == 'mobile' %}
+                      <i class="fa-solid fa-phone"></i>
+                    {% elif field.name == 'bloodgroup' %}
+                      <i class="fa-solid fa-droplet"></i>
+                    {% elif field.name == 'donation_center' %}
+                      <i class="fa-solid fa-hospital"></i>
+                    {% elif field.name == 'nurse' %}
+                      <i class="fa-solid fa-user-nurse"></i>
+                    {% elif field.name == 'appointment_date' %}
+                      <i class="fa-solid fa-calendar-days"></i>
+                    {% endif %}
+                    {{ field|add_class:"form-control" }}
+                  </div>
+                  {% if field.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in field.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% else %}
+                {{ field }} {# Hidden appointment_time field #}
+              {% endif %}
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary w-100 mt-3" id="submitBtn">
+              <i class="fa-solid fa-paper-plane"></i> Submit
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Summary / History Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm p-3">
+        <h5 class="text-secondary mb-3"><i class="fa-solid fa-info-circle"></i> Appointment Summary</h5>
+
+        {% if not active_donation %}
+          <p><strong>Date:</strong> <span id="appointmentDateDisplay">Not selected</span></p>
+          <p><strong>Time:</strong> <span id="appointmentTimeDisplay">Not selected</span></p>
+          <p><strong>Nurse:</strong> <span id="nurseDisplay">Not selected</span></p>
+
+          <div class="form-row mt-3">
+            <div class="name"><i class="fa-solid fa-clock"></i> Select Appointment Time</div>
+            <fieldset id="timeSlots" aria-label="Available time slots">
+              <legend class="sr-only">Appointment Time</legend>
+            </fieldset>
+          </div>
+        {% else %}
+          <h6 class="mb-2">Your Latest Donation Request</h6>
+          <p><strong>Status:</strong> 
+            <span class="badge bg-{% if active_donation.status == 'pending' %}warning
+              {% elif active_donation.status == 'approved' %}success
+              {% elif active_donation.status == 'completed' %}primary
+              {% elif active_donation.status == 'rejected' %}danger
+              {% elif active_donation.status == 'cancelled' %}secondary
+              {% else %}dark{% endif %}">
+              {{ active_donation.status|title }}
+            </span>
+          </p>
+          <p><strong>Date:</strong> {{ active_donation.date }}</p>
+          <p><strong>Center:</strong> {{ active_donation.donation_center.name }}</p>
+          <p><strong>Nurse:</strong> {{ active_donation.nurse|default:"Not assigned" }}</p>
+
+          {% if active_donation.approved_by_admin or active_donation.approved_by_nurse %}
+            <p><strong>Approved:</strong> 
+              {% if active_donation.approved_by_admin %}
+                By Admin ({{ active_donation.approved_at_admin|date:"Y-m-d H:i" }})
+              {% elif active_donation.approved_by_nurse %}
+                By Nurse ({{ active_donation.approved_at_nurse|date:"Y-m-d H:i" }})
+              {% endif %}
+            </p>
+          {% endif %}
+
+          {% if active_donation.rejected_by %}
+            <p class="text-danger"><strong>Rejected:</strong> By {{ active_donation.rejected_by|title }} on {{ active_donation.rejected_at|date:"Y-m-d H:i" }}</p>
+          {% endif %}
+
+          {% if active_donation.completed_by_admin or active_donation.completed_by_nurse %}
+            <p class="text-success"><strong>Completed:</strong>
+              {% if active_donation.completed_by_admin %}
+                By Admin ({{ active_donation.completed_at_admin|date:"Y-m-d H:i" }})
+              {% elif active_donation.completed_by_nurse %}
+                By Nurse ({{ active_donation.completed_at_nurse|date:"Y-m-d H:i" }})
+              {% endif %}
+            </p>
+          {% endif %}
+
+          {% if active_donation.cancelled_by %}
+            <p class="text-muted"><strong>Cancelled:</strong> By {{ active_donation.cancelled_by|title }} on {{ active_donation.cancelled_at|date:"Y-m-d H:i" }}</p>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Script sources -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  const nurseDropdown = document.getElementById('{{ donation_form.nurse.id_for_label }}');
+  const donationCenterSelect = document.getElementById('{{ donation_form.donation_center.id_for_label }}');
+  const appointmentDateInput = document.getElementById('{{ donation_form.appointment_date.id_for_label }}');
+  const appointmentTimeInput = document.getElementById('{{ donation_form.appointment_time.id_for_label }}');
+  const timeSlotsDiv = document.getElementById('timeSlots');
+  const appointmentDateDisplay = document.getElementById('appointmentDateDisplay');
+  const appointmentTimeDisplay = document.getElementById('appointmentTimeDisplay');
+  const nurseDisplay = document.getElementById('nurseDisplay');
+
+  const timeOptions = ["09:00 AM", "10:30 AM", "12:00 PM", "02:00 PM", "04:00 PM"];
+
+  function renderTimeSlots(booked=[]) {
+    if (!timeSlotsDiv) return;
+    timeSlotsDiv.innerHTML = '';
+    timeOptions.forEach(slot => {
+      const isBooked = booked.includes(slot);
+      const label = document.createElement('label');
+      label.classList.add("d-block", "mb-1");
+      label.innerHTML = `<input type="radio" name="appointment_time_radio" value="${slot}" ${isBooked ? 'disabled' : ''}> ${slot} ${isBooked ? '(Booked)' : ''}`;
+      if (!isBooked) {
+        label.querySelector('input').addEventListener('change', () => {
+          appointmentTimeInput.value = slot;
+          appointmentTimeDisplay.textContent = slot;
+          updateSummary();
+        });
+      }
+      timeSlotsDiv.appendChild(label);
+    });
+  }
+
+  async function updateAvailableTimes() {
+    const nurseId = nurseDropdown?.value;
+    const date = appointmentDateInput?.value;
+    if (!nurseId || !date) {
+      renderTimeSlots();
+      if (appointmentTimeInput) appointmentTimeInput.value = '';
+      if (appointmentTimeDisplay) appointmentTimeDisplay.textContent = 'Not selected';
+      return;
+    }
+    try {
+      const response = await fetch(`/nurse/ajax/booked-timeslots/?nurse_id=${nurseId}&date=${date}`);
+      if (response.ok) {
+        const data = await response.json();
+        renderTimeSlots(data.booked_times || []);
+      } else {
+        renderTimeSlots();
+      }
+      appointmentTimeInput.value = '';
+      appointmentTimeDisplay.textContent = 'Not selected';
+    } catch (error) {
+      console.error('Error fetching booked times:', error);
+      renderTimeSlots();
+    }
+  }
+
+  function updateSummary() {
+    if (appointmentDateDisplay) {
+      appointmentDateDisplay.textContent = appointmentDateInput?.value || 'Not selected';
+    }
+    if (appointmentTimeDisplay) {
+      appointmentTimeDisplay.textContent = appointmentTimeInput?.value || 'Not selected';
+    }
+    if (nurseDisplay) {
+      const selectedNurse = nurseDropdown?.options[nurseDropdown.selectedIndex]?.text;
+      nurseDisplay.textContent = selectedNurse || 'Not selected';
+    }
+  }
+
+  // Handle donation center selection
+  if (donationCenterSelect) {
+    donationCenterSelect.addEventListener('change', () => {
+      const centerId = donationCenterSelect.value;
+      if (centerId) {
+        fetch(`/ajax/get-nurses/?center_id=${centerId}`)
+          .then(res => res.json())
+          .then(data => {
+            let options = '<option value="">Select Nurse</option>';
+            data.nurses.forEach(nurse => {
+              options += `<option value="${nurse.id}">Nurse: ${nurse.name}</option>`;  
+            });
+            nurseDropdown.innerHTML = options;
+            nurseDropdown.disabled = false;
+            appointmentDateInput.disabled = false;
+            appointmentTimeInput.value = '';
+            renderTimeSlots();
+            updateSummary();
+          })
+          .catch(error => {
+            console.error('Error fetching nurses:', error);
+            nurseDropdown.innerHTML = '<option value="">Error loading nurses</option>';
+            nurseDropdown.disabled = true;
+            appointmentDateInput.disabled = true;
+          });
+      } else {
+        nurseDropdown.innerHTML = '<option value="">Select Donation Center first</option>';
+        nurseDropdown.disabled = true;
+        appointmentDateInput.disabled = true;
+        appointmentTimeInput.value = '';
+        renderTimeSlots();
+        updateSummary();
+      }
+    });
+  }
+
+  // Handle nurse selection
+  if (nurseDropdown) {
+    nurseDropdown.addEventListener('change', () => {
+      const isNurseSelected = !!nurseDropdown.value;
+      if (appointmentDateInput) {
+        appointmentDateInput.disabled = !isNurseSelected;
+      }
+      updateAvailableTimes();
+      updateSummary();
+    });
+  }
+
+  // Initialize date picker
+  if (appointmentDateInput) {
+    flatpickr(appointmentDateInput, {
+      minDate: "today",
+      dateFormat: "Y-m-d",
+      disableMobile: true,
+      onChange: () => {
+        updateAvailableTimes();
+        updateSummary();
+      }
+    });
+  }
+
+  // Form validation on submit
+  const form = document.querySelector("form");
+  if (form) {
+    form.addEventListener("submit", function(e) {
+      const isValid = nurseDropdown?.value && 
+                     appointmentDateInput?.value && 
+                     appointmentTimeInput?.value;
+                     
+      if (!isValid) {
+        alert("Please fill all required fields before submitting.");
+        e.preventDefault();
+        return false;
+      }
+      
+      // Disable submit button to prevent double submission
+      const submitBtn = document.getElementById("submitBtn");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+      }
+    });
+  }
+
+  // Initial setup
+  updateSummary();
+</script>
+{% endblock %}

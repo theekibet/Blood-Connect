@@ -1,0 +1,111 @@
+{% extends 'blood/adminbase.html' %}
+{% block title %}Nurse Blood Requests - Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Nurse Blood Requests (Admin)</h2>
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Nurse</th>
+          <th>Blood Group</th>
+          <th>Units (ml)</th>
+          <th>Donation Centre</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Requested On</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+          <tr>
+            <td>
+              {% if req.requester.get_full_name %}
+                {{ req.requester.get_full_name }}
+              {% else %}
+                {{ req.requester.user.username }}
+              {% endif %}
+            </td>
+            <td>{{ req.blood_group }}</td>
+            <td>{{ req.units }}</td>
+            <td>{{ req.supplying_center.name }}</td>
+            <td>{{ req.reason|default:"N/A" }}</td>
+            <td>
+              {% if req.status == 'pending' %}
+                <span class="badge bg-warning text-dark">Pending</span>
+              {% elif req.status == 'approved' %}
+                <span class="badge bg-success">Approved</span>
+              {% elif req.status == 'rejected' %}
+                <span class="badge bg-danger">Rejected</span>
+              {% elif req.status == 'fulfilled' %}
+                <span class="badge bg-info text-dark">Fulfilled</span>
+              {% elif req.status == 'cancelled' %}
+                <span class="badge bg-secondary">Cancelled</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ req.status }}</span>
+              {% endif %}
+            </td>
+            <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
+            <td>
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="request_id" value="{{ req.id }}">
+
+                <button type="submit" name="action" value="approve"
+                        class="btn btn-success btn-sm me-1"
+                        {% if req.status == 'approved' or req.status == 'rejected' or req.status == 'fulfilled' or req.status == 'cancelled' %}
+                          disabled
+                        {% endif %}>
+                  Approve
+                </button>
+
+                <button type="submit" name="action" value="reject"
+                        class="btn btn-danger btn-sm me-1"
+                        {% if req.status == 'rejected' or req.status == 'approved' or req.status == 'fulfilled' or req.status == 'cancelled' %}
+                          disabled
+                        {% endif %}>
+                  Reject
+                </button>
+
+                <button type="submit" name="action" value="cancel"
+                        class="btn btn-secondary btn-sm me-1"
+                        {% if req.status == 'cancelled' or req.status == 'fulfilled' %}
+                          disabled
+                        {% endif %}>
+                  Cancel
+                </button>
+
+                <button type="submit" name="action" value="complete"
+                        class="btn btn-primary btn-sm"
+                        {% if req.status != 'approved' %}
+                          disabled
+                        {% endif %}>
+                  Complete
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted">No blood requests found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

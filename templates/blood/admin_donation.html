@@ -1,0 +1,248 @@
+{% extends 'blood/adminbase.html' %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block content %}
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <style>
+          :root{--primary-color:#dc3545;--primary-gradient:linear-gradient(135deg,#dc3545 0%,#e17055 100%);--nurse-color:#17a2b8;--nurse-gradient:linear-gradient(135deg,#17a2b8 0%,#20c997 100%);--success-color:#28a745;--warning-color:#ffc107;--info-color:#17a2b8;--danger-color:#dc3545;--secondary-color:#6c757d;--light-bg:#f8f9fa;--border-radius:12px;--shadow:0 6px 18px rgba(23,162,184,.15);--transition:all .3s ease;}
+          .container{max-width:1200px;margin:auto;padding:20px;}
+          .page-header{background:var(--nurse-gradient);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:30px;box-shadow:var(--shadow);}
+          .page-header h1{margin:0;font-weight:700;display:flex;align-items:center;gap:15px;}
+          .message-container{margin-bottom:20px;}
+          .search-section{background:#fff;padding:20px;border-radius:var(--border-radius);box-shadow:var(--shadow);margin-bottom:30px;}
+          .search-input{border:2px solid #e9ecef;border-radius:8px;padding:12px 20px;font-size:16px;transition:var(--transition);}
+          .search-input:focus{border-color:var(--nurse-color);box-shadow:0 0 0 .2rem rgba(23,162,184,.25);}
+          .table-container{background:#fff;border-radius:var(--border-radius);box-shadow:var(--shadow);overflow:hidden;}
+          table{width:100%;border-collapse:collapse;margin:0;}
+          th,td{padding:15px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid #eee;}
+          thead th{background:var(--nurse-gradient);color:#fff;font-weight:700;position:sticky;top:0;z-index:10;}
+          tbody tr{transition:var(--transition);}
+          tbody tr:hover{background-color:#f0fdff;transform:scale(1.01);}
+          .status-badge{padding:6px 12px;border-radius:20px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+          .status-pending{background:#fff3cd;color:#856404;}
+          .status-approved{background:#d4edda;color:#155724;}
+          .status-rejected{background:#f8d7da;color:#721c24;}
+          .status-completed{background:#d1ecf1;color:#0c5460;}
+          .status-cancelled{background:#e2e3e5;color:#383d41;}
+          .btn{padding:8px 16px;border:none;border-radius:6px;font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:6px;margin:2px;}
+          .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+          .btn-success{background:var(--success-color);color:#fff;}
+          .btn-danger{background:var(--danger-color);color:#fff;}
+          .btn-info{background:var(--info-color);color:#fff;}
+          .btn-secondary{background:var(--secondary-color);color:#fff;}
+          .btn:disabled{opacity:.6;cursor:not-allowed;transform:none!important;}
+          .action-buttons{display:flex;flex-wrap:wrap;gap:5px;}
+          .profile-img{width:50px;height:50px;border-radius:50%;border:2px solid var(--nurse-color);object-fit:cover;}
+          .donor-info{display:flex;flex-direction:column;}
+          .donor-name{font-weight:700;color:#2c3e50;}
+          .donor-details{font-size:.85rem;color:#6c757d;}
+          .modal-content{border-radius:var(--border-radius);border:none;box-shadow:0 10px 30px rgba(0,0,0,.3);}
+          .modal-header{background:var(--nurse-gradient);color:#fff;border-radius:var(--border-radius) var(--border-radius) 0 0;}
+          .form-control,.form-select{border:2px solid #e9ecef;border-radius:8px;padding:10px 15px;transition:var(--transition);}
+          .form-control:focus,.form-select:focus{border-color:var(--nurse-color);box-shadow:0 0 0 .2rem rgba(23,162,184,.25);}
+          .alert{border:none;border-radius:var(--border-radius);padding:15px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+          .alert-dismissible .btn-close{padding:8px;}
+          .no-data{text-align:center;padding:60px 20px;color:#6c757d;}
+          .no-data i{font-size:4rem;margin-bottom:20px;opacity:.5;}
+          .loading-spinner{display:inline-block;width:1rem;height:1rem;border:.2rem solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin 1s linear infinite;}
+          @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+          .blood-type{font-weight:700;font-size:1.1rem;color:var(--primary-color);}
+          .appointment-time{font-weight:600;color:var(--nurse-color);}
+          @media(max-width:768px){.container{padding:10px;}table{font-size:.85rem;}th,td{padding:10px 8px;}.btn{padding:6px 12px;font-size:.8rem;}.profile-img{width:40px;height:40px;}}
+          </style>
+          
+          
+</head>
+<div class="container" role="main">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>
+      <i class="fas fa-hand-holding-medical"></i>
+      Blood Donation Management
+    </h1>
+    <p class="mb-0">Track donation appointments and monitor nurse activities in real-time</p>
+  </div>
+
+  <!-- Export Section -->
+  <div class="text-end mb-3">
+    <a href="{% url 'admin-donation-report' %}" class="btn btn-outline-primary">
+      <i class="fas fa-download"></i> Export CSV Report
+    </a>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+  <div aria-live="assertive" role="alert">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}fa-exclamation-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Search Section -->
+  <div class="search-section mb-4">
+    <label for="donationSearch" class="form-label fw-bold">
+      <i class="fas fa-search"></i> Search Donations
+    </label>
+    <input type="search" id="donationSearch" class="form-control search-input" 
+           placeholder="Search by donor name, blood group, contact, status...">
+    <small class="form-text text-muted mt-2">
+      <i class="fas fa-info-circle"></i> Type to filter donations in real-time
+    </small>
+  </div>
+
+  <!-- Main Table -->
+  <div class="table-container">
+    <div style="max-height: 600px; overflow-y: auto;">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th><i class="fas fa-user"></i> Donor</th>
+            <th><i class="fas fa-phone"></i> Contact</th>
+            <th><i class="fas fa-tint"></i> Blood Info</th>
+            <th><i class="fas fa-hospital"></i> Center & Nurse</th>
+            <th><i class="fas fa-calendar"></i> Appointment</th>
+            <th><i class="fas fa-flag"></i> Status</th>
+            <th><i class="fas fa-history"></i> Activity Log</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for donation in donations %}
+          <tr data-donation-id="{{ donation.id }}">
+            <!-- Donor -->
+            <td>
+              <div class="fw-bold">{{ donation.donor.user.get_full_name }}</div>
+              <small class="text-muted">Age: {{ donation.donor_age|default:"N/A" }}</small>
+            </td>
+
+            <!-- Contact -->
+            <td>
+              <div>{{ donation.donor.mobile|default:"N/A" }}</div>
+              <small class="text-muted">{{ donation.donor.national_id|default:"No ID" }}</small>
+            </td>
+
+            <!-- Blood Info -->
+            <td>
+              <div class="fw-bold text-primary">{{ donation.bloodgroup }}</div>
+              <small class="text-muted">{{ donation.unit }}ml</small>
+            </td>
+
+            <!-- Center & Nurse -->
+            <td>
+              <div>{{ donation.donation_center.name|default:"N/A" }}</div>
+              <small class="text-muted">
+                {% with donation.prefetched_appointments.0 as appt %}
+                  {% if appt and appt.nurse %}
+                    Nurse: {{ appt.nurse.user.get_full_name }}
+                  {% else %}
+                    No nurse assigned
+                  {% endif %}
+                {% endwith %}
+              </small>
+            </td>
+
+            <!-- Appointment -->
+            <td>
+              {% with donation.prefetched_appointments.0 as appt %}
+                {% if appt %}
+                  <div class="fw-bold">{{ appt.date|date:"M d, Y" }}</div>
+                  <small class="text-muted">{{ appt.date|date:"h:i A" }}</small>
+                {% else %}
+                  <span class="text-muted"><em>Not scheduled</em></span>
+                {% endif %}
+              {% endwith %}
+            </td>
+
+            <!-- Status -->
+            <td>
+              <span class="badge 
+                {% if donation.status == 'pending' %}bg-warning text-dark
+                {% elif donation.status == 'approved' %}bg-success
+                {% elif donation.status == 'completed' %}bg-info
+                {% elif donation.status == 'rejected' %}bg-danger
+                {% elif donation.status == 'cancelled' %}bg-secondary
+                {% else %}bg-light text-dark{% endif %}">
+                {{ donation.status|title }}
+              </span>
+            </td>
+
+            <!-- Activity Log -->
+            <td class="activity-log">
+              {% if donation.prefetched_appointments %}
+                {% for appt in donation.prefetched_appointments %}
+                  {% if appt.status == 'approved' %}
+                    <div><i class="fas fa-user-nurse text-success"></i> Approved by Nurse <small class="timestamp">{{ appt.updated_at|date:"M d, H:i" }}</small></div>
+                  {% elif appt.status == 'rejected' %}
+                    <div><i class="fas fa-times-circle text-danger"></i> Rejected by Nurse <small class="timestamp">{{ appt.updated_at|date:"M d, H:i" }}</small></div>
+                  {% elif appt.status == 'completed' %}
+                    <div><i class="fas fa-flag-checkered text-info"></i> Completed by Nurse <small class="timestamp">{{ appt.updated_at|date:"M d, H:i" }}</small></div>
+                  {% elif appt.status == 'cancelled' %}
+                    <div><i class="fas fa-ban text-secondary"></i> Cancelled by Nurse <small class="timestamp">{{ appt.updated_at|date:"M d, H:i" }}</small></div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <em class="text-muted">No activity yet</em>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="no-data text-center">
+                <i class="fas fa-inbox fa-2x"></i>
+                <h4>No Donations Found</h4>
+                <p class="text-muted mb-0">No donation appointments are available at this time.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('donationSearch');
+  const tableRows = document.querySelectorAll('.table tbody tr[data-donation-id]');
+
+  searchInput.addEventListener('input', function() {
+    const query = this.value.toLowerCase().trim();
+    tableRows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const match = text.includes(query);
+      row.style.display = match ? '' : 'none';
+    });
+
+    // Show no results
+    const visible = Array.from(tableRows).some(r => r.style.display !== 'none');
+    if (!visible && query) {
+      if (!document.querySelector('.no-search-results')) {
+        const tbody = document.querySelector('.table tbody');
+        const noResults = document.createElement('tr');
+        noResults.className = 'no-search-results';
+        noResults.innerHTML = `<td colspan="7"><div class="no-data"><i class="fas fa-search"></i><h5>No Results Found</h5><p class="text-muted mb-0">No donations match "${query}"</p></div></td>`;
+        tbody.appendChild(noResults);
+      }
+    } else {
+      const msg = document.querySelector('.no-search-results');
+      if (msg) msg.remove();
+    }
+  });
+
+  // Auto-refresh every 5 min
+  setInterval(() => {
+    if (document.visibilityState === 'visible') location.reload();
+  }, 300000);
+});
+</script>
+{% endblock %}

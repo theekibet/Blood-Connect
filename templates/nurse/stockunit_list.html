@@ -1,0 +1,47 @@
+{% extends 'nurse/nursebase.html' %}
+{% load custom_filters %}
+{% block content %}
+
+<div class="container mt-4">
+  <h3>Recent Stock Units (Latest First)</h3>
+
+  <!-- Search Bar -->
+  <form method="get" class="mb-3">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by Barcode or Blood Group" value="{{ search_query }}">
+      <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+  </form>
+
+  <!-- Stock Units Table -->
+  <table class="table table-bordered table-hover">
+    <thead class="table-dark">
+      <tr>
+        <th>Barcode</th>
+        <th>Blood Group</th>
+        <th>Units (ml)</th>
+        <th>Deducted (ml)</th>
+        <th>Remaining (ml)</th>
+        <th>Expiry Date</th>
+        <th>Added On</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for info in stockunits_info %}
+        <tr {% if info.unit.id == highlight_id %} style="background-color:#e6ffe6;" {% endif %}>
+          <td>{{ info.unit.barcode }}</td>
+          <td>{{ info.unit.bloodgroup }}</td>
+          <td>{{ info.unit.unit }}</td>
+          <td>{{ info.deducted }}</td>
+          <td>{{ info.remaining }}</td>
+          <td>{{ info.unit.expiry_date|date:"M d, Y" }}</td>
+          <td>{{ info.unit.added_on|date:"M d, Y H:i" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-center">No stock units found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

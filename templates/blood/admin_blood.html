@@ -1,0 +1,275 @@
+{% extends 'blood/adminbase.html' %}
+{% load static %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container mt-5">
+    <h2 class="mb-4">Blood Stock Dashboard</h2>
+
+    <!-- Success & Error Messages -->
+    {% if messages %}
+      <div class="container mt-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Chart -->
+    <div>
+        <canvas id="dynamicStockChart" height="120"></canvas>
+    </div>
+
+    <!-- Add Stock Unit Note -->
+    <div class="alert alert-info mt-4">
+        <i class="fa fa-info-circle"></i>
+        Use the form below to <strong>add</strong> a new blood stock unit with expiry date and barcode.
+    </div>
+
+    <!-- Stock Unit Form and Add Donation Center Button -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <form method="post" class="flex-grow-1 me-3">
+          {% csrf_token %}
+          <div class="row g-3 align-items-end">
+              <div class="col-md-3">
+                  {{ stockForm.center.label_tag }}
+                  {{ stockForm.center }}
+                  {% for error in stockForm.center.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+              </div>
+              <div class="col-md-2">
+                  {{ stockForm.bloodgroup.label_tag }}
+                  {{ stockForm.bloodgroup }}
+                  {% for error in stockForm.bloodgroup.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+              </div>
+              <div class="col-md-2">
+                  {{ stockForm.unit.label_tag }}
+                  {{ stockForm.unit }}
+                  {% for error in stockForm.unit.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+              </div>
+              <div class="col-md-2">
+                  {{ stockForm.expiry_date.label_tag }}
+                  {{ stockForm.expiry_date }}
+                  {% for error in stockForm.expiry_date.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+              </div>
+              <div class="col-md-3">
+                  {{ stockForm.barcode.label_tag }}
+                  {{ stockForm.barcode }}
+                  {% for error in stockForm.barcode.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+              </div>
+              <div class="col-md-2">
+                  <button type="submit" class="btn btn-primary w-100">Add Stock Unit</button>
+              </div>
+          </div>
+      </form>
+
+      <!-- Button trigger modal -->
+      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDonationCenterModal">
+          Add Donation Center
+      </button>
+    </div>
+
+    <!-- Add Donation Center Modal -->
+    <div class="modal fade" id="addDonationCenterModal" tabindex="-1" aria-labelledby="addDonationCenterLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="post" action="{% url 'admin-blood' %}">
+            {% csrf_token %}
+            <input type="hidden" name="submit_donation_center" value="1">
+              <h5 class="modal-title" id="addDonationCenterLabel">Add Donation Center</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              {{ donation_center_form.as_p }}
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Add Center</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aggregated Stock Table -->
+    <div class="row mt-4">
+        <div class="col-md-12 mb-4">
+            <h4>Aggregated Stock by Donation Center</h4>
+            {% for center_id, data in center_stock_map.items %}
+                <h5>{{ data.name }}</h5>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Blood Group</th>
+                            <th>Total Units (ml)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bg, units in data.stock.items %}
+                        <tr>
+                            <td>{{ bg }}</td>
+                            <td>{{ units }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% empty %}
+                <p>No aggregated stock data available.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Detailed Stock Units List -->
+    <div class="row">
+        <div class="col-md-12">
+            <h4>Detailed Stock Units</h4>
+
+            <!-- Search box for filtering -->
+            <div class="mb-3">
+                <input type="text" id="stockSearchInput" class="form-control" placeholder="Search stock units...">
+            </div>
+
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>Center</th>
+                        <th>Blood Group</th>
+                        <th>Units (ml)</th>
+                        <th>Expiry Date</th>
+                        <th>Barcode</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stock_units %}
+                    <tr>
+                        <td>{{ stock.center.name }}</td>
+                        <td>{{ stock.bloodgroup }}</td>
+                        <td>{{ stock.unit }}</td>
+                        <td>{{ stock.expiry_date|date:"M d, Y" }}</td>
+                        <td>{{ stock.barcode }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No stock units available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const chartData = {{ chart_data_json|safe }};
+const allBloodGroups = {{ blood_groups|safe }};
+const ctx = document.getElementById('dynamicStockChart').getContext('2d');
+
+const centersMap = {};
+chartData.forEach(item => {
+    centersMap[item.center_id] = item.center;
+});
+const centers = Object.keys(centersMap);
+
+function getChartDataset(selectedCenter, selectedBloodGroup) {
+    let labels = [];
+    let datasets = [];
+
+    if (selectedCenter === "all" && selectedBloodGroup === "all") {
+        labels = centers.map(id => centersMap[id]);
+        datasets = allBloodGroups.map((bg, idx) => ({
+            label: bg,
+            data: centers.map(id => {
+                const centerData = chartData.find(item => item.center_id == id);
+                return centerData ? centerData.stock[bg] || 0 : 0;
+            }),
+            backgroundColor: `rgba(${50+idx*20},${100+idx*10},${200-idx*10},0.7)`
+        }));
+    } else if (selectedCenter === "all") {
+        labels = centers.map(id => centersMap[id]);
+        datasets = [{
+            label: selectedBloodGroup,
+            data: centers.map(id => {
+                const centerData = chartData.find(item => item.center_id == id);
+                return centerData ? centerData.stock[selectedBloodGroup] || 0 : 0;
+            }),
+            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+        }];
+    } else if (selectedBloodGroup === "all") {
+        const centerData = chartData.find(item => item.center_id == selectedCenter);
+        labels = allBloodGroups;
+        datasets = [{
+            label: centersMap[selectedCenter],
+            data: allBloodGroups.map(bg => centerData ? centerData.stock[bg] || 0 : 0),
+            backgroundColor: allBloodGroups.map((bg, idx) => `rgba(${50+idx*20},${100+idx*10},${200-idx*10},0.7)`)
+        }];
+    } else {
+        const centerData = chartData.find(item => item.center_id == selectedCenter);
+        labels = [selectedBloodGroup];
+        datasets = [{
+            label: `${centersMap[selectedCenter]} - ${selectedBloodGroup}`,
+            data: [centerData ? centerData.stock[selectedBloodGroup] || 0 : 0],
+            backgroundColor: 'rgba(255,99,132,0.7)'
+        }];
+    }
+    return { labels, datasets };
+}
+
+let currentCenter = "all";
+let currentBloodGroup = "all";
+let stockChart = null;
+
+function updateChart() {
+    const { labels, datasets } = getChartDataset(currentCenter, currentBloodGroup);
+    if (stockChart) {
+        stockChart.data.labels = labels;
+        stockChart.data.datasets = datasets;
+        stockChart.update();
+    } else {
+        stockChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { stacked: false, title: { display: true, text: currentCenter === "all" ? "Centers" : "Blood Groups" }},
+                    y: { beginAtZero: true, title: { display: true, text: 'Stock (ml)' }}
+                }
+            }
+        });
+    }
+}
+
+// Initial chart render
+updateChart();
+
+// Search filter script for Detailed Stock Units
+document.getElementById('stockSearchInput').addEventListener('input', function() {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('table.table tbody tr');
+
+    rows.forEach(row => {
+        const rowText = row.textContent.toLowerCase();
+        row.style.display = rowText.includes(filter) ? '' : 'none';
+    });
+});
+</script>
+
+{% endblock %}

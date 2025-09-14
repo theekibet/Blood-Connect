@@ -1,0 +1,191 @@
+{% extends 'patient/patientbase.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1>Frequently Asked Questions</h1>
+    <p>Your guide to understanding blood donation and transfusion</p>
+<!-- Search Bar -->
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Search FAQs..." id="faqSearchInput">
+        <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" id="faqSearchButton"><i class="fas fa-search"></i></button>
+        </div>
+    </div>
+    <div class="accordion" id="faqsAccordion">
+<!-- FAQs -->
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingOne">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        <i class="fas fa-question-circle"></i> Q: Why is blood donation important for patients?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-check-circle"></i> Blood donations are crucial for patients needing transfusions due to surgery, injury, or illness. They save lives and support those with chronic conditions.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingTwo">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        <i class="fas fa-question-circle"></i> Q: What types of blood donations are there?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-list-ul"></i>
+                    <ul>
+                        <li><b>Whole Blood Donation</b>: A pint of blood is collected.</li>
+                        <li><b>Platelet Donation</b>: Platelets are separated, often used for cancer patients.</li>
+                        <li><b>Plasma Donation</b>: Plasma is collected for clotting factors.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingThree">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        <i class="fas fa-question-circle"></i> Q: How often can one donate blood?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-calendar-alt"></i> One can donate whole blood every 56 days. Platelets can be donated more frequently (check with your center).
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingFour">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        <i class="fas fa-question-circle"></i> Q: Is blood donation safe?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-shield-alt"></i> Yes! Sterile, single-use equipment ensures your safety.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingFive">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                        <i class="fas fa-question-circle"></i> What happens to donated blood?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseFive" class="collapse" aria-labelledby="headingFive" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-hand-holding-heart"></i> Donated blood is processed into components like red cells and platelets for transfusions.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingSix">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                        <i class="fas fa-question-circle"></i> Can I donate blood if I'm taking medications?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseSix" class="collapse" aria-labelledby="headingSix" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-exclamation-triangle"></i> Many meds are fine, but check with your doctor/blood center to be sure!
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingSeven">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseSeven" aria-expanded="false" aria-controls="collapseSeven">
+                        <i class="fas fa-question-circle"></i> How long does the donation process take?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseSeven" class="collapse" aria-labelledby="headingSeven" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-stopwatch"></i> The process, from registration to refreshments, takes about an hour.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingEight">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseEight" aria-expanded="false" aria-controls="collapseEight">
+                        <i class="fas fa-question-circle"></i> Can one donate blood if they've recently travelled?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseEight" class="collapse" aria-labelledby="headingEight" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-map-marked-alt"></i> Some destinations may require a waiting period. Check with your local blood center.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingNine">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseNine" aria-expanded="false" aria-controls="collapseNine">
+                        <i class="fas fa-question-circle"></i> What if  a donor had a recent vaccination?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseNine" class="collapse" aria-labelledby="headingNine" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-check-square"></i> Most vaccines (including flu) are fine, but ask your blood center to be sure.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingTen">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseTen" aria-expanded="false" aria-controls="collapseTen">
+                        <i class="fas fa-question-circle"></i> How is the blood supply ensured to be safe?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseTen" class="collapse" aria-labelledby="headingTen" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-shield-alt"></i> Donations undergo rigorous screening, testing, and processing for safety.
+                </div>
+            </div>
+        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingTwelve">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left faq-question collapsed" type="button" data-toggle="collapse" data-target="#collapseTwelve" aria-expanded="false" aria-controls="collapseTwelve">
+                        <i class="fas fa-question-circle"></i> How can patients in need of transfusions benefit from blood donations?
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseTwelve" class="collapse" aria-labelledby="headingTwelve" data-parent="#faqsAccordion">
+                <div class="card-body faq-answer">
+                    <i class="fas fa-user-md"></i> Patients receive components to help with recovery or chronic condition management.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .faq-question {color: #007bff; font-weight: bold;text-decoration: none;transition: color 0.2s ease-in-out;}
+    .faq-question:hover {color: #0056b3; }
+    .faq-answer {color: #333; }
+</style>
+<script>
+    $(document).ready(function(){
+        $("#faqSearchInput").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("#faqsAccordion .card").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    });
+</script>
+{% endblock %}

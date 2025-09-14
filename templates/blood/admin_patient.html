@@ -1,0 +1,150 @@
+{% extends 'blood/adminbase.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+<style>
+    .table { font-family: 'Arial Black', sans-serif; border-collapse: collapse; width: 100%; }
+    .table th, .table td { padding: 12px; text-align: center; vertical-align: middle; border: 1px solid #dee2e6; }
+    .table thead { background: linear-gradient(to right, #ff4b1f, #1fddff); color: white; text-shadow: 2px 2px 4px #000000; }
+    .table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+    .table tbody tr:hover { background-color: #e6f7ff; transition: background-color 0.3s ease; }
+    .btn-primary.badge-pill, .btn-danger.badge-pill, .btn-info.badge-pill { border-radius: 20px; transition: background-color 0.3s ease; }
+    .btn-primary.badge-pill:hover { background-color: #0056b3; }
+    .btn-danger.badge-pill:hover { background-color: #c82333; }
+    .btn-info.badge-pill:hover { background-color: #117a8b; }
+    .container { animation: fadeIn 1s ease-in-out; padding-top: 20px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    .profile-pic { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; }
+    .action-column { white-space: nowrap; }
+    .badge-rare { background: #ff9800; color: #fff; }
+    .badge-critical { background: #dc3545; color: #fff; }
+    .badge-normal { background: #28a745; color: #fff; }
+    @media (max-width: 768px) {
+        .table th, .table td { padding: 8px; font-size: 0.9em; }
+        .action-column a, .action-column form { display: block; margin-bottom: 5px; }
+    }
+</style>
+
+<div class="container mt-5">
+    <h4 class="text-center mb-4"><i class="fas fa-user-injured" style="color: #007bff;"></i> Patient Details</h4>
+
+    <!-- Search Bar -->
+    <div class="mb-3">
+        <input type="text" id="patientSearch" class="form-control" placeholder="Search by name, blood group, mobile...">
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success text-center" role="alert">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table table-light table-hover table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Profile</th>
+                    <th>Blood Group</th>
+                    <th>Age</th>
+                    <th>Disease</th>
+                    <th>Mobile</th>
+                    <th>National ID</th>
+                    <th>Emergency Contact</th>
+                    <th>Gender</th>
+                    <th>Last Request</th>
+                    <th>Last Appointment</th>
+                    <th>Status</th>
+                    <th class="action-column">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr {% if patient.is_critical %}class="table-danger"{% endif %}>
+                    <td>{{ patient.get_name }}</td>
+                    <td>
+                        {% if patient.profile_pic %}
+                            <img src="{{ patient.profile_pic.url }}" alt="Profile Pic" class="img-thumbnail profile-pic" />
+                        {% else %}
+                            <img src="{% static 'images/default-profile.png' %}" alt="Default Profile Pic" class="img-thumbnail profile-pic" />
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ patient.bloodgroup|default:"N/A" }}
+                        {% if patient.bloodgroup in 'AB-,B-' %}
+                            <span class="badge badge-rare ms-1">Rare</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ patient.age|default:"Not Provided" }}</td>
+                    <td>{{ patient.disease|default:"No disease info" }}</td>
+                    <td>{{ patient.mobile|default:"No mobile number" }}</td>
+                    <td>
+                        {% if patient.national_id %}
+                            {{ patient.national_id }}
+                        {% else %}
+                            <span class="text-muted">Not Provided</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if patient.emergency_contact %}
+                            {{ patient.emergency_contact }}
+                        {% else %}
+                            <span class="text-muted">Not Provided</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ patient.gender|default:"Unspecified" }}</td>
+                    <td>
+                        {% if patient.last_request %}
+                            {{ patient.last_request|date:"M d, Y" }}
+                        {% else %}
+                            <span class="text-muted">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if patient.last_appointment %}
+                            {{ patient.last_appointment|date:"M d, Y" }}
+                        {% else %}
+                            <span class="text-muted">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if patient.is_critical %}
+                            <span class="badge badge-critical">Critical</span>
+                        {% else %}
+                            <span class="badge badge-normal">Normal</span>
+                        {% endif %}
+                    </td>
+                    <td class="action-column">
+                        <a href="{% url 'update-patient' patient.id %}" class="btn btn-sm btn-primary badge-pill mb-1">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <form action="{% url 'delete-patient' patient.id %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger badge-pill"
+                                    onclick="return confirm('Are you sure you want to delete this patient?');">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="13" class="text-center">No patients found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.getElementById('patientSearch').addEventListener('keyup', function() {
+    var query = this.value.toLowerCase();
+    document.querySelectorAll('.table tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+    });
+});
+</script>
+{% endblock content %}

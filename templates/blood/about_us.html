@@ -1,0 +1,57 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-image: url('{% static "image/aboutus.jpg" %}'); background-size: cover; background-attachment: fixed; }
+.about-us-container { max-width: 800px; margin: auto; padding: 20px; background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+h1 { text-align: center; margin-bottom: 20px; animation: fadeInDown 1s; }
+.section { margin-bottom: 20px; }
+.section h2 { margin-bottom: 10px; animation: fadeInLeft 1s; }
+.section p { font-size: 1rem; color: #555; animation: fadeInRight 1s; }
+.btn-custom { background-color: rgb(0, 200, 255); color: white; padding: 10px 20px; border-radius: 4px; border: none; transition: background-color 0.3s ease; }
+.btn-custom:hover { background-color: rgb(0, 180, 230); }
+.back-button { display: inline-block; margin-top: 10px; }
+.contact-info { margin-top: 20px; text-align: center; }
+.contact-info a { margin: 10px; font-size: 1.2rem; color: #555; transition: color 0.3s ease; }
+.contact-info a:hover { color: rgb(0, 200, 255); }
+    </style>
+</head>
+<body>
+    <div class="about-us-container">
+        <h1><i class="fa-solid fa-circle-info"></i> About Us</h1>
+        
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Our Mission</h2>
+            <p>At Blood Connect, our mission is to bridge the gap between blood donors and those in need, fostering a community that values life and generosity. Leveraging AI and automation, we aim to streamline blood banking operations, ensuring a more efficient, secure, and responsive system that ultimately saves lives.</p>
+        </div>
+        
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Our Team</h2>
+            <p>Meet the dedicated team behind Blood Connect, working tirelessly to make a difference. Our team is passionate about harnessing technology to improve blood donation processes and enhance communication among stakeholders.</p>
+        </div>
+        
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Get Involved</h2>
+            <p>Ready to take the first step? Click the button below to learn more about our programs and initiatives.</p>
+            <a href="#" class="btn-custom">Learn More</a>
+        </div>
+        
+        <div class="contact-info">
+            <p>Stay Connected:</p>
+            <a href="tel:+254781024762"><i class="fa-solid fa-phone"></i> +254781024762</a>
+            <a href="mailto:allankibet1820@gmail.com"><i class="fa-solid fa-envelope"></i> allankibet1820@gmail.com</a>
+        </div>
+        
+        <div class="back-button">
+            <button onclick="history.back()" class="btn btn-custom">Back</button>
+        </div>
+    </div>
+</body>
+</html>

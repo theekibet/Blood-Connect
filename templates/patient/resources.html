@@ -1,0 +1,49 @@
+{% extends 'patient/patientbase.html' %}
+{% block content %}
+<style>
+  .resources-container {margin-top: 3rem; margin-bottom: 3rem;}
+  .resources-header {font-weight: 700; font-size: 2.5rem; color: #d32f2f; margin-bottom: 1.5rem; text-align: center;}
+  .resources-intro {font-size: 1.1rem; color: #555;max-width: 700px;margin: 0 auto 3rem auto;text-align: center;line-height: 1.6;}
+  .resource-card {background: #fff;border-radius: 12px;box-shadow: 0 4px 18px rgba(211, 47, 47, 0.15);padding: 2rem;margin-bottom: 2rem;transition: box-shadow 0.3s ease;}
+  .resource-card:hover {box-shadow: 0 8px 36px rgba(211, 47, 47, 0.3);}
+  .resource-title {font-size: 1.5rem;color: #d32f2f;font-weight: 700;margin-bottom: 1rem;}
+  .resource-description {font-size: 1rem;color: #333;line-height: 1.5;margin-bottom: 1rem;}
+  .resource-source {font-size: 0.9rem;color: #777;}
+  .resource-source a {color: #d32f2f;text-decoration: none;font-weight: 600;}
+  .resource-source a:hover {text-decoration: underline;}
+</style>
+<div class="container resources-container">
+  <h1 class="resources-header">Health Resources</h1>
+  
+
+  <div class="resource-card" role="region" aria-labelledby="sickle-cell-title">
+    <h2 id="sickle-cell-title" class="resource-title">Sickle Cell Disease and Blood Donation</h2>
+    <p class="resource-description">
+      Highlighting the critical need for ethnically matched blood donors to help sickle cell patients receive compatible blood, reducing complications.
+    </p>
+    <p class="resource-source">
+      Source: <a href="https://www.redcrossblood.org" target="_blank" rel="noopener noreferrer">Red Cross Blood Donation - Sickle Cell</a>
+    </p>
+  </div>
+
+  <div class="resource-card" role="region" aria-labelledby="safety-title">
+    <h2 id="safety-title" class="resource-title">Blood Donation Safety and Procedures</h2>
+    <p class="resource-description">
+      Information about safety measures, testing of donated blood for infectious diseases, and how blood is handled to ensure patient safety.
+    </p>
+    <p class="resource-source">
+      Source: <a href="https://www.nhlbi.nih.gov/health-topics/blood-donation" target="_blank" rel="noopener noreferrer">NHLBI Blood Donation Safety</a>
+    </p>
+  </div>
+
+  <div class="resource-card" role="region" aria-labelledby="education-title">
+    <h2 id="education-title" class="resource-title">Blood Health Education Resources</h2>
+    <p class="resource-description">
+      Educational materials about blood diseases, disorders, and caregiving tips for patients and families.
+    </p>
+    <p class="resource-source">
+      Source: <a href="https://www.nhlbi.nih.gov/education/blood/resources-for-patients-caregivers" target="_blank" rel="noopener noreferrer">NHLBI Blood Health Resources</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

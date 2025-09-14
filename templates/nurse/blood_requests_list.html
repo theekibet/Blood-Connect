@@ -1,0 +1,102 @@
+{% extends 'nurse/nursebase.html' %}
+{% block title %}My Blood Requests{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">My Blood Requests</h2>
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Blood Group</th>
+          <th scope="col">Units (ml)</th>
+          <th scope="col">Donation Centre</th>
+          <th scope="col">Reason</th>
+          <th scope="col">Status</th>
+          <th scope="col">Requested On</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td>{{ req.blood_group }}</td>
+          <td>{{ req.units }}</td>
+          <td>{{ req.supplying_center.name }}</td>
+          <td>{{ req.reason|default:"N/A" }}</td>
+          <td>
+            {% if req.status == 'pending' %}
+              <span class="badge bg-warning text-dark">Pending</span>
+            {% elif req.status == 'approved' %}
+              <span class="badge bg-success">Approved</span>
+            {% elif req.status == 'rejected' %}
+              <span class="badge bg-danger">Rejected</span>
+            {% elif req.status == 'fulfilled' %}
+              <span class="badge bg-info text-dark">Fulfilled</span>
+            {% else %}
+              <span class="badge bg-secondary text-light">{{ req.status|capfirst }}</span>
+            {% endif %}
+          </td>
+          <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
+        </tr>
+
+        {% if req.status == 'fulfilled' %}
+        <tr>
+          <td colspan="6" class="p-0">
+            <button class="btn btn-link btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#stockUnitsUsed{{ req.id }}" aria-expanded="false" aria-controls="stockUnitsUsed{{ req.id }}">
+              Show stock units used to fulfill
+            </button>
+            <div class="collapse ps-3" id="stockUnitsUsed{{ req.id }}">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col">Batch Barcode</th>
+                    <th scope="col">Units Used (ml)</th>
+                    <th scope="col">Expiry Date</th>
+                    <th scope="col">Supplying Centre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for allocation in req.nursebloodrequeststockunit_set.all %}
+                  <tr>
+                    <td>{{ allocation.stock_unit.barcode }}</td>
+                    <td>{{ allocation.units_used }}</td>
+                    <td>{{ allocation.stock_unit.expiry_date|date:"M d, Y" }}</td>
+                    <td>{{ allocation.stock_unit.center.name }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-muted text-center fst-italic">No stock units recorded.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted fst-italic">You have no blood requests.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Bootstrap collapse script: Ensure Bootstrap 5 JS is loaded in base template -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var collapseTriggers = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    collapseTriggers.forEach(function(trigger) {
+      trigger.addEventListener('click', function() {
+        var target = document.querySelector(this.getAttribute('data-bs-target'));
+        if (target) {
+          new bootstrap.Collapse(target, {toggle: true});
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

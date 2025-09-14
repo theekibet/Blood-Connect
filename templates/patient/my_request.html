@@ -1,0 +1,189 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  .container { max-width: 1100px; margin: auto; padding-top: 40px; }
+  h1 { color: #dc3545; font-weight: 700; margin-bottom: 20px; }
+  table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 6px 18px rgba(220,53,69,0.15); 
+    overflow: hidden; 
+  }
+  th, td { 
+    padding: 12px; 
+    border-bottom: 1px solid #eee; 
+    text-align: left; 
+    vertical-align: top; 
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  thead th { 
+    background: linear-gradient(90deg,#dc3545 60%,#e17055 100%); 
+    color: white; 
+    font-weight: 700; 
+  }
+  tbody tr:hover { background-color: #ffe6e6; }
+  .badge { font-size: 0.85rem; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .btn { padding: 5px 10px; margin-right: 5px; font-size: 0.8rem; }
+  .cancel-info { font-size: 0.8rem; color: #6c757d; margin-top: 3px; }
+  .activity-log-entry {
+    display: block;
+    font-size: 0.85rem;
+    color: #444;
+    white-space: nowrap;
+    margin-bottom: 3px;
+  }
+  @media (max-width:768px) {
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { display: none; }
+    tbody tr {
+      margin-bottom: 20px;
+      border-radius: 12px;
+      background: #fff5f5;
+      box-shadow: 0 6px 18px rgba(220,53,69,0.1);
+      padding: 15px;
+    }
+    tbody td {
+      padding-left: 50%;
+      position: relative;
+      text-align: left;
+      border-bottom: none;
+      white-space: normal;
+      overflow: visible;
+    }
+    tbody td::before {
+      content: attr(data-label);
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #dc3545;
+      white-space: nowrap;
+    }
+  }
+</style>
+
+<div class="container">
+  <h1>MY REQUESTS & APPOINTMENTS</h1>
+
+  {% if blood_requests %}
+    <table>
+      <thead>
+        <tr>
+          <th>Type / Applicant</th>
+          <th>Blood Group</th>
+          <th>Units</th>
+          <th>Center</th>
+          <th>Request Date</th>
+          <th>Appointment Date</th>
+          <th>Appointment Status</th>
+          <th>Activity Log</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in blood_requests %}
+          <tr>
+            <td data-label="Type / Applicant">
+              {% if req.request_by_patient %}
+                Patient: {{ req.request_by_patient.user.get_full_name }}
+              {% elif req.request_by_donor %}
+                Donor: {{ req.request_by_donor.user.get_full_name }}
+              {% else %}
+                Unknown
+              {% endif %}
+            </td>
+
+            <td data-label="Blood Group">{{ req.bloodgroup }}</td>
+            <td data-label="Units">{{ req.unit }}</td>
+            <td data-label="Center">{{ req.donation_center.name }}</td>
+            <td data-label="Request Date">{{ req.created_at|date:"M d, Y h:i A" }}</td>
+
+            <td data-label="Appointment Date">
+              {% if req.appointment %}
+                {{ req.appointment.date|date:"M d, Y h:i A" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td data-label="Appointment Status" style="white-space: nowrap;">
+              {% if req.appointment %}
+                {% if req.appointment.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% elif req.appointment.status == 'approved' %}
+                  <span class="badge bg-success">Approved</span>
+                {% elif req.appointment.status == 'rejected' %}
+                  <span class="badge bg-danger">Rejected</span>
+                {% elif req.appointment.status|lower == 'cancelled' or 'cancelled' in req.appointment.status|lower %}
+                  <span class="badge bg-secondary">Cancelled</span>
+                  {% if req.appointment.cancelled_by_user or req.appointment.cancelled_at %}
+                    <div class="cancel-info">
+                      {% if req.appointment.cancelled_by_user %}
+                        Cancelled by: {{ req.appointment.cancelled_by_user.get_full_name }}
+                      {% endif %}
+                      {% if req.appointment.cancelled_at %}
+                        on {{ req.appointment.cancelled_at|date:"M d, Y h:i A" }}
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="cancel-info">{{ req.appointment.status }}</div>
+                  {% endif %}
+                {% elif req.appointment.status == 'completed' %}
+                  <span class="badge bg-info text-dark">Completed</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ req.appointment.status }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">No appointment</span>
+              {% endif %}
+            </td>
+
+            <td data-label="Activity Log" style="white-space: normal; max-width: 180px;">
+              {% if req.approved_by_admin %}
+                <span class="activity-log-entry">Admin approved ({{ req.approved_at_admin|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if req.approved_by_nurse %}
+                <span class="activity-log-entry">Nurse approved ({{ req.approved_at_nurse|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if req.completed_by_admin %}
+                <span class="activity-log-entry">Admin completed ({{ req.completed_at_admin|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if req.completed_by_nurse %}
+                <span class="activity-log-entry">Nurse completed ({{ req.completed_at_nurse|date:"M d H:i" }})</span>
+              {% endif %}
+              {% if req.status == 'cancelled' and req.cancelled_by %}
+                <span class="activity-log-entry">Cancelled by {{ req.cancelled_by|capfirst }}{% if req.cancelled_at %} ({{ req.cancelled_at|date:"M d H:i" }}){% endif %}</span>
+              {% endif %}
+              {% if req.status == 'rejected' and req.rejected_by %}
+                <span class="activity-log-entry">Rejected by {{ req.rejected_by|capfirst }}{% if req.rejected_at %} ({{ req.rejected_at|date:"M d H:i" }}){% endif %}</span>
+              {% endif %}
+              {% if not req.approved_by_admin and not req.approved_by_nurse and not req.completed_by_admin and not req.completed_by_nurse and req.status not in 'cancelled,rejected' %}
+                <em>No activity yet</em>
+              {% endif %}
+            </td>
+
+            <td data-label="Actions" style="min-width: 110px;">
+              {% if req.appointment and req.appointment.date > now and req.appointment.status|lower in "pending approved" %}
+                <a href="{% url 'cancel-request' req.id %}" class="btn btn-warning">Cancel</a>
+              {% else %}
+                <em>No actions</em>
+              {% endif %}
+            </td>
+
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted">No blood requests found.</p>
+  {% endif %}
+</div>
+{% endblock %}

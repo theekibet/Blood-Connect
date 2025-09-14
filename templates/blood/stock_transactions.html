@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Stock Transactions for Blood Request {{ transactions.first.blood_request.id }}</h2>
+
+  {% if transactions %}
+    <table class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th>Barcode</th>
+          <th>Transaction Type</th>
+          <th>Quantity Added</th>
+          <th>Quantity Deducted</th>
+          <th>Expiry Date</th>
+          <th>Transaction Date</th>
+          <th>Performed By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+          <tr>
+            <td>{{ t.stockunit.barcode }}</td>
+            <td>{{ t.get_transaction_type_display }}</td>
+            <td>{{ t.quantity_added|default:"-" }}</td>
+            <td>{{ t.quantity_deducted|default:"-" }}</td>
+            <td>{{ t.stockunit.expiry_date }}</td>
+            <td>{{ t.transaction_at|date:"M d, Y H:i" }}</td>
+            <td>{{ t.user.get_full_name|default:"System" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No stock transaction records found for this blood request.</p>
+  {% endif %}
+{% endblock %}

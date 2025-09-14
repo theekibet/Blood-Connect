@@ -1,0 +1,856 @@
+{% extends 'nurse/nursebase.html' %}
+{% load static %}
+{% block content %}
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root{--primary-color:#dc3545;--primary-gradient:linear-gradient(135deg,#dc3545 0%,#e17055 100%);--nurse-color:#17a2b8;--nurse-gradient:linear-gradient(135deg,#17a2b8 0%,#20c997 100%);--success-color:#28a745;--warning-color:#ffc107;--info-color:#17a2b8;--danger-color:#dc3545;--secondary-color:#6c757d;--light-bg:#f8f9fa;--border-radius:12px;--shadow:0 6px 18px rgba(23,162,184,0.15);--transition:all .3s ease;}
+    .container{max-width:1200px;margin:auto;padding:20px;}
+    .page-header{background:var(--nurse-gradient);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:30px;box-shadow:var(--shadow);}
+    .page-header h1{margin:0;font-weight:700;display:flex;align-items:center;gap:15px;}
+    .message-container{margin-bottom:20px;}
+    .search-section{background:#fff;padding:20px;border-radius:var(--border-radius);box-shadow:var(--shadow);margin-bottom:30px;}
+    .search-input{border:2px solid #e9ecef;border-radius:8px;padding:12px 20px;font-size:16px;transition:var(--transition);}
+    .search-input:focus{border-color:var(--nurse-color);box-shadow:0 0 0 .2rem rgba(23,162,184,.25);}
+    .table-container{background:#fff;border-radius:var(--border-radius);box-shadow:var(--shadow);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;margin:0;}
+    th,td{padding:15px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid #eee;}
+    thead th{background:var(--nurse-gradient);color:#fff;font-weight:700;position:sticky;top:0;z-index:10;}
+    tbody tr{transition:var(--transition);}
+    tbody tr:hover{background-color:#f0fdff;transform:scale(1.01);}
+    .status-badge{padding:6px 12px;border-radius:20px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+    .status-pending{background:#fff3cd;color:#856404;}
+    .status-approved{background:#d4edda;color:#155724;}
+    .status-rejected{background:#f8d7da;color:#721c24;}
+    .status-completed{background:#d1ecf1;color:#0c5460;}
+    .status-cancelled{background:#e2e3e5;color:#383d41;}
+    .btn{padding:8px 16px;border:none;border-radius:6px;font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:6px;margin:2px;}
+    .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+    .btn-success{background:var(--success-color);color:#fff;}
+    .btn-danger{background:var(--danger-color);color:#fff;}
+    .btn-info{background:var(--info-color);color:#fff;}
+    .btn-secondary{background:var(--secondary-color);color:#fff;}
+    .btn:disabled{opacity:.6;cursor:not-allowed;transform:none!important;}
+    .action-buttons{display:flex;flex-wrap:wrap;gap:5px;}
+    .conflict-warning{background-color:#fff3cd;border:1px solid #ffeaa7;color:#856404;padding:10px;border-radius:5px;margin:10px 0;}
+    .success-message{background-color:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:10px;border-radius:5px;margin:10px 0;}
+    .error-message{background-color:#f8d7da;border:1px solid #f5c6cb;color:#721c24;padding:10px;border-radius:5px;margin:10px 0;}
+    .action-disabled{opacity:.6;cursor:not-allowed;}
+    .activity-log{font-size:.85rem;line-height:1.3;}
+    .activity-log .timestamp{color:#666;font-weight:normal;}
+    .activity-log .actor{font-weight:bold;}
+    .activity-log .admin-action{color:#dc3545;}
+    .activity-log .nurse-action{color:#007bff;}
+    .requester-info{display:flex;flex-direction:column;}
+    .requester-name{font-weight:700;color:#2c3e50;}
+    .requester-details{font-size:.85rem;color:#6c757d;}
+    .blood-type{font-weight:700;font-size:1.1rem;color:var(--primary-color);}
+    .appointment-time{font-weight:600;color:var(--nurse-color);}
+    .modal-content{border-radius:var(--border-radius);border:none;box-shadow:0 10px 30px rgba(0,0,0,.3);}
+    .modal-header{background:var(--nurse-gradient);color:#fff;border-radius:var(--border-radius) var(--border-radius) 0 0;}
+    .form-control,.form-select{border:2px solid #e9ecef;border-radius:8px;padding:10px 15px;transition:var(--transition);}
+    .form-control:focus,.form-select:focus{border-color:var(--nurse-color);box-shadow:0 0 0 .2rem rgba(23,162,184,.25);}
+    .alert{border:none;border-radius:var(--border-radius);padding:15px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+    .alert-dismissible .btn-close{padding:8px;}
+    .no-data{text-align:center;padding:60px 20px;color:#6c757d;}
+    .no-data i{font-size:4rem;margin-bottom:20px;opacity:.5;}
+    .loading-spinner{display:inline-block;width:1rem;height:1rem;border:.2rem solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    @media(max-width:768px){.container{padding:10px;}table{font-size:.85rem;}th,td{padding:10px 8px;}.btn{padding:6px 12px;font-size:.8rem;}}
+  </style>
+</head>
+
+<div class="container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>
+      <i class="fas fa-user-nurse"></i>
+      Blood Request Appointments
+    </h1>
+    <p class="mb-0">Manage and process blood requests assigned to you</p>
+  </div>
+
+  <!-- Messages Container -->
+  <div id="nurse-messages" class="message-container"></div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <label for="bloodRequestSearch" class="form-label fw-bold">
+      <i class="fas fa-search"></i> Search Appointments
+    </label>
+    <input type="search" id="bloodRequestSearch" class="form-control search-input" 
+           placeholder="Search by requester name, blood group, contact, status...">
+    <small class="form-text text-muted mt-2">
+      <i class="fas fa-info-circle"></i> Type to filter appointments in real-time
+    </small>
+  </div>
+
+  {% if appointments %}
+  <div class="table-container">
+    <div style="max-height: 600px; overflow-y: auto;">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th><i class="fas fa-user"></i> Requester</th>
+            <th><i class="fas fa-id-card"></i> Type</th>
+            <th><i class="fas fa-phone"></i> Contact</th>
+            <th><i class="fas fa-tint"></i> Blood Details</th>
+            <th><i class="fas fa-hospital"></i> Center</th>
+            <th><i class="fas fa-calendar-alt"></i> Date</th>
+            <th><i class="fas fa-flag"></i> Status</th>
+            <th><i class="fas fa-cogs"></i> Actions</th>
+            <th><i class="fas fa-history"></i> Activity Log</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for appointment in appointments %}
+          {% with req=appointment.request %}
+          <tr id="appointment-row-{{ appointment.id }}" data-appointment-id="{{ appointment.id }}">
+            <!-- Requester Info -->
+            <td>
+              <div class="requester-info">
+                {% if req.request_by_patient %}
+                  <div class="requester-name">{{ req.request_by_patient.user.get_full_name }}</div>
+                  <div class="requester-details">Patient Request</div>
+                {% elif req.request_by_donor %}
+                  <div class="requester-name">{{ req.request_by_donor.user.get_full_name }}</div>
+                  <div class="requester-details">For: {{ req.patient_name }} (Age: {{ req.patient_age }})</div>
+                {% else %}
+                  <div class="text-muted">Unknown</div>
+                {% endif %}
+              </div>
+            </td>
+
+            <!-- Type -->
+            <td>
+              {% if req.request_by_patient %}
+                <span class="badge bg-primary">Patient</span>
+              {% elif req.request_by_donor %}
+                <span class="badge bg-info">Donor Request</span>
+              {% else %}
+                <span class="badge bg-secondary">Unknown</span>
+              {% endif %}
+            </td>
+
+            <!-- Contact -->
+            <td>
+              {% if req.request_by_patient %}
+                <i class="fas fa-phone"></i> {{ req.request_by_patient.mobile|default:"N/A" }}
+              {% elif req.request_by_donor %}
+                <i class="fas fa-phone"></i> {{ req.request_by_donor.mobile|default:"N/A" }}
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+
+            <!-- Blood Details -->
+            <td>
+              <div class="blood-type">{{ req.bloodgroup|default:"N/A" }}</div>
+              <div class="text-muted">{{ req.unit|default:"N/A" }} ml</div>
+            </td>
+
+            <!-- Center -->
+            <td>
+              <div class="fw-bold">{{ req.donation_center.name|default:"N/A" }}</div>
+            </td>
+
+            <!-- Date -->
+            <td>
+              <div class="appointment-time">{{ appointment.date|date:"M d, Y" }}</div>
+              <div class="text-muted">{{ appointment.date|date:"h:i A" }}</div>
+            </td>
+
+            <!-- Status -->
+            <td>
+              <span class="status-badge status-{{ appointment.status }}">
+                {{ appointment.status|title }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td>
+              {% comment %}Check for admin conflicts before showing actions{% endcomment %}
+              {% if req.approved_by_admin or req.rejected_by == 'admin' or req.completed_by_admin or req.cancelled_by == 'admin' %}
+                <div class="conflict-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  Admin has already acted on this request.
+                </div>
+              {% elif appointment.status == 'pending' %}
+                <div class="action-buttons">
+                  <button class="btn btn-success update-status-btn"
+                          data-id="{{ appointment.id }}" 
+                          data-action="approve"
+                          data-original-text="<i class='fas fa-check'></i> Approve">
+                    <i class="fas fa-check"></i> Approve
+                  </button>
+                  <button class="btn btn-danger update-status-btn"
+                          data-id="{{ appointment.id }}" 
+                          data-action="reject"
+                          data-original-text="<i class='fas fa-times'></i> Reject">
+                    <i class="fas fa-times"></i> Reject
+                  </button>
+                </div>
+              {% elif appointment.status == 'approved' %}
+                <button class="btn btn-info"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#completeModal-{{ appointment.id }}">
+                  <i class="fas fa-check-double"></i> Complete
+                </button>
+              {% else %}
+                <div class="text-muted">
+                  <i class="fas fa-info-circle"></i> No actions available
+                  {% if appointment.status == 'completed' %}
+                    - Request completed
+                  {% elif appointment.status == 'cancelled' %}
+                    - Request cancelled
+                  {% elif appointment.status == 'rejected' %}
+                    - Request rejected
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+            
+            <!-- Activity Log -->
+            <td class="activity-log">
+              {% if req.approved_by_admin %}
+                <div class="admin-action">
+                  <i class="fas fa-user-shield"></i> 
+                  <span class="actor">Admin</span> approved 
+                  <span class="timestamp">({{ req.approved_at_admin|date:"M d H:i" }})</span>
+                </div>
+              {% endif %}
+              
+              {% if req.approved_by_nurse %}
+                <div class="nurse-action">
+                  <i class="fas fa-user-nurse"></i> 
+                  <span class="actor">Nurse</span> approved 
+                  <span class="timestamp">({{ req.approved_at_nurse|date:"M d H:i" }})</span>
+                </div>
+              {% endif %}
+              
+              {% if req.completed_by_admin %}
+                <div class="admin-action">
+                  <i class="fas fa-user-shield"></i> 
+                  <span class="actor">Admin</span> completed 
+                  <span class="timestamp">({{ req.completed_at_admin|date:"M d H:i" }})</span>
+                </div>
+              {% endif %}
+              
+              {% if req.completed_by_nurse %}
+                <div class="nurse-action">
+                  <i class="fas fa-user-nurse"></i> 
+                  <span class="actor">Nurse</span> completed 
+                  <span class="timestamp">({{ req.completed_at_nurse|date:"M d H:i" }})</span>
+                </div>
+              {% endif %}
+              
+              {% if appointment.status == 'cancelled' and req.cancelled_by %}
+                <div class="{% if req.cancelled_by == 'admin' %}admin-action{% else %}nurse-action{% endif %}">
+                  <i class="fas fa-{% if req.cancelled_by == 'admin' %}user-shield{% else %}user-nurse{% endif %}"></i> 
+                  <span class="actor">{{ req.cancelled_by|capfirst }}</span> cancelled 
+                  <span class="timestamp">({{ req.cancelled_at|date:"M d H:i" }})</span>
+                  {% if req.cancellation_reason %}
+                    <br><small class="text-muted">Reason: {{ req.cancellation_reason }}</small>
+                  {% endif %}
+                </div>
+              {% endif %}
+              
+              {% if appointment.status == 'rejected' and req.rejected_by %}
+                <div class="{% if req.rejected_by == 'admin' %}admin-action{% else %}nurse-action{% endif %}">
+                  <i class="fas fa-{% if req.rejected_by == 'admin' %}user-shield{% else %}user-nurse{% endif %}"></i> 
+                  <span class="actor">{{ req.rejected_by|capfirst }}</span> rejected 
+                  <span class="timestamp">({{ req.rejected_at|date:"M d H:i" }})</span>
+                  {% if req.rejection_reason %}
+                    <br><small class="text-muted">Reason: {{ req.rejection_reason }}</small>
+                  {% endif %}
+                </div>
+              {% endif %}
+              
+              {% if not req.approved_by_admin and not req.approved_by_nurse and not req.completed_by_admin and not req.completed_by_nurse and appointment.status not in "cancelled,rejected" %}
+                <div class="text-muted">
+                  <i class="fas fa-clock"></i> <em>No activity yet</em>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Completion Modal -->
+          <div class="modal fade" id="completeModal-{{ appointment.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+              <form method="post" class="complete-form" data-id="{{ appointment.id }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="completed" />
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">
+                      <i class="fas fa-check-double"></i> Complete Blood Request
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="alert alert-warning">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <strong>Important:</strong> These values will be used to deduct blood stock from inventory.
+                    </div>
+                    
+                    <div class="alert alert-info">
+                      <strong>Patient:</strong> 
+                      {% if req.request_by_patient %}
+                        {{ req.request_by_patient.user.get_full_name }}
+                      {% elif req.request_by_donor %}
+                        {{ req.patient_name }} (Age: {{ req.patient_age }})
+                      {% else %}
+                        N/A
+                      {% endif %}
+                      <br>
+                      <strong>Appointment:</strong> {{ appointment.date|date:"M d, Y h:i A" }}<br>
+                      <strong>Center:</strong> {{ req.donation_center.name|default:"N/A" }}
+                    </div>
+                    
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-tint"></i> Confirm Blood Group *
+                        </label>
+                        <select name="bloodgroup" class="form-select" required>
+                          {% for bg_value, bg_label in req.BLOOD_GROUP_CHOICES %}
+                            <option value="{{ bg_value }}" {% if req.bloodgroup == bg_value %}selected{% endif %}>
+                              {{ bg_label }}
+                            </option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-flask"></i> Confirm Units (ml) *
+                        </label>
+                        <input type="number" name="unit" min="450" max="2700" step="50" 
+                               class="form-control" value="{{ req.unit }}" required>
+                        <small class="form-text text-muted">Must be between 450-2700 ml in multiples of 50</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                      <i class="fas fa-check-double"></i> Confirm & Complete
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Rejection Modal -->
+          <div class="modal fade" id="rejectModal-{{ appointment.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+              <form method="post" class="reject-form" data-id="{{ appointment.id }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject" />
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">
+                      <i class="fas fa-times-circle text-danger"></i> Reject Blood Request
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="alert alert-warning">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <strong>Warning:</strong> This action will reject the blood request and notify the requester.
+                    </div>
+                    
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">
+                        <i class="fas fa-comment"></i> Reason for Rejection (Optional)
+                      </label>
+                      <textarea name="reason" class="form-control" rows="3" 
+                                placeholder="Please provide a reason for rejection (e.g., insufficient documentation, medical contraindications, etc.)"></textarea>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                      <i class="fas fa-times"></i> Confirm Rejection
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Cancellation Modal -->
+          <div class="modal fade" id="cancelModal-{{ appointment.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+              <form method="post" class="cancel-form" data-id="{{ appointment.id }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancelled" />
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">
+                      <i class="fas fa-ban text-secondary"></i> Cancel Blood Request
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="alert alert-warning">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <strong>Warning:</strong> This action will cancel the blood request appointment.
+                    </div>
+                    
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">
+                        <i class="fas fa-comment"></i> Reason for Cancellation (Optional)
+                      </label>
+                      <textarea name="reason" class="form-control" rows="3" 
+                                placeholder="Please provide a reason for cancellation (e.g., patient unavailable, scheduling conflict, etc.)"></textarea>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-secondary">
+                      <i class="fas fa-ban"></i> Confirm Cancellation
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>" name="action" value="completed" />
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">
+                      <i class="fas fa-check-double"></i> Complete Blood Request
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="alert alert-warning">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <strong>Important:</strong> These values will be used to deduct blood stock from inventory.
+                    </div>
+                    
+                    <div class="alert alert-info">
+                      <strong>Patient:</strong> 
+                      {% if req.request_by_patient %}
+                        {{ req.request_by_patient.user.get_full_name }}
+                      {% elif req.request_by_donor %}
+                        {{ req.patient_name }} (Age: {{ req.patient_age }})
+                      {% else %}
+                        N/A
+                      {% endif %}
+                      <br>
+                      <strong>Appointment:</strong> {{ appointment.date|date:"M d, Y h:i A" }}<br>
+                      <strong>Center:</strong> {{ req.donation_center.name|default:"N/A" }}
+                    </div>
+                    
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-tint"></i> Confirm Blood Group *
+                        </label>
+                        <select name="bloodgroup" class="form-select" required>
+                          {% for bg_value, bg_label in req.BLOOD_GROUP_CHOICES %}
+                            <option value="{{ bg_value }}" {% if req.bloodgroup == bg_value %}selected{% endif %}>
+                              {{ bg_label }}
+                            </option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-flask"></i> Confirm Units (ml) *
+                        </label>
+                        <input type="number" name="unit" min="450" max="2700" step="50" 
+                               class="form-control" value="{{ req.unit }}" required>
+                        <small class="form-text text-muted">Must be between 450-2700 ml in multiples of 50</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                      <i class="fas fa-check-double"></i> Confirm & Complete
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+    <div class="table-container">
+      <div class="no-data">
+        <i class="fas fa-inbox"></i>
+        <h4>No Appointments Found</h4>
+        <p class="text-muted mb-0">You don't have any blood request appointments assigned to you at this time.</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // CSRF Token helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Enhanced message display with auto-dismiss
+  function showMessage(type, message, autoHide = true) {
+    const container = document.getElementById('nurse-messages');
+    const alertId = 'alert-' + Date.now();
+    
+    container.innerHTML = `
+      <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+        <i class="fas ${getIconForType(type)}"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>`;
+    
+    container.scrollIntoView({ behavior: "smooth", block: "start" });
+    
+    if (autoHide && type === 'success') {
+      setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) {
+          bootstrap.Alert.getOrCreateInstance(alert).close();
+        }
+      }, 3000);
+    }
+  }
+
+  function getIconForType(type) {
+    const icons = {
+      'success': 'fa-check-circle',
+      'danger': 'fa-exclamation-circle',
+      'warning': 'fa-exclamation-triangle',
+      'info': 'fa-info-circle'
+    };
+    return icons[type] || 'fa-info-circle';
+  }
+
+  // Enhanced search functionality
+  const searchInput = document.getElementById('bloodRequestSearch');
+  const tableRows = document.querySelectorAll('tr[data-appointment-id]');
+  
+  searchInput.addEventListener('input', function() {
+    const query = this.value.toLowerCase().trim();
+    let visibleCount = 0;
+    
+    tableRows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const shouldShow = query === '' || text.includes(query);
+      
+      row.style.display = shouldShow ? '' : 'none';
+      if (shouldShow) visibleCount++;
+      
+      if (shouldShow && query !== '') {
+        row.style.backgroundColor = '#e8f7ff';
+        setTimeout(() => {
+          row.style.backgroundColor = '';
+        }, 2000);
+      }
+    });
+    
+    // Handle no results message
+    handleNoResultsMessage(visibleCount, query);
+  });
+
+  function handleNoResultsMessage(visibleCount, query) {
+    const existingMsg = document.querySelector('.no-search-results');
+    
+    if (visibleCount === 0 && query !== '' && !existingMsg) {
+      const tbody = document.querySelector('.table tbody');
+      const noResultsRow = document.createElement('tr');
+      noResultsRow.className = 'no-search-results';
+      noResultsRow.innerHTML = `
+        <td colspan="9">
+          <div class="no-data">
+            <i class="fas fa-search"></i>
+            <h5>No Results Found</h5>
+            <p class="text-muted mb-0">No appointments match your search: "${query}"</p>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(noResultsRow);
+    } else if (visibleCount > 0 && existingMsg) {
+      existingMsg.remove();
+    }
+  }
+
+  // Enhanced confirmation messages
+  function getConfirmationMessage(action, requesterName) {
+    const messages = {
+      'approve': `Approve the blood request for ${requesterName}?\n\nThis will allow the request to proceed to completion.`,
+      'reject': `Reject the blood request for ${requesterName}?\n\nThe requester will be notified and may need to submit a new request.`,
+      'completed': `Mark the blood request for ${requesterName} as completed?\n\nThis will deduct blood from stock and finalize the request.`
+    };
+    return messages[action] || `${action} this request for ${requesterName}?`;
+  }
+
+  // Status update buttons with enhanced error handling
+  document.querySelectorAll('.update-status-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const appointmentId = button.dataset.id;
+      const action = button.dataset.action;
+      const requesterName = button.closest('tr').querySelector('.requester-name').textContent;
+      const originalText = button.dataset.originalText;
+      
+      if(!confirm(getConfirmationMessage(action, requesterName))) return;
+
+      // Disable button and show loading
+      button.disabled = true;
+      button.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+      fetch(`{% url 'nurse-update-bloodrequest-appointment-status' 0 %}`.replace('0', appointmentId), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ action: action })
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if(data.success){
+          showMessage("success", `Success: ${data.message}`);
+          
+          // Update UI immediately
+          updateRowStatus(appointmentId, data.status);
+          
+          // Reload after delay for full sync
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          showMessage("danger", `Error: ${data.error}`, false);
+          resetButton(button, originalText);
+        }
+      })
+      .catch((error) => {
+        console.error('Request failed:', error);
+        showMessage("danger", `Network error: ${error.message}`, false);
+        resetButton(button, originalText);
+      });
+    });
+  });
+
+  function resetButton(button, originalText) {
+    button.disabled = false;
+    button.innerHTML = originalText;
+  }
+
+  function updateRowStatus(appointmentId, newStatus) {
+    const row = document.getElementById(`appointment-row-${appointmentId}`);
+    if (row) {
+      const statusBadge = row.querySelector('.status-badge');
+      if (statusBadge) {
+        statusBadge.className = `status-badge status-${newStatus}`;
+        statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+      }
+    }
+  }
+
+  // Completion form handling
+  document.querySelectorAll('.complete-form').forEach(form => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const appointmentId = form.dataset.id;
+      const formData = new FormData(form);
+      const requesterName = form.closest('tr').querySelector('.requester-name').textContent;
+      
+      if(!confirm(getConfirmationMessage('completed', requesterName))) return;
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+      fetch(`{% url 'nurse-update-bloodrequest-appointment-status' 0 %}`.replace('0', appointmentId), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if(data.success){
+          showMessage("success", `Success: ${data.message}`);
+          
+          // Close modal and reload
+          const modalEl = document.getElementById(`completeModal-${appointmentId}`);
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) {
+            modal.hide();
+          }
+          
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          showMessage("danger", `Error: ${data.error}`, false);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      })
+      .catch((error) => {
+        console.error('Request failed:', error);
+        showMessage("danger", `Network error: ${error.message}`, false);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  });
+
+  // Rejection form handling
+  document.querySelectorAll('.reject-form').forEach(form => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const appointmentId = form.dataset.id;
+      const formData = new FormData(form);
+      const requesterName = form.closest('tr').querySelector('.requester-name').textContent;
+      
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+      fetch(`{% url 'nurse-update-bloodrequest-appointment-status' 0 %}`.replace('0', appointmentId), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if(data.success){
+          showMessage("success", `Success: ${data.message}`);
+          
+          // Close modal and reload
+          const modalEl = document.getElementById(`rejectModal-${appointmentId}`);
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) {
+            modal.hide();
+          }
+          
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          showMessage("danger", `Error: ${data.error}`, false);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      })
+      .catch((error) => {
+        console.error('Request failed:', error);
+        showMessage("danger", `Network error: ${error.message}`, false);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  });
+
+  // Cancellation form handling
+  document.querySelectorAll('.cancel-form').forEach(form => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const appointmentId = form.dataset.id;
+      const formData = new FormData(form);
+      const requesterName = form.closest('tr').querySelector('.requester-name').textContent;
+      
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+      fetch(`{% url 'nurse-update-bloodrequest-appointment-status' 0 %}`.replace('0', appointmentId), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if(data.success){
+          showMessage("success", `Success: ${data.message}`);
+          
+          // Close modal and reload
+          const modalEl = document.getElementById(`cancelModal-${appointmentId}`);
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) {
+            modal.hide();
+          }
+          
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          showMessage("danger", `Error: ${data.error}`, false);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      })
+      .catch((error) => {
+        console.error('Request failed:', error);
+        showMessage("danger", `Network error: ${error.message}`, false);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  });
+
+  // Auto-refresh every 5 minutes when page is visible
+  setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      console.log('Auto-refreshing appointments...');
+      window.location.reload();
+    }
+  }, 300000); // 5 minutes
+
+  // Show loading indicator on page unload
+  window.addEventListener('beforeunload', () => {
+    document.body.style.opacity = '0.7';
+  });
+});
+</script>
+{% endblock %}

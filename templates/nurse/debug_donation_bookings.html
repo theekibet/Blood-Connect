@@ -1,0 +1,95 @@
+{% extends 'nurse/nursebase.html' %}
+
+{% block content %}
+<div class="container my-4">
+  <h1 class="mb-4">DEBUG: Donation Appointments Data</h1>
+  
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <h3 class="text-primary">{{ debug_info.total_appointments }}</h3>
+          <p>Total Appointments</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <h3 class="text-info">{{ debug_info.donation_appointments }}</h3>
+          <p>Donation Appointments</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <h3 class="text-success">{{ debug_info.nurse_blood_donates }}</h3>
+          <p>BloodDonate Records</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if donor_donations %}
+    {% for appointment in donor_donations %}
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Appointment ID: {{ appointment.id }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Appointment Info:</h6>
+            <table class="table table-sm">
+              <tr><td><strong>Date:</strong></td><td>{{ appointment.date }}</td></tr>
+              <tr><td><strong>Status:</strong></td><td><span class="badge bg-primary">{{ appointment.status }}</span></td></tr>
+              <tr><td><strong>Donor:</strong></td><td>{{ appointment.donor.user.get_full_name|default:"None" }}</td></tr>
+              <tr><td><strong>Patient:</strong></td><td>{{ appointment.patient.user.get_full_name|default:"None" }}</td></tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6>Generic FK Info:</h6>
+            <table class="table table-sm">
+              <tr><td><strong>Content Type:</strong></td><td>{{ appointment.request_content_type }}</td></tr>
+              <tr><td><strong>Object ID:</strong></td><td>{{ appointment.request_object_id }}</td></tr>
+              <tr><td><strong>Request Object:</strong></td><td>{{ appointment.request|default:"None" }}</td></tr>
+            </table>
+          </div>
+        </div>
+        
+        {% if appointment.request %}
+        <hr>
+        <h6>BloodDonate Details:</h6>
+        <div class="row">
+          <div class="col-md-6">
+            <table class="table table-sm">
+              <tr><td><strong>Blood Group:</strong></td><td>{{ appointment.request.bloodgroup|default:"Not set" }}</td></tr>
+              <tr><td><strong>Unit:</strong></td><td>{{ appointment.request.unit|default:"Not set" }}</td></tr>
+              <tr><td><strong>Status:</strong></td><td><span class="badge bg-secondary">{{ appointment.request.status }}</span></td></tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <table class="table table-sm">
+              <tr><td><strong>Date:</strong></td><td>{{ appointment.request.date }}</td></tr>
+              <tr><td><strong>Center:</strong></td><td>{{ appointment.request.donation_center.name|default:"Not set" }}</td></tr>
+              <tr><td><strong>Donor Age:</strong></td><td>{{ appointment.request.donor_age|default:"N/A" }}</td></tr>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <div class="alert alert-danger">
+          <strong>ERROR:</strong> No BloodDonate object found for this appointment!
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-warning">
+      <h4>No Donation Appointments Found!</h4>
+      <p>Check the server console for detailed debug information.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

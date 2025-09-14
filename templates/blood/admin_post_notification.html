@@ -1,0 +1,117 @@
+{% extends 'blood/adminbase.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-bell"></i> Post Notification</h6>
+        </div>
+        <div class="card-body">
+            <!-- Display Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags == 'success' %}
+                        <div class="alert alert-success" role="alert">
+                            {{ message }}
+                        </div>
+                    {% elif message.tags == 'error' %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="title">Notification Title:</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="message"><i class="fas fa-comment"></i> Notification Message:</label>
+                    <textarea class="form-control" id="message" name="message" rows="4" required></textarea>
+                </div>
+
+                <!-- Recipient Type Selection -->
+                <div class="form-group">
+                    <label for="recipient_type"><i class="fas fa-users"></i> Recipient Type:</label>
+                    <select class="form-control" id="recipient_type" name="recipient_type" required>
+                        <option value="patient">Patient</option>
+                        <option value="donor">Donor</option>
+                        <option value="nurse">Nurse</option>  <!-- Changed doctor to nurse -->
+                    </select>
+                </div>
+
+                <!-- Recipient Selection -->
+                <div class="form-group">
+                    <label for="recipient_id"><i class="fas fa-user"></i> Select Recipient:</label>
+                    <select class="form-control" id="recipient_id" name="recipient_id" required>
+                        <option value="">Select a recipient</option>
+
+                        <!-- Patient group -->
+                        <optgroup label="Patients" id="patient-options">
+                            {% for patient in patients %}
+                                {% if patient.user %}
+                                    <option value="{{ patient.user.id }}" data-type="patient">{{ patient.user.username }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </optgroup>
+
+                        <!-- Donor group -->
+                        <optgroup label="Donors" id="donor-options">
+                            {% for donor in donors %}
+                                {% if donor.user %}
+                                    <option value="{{ donor.user.id }}" data-type="donor">{{ donor.user.username }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </optgroup>
+
+                        <!-- Nurse group -->
+                        <optgroup label="Nurses" id="nurse-options">
+                            {% for nurse in nurses %}
+                                {% if nurse.user %}
+                                    <option value="{{ nurse.user.id }}" data-type="nurse">{{ nurse.user.username }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </optgroup>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-paper-plane"></i> Post Notification
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript to filter recipients -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const recipientTypeSelect = document.getElementById('recipient_type');
+        const recipientIdSelect = document.getElementById('recipient_id');
+
+        function filterRecipients() {
+            const selectedType = recipientTypeSelect.value;
+
+            for (const option of recipientIdSelect.options) {
+                if (option.tagName !== 'OPTION') continue;
+
+                const type = option.getAttribute('data-type');
+                if (!type) continue; // Skip placeholder and optgroups
+
+                option.style.display = (type === selectedType) ? 'block' : 'none';
+            }
+
+            // Reset selection when type changes
+            recipientIdSelect.value = '';
+        }
+
+        // Run on page load and on change
+        filterRecipients();
+        recipientTypeSelect.addEventListener('change', filterRecipients);
+    });
+</script>
+{% endblock %}

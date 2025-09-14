@@ -1,0 +1,535 @@
+{% extends 'blood/adminbase.html' %}
+{% block content %}
+{% load widget_tweaks %}
+{% load static %}
+
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    body{background-color:#f3f5f9;}
+    .wrapper{display:flex;min-height:100vh;}
+    .main_content{margin-left:220px;padding:90px 30px 30px 30px;width:calc(100% - 220px);min-height:100vh;background:#fff;box-shadow:inset 0 0 15px #f0f0f0;border-radius:0 8px 8px 0;}
+    .activity-log{font-size:.85rem;line-height:1.3;}
+    .activity-log .timestamp{color:#666;font-weight:normal;}
+    .activity-log .actor{font-weight:bold;}
+    .activity-log .admin-action{color:#dc3545;}
+    .activity-log .nurse-action{color:#007bff;}
+    .status-pending{background-color:#ffc107!important;color:#212529;}
+    .status-approved{background-color:#28a745!important;color:#fff;}
+    .status-rejected{background-color:#dc3545!important;color:#fff;}
+    .status-completed{background-color:#17a2b8!important;color:#fff;}
+    .status-cancelled{background-color:#6c757d!important;color:#fff;}
+    .view-only-badge{background-color:#6c757d;color:#fff;padding:4px 8px;border-radius:4px;font-size:0.75rem;}
+    .nurse-assigned{background-color:#e7f3ff;border:1px solid #b3d7ff;color:#004085;padding:8px 12px;border-radius:5px;margin:5px 0;font-size:.9rem;}
+    .stats-card{background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);padding:20px;text-align:center;margin-bottom:20px;}
+    .filter-controls{background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:20px;}
+    .last-updated{font-size:0.85rem;color:#666;font-style:italic;}
+    @media(max-width:768px){
+      table,thead,tbody,th,td,tr{display:block;}
+      thead tr{display:none;}
+      tbody tr{margin-bottom:1rem;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,0.1);padding:15px;border-radius:12px;}
+      tbody td{padding-left:50%;position:relative;border-bottom:1px solid #eee;}
+      tbody td::before{content:attr(data-label);position:absolute;top:15px;left:15px;font-weight:bold;color:#dc3545;}
+    }
+  </style>
+</head>
+
+<div class="container main_content">
+  <!-- Display Django Messages -->
+  {% if messages %}
+    <div class="alert-container mb-4">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+          {% if message.tags == 'success' %}
+            <i class="fas fa-check-circle"></i>
+          {% elif message.tags == 'error' %}
+            <i class="fas fa-exclamation-triangle"></i>
+          {% elif message.tags == 'warning' %}
+            <i class="fas fa-exclamation-circle"></i>
+          {% else %}
+            <i class="fas fa-info-circle"></i>
+          {% endif %}
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-eye"></i> Blood Request Monitoring Dashboard</h4>
+    <div>
+      <span class="view-only-badge">
+        <i class="fas fa-eye"></i> VIEW ONLY MODE
+      </span>
+      <small class="last-updated ms-2">
+        Last updated: <span id="lastUpdated"></span>
+      </small>
+    </div>
+  </div>
+
+  <!-- Real-time Statistics -->
+  <div class="row mb-4">
+    <div class="col-md-2">
+      <div class="stats-card">
+        <h5 class="text-warning" id="totalRequests">{{ appointments|length }}</h5>
+        <p class="mb-0">Total Requests</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="stats-card">
+        <h5 class="text-info" id="pendingRequests">
+          {{ appointments|length|add:0 }}
+        </h5>
+        <p class="mb-0">Pending</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="stats-card">
+        <h5 class="text-success" id="approvedRequests">0</h5>
+        <p class="mb-0">Approved</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="stats-card">
+        <h5 class="text-primary" id="completedRequests">0</h5>
+        <p class="mb-0">Completed</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="stats-card">
+        <h5 class="text-danger" id="rejectedRequests">0</h5>
+        <p class="mb-0">Rejected</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="stats-card">
+        <h5 class="text-secondary" id="cancelledRequests">0</h5>
+        <p class="mb-0">Cancelled</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter and Export Controls -->
+  <div class="filter-controls">
+    <div class="row">
+      <div class="col-md-4">
+        <input type="search" id="requestSearch" class="form-control"
+               placeholder="Search by patient name, blood group, nurse...">
+      </div>
+      <div class="col-md-3">
+        <select id="statusFilter" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="completed">Completed</option>
+          <option value="rejected">Rejected</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select id="typeFilter" class="form-select">
+          <option value="">All Types</option>
+          <option value="patient">Patient Requests</option>
+          <option value="donor">Donor for Patient</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <div class="btn-group w-100">
+          <button id="refreshData" class="btn btn-outline-primary">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+          <a href="{% url 'export-bloodrequests-csv' %}" class="btn btn-success">
+            <i class="fas fa-file-csv"></i> Export
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if appointments %}
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i>
+      <strong>Note:</strong> This is a monitoring dashboard. All appointment status changes are handled by assigned nurses. 
+      You can view real-time updates and generate reports.
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Requester</th>
+            <th>Type</th>
+            <th>Patient Info</th>
+            <th>Contact</th>
+            <th>Blood Details</th>
+            <th>Center</th>
+            <th>Assigned Nurse</th>
+            <th>Status</th>
+            <th>Activity Timeline</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="appointmentsTable">
+          {% for appointment in appointments %}
+            {% with req=appointment.request %}
+            <tr data-appointment-id="{{ appointment.id }}" 
+                data-status="{{ req.status }}" 
+                data-type="{% if req.request_by_patient %}patient{% else %}donor{% endif %}">
+              
+              <!-- ID -->
+              <td data-label="ID">
+                <strong>#{{ appointment.id }}</strong>
+                <br><small class="text-muted">{{ req.id }}</small>
+              </td>
+              
+              <!-- Requester -->
+              <td data-label="Requester">
+                {% if req.request_by_patient %}
+                  <i class="fas fa-user"></i> <strong>Patient:</strong><br>
+                  {{ req.request_by_patient.user.get_full_name }}
+                {% elif req.request_by_donor %}
+                  <i class="fas fa-hand-holding-heart"></i> <strong>Donor:</strong><br>
+                  {{ req.request_by_donor.user.get_full_name }}
+                {% else %} 
+                  <span class="text-muted">Unknown</span>
+                {% endif %}
+              </td>
+
+              <!-- Type -->
+              <td data-label="Type">
+                {% if req.request_by_patient %} 
+                  <span class="badge bg-primary">
+                    <i class="fas fa-user"></i> Patient Request
+                  </span>
+                {% elif req.request_by_donor %} 
+                  <span class="badge bg-info">
+                    <i class="fas fa-hand-holding-heart"></i> Donor for Patient
+                  </span>
+                {% else %} 
+                  <span class="badge bg-secondary">Unknown</span>
+                {% endif %}
+              </td>
+
+              <!-- Patient Details -->
+              <td data-label="Patient Info">
+                <strong>Name:</strong> {{ req.patient_name|default:"N/A" }}<br>
+                <strong>Age:</strong> {{ req.patient_age|default:"N/A" }}<br>
+                {% if req.patient_gender %}
+                  <strong>Gender:</strong> {{ req.patient_gender }}
+                {% endif %}
+              </td>
+              
+              <!-- Contact -->
+              <td data-label="Contact">
+                <i class="fas fa-phone"></i> {{ req.contact_number|default:"N/A" }}
+                {% if req.request_by_patient %}
+                  <br><small>{{ req.request_by_patient.mobile }}</small>
+                {% elif req.request_by_donor %}
+                  <br><small>{{ req.request_by_donor.mobile }}</small>
+                {% endif %}
+              </td>
+
+              <!-- Blood Details -->
+              <td data-label="Blood Details">
+                <div class="mb-1">
+                  <strong>Group:</strong> 
+                  <span class="badge bg-dark">{{ req.bloodgroup|default:"N/A" }}</span>
+                </div>
+                <div class="mb-1">
+                  <strong>Units:</strong> {{ req.unit|default:"N/A" }} ml
+                </div>
+                <div>
+                  <strong>Urgency:</strong> 
+                  <span class="badge {% if req.urgency_level == 'High' %}bg-danger{% elif req.urgency_level == 'Medium' %}bg-warning{% else %}bg-success{% endif %}">
+                    {{ req.urgency_level|default:"Normal" }}
+                  </span>
+                </div>
+              </td>
+              
+              <!-- Center -->
+              <td data-label="Center">
+                <i class="fas fa-hospital"></i> {{ req.donation_center.name|default:"N/A" }}
+                {% if req.donation_center.city %}
+                  <br><small class="text-muted">{{ req.donation_center.city }}</small>
+                {% endif %}
+              </td>
+
+              <!-- Nurse Assignment -->
+              <td data-label="Assigned Nurse">
+                {% if appointment.nurse %}
+                  <div class="nurse-assigned">
+                    <i class="fas fa-user-nurse"></i> 
+                    <strong>{{ appointment.nurse.user.get_full_name }}</strong>
+                    <br><small class="text-muted">{{ appointment.nurse.user.email }}</small>
+                  </div>
+                {% else %}
+                  <span class="text-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Unassigned
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Status -->
+              <td data-label="Status">
+                <span class="badge status-{{ req.status }}">
+                  {% if req.status == 'pending' %}
+                    <i class="fas fa-clock"></i> Pending
+                  {% elif req.status == 'approved' %}
+                    <i class="fas fa-check"></i> Approved
+                  {% elif req.status == 'rejected' %}
+                    <i class="fas fa-times"></i> Rejected
+                  {% elif req.status == 'completed' %}
+                    <i class="fas fa-check-double"></i> Completed
+                  {% elif req.status == 'cancelled' %}
+                    <i class="fas fa-ban"></i> Cancelled
+                  {% else %}
+                    {{ req.status|capfirst }}
+                  {% endif %}
+                </span>
+                <br><small class="text-muted">{{ req.created_at|date:"M d, Y H:i" }}</small>
+              </td>
+
+              <!-- Activity Timeline -->
+              <td data-label="Activity" class="activity-log">
+                <div class="timeline">
+                  <!-- Creation -->
+                  <div class="mb-2">
+                    <i class="fas fa-plus-circle text-muted"></i> 
+                    <small><strong>Created</strong> - {{ req.created_at|date:"M d H:i" }}</small>
+                  </div>
+                  
+                  <!-- Nurse Assignment -->
+                  {% if appointment.nurse %}
+                    <div class="mb-2">
+                      <i class="fas fa-user-plus text-info"></i> 
+                      <small><strong>Assigned to {{ appointment.nurse.user.get_full_name }}</strong></small>
+                    </div>
+                  {% endif %}
+                  
+                  <!-- Nurse Actions -->
+                  {% if req.approved_by_nurse %}
+                    <div class="nurse-action mb-2">
+                      <i class="fas fa-check text-success"></i> 
+                      <small><strong>{{ req.approved_by_nurse.user.get_full_name }}</strong> approved</small>
+                      <br><small class="timestamp">{{ req.approved_at_nurse|date:"M d H:i" }}</small>
+                    </div>
+                  {% endif %}
+                  
+                  {% if req.completed_by_nurse %}
+                    <div class="nurse-action mb-2">
+                      <i class="fas fa-check-double text-info"></i> 
+                      <small><strong>{{ req.completed_by_nurse.user.get_full_name }}</strong> completed</small>
+                      <br><small class="timestamp">{{ req.completed_at_nurse|date:"M d H:i" }}</small>
+                    </div>
+                  {% endif %}
+                  
+                  {% if req.rejected_by == 'nurse' %}
+                    <div class="nurse-action mb-2">
+                      <i class="fas fa-times text-danger"></i> 
+                      <small><strong>Nurse</strong> rejected</small>
+                      <br><small class="timestamp">{{ req.rejected_at|date:"M d H:i" }}</small>
+                      {% if req.rejection_reason %}
+                        <br><small class="text-muted">{{ req.rejection_reason }}</small>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                  
+                  {% if req.cancelled_by == 'nurse' %}
+                    <div class="nurse-action mb-2">
+                      <i class="fas fa-ban text-secondary"></i> 
+                      <small><strong>Nurse</strong> cancelled</small>
+                      <br><small class="timestamp">{{ req.cancelled_at|date:"M d H:i" }}</small>
+                      {% if req.cancellation_reason %}
+                        <br><small class="text-muted">{{ req.cancellation_reason }}</small>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+
+                  {% if not req.approved_by_nurse and not req.completed_by_nurse and req.status not in "cancelled,rejected" %}
+                    <div class="text-muted">
+                      <i class="fas fa-hourglass-half"></i> <small><em>Awaiting nurse action</em></small>
+                    </div>
+                  {% endif %}
+                </div>
+              </td>
+
+              <!-- Created Date -->
+              <td data-label="Created">
+                <time datetime="{{ req.created_at }}">
+                  {{ req.created_at|date:"M d, Y" }}
+                  <br><small class="text-muted">{{ req.created_at|date:"H:i" }}</small>
+                </time>
+              </td>
+            </tr>
+            {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="fas fa-inbox fa-3x"></i>
+      <h5 class="mt-3">No blood request appointments found</h5>
+      <p>There are currently no appointments available for monitoring.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Update last updated timestamp
+  updateLastUpdatedTime();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(function() {
+    if (document.getElementById('refreshData')) {
+      refreshData();
+    }
+  }, 30000);
+
+  // Search functionality
+  const searchInput = document.getElementById('requestSearch');
+  const statusFilter = document.getElementById('statusFilter');
+  const typeFilter = document.getElementById('typeFilter');
+  
+  if (searchInput) {
+    searchInput.addEventListener('keyup', filterTable);
+  }
+  if (statusFilter) {
+    statusFilter.addEventListener('change', filterTable);
+  }
+  if (typeFilter) {
+    typeFilter.addEventListener('change', filterTable);
+  }
+
+  // Refresh button
+  const refreshButton = document.getElementById('refreshData');
+  if (refreshButton) {
+    refreshButton.addEventListener('click', function() {
+      refreshData();
+    });
+  }
+
+  // Initial stats calculation
+  calculateStats();
+
+  function filterTable() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const statusValue = statusFilter.value;
+    const typeValue = typeFilter.value;
+    
+    const rows = document.querySelectorAll('#appointmentsTable tr[data-appointment-id]');
+    let visibleCount = 0;
+    
+    rows.forEach(function(row) {
+      const text = row.textContent.toLowerCase();
+      const status = row.dataset.status;
+      const type = row.dataset.type;
+      
+      const matchesSearch = !searchTerm || text.includes(searchTerm);
+      const matchesStatus = !statusValue || status === statusValue;
+      const matchesType = !typeValue || type === typeValue;
+      
+      if (matchesSearch && matchesStatus && matchesType) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    
+    // Update visible count in stats
+    document.getElementById('totalRequests').textContent = visibleCount;
+  }
+
+  function calculateStats() {
+    const rows = document.querySelectorAll('#appointmentsTable tr[data-appointment-id]');
+    const stats = {
+      pending: 0,
+      approved: 0,
+      completed: 0,
+      rejected: 0,
+      cancelled: 0
+    };
+    
+    rows.forEach(function(row) {
+      const status = row.dataset.status;
+      if (stats.hasOwnProperty(status)) {
+        stats[status]++;
+      }
+    });
+    
+    // Update stat cards
+    document.getElementById('pendingRequests').textContent = stats.pending;
+    document.getElementById('approvedRequests').textContent = stats.approved;
+    document.getElementById('completedRequests').textContent = stats.completed;
+    document.getElementById('rejectedRequests').textContent = stats.rejected;
+    document.getElementById('cancelledRequests').textContent = stats.cancelled;
+  }
+
+  function refreshData() {
+    const refreshButton = document.getElementById('refreshData');
+    const originalText = refreshButton.innerHTML;
+    
+    refreshButton.disabled = true;
+    refreshButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    
+    // Simulate refresh (in real implementation, you'd make an AJAX call)
+    setTimeout(function() {
+      updateLastUpdatedTime();
+      calculateStats();
+      
+      refreshButton.disabled = false;
+      refreshButton.innerHTML = originalText;
+      
+      // Show success message
+      showMessage('Data refreshed successfully', 'success');
+    }, 1000);
+  }
+
+  function updateLastUpdatedTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+      hour12: true, 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    document.getElementById('lastUpdated').textContent = timeString;
+  }
+
+  function showMessage(message, type) {
+    const alertContainer = document.querySelector('.alert-container');
+    if (alertContainer) {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+      alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      alertContainer.appendChild(alertDiv);
+      
+      // Auto-hide after 3 seconds
+      setTimeout(function() {
+        const alert = new bootstrap.Alert(alertDiv);
+        alert.close();
+      }, 3000);
+    }
+  }
+
+  // Auto-dismiss existing messages after 5 seconds
+  setTimeout(function() {
+    const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+    alerts.forEach(alert => {
+      const bsAlert = new bootstrap.Alert(alert);
+      bsAlert.close();
+    });
+  }, 5000);
+});
+</script>
+{% endblock %}

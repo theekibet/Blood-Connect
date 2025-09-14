@@ -1,0 +1,83 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<div class="page-wrapper bg-gra-03 p-t-45 p-b-50">
+    <div class="wrapper wrapper--w790">
+        <div class="card card-5" style="margin-left:70px;">
+            <div class="card-heading">
+                <h2 class="title">Find Donation Centers Near You</h2>
+            </div>
+            <div class="card-body">
+
+                <!-- Search Form -->
+                <form method="get" action="" style="margin-bottom:20px;">
+                    <div class="input-group">
+                        <input type="text" name="q" placeholder="Search by city or address..." class="input--style-5" value="{{ query }}">
+                        <button type="submit" class="btn btn--radius-2 btn-primary" style="margin-left:10px;">Search</button>
+                    </div>
+                </form>
+
+                <!-- Map -->
+                <div id="map" style="height: 400px; margin-bottom: 30px; border-radius:10px;"></div>
+
+                <hr>
+
+                <!-- List of Centers -->
+                {% for center in centers %}
+                    <div class="card" style="padding:15px; margin-bottom:10px;">
+                        <div class="card-body">
+                            <h5>{{ center.name }}</h5>
+                            <p><strong>Address:</strong> {{ center.address }}</p>
+                            <p><strong>City:</strong> {{ center.city }}</p>
+                            <p><strong>Contact:</strong> {{ center.contact_number }}</p>
+                            <p><strong>Open Hours:</strong> {{ center.open_hours }}</p>
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ center.latitude }},{{ center.longitude }}" target="_blank" class="btn btn-info btn-sm mt-2">Get Directions</a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p>No donation centers found for your search.</p>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize map
+    var map = L.map('map').setView([20.5937, 78.9629], 5); 
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add center markers
+    {% for center in centers %}
+        {% if center.latitude and center.longitude %}
+            L.marker([{{ center.latitude }}, {{ center.longitude }}])
+                .addTo(map)
+                .bindPopup("<b>{{ center.name }}</b><br>{{ center.address }}<br>{{ center.city }}<br>📞 {{ center.contact_number }}");
+        {% endif %}
+    {% endfor %}
+
+    // Auto-fit map to markers if there are centers
+    {% if centers %}
+        var group = L.featureGroup([
+            {% for center in centers %}
+                {% if center.latitude and center.longitude %}
+                    L.marker([{{ center.latitude }}, {{ center.longitude }}]),
+                {% endif %}
+            {% endfor %}
+        ]);
+        map.fitBounds(group.getBounds().pad(0.2));
+    {% endif %}
+</script>
+
+{% endblock %}

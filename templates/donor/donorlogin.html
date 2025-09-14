@@ -1,0 +1,377 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Donor Login</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Font Awesome CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Google Fonts: Open Sans & Poppins for modern look -->
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,700|Poppins:400,600,700&display=swap" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link href="{% static 'css/main.css' %}" rel="stylesheet" media="all">
+  <style>
+    .capslock-warning {
+      color: #dc3545;
+      font-size: 0.88rem;
+      font-weight: 500;
+      margin-top: 5px;
+      display: none;
+    }
+    body {
+      font-family: 'Poppins', 'Open Sans', Arial, sans-serif;
+      background: linear-gradient(120deg, #f8fafc 0%, #fbeee6 100%);
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeInBody 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInBody {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    .content-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .card {
+      background: rgba(255,255,255,0.97);
+      border: none;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+      overflow: hidden;
+      max-width: 420px;
+      margin: 0;
+      animation: cardSlideIn 0.9s cubic-bezier(.4,0,.2,1);
+      transition: box-shadow 0.3s;
+    }
+    .card:hover {
+      box-shadow: 0 16px 40px 0 rgba(220,53,69,0.22);
+    }
+    @keyframes cardSlideIn {
+      from {
+        transform: translateY(40px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    .card-heading {
+      background: linear-gradient(90deg, #dc3545 60%, #e17055 100%);
+      color: #fff;
+      text-align: center;
+      padding: 28px 20px 18px 20px;
+      border-radius: 18px 18px 0 0;
+      font-weight: 700;
+      font-size: 1.7rem;
+      letter-spacing: 1.2px;
+      box-shadow: 0 2px 10px rgba(220,53,69,0.09);
+      position: relative;
+    }
+    .card-heading i {
+      font-size: 2.4rem;
+      margin-bottom: 8px;
+      display: block;
+      animation: bounceIn 0.7s;
+    }
+    @keyframes bounceIn {
+      0% {
+        transform: scale(0.7);
+        opacity: 0;
+      }
+      70% {
+        transform: scale(1.15);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    .card-body {
+      padding: 32px 28px 24px 28px;
+    }
+    .form-group {
+      margin-bottom: 22px;
+      position: relative;
+    }
+    label {
+      font-weight: 600;
+      color: #444;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+      display: block;
+    }
+    .form-control {
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 13px 16px;
+      font-size: 1rem;
+      background: #f9f9f9;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      box-shadow: none;
+    }
+    .form-control:focus {
+      border-color: #dc3545;
+      box-shadow: 0 0 0 2px rgba(220,53,69,0.11);
+      background: #fff;
+    }
+    .show-password-toggle {
+      position: absolute;
+      right: 18px;
+      top: 44px;
+      cursor: pointer;
+      color: #bdbdbd;
+      font-size: 1.1rem;
+      z-index: 2;
+      transition: color 0.2s;
+    }
+    .show-password-toggle:hover,
+    .show-password-toggle:focus {
+      color: #dc3545;
+      outline: none;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #dc3545 80%, #e17055 100%);
+      border: none;
+      padding: 13px 0;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.7px;
+      transition: background 0.3s, transform 0.2s;
+      box-shadow: 0 2px 8px rgba(220,53,69,0.08);
+    }
+    .btn-primary:hover,
+    .btn-primary:focus {
+      background: linear-gradient(90deg, #c0392b 80%, #e17055 100%);
+      transform: translateY(-2px) scale(1.02);
+      outline: none;
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+    .alert {
+      border-radius: 8px;
+      margin-bottom: 18px;
+      font-size: 0.98rem;
+      animation: fadeInAlert 0.7s;
+    }
+    @keyframes fadeInAlert {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    .error-message {
+      color: #dc3545;
+      font-size: 0.94rem;
+      margin-top: 5px;
+      display: block;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+    }
+    .form-check-label {
+      font-size: 0.97rem;
+      color: #666;
+      font-weight: 500;
+    }
+    .register-link,
+    .back-button {
+      text-align: center;
+      margin-top: 18px;
+    }
+    .register-link a {
+      color: #dc3545;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.23s;
+    }
+    .register-link a:hover {
+      color: #c0392b;
+      text-decoration: underline;
+    }
+    .back-button .btn-custom {
+      background: transparent;
+      border: 2px solid #dc3545;
+      color: #dc3545;
+      padding: 9px 22px;
+      border-radius: 5px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+    .back-button .btn-custom:hover,
+    .back-button .btn-custom:focus {
+      background: #dc3545;
+      color: #fff;
+      outline: none;
+    }
+    .text-secondary {
+      color: #888 !important;
+      font-size: 0.97rem;
+      transition: color 0.2s;
+    }
+    .text-secondary:hover {
+      color: #dc3545 !important;
+      text-decoration: underline;
+    }
+    /* Add this to position navbar at the bottom */
+    .navbar {
+      margin-top: auto;
+      width: 100%;
+    }
+    @media (max-width: 576px) {
+      .card {
+        max-width: 98vw;
+      }
+      .card-body {
+        padding: 16px 7vw 18px 7vw;
+      }
+      .card-heading {
+        font-size: 1.2rem;
+        padding: 18px 8px 12px 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="content-wrapper">
+    <div class="card shadow mt-5" role="main" aria-labelledby="donor-login-heading">
+      <div class="card-heading" id="donor-login-heading">
+        <i class="fas fa-hand-holding-heart"></i> Donor Login
+      </div>
+      <div class="card-body">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center">
+              <i class="fas fa-info-circle mr-2"></i> {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+        <form method="POST" autocomplete="on" aria-label="Donor Login Form" action="{% url 'donorlogin' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="{{ form.username.id_for_label }}"><i class="fas fa-user mr-1"></i> Username</label>
+            {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username"|attr:"autofocus:autofocus" }}
+            {% if form.username.errors %}
+              <span class="error-message" role="alert"><i class="fas fa-exclamation-circle mr-1"></i> {{ form.username.errors|striptags }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group position-relative">
+            <label for="{{ form.password.id_for_label }}"><i class="fas fa-lock mr-1"></i> Password</label>
+            {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password"|attr:"type:password" }}
+            <span class="show-password-toggle" tabindex="0" aria-label="Show or hide password" onclick="togglePassword()" onkeypress="if(event.key==='Enter'){togglePassword();}">
+              <i class="fa fa-eye" id="togglePasswordIcon"></i>
+            </span>
+            <div id="capsWarning" class="capslock-warning"><i class="fas fa-exclamation-triangle"></i> Caps Lock is ON</div>
+            {% if form.password.errors %}
+              <span class="error-message" role="alert"><i class="fas fa-exclamation-circle mr-1"></i> {{ form.password.errors|striptags }}</span>
+            {% endif %}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              {% for error in form.non_field_errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+            <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i> Login</span>
+            <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          </button>
+
+          <div class="text-right mt-2">
+            <a href="{% url 'password_reset' %}" class="text-secondary"><i class="fas fa-key mr-1"></i> Forgot password?</a>
+          </div>
+        </form>
+
+        <div class="register-link">
+          <span>Don't have an account?</span>
+          <a href="{% url 'donorsignup' %}"><i class="fas fa-user-plus"></i> Register here</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="back-button">
+    <button onclick="history.back()" class="btn btn-custom"><i class="fas fa-arrow-left"></i> Back</button>
+  </div>
+
+  {% include "blood/navbar.html" %}
+
+  <!-- Bootstrap JavaScript -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <script>
+    // Password show/hide toggle
+    function togglePassword() {
+      const passwordField = document.querySelector('input[type="password"], input[name="password"]');
+      const icon = document.getElementById('togglePasswordIcon');
+      if (passwordField.type === "password") {
+        passwordField.type = "text";
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        passwordField.type = "password";
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    // Loading spinner on submit
+    document.querySelector('form').addEventListener('submit', function() {
+      document.getElementById('loginBtnText').classList.add('d-none');
+      document.getElementById('loginSpinner').classList.remove('d-none');
+    });
+
+    // CAPSLOCK detection
+    const passwordInput = document.querySelector('input[name="password"]');
+    const capsWarning = document.getElementById('capsWarning');
+
+    passwordInput.addEventListener('keyup', function(e) {
+      if (e.getModifierState('CapsLock')) {
+        capsWarning.style.display = 'block';
+      } else {
+        capsWarning.style.display = 'none';
+      }
+    });
+
+    passwordInput.addEventListener('blur', function() {
+      capsWarning.style.display = 'none';
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!-- Contact Success Page -->
+<div class="success-message">
+    <h1><i class="fa fa-check-circle"></i> Thank you for your message!</h1>
+    <p>We appreciate your feedback and will respond as soon as possible.</p>
+    <a href="{% url 'home' %}"><i class="fa fa-home"></i> Return to Home</a>
+</div>
+
+<!-- CSS Styling -->
+<style>
+    /* General Styling */
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Lato', sans-serif;
+        background: linear-gradient(135deg, #B30000, #81C784); /* Green gradient background */
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .success-message {
+        text-align: center;
+        padding: 50px 20px;
+        background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+        border-radius: 15px; /* Rounded corners */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Elevated shadow effect */
+        animation: fadeInScale 1s ease-in-out; /* Animation effect */
+    }
+
+    .success-message h1 {
+        color: #4CAF50; /* Green color for success */
+        margin-bottom: 15px;
+        font-size: 2.5em;
+        animation: slideInLeft 1s ease-in-out; /* Slide-in animation */
+    }
+
+    .success-message p {
+        font-size: 1.2em;
+        margin-bottom: 20px;
+        color: #555; /* Subtle gray text for better readability */
+    }
+
+    .success-message a {
+        display: inline-block;
+        background-color: #4CAF50; /* Green background for link */
+        color: white;
+        padding: 12px 25px;
+        border-radius: 5px; /* Rounded corners */
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 1em;
+        transition: all 0.3s ease-in-out; /* Smooth hover transition */
+    }
+
+    .success-message a:hover {
+        background-color: #388E3C; /* Darker green on hover */
+        transform: scale(1.1); /* Slight zoom effect on hover */
+    }
+
+    .fa {
+        margin-right: 8px; /* Space between icon and text */
+    }
+
+    /* Animations */
+    @keyframes fadeInScale {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    @keyframes slideInLeft {
+        from {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+
+<!-- Include Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8eLTWv5XZX7KocUQHAw1QNaXaDvFqrqmWfacFeI5IFekbeU7Mm3NAewA+penJs52U1c+9DbRS13HslU4w==" crossorigin="anonymous" referrerpolicy="no-referrer" />

@@ -1,0 +1,282 @@
+{% extends 'patient/patientbase.html' %}
+
+{% block content %}
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        .xyz { font-size: 3ex; }
+        .card { border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); transition: transform 0.3s; }
+        .card:hover { transform: scale(1.05); }
+        .card-body { text-align: center; }
+        .blood { margin-bottom: 10px; }
+        .resource-section { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px; }
+        .resource-item { margin-bottom: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; transition: background 0.3s; }
+        .resource-item:hover { background: #e9ecef; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes shake {
+            10%,90%{transform:translate3d(-1px,0,0);}
+            20%,80%{transform:translate3d(2px,0,0);}
+            30%,50%,70%{transform:translate3d(-4px,0,0);}
+            40%,60%{transform:translate3d(4px,0,0);}
+        }
+
+        .patient-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #e9ecef; }
+        .avatar-placeholder { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; color: #6c757d; background: #e9ecef; border-radius: 50%; }
+        .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .location-info { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 0.95rem; color: #555; }
+        .location-info i { color: #007bff; }
+        #updateLocationBtn { font-size: 0.85rem; }
+    </style>
+</head>
+
+<br><br>
+<div class="container">
+    <!-- Welcome Section -->
+    <div class="welcome-card card mb-4 p-3 shadow-sm">
+        <div class="d-flex align-items-center">
+            {% if patient.profile_pic %}
+                <img src="{{ patient.profile_pic.url }}" class="patient-avatar me-3 rounded-circle" alt="Profile picture of {{ request.user.first_name }}">
+            {% else %}
+                <div class="avatar-placeholder me-3 text-muted">
+                    <i class="fas fa-user-circle fa-3x"></i>
+                </div>
+            {% endif %}
+            <div>
+                <h3 class="mb-1">Welcome, <strong>{{ request.user.first_name }}</strong></h3>
+                <div class="patient-meta mb-2">
+                    <span class="badge bg-primary">{{ patient.get_bloodgroup_display }}</span>
+                </div>
+
+                <!-- Location -->
+                <div class="location-info small text-muted" id="locationDisplay">
+                    <i class="fas fa-map-marker-alt text-danger"></i>
+                    {% if patient.address %}
+                        {{ patient.address|truncatechars:30 }},
+                    {% endif %}
+                    Lat: <span id="latText">{{ patient.latitude|default:"N/A" }}</span>, 
+                    Lon: <span id="lonText">{{ patient.longitude|default:"N/A" }}</span>
+                    {% if patient.location_name %}
+                        <br>
+                        <small>Location: <span id="locationName">{{ patient.location_name }}</span></small>
+                    {% endif %}
+                    <button id="updateLocationBtn" class="btn btn-sm btn-outline-primary ms-3" type="button" title="Update your current location" aria-label="Update location">
+                        <i class="fas fa-location-arrow"></i> Update Location
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mb-4 action-buttons">
+        <a href="{% url 'nearby-eligible-donors' %}" class="btn btn-success btn-lg shadow-sm">
+            <i class="fas fa-users"></i> Find Nearby Eligible Donors
+        </a>
+        <a href="{% url 'nearby-centers' %}" class="btn btn-primary btn-lg shadow-sm">
+            <i class="fas fa-hospital"></i> Locate Nearby Donation Centers
+        </a>
+    </div>
+    
+    <!-- Dashboard Layout -->
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Blood Request Stats -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Blood Request Stats</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for stat in blood_request_stats %}
+                        <div class="col-6 col-md-3">
+                            <div class="card bg-light border-0 shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <i class="{{ stat.icon_class }} fa-2x text-primary mb-2"></i>
+                                    <div><strong>{{ stat.label }}</strong></div>
+                                    <div class="fs-5">{{ stat.count }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center">No stats available</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Appointments -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Upcoming Appointments</h4>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_appointments %}
+                        <div class="list-group">
+                            {% for app in upcoming_appointments %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center {% if app.status|lower != 'approved' %}bg-light text-muted{% endif %}">
+                                    <div>
+                                        {% if app.status|lower == 'approved' %}
+                                            <strong>Dr. {{ app.nurse.user.get_full_name }}</strong>
+                                            <div class="text-muted">{{ app.nurse.donation_center.name }}</div>
+                                        {% else %}
+                                            <strong>Appointment pending approval</strong>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        {% if app.status|lower == 'approved' %}
+                                            <div>{{ app.date|date:"M d, Y" }}</div>
+                                            <div>{{ app.date|time:"H:i" }}</div>
+                                            <span class="badge bg-success mt-2">Approved</span>
+                                        {% else %}
+                                            <span class="badge bg-warning mt-2">Status: {{ app.status|capfirst }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No upcoming appointments</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Help Card -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-hands-helping me-2"></i>Need Help?</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p>If you need assistance, please contact our support team.</p>
+                    <a href="tel:+254781024762" class="btn btn-outline-danger btn-sm mb-2 w-100">
+                        <i class="fas fa-phone"></i> Call Support
+                    </a>
+                    <a href="mailto:allankibet1826@gmail.com" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-envelope"></i> Email Support
+                    </a>
+                </div>
+            </div>
+
+            <!-- Health Tips -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Health Tips</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <h6><i class="fas fa-running text-success"></i> Stay Active</h6>
+                            <p class="small text-muted">Engage in regular exercise to boost your immune system.</p>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <h6><i class="fas fa-tint text-danger"></i> Hydrate Well</h6>
+                            <p class="small text-muted">Drink plenty of water before and after donation.</p>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <h6><i class="fas fa-apple-alt text-warning"></i> Eat Healthy</h6>
+                            <p class="small text-muted">Maintain a balanced diet rich in iron & vitamins.</p>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <h6><i class="fas fa-bed text-primary"></i> Rest Well</h6>
+                            <p class="small text-muted">Aim for 7–8 hours of sleep every night.</p>
+                        </div>
+                        <div class="col-12">
+                            <h6><i class="fas fa-book-open text-info"></i> Learn More</h6>
+                            <p class="small text-muted">
+                                Explore <a href="{% url 'patient-resources' %}">resources</a> and <a href="{% url 'patient-faqs' %}">FAQs</a>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- row -->
+</div>
+
+<!-- Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const locationDisplay = document.getElementById('locationDisplay');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        document.cookie.split(';').forEach(cookie => {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+            }
+        });
+        return cookieValue;
+    }
+
+    function attachUpdateHandler() {
+        const updateBtn = document.getElementById('updateLocationBtn');
+        if (!updateBtn) return;
+
+        updateBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+
+            locationDisplay.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Locating...`;
+
+            navigator.geolocation.getCurrentPosition(position => {
+                const latitude = position.coords.latitude.toFixed(6);
+                const longitude = position.coords.longitude.toFixed(6);
+                const csrftoken = getCookie('csrftoken');
+
+                fetch("{% url 'save-user-location' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: new URLSearchParams({ latitude, longitude })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const addressText = `{% if patient.address %}{{ patient.address|escapejs }}, {% endif %}`;
+                        locationDisplay.innerHTML = `
+                            <i class="fas fa-map-marker-alt text-danger"></i>
+                            ${addressText} Lat: <span id="latText">${latitude}</span>,
+                            Lon: <span id="lonText">${longitude}</span>
+                            <br><small>Location: <span id="locationName">${data.location_name || 'N/A'}</span></small>
+                            <button id="updateLocationBtn" class="btn btn-sm btn-outline-primary ms-3" type="button">
+                                <i class="fas fa-location-arrow"></i> Update Location
+                            </button>`;
+                        attachUpdateHandler(); // rebind handler 
+                        alert("Location updated successfully!");
+                    } else {
+                        throw new Error(data.message || "Failed to update location");
+                    }
+                })
+                .catch(err => {
+                    alert("Error updating location: " + err.message);
+                    attachUpdateHandler();
+                });
+            }, error => {
+                let message = "An unknown error occurred.";
+                if (error.code === error.PERMISSION_DENIED) message = "Permission denied for location access.";
+                if (error.code === error.POSITION_UNAVAILABLE) message = "Location unavailable.";
+                if (error.code === error.TIMEOUT) message = "Location request timed out.";
+                alert(message);
+                attachUpdateHandler();
+            });
+        });
+    }
+
+    attachUpdateHandler();
+});
+</script>
+{% endblock %}

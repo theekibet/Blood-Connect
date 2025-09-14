@@ -1,0 +1,31 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+  <h2>Nearby Compatible Donors</h2>
+
+  {% if nearby_donors %}
+    <p>You (blood group: <strong>{{ user_blood_type }}</strong>) have {{ nearby_donors|length }} donors nearby who are eligible to donate.</p>
+
+    <div class="list-group">
+      {% for donor, distance in nearby_donors %}
+        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <div>
+            <h5>{{ donor.user.get_full_name }}</h5>
+            <p>Blood Group: {{ donor.bloodgroup }}</p>
+            <p>Mobile: {{ donor.mobile }}</p>
+            <p>Last Donation: {{ donor.last_donation_date|default:"Never" }}</p>
+          </div>
+          <small class="text-muted">{{ distance }} km away</small>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <p>No eligible donors found nearby based on your location and blood type.</p>
+  {% endif %}
+
+  <a href="{% url 'patient-dashboard' %}" class="btn btn-secondary mt-4">Back to Dashboard</a>
+</div>
+{% endblock %}

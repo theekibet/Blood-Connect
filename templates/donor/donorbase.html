@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DONOR</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+
+    <style>
+        /* General styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            list-style: none;
+            text-decoration: none;
+            font-family: 'Josefin Sans', sans-serif;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f3f5f9;
+        }
+
+        .bg-danger {
+            background-color: #ff0018 !important;
+        }
+
+        /* Sidebar styling */
+        .wrapper {
+            display: flex;
+            position: relative;
+        }
+
+        .wrapper .sidebar {
+            width: 240px;
+            height: 100vh;
+            background: #343a40;
+            padding: 30px 0px;
+            position: fixed;
+            overflow-y: auto;
+        }
+
+        .wrapper .sidebar h2 {
+            color: #fff;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .wrapper .sidebar ul li {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .wrapper .sidebar ul li a {
+            color: #fff;
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .wrapper .sidebar ul li a .fas {
+            color: #ff0018;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .wrapper .sidebar ul li:hover {
+            background-color: #594f8d;
+        }
+
+        .wrapper .sidebar ul li:hover a {
+            color: #fff;
+        }
+
+        .wrapper .sidebar .social_media {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+        }
+
+        .wrapper .sidebar .social_media a {
+            display: block;
+            width: 40px;
+            background: #594f8d;
+            height: 40px;
+            line-height: 45px;
+            text-align: center;
+            margin: 0 5px;
+            color: #bdb8d7;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+
+        .wrapper .main_content {
+            width: calc(100% - 240px);
+            margin-left: 240px;
+            padding: 20px;
+            min-height: 100vh;
+            background-color: #fff;
+        }
+
+        .wrapper .main_content .header {
+            padding: 20px;
+            background: #fff;
+            color: #717171;
+            border-bottom: 1px solid #e0e4e8;
+        }
+
+        /* Bell Shake Animation */
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(-15deg); }
+            75% { transform: rotate(15deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .animate-shake {
+            animation: shake 0.5s infinite;
+        }
+
+        /* Navbar profile image */
+        .navbar-nav .nav-link img {
+            width: 30px;
+            height: 30px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 50%;
+            border: 1.5px solid #fff;
+        }
+
+        /* Badge styling for notification dot */
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 0.65rem;
+            transform: translate(50%, -50%);
+        }
+
+        .badge-success {
+            background-color: #28a745 !important;
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light fixed-top bg-danger">
+    <a style="color:white;" class="navbar-brand" href="/">
+        <i class="fas fa-hand-holding-heart"></i>&nbsp;
+        <span style="font-family:'Comic Sans MS'; font-size: 1.25rem;">DONOR ACCOUNT</span>
+    </a>
+
+    <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
+        <ul class="navbar-nav ml-auto align-items-center">
+
+            <!-- Eligibility / Rewards icon -->
+            <li class="nav-item mx-2">
+                <a class="nav-link" style="color:white; position: relative;" href="{% url 'donor-eligibility-status' %}" data-toggle="tooltip" title="Rewards / Eligibility">
+                    <i class="fas fa-medal fa-lg"></i>
+                </a>
+            </li>
+
+            <!-- Notifications -->
+            <li class="nav-item">
+                <a class="nav-link position-relative" style="color:white;" href="{% url 'donor-notifications' %}" data-toggle="tooltip" title="Notifications" aria-label="Notifications">
+                    <i class="fas fa-bell {% if donor_unread_notification_count > 0 %}animate-shake{% endif %}"></i>
+                    {% if donor_unread_notification_count > 0 %}
+                        <span class="badge badge-success notification-badge">{{ donor_unread_notification_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+
+            <!-- Profile Dropdown -->
+            {% if request.user.is_authenticated and request.user.donor %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="donorDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="color:white;">
+                    {% if request.user.donor.profile_pic %}
+                        <img src="{{ request.user.donor.profile_pic.url }}" alt="Profile Picture" />
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Default Avatar" />
+                    {% endif %}
+                    <i class="fas fa-user-circle"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="donorDropdown">
+                    <a class="dropdown-item" href="{% url 'donor-profile' %}">View Profile</a>
+                    <a class="dropdown-item" href="{% url 'donor-edit-profile' %}">Edit Profile</a>
+                    <a class="dropdown-item" href="#" onclick="return false;">Change Password</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="{% url 'logout' %}">Logout</a>
+                </div>
+            </li>
+            {% endif %}
+
+            <!-- Logout fallback if no donor profile -->
+            {% if not request.user.is_authenticated or not request.user.donor %}
+            <li class="nav-item">
+                <a class="nav-link" style="color:white;" href="{% url 'logout' %}" title="Logout">
+                    Logout &nbsp; <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </li>
+            {% endif %}
+
+        </ul>
+    </div>
+</nav>
+
+<br><br>
+<div class="wrapper">
+    <div class="sidebar">
+        <h2>Donor Panel</h2>
+        <ul>
+            <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="/donor/donate-blood"><i class="fas fa-hand-holding-medical"></i> Donate Blood</a></li>
+            <li><a href="/donor/donation-history"><i class="fas fa-history"></i> Donation History</a></li>
+            <li><a href="/donor/make-request"><i class="fas fa-sync-alt"></i> Blood Request</a></li>
+            <li><a href="/donor/request-history"><i class="fas fa-history"></i> Request History</a></li>
+        </ul>
+
+        <div class="social_media">
+            <a href="#" style="background-color: #594f8d;" class="fab fa-facebook-f"></a>
+            <a href="#" style="background-color: #594f8d;" class="fab fa-twitter"></a>
+            <a href="#" style="background-color: #594f8d;" class="fab fa-instagram"></a>
+        </div>
+    </div>
+    <div class="main_content">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock content %}
+    </div>
+</div>
+
+<!-- Optional JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" 
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" 
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" 
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" 
+        crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" 
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" 
+        crossorigin="anonymous"></script>
+
+<script src="{% static 'js/main.js' %}"></script>
+
+<script>
+  $(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip();
+  });
+</script>
+
+</body>
+</html>

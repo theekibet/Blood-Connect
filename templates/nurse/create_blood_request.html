@@ -1,0 +1,139 @@
+{% extends 'nurse/nursebase.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 600px;">
+  <h2 class="mb-4 text-danger fw-bold text-center">Create Blood Request</h2>
+
+  <form method="post" novalidate aria-describedby="formInstructions">
+    {% csrf_token %}
+
+    <!-- Minimal initial instruction with collapsible detailed help -->
+    <p id="formInstructions" class="text-center mb-4 fst-italic">
+      Fill in the details below to create a blood request.and await admin response of supplying centre.
+      <a class="btn btn-link p-0" data-bs-toggle="collapse" href="#detailedHelp" role="button" aria-expanded="false" aria-controls="detailedHelp">
+       
+      </a>
+    </p>
+    <div class="collapse mb-4" id="detailedHelp">
+      <div class="card card-body bg-light small">
+        <ul class="mb-0 ps-3">
+          <li><strong>Blood Group:</strong> Prefilled and read-only to avoid errors.</li>
+          <li><strong>Donation Centre:</strong> Choose from centres with sufficient stock available.</li>
+          <li><strong>Units (ml):</strong> Enter the amount you need, minimum 1 ml; larger quantities allowed if your blood stock is low.</li>
+          <li><strong>Reason:</strong> Provide a brief, clear reason for your request.</li>
+          <li><strong>Urgency Level:</strong> Indicate how urgent your blood request is.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Blood Group (readonly) -->
+    <div class="mb-3">
+      <label for="id_blood_group" class="form-label fw-semibold" 
+             data-bs-toggle="tooltip" data-bs-placement="right" title="This field is prefilled based on your prior selection.">
+        Blood Group <i class="fas fa-info-circle text-muted"></i>
+      </label>
+      <input type="text"
+             name="blood_group"
+             id="id_blood_group"
+             class="form-control"
+             value="{{ blood_group_prefill|default_if_none:'' }}"
+             readonly
+             aria-readonly="true"
+             tabindex="-1">
+      {% if form.blood_group.errors %}
+        <div class="invalid-feedback d-block">{{ form.blood_group.errors|striptags }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Supplying Center Dropdown -->
+    <div class="mb-3">
+      <label for="id_supplying_center" class="form-label fw-semibold" 
+             data-bs-toggle="tooltip" data-bs-placement="right" title="Select a donation centre with enough stock to fulfill your request.">
+        Donation Centre <i class="fas fa-info-circle text-muted"></i>
+      </label>
+      <select name="supplying_center"
+              id="id_supplying_center"
+              class="form-select{% if form.supplying_center.errors %} is-invalid{% endif %}"
+              required aria-required="true">
+        <option value="" disabled {% if not sufficient_centres %}selected{% endif %}>-- Choose Centre --</option>
+        {% for centre_id, centre_name in sufficient_centres %}
+          <option value="{{ centre_id }}"
+            {% if form.supplying_center.value|stringformat:"s" == centre_id|stringformat:"s" %}selected{% endif %}>
+            {{ centre_name }}
+          </option>
+        {% empty %}
+          <option disabled selected>No centres with sufficient stock available</option>
+        {% endfor %}
+      </select>
+      {% if form.supplying_center.errors %}
+        <div class="invalid-feedback">{{ form.supplying_center.errors|striptags }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Units Input -->
+    <div class="mb-3">
+      <label for="{{ form.units.id_for_label }}" class="form-label fw-semibold" 
+             data-bs-toggle="tooltip" data-bs-placement="right" title="Input the amount of blood needed in milliliters. Minimum of 1 ml.">
+        Units (ml) <i class="fas fa-info-circle text-muted"></i>
+      </label>
+      {{ form.units|add_class:"form-control"|attr:"aria-describedby=unitsHelp" }}
+      {% if form.units.errors %}
+        <div class="invalid-feedback d-block">{{ form.units.errors|striptags }}</div>
+      {% endif %}
+      <div id="unitsHelp" class="form-text">
+       
+      </div>
+    </div>
+
+    <!-- Reason Input -->
+    <div class="mb-3">
+      <label for="{{ form.reason.id_for_label }}" class="form-label fw-semibold" 
+             data-bs-toggle="tooltip" data-bs-placement="right" title="Explain why this blood is needed.">
+        Reason <i class="fas fa-info-circle text-muted"></i>
+      </label>
+      {{ form.reason|add_class:"form-control"|attr:"aria-describedby=reasonHelp" }}
+      {% if form.reason.errors %}
+        <div class="invalid-feedback d-block">{{ form.reason.errors|striptags }}</div>
+      {% endif %}
+      <div id="reasonHelp" class="form-text">
+       
+      </div>
+    </div>
+
+    <!-- Urgency Level Dropdown -->
+    <div class="mb-4">
+      <label for="{{ form.urgency_level.id_for_label }}" class="form-label fw-semibold" 
+             data-bs-toggle="tooltip" data-bs-placement="right" title="Indicate how urgent this blood request is.">
+        Urgency Level <i class="fas fa-info-circle text-muted"></i>
+      </label>
+      {{ form.urgency_level|add_class:"form-select"|attr:"aria-describedby=urgencyHelp" }}
+      {% if form.urgency_level.errors %}
+        <div class="invalid-feedback d-block">{{ form.urgency_level.errors|striptags }}</div>
+      {% endif %}
+      <div id="urgencyHelp" class="form-text">
+        
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex gap-3 justify-content-center">
+      <button type="submit" class="btn btn-danger flex-grow-1" aria-label="Submit Blood Request">
+        <i class="fas fa-paper-plane me-2" aria-hidden="true"></i> Submit Request
+      </button>
+      <a href="{% url 'nurse-dashboard' %}" class="btn btn-secondary flex-grow-1" aria-label="Cancel and return to dashboard">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<!-- Enable Bootstrap tooltips -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+  });
+</script>
+
+{% endblock %}

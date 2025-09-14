@@ -1,0 +1,261 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Patient Signup</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" />
+    <style>
+        body { font-family: 'Poppins', 'Open Sans', Arial, sans-serif; background: linear-gradient(120deg, #f8fafc 0%, #fbeee6 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .card { border-radius: 18px; padding: 32px; max-width: 650px; box-shadow: 0 8px 32px rgba(31, 38, 135, 0.18); }
+        label { font-weight: 600; color: #444; }
+        .required-asterisk { color: #dc3545; }
+        .help-block { color: #dc3545; font-size: 0.9rem; margin-top: 0.25rem; }
+        .input-group-text { background: transparent; border: none; }
+        .show-password-toggle { cursor: pointer; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
+        .password-strength { font-size: 0.9rem; margin-top: 5px; }
+        .password-match { font-size: 0.9rem; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="card shadow">
+        <h2 class="text-center mb-4 text-danger"><i class="fas fa-user-plus"></i> Patient Signup</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            <!-- User Fields -->
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="{{ userForm.first_name.id_for_label }}">First Name <span class="required-asterisk">*</span></label>
+                    {{ userForm.first_name|add_class:"form-control" }}
+                    {% if userForm.first_name.errors %}
+                        <div class="help-block">{{ userForm.first_name.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="{{ userForm.last_name.id_for_label }}">Last Name <span class="required-asterisk">*</span></label>
+                    {{ userForm.last_name|add_class:"form-control" }}
+                    {% if userForm.last_name.errors %}
+                        <div class="help-block">{{ userForm.last_name.errors|first }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="{{ userForm.username.id_for_label }}">Username <span class="required-asterisk">*</span></label>
+                    {{ userForm.username|add_class:"form-control" }}
+                    <div id="usernameHelp" class="text-danger mt-1"></div>
+                    {% if userForm.username.errors %}
+                        <div class="help-block">{{ userForm.username.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="{{ userForm.email.id_for_label }}">Email <span class="required-asterisk">*</span></label>
+                    {{ userForm.email|add_class:"form-control" }}
+                    {% if userForm.email.errors %}
+                        <div class="help-block">{{ userForm.email.errors|first }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6 position-relative">
+                    <label for="id_password">Password <span class="required-asterisk">*</span></label>
+                    {{ userForm.password|add_class:"form-control"|attr:"id:id_password" }}
+                    <span class="show-password-toggle" onclick="togglePassword('id_password', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                    <div id="password-strength" class="password-strength text-muted"></div>
+                    {% if userForm.password.errors %}
+                        <div class="help-block">{{ userForm.password.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-6 position-relative">
+                    <label for="id_confirm_password">Confirm Password <span class="required-asterisk">*</span></label>
+                    {{ userForm.confirm_password|add_class:"form-control"|attr:"id:id_confirm_password" }}
+                    <span class="show-password-toggle" onclick="togglePassword('id_confirm_password', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                    <div id="password-match" class="password-match text-muted"></div>
+                    {% if userForm.confirm_password.errors %}
+                        <div class="help-block">{{ userForm.confirm_password.errors|first }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Patient Fields -->
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="{{ patientForm.profile_pic.id_for_label }}">Profile Picture (optional)</label>
+                    {{ patientForm.profile_pic|add_class:"form-control" }}
+                    {% if patientForm.profile_pic.errors %}
+                        <div class="help-block">{{ patientForm.profile_pic.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="{{ patientForm.gender.id_for_label }}">Gender <span class="required-asterisk">*</span></label>
+                    {{ patientForm.gender|add_class:"form-control" }}
+                    {% if patientForm.gender.errors %}
+                        <div class="help-block">{{ patientForm.gender.errors|first }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="{{ patientForm.dob.id_for_label }}">Date of Birth <span class="required-asterisk">*</span></label>
+                    {{ patientForm.dob|add_class:"form-control" }}
+                    {% if patientForm.dob.errors %}
+                        <div class="help-block">{{ patientForm.dob.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="{{ patientForm.bloodgroup.id_for_label }}">Blood Group (optional)</label>
+                    {{ patientForm.bloodgroup|add_class:"form-control" }}
+                    {% if patientForm.bloodgroup.errors %}
+                        <div class="help-block">{{ patientForm.bloodgroup.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="{{ patientForm.national_id.id_for_label }}">National ID <span class="required-asterisk">*</span></label>
+                    {{ patientForm.national_id|add_class:"form-control" }}
+                    {% if patientForm.national_id.errors %}
+                        <div class="help-block">{{ patientForm.national_id.errors|first }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="{{ patientForm.mobile.id_for_label }}">Mobile <span class="required-asterisk">*</span></label>
+                    {{ patientForm.mobile|add_class:"form-control" }}
+                    {% if patientForm.mobile.errors %}
+                        <div class="help-block">{{ patientForm.mobile.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="{{ patientForm.emergency_contact.id_for_label }}">Emergency Contact <span class="required-asterisk">*</span></label>
+                    {{ patientForm.emergency_contact|add_class:"form-control" }}
+                    {% if patientForm.emergency_contact.errors %}
+                        <div class="help-block">{{ patientForm.emergency_contact.errors|first }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {{ patientForm.latitude }}
+            {{ patientForm.longitude }}
+
+            <button type="submit" class="btn btn-danger btn-block mt-3">Sign Up</button>
+        </form>
+    </div>
+    <div class="back-button">
+        <button onclick="history.back()" class="btn btn-custom"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Toggle password visibility
+        function togglePassword(inputId, toggleSpan) {
+            var input = document.getElementById(inputId);
+            var icon = toggleSpan.querySelector('i');
+            if(input.type === 'password'){
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+        window.togglePassword = togglePassword; // make global so onclick works
+
+        // Password strength checker
+        const passwordInput = document.getElementById('id_password');
+        const strengthDisplay = document.getElementById('password-strength');
+        const confirmInput = document.getElementById('id_confirm_password');
+        const matchDisplay = document.getElementById('password-match');
+
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+            let strength = "Weak";
+            let color = "red";
+            if(val.length >= 8 && /[A-Z]/.test(val) && /[a-z]/.test(val) && /\d/.test(val) && /[@$!%*?&]/.test(val)){
+                strength = "Strong";
+                color = "green";
+            } else if(val.length >= 6){
+                strength = "Medium";
+                color = "orange";
+            }
+            strengthDisplay.textContent = "Strength: " + strength;
+            strengthDisplay.style.color = color;
+        });
+
+        // Password match checker
+        function checkMatch(){
+            const passVal = passwordInput.value;
+            const confirmVal = confirmInput.value;
+            if(confirmVal === ""){
+                matchDisplay.textContent = "";
+            } else if(passVal === confirmVal){
+                matchDisplay.textContent = "Passwords match";
+                matchDisplay.style.color = "green";
+            } else {
+                matchDisplay.textContent = "Passwords do not match";
+                matchDisplay.style.color = "red";
+            }
+        }
+        passwordInput.addEventListener('input', checkMatch);
+        confirmInput.addEventListener('input', checkMatch);
+
+
+        // AJAX Username Validation
+        const usernameInput = $("#id_username");
+        const usernameHelp = $("#usernameHelp");
+
+        let typingTimer;
+        const doneTypingInterval = 500; // ms
+
+        usernameInput.on('keyup', function() {
+            clearTimeout(typingTimer);
+            const username = $(this).val();
+            if(username.length > 0){
+                typingTimer = setTimeout(() => {
+                    $.ajax({
+                        url: "{% url 'ajax_validate_username' %}",
+                        data: { 'username': username },
+                        dataType: 'json',
+                        success: function(data){
+                            if(data.is_taken){
+                                usernameHelp.text("This username is already taken. Please choose another.");
+                            } else {
+                                usernameHelp.text("");
+                            }
+                        },
+                        error: function(){
+                            // Optionally handle error
+                            usernameHelp.text("");
+                        }
+                    });
+                }, doneTypingInterval);
+            } else {
+                usernameHelp.text("");
+            }
+        });
+    });
+    </script>
+</body>

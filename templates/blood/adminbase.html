@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Admin Dashboard{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet" />
+
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+        crossorigin="anonymous" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.css" />
+
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            list-style: none;
+            text-decoration: none;
+            font-family: 'Josefin Sans', sans-serif;
+        }
+
+        body {
+            background-color: #f3f5f9;
+        }
+
+        /* Wrapper and Sidebar */
+        .wrapper {
+            display: flex;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        .wrapper .sidebar {
+            width: 220px;
+            background-color: #343a40;
+            padding: 30px 0;
+            position: fixed;
+            height: 100vh;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .wrapper .sidebar h2 {
+            color: #fff;
+            text-transform: uppercase;
+            text-align: center;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .wrapper .sidebar ul {
+            padding-left: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .wrapper .sidebar ul li {
+            padding: 15px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .wrapper .sidebar ul li:hover {
+            background-color: #495057;
+        }
+
+        .wrapper .sidebar ul li a {
+            color: #bdb8d7;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            transition: color 0.3s ease;
+            font-weight: 500;
+            font-size: 1.05em;
+        }
+
+        .wrapper .sidebar ul li:hover a,
+        .wrapper .sidebar ul li.active a {
+            color: white;
+        }
+
+        .wrapper .sidebar ul li a .fas {
+            width: 25px;
+            font-size: 1.3em;
+            margin-right: 15px;
+        }
+
+        /* Notification badge */
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 50%;
+            margin-left: auto;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Navbar */
+        nav.navbar {
+            background-color: #dc3545;
+            padding: 0.5rem 1rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1030;
+        }
+
+        nav.navbar .navbar-brand {
+            color: white;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+        }
+
+        nav.navbar .navbar-brand i {
+            margin-right: 8px;
+        }
+
+        nav.navbar .nav-link {
+            color: white !important;
+            font-weight: 500;
+        }
+
+        nav.navbar .nav-link:hover {
+            color: #f8d7da !important;
+        }
+
+        /* Main Content */
+        .wrapper .main_content {
+            margin-left: 220px;
+            padding: 90px 30px 30px 30px; /* top padding includes navbar height */
+            width: calc(100% - 220px);
+            min-height: 100vh;
+            background-color: white;
+            box-shadow: inset 0 0 15px #f0f0f0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .wrapper {
+                flex-direction: column;
+            }
+
+            .wrapper .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
+
+            .wrapper .main_content {
+                margin-left: 0;
+                width: 100%;
+                padding: 100px 15px 15px 15px;
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand navbar-light">
+        
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'logout' %}">Logout <i class="fas fa-sign-out-alt"></i></a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>Admin Panel</h2>
+            <ul>
+                <li class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
+                    <a href="{% url 'admin-dashboard' %}"><i class="fas fa-home"></i> Dashboard</a>
+                </li>
+                
+                <li class="{% if request.resolver_match.url_name == 'admin-patient' %}active{% endif %}">
+                    <a href="{% url 'admin-patient' %}"><i class="fas fa-user-injured"></i> Patients</a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-nurse' %}active{% endif %}">
+                    <a href="{% url 'admin-nurse' %}"><i class="fas fa-user-md"></i> Nurses</a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-donor' %}active{% endif %}">
+                    <a href="{% url 'admin-donor' %}"><i class="fas fa-hand-holding-heart"></i> Donors</a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-donation' %}active{% endif %}">
+                    <a href="{% url 'admin-donation' %}">
+                        <i class="fas fa-hand-holding-medical"></i> Donations
+                        {% if new_donations_count|default:0 > 0 %}
+                        <span class="badge badge-danger">{{ new_donations_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-request' %}active{% endif %}">
+                    <a href="{% url 'admin-request' %}">
+                        <i class="fas fa-spinner"></i> Blood Requests
+                        {% if new_requests_count|default:0 > 0 %}
+                        <span class="badge badge-danger">{{ new_requests_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li> <a href="{% url 'admin-nurse-blood-requests' %}">Nurses Blood Requests</a>
+
+                </li>
+                
+                <li><a href="{% url 'admin-blood' %}"><i class="fas fa-tint"></i> Blood Stock</a></li>
+                <li><a href="{% url 'admin_contacts' %}"><i class="fas fa-address-book"></i> Contacts</a></li>
+                <li><a href="{% url 'admin-post-notification' %}"><i class="fas fa-bell"></i> Post Notification</a></li>
+                
+                {% if current_blood_request %}
+                <a href="{% url 'blood_request_stock_transactions' blood_request_id=current_blood_request.id %}" class="btn btn-primary">
+                  View Stock Units Affected
+                </a>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Main content -->
+        <div class="main_content">
+            <!-- Django messages block -->
+            {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}
+            <!-- Page specific contents go here -->
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS dependencies -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9b+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+  <style type="text/css">
+    .navbar {
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #d32f2f, #ff0018);
+      box-shadow: 0 4px 8px rgba(211, 47, 47, 0.4);
+      transition: background-color 0.3s ease;
+    }
+    
+    .navbar-brand {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: 1.5px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+      color: white !important;
+    }
+    
+    .navbar-nav .nav-link {
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: #fff !important;
+      transition: color 0.3s ease, background-color 0.3s ease;
+      border-radius: 5px;
+    }
+    
+    .navbar-nav .nav-link:hover {
+      color: #ffccd5 !important;
+      background-color: rgba(255, 0, 24, 0.2);
+    }
+    
+    .navbar-nav .nav-item.active .nav-link {
+      font-weight: 700;
+      color: #fff !important;
+      background-color: rgba(255, 0, 24, 0.4);
+      border-radius: 5px;
+      text-decoration: underline;
+    }
+    
+    .navbar-toggler {
+      border-color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .navbar-toggler-icon {
+      background-image: url("data:image/svg+xml;charset=utf8,%3csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    }
+    
+  </style>
+</head>
+
+<body>
+
+  <div class="bs-example">
+    <nav style="background-color: #FF0018;" class="navbar navbar-expand-md navbar-dark fixed-top">
+      <a href="/" class="navbar-brand"><i class="fas fa-heartbeat"></i>&nbsp; BLOOD CONNECT</a>
+      <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbarCollapse">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse justify-content-between" id="navbarCollapse">
+        <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/"><i class="fas fa-house-user"></i>&nbsp; Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/patient/patientlogin"><i class="fas fa-procedures"></i>&nbsp; Patient</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/donor/donorlogin"><i class="fas fa-hand-holding-droplet"></i>&nbsp; Donor</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/nurse/nurselogin"><i class="fas fa-user-nurse"></i>&nbsp; Nurse</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/adminlogin"><i class="fas fa-user-cog"></i>&nbsp; Admin</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </div>
+
+</body>
+
+</html>
