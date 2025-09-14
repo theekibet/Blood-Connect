@@ -34,8 +34,9 @@ BloodConnect is a Django-based web application to manage blood donations, appoin
 
 ### Clone the Repository
 
-git clone https://github.com/yourusername/blood-donation-management.git
-cd blood-donation-management
+git clone https://github.com/theekibet/Blood-Connect.git
+cd Blood-Connect
+
 
 
 
