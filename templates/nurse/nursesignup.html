@@ -1,0 +1,449 @@
+{% load widget_tweaks %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurse Signup - Blood Bank System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .signup-container { padding: 40px 0; }
+        .signup-card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .required-asterisk { color: #dc3545; font-weight: bold; }
+        .help-block { color: #dc3545; font-size: 0.875em; margin-top: 0.25rem; }
+        .help-text { color: #6c757d; font-size: 0.875em; margin-top: 0.25rem; }
+        .match-feedback { font-size: 0.875em; margin-top: 0.25rem; font-weight: 500; }
+        .match { color: #28a745; }
+        .nomatch { color: #dc3545; }
+        #passwordStrength { font-size: 0.875em; margin-top: 0.25rem; font-weight: bold; }
+        .strength-weak { color: #dc3545; }
+        .strength-moderate { color: #fd7e14; }
+        .strength-strong { color: #28a745; }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25); }
+        .validation-icon { position: absolute; right: 10px; top: 38px; }
+        .validation-icon.valid { color: #28a745; }
+        .validation-icon.invalid { color: #dc3545; }
+        .info-box { background: #e7f3ff; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+<div class="signup-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="card signup-card">
+                    <div class="card-header text-center bg-primary text-white py-4">
+                        <h2 class="mb-0"><i class="fas fa-user-nurse"></i> Nurse Registration</h2>
+                        <p class="mb-0">Join our blood bank team</p>
+                    </div>
+                    <div class="card-body p-4">
+
+                        <!-- Info Box -->
+                        <div class="info-box">
+                            <h6><i class="fas fa-info-circle"></i> Registration Process</h6>
+                            <p class="mb-0">
+                                Your registration will be reviewed by our administration team. 
+                                You will receive an email notification once your account is approved.
+                                Fields marked with <span class="required-asterisk">*</span> are required.
+                            </p>
+                        </div>
+                        <!-- Email Verification Notice -->
+                        <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-envelope fa-2x me-3"></i>
+                        <div>
+                            <h6 class="mb-1 fw-bold">Email Verification Required</h6>
+                            <p class="mb-0">
+                            After registration, you'll receive a verification email. 
+                            <strong>You must click the link in that email</strong> to activate your account before login.
+                            After verification, your account will be reviewed by admin for approval.
+                            </p>
+                        </div>  
+                        </div>
+                        </div>
+                        <!-- Django messages -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="POST" enctype="multipart/form-data" autocomplete="off" id="signupForm">
+                            {% csrf_token %}
+                            
+                            <!-- Personal Information Section -->
+                            <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> Personal Information</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">First Name <span class="required-asterisk">*</span></label>
+                                    <div class="position-relative">
+                                        {{ form.first_name|add_class:"form-control" }}
+                                        <span class="validation-icon" id="firstNameIcon"></span>
+                                    </div>
+                                    {% if form.first_name.help_text %}<small class="help-text">{{ form.first_name.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.first_name.errors|first }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Last Name <span class="required-asterisk">*</span></label>
+                                    <div class="position-relative">
+                                        {{ form.last_name|add_class:"form-control" }}
+                                        <span class="validation-icon" id="lastNameIcon"></span>
+                                    </div>
+                                    {% if form.last_name.help_text %}<small class="help-text">{{ form.last_name.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.last_name.errors|first }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Account Information Section -->
+                            <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-key"></i> Account Information</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Username <span class="required-asterisk">*</span></label>
+                                    <div class="position-relative">
+                                        {{ form.username|add_class:"form-control" }}
+                                        <span class="validation-icon" id="usernameIcon"></span>
+                                    </div>
+                                    {% if form.username.help_text %}<small class="help-text">{{ form.username.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.username.errors|first }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email <span class="required-asterisk">*</span></label>
+                                    <div class="position-relative">
+                                        {{ form.email|add_class:"form-control" }}
+                                        <span class="validation-icon" id="emailIcon"></span>
+                                    </div>
+                                    {% if form.email.help_text %}<small class="help-text">{{ form.email.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.email.errors|first }}</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Password <span class="required-asterisk">*</span></label>
+                                    {{ form.password1|add_class:"form-control" }}
+                                    <div id="passwordStrength"></div>
+                                    {% if form.password1.help_text %}<small class="help-text">{{ form.password1.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.password1.errors|first }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Confirm Password <span class="required-asterisk">*</span></label>
+                                    {{ form.password2|add_class:"form-control" }}
+                                    <div id="matchFeedback" class="match-feedback"></div>
+                                    {% if form.password2.help_text %}<small class="help-text">{{ form.password2.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.password2.errors|first }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Professional Information Section -->
+                            <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-id-badge"></i> Professional Information</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Registration Number <span class="required-asterisk">*</span></label>
+                                    {{ form.registration_number|add_class:"form-control" }}
+                                    {% if form.registration_number.help_text %}<small class="help-text">{{ form.registration_number.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.registration_number.errors|first }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Specialization <span class="required-asterisk">*</span></label>
+                                    {{ form.specialization|add_class:"form-select" }}
+                                    {% if form.specialization.help_text %}<small class="help-text">{{ form.specialization.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.specialization.errors|first }}</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Donation Center <span class="required-asterisk">*</span></label>
+                                    {{ form.donation_center|add_class:"form-select" }}
+                                    {% if form.donation_center.help_text %}<small class="help-text">{{ form.donation_center.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.donation_center.errors|first }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number <span class="required-asterisk">*</span></label>
+                                    {{ form.phone|add_class:"form-control" }}
+                                    {% if form.phone.help_text %}<small class="help-text">{{ form.phone.help_text }}</small>{% endif %}
+                                    <div class="help-block">{{ form.phone.errors|first }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Optional Information Section -->
+                            <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-image"></i> Optional Information</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Profile Picture</label>
+                                {{ form.profile_pic|add_class:"form-control" }}
+                                {% if form.profile_pic.help_text %}<small class="help-text">{{ form.profile_pic.help_text }}</small>{% endif %}
+                                <div class="help-block">{{ form.profile_pic.errors|first }}</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Bio</label>
+                                {{ form.bio|add_class:"form-control" }}
+                                <small class="text-muted">Characters: <span id="charCount">0</span>/500</small>
+                                {% if form.bio.help_text %}<small class="help-text d-block">{{ form.bio.help_text }}</small>{% endif %}
+                                <div class="help-block">{{ form.bio.errors|first }}</div>
+                            </div>
+
+                            <!-- Terms and Conditions -->
+                            <div class="form-check mt-4 p-3 bg-light rounded">
+                                {{ form.terms }}
+                                <label class="form-check-label">
+                                    I agree to the terms and conditions and understand that my account requires admin approval
+                                </label>
+                                <div class="help-block">{{ form.terms.errors|first }}</div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'home' %}" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </a>
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="fas fa-user-plus"></i> Register
+                                </button>
+                            </div>
+                        </form>
+
+                        <p class="text-center mt-4 mb-0">
+                            Already have an account? 
+                            <a href="{% url 'nurselogin' %}" class="btn btn-outline-primary btn-sm">Login here</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // =============================
+    // Name validation
+    // =============================
+    function validateName(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (!input) return;
+    
+        input.addEventListener('input', function() {
+            const value = this.value.trim();
+            const isValid = value.length >= 2 && /^[a-zA-Z\s\-']+$/.test(value);
+    
+            if (value.length === 0) {
+                icon.innerHTML = '';
+            } else if (isValid) {
+                icon.innerHTML = '<i class="fas fa-check-circle valid"></i>';
+            } else {
+                icon.innerHTML = '<i class="fas fa-times-circle invalid"></i>';
+            }
+        });
+    }
+    
+    validateName('id_first_name', 'firstNameIcon');
+    validateName('id_last_name', 'lastNameIcon');
+    
+    
+    // =============================
+    // Username AJAX Validation
+    // =============================
+    const usernameInput = document.getElementById('id_username');
+    const usernameIcon = document.getElementById('usernameIcon');
+    if (usernameInput) {
+        let usernameTimeout = null;
+    
+        usernameInput.addEventListener('input', function() {
+            const value = this.value.trim();
+    
+            if (value.length === 0) {
+                usernameIcon.innerHTML = '';
+                return;
+            }
+    
+            // Local validation
+            const validFormat = value.length >= 4 && /^[\w.@+-]+$/.test(value);
+            if (!validFormat) {
+                usernameIcon.innerHTML = '<i class="fas fa-times-circle invalid"></i>';
+                return;
+            }
+    
+            usernameIcon.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+    
+            // Delay AJAX to avoid too many requests
+            clearTimeout(usernameTimeout);
+            usernameTimeout = setTimeout(() => {
+                fetch(`/validate-username/?username=${encodeURIComponent(value)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.exists) {
+                            usernameIcon.innerHTML = '<i class="fas fa-times-circle invalid"></i>';
+                            usernameInput.classList.add('is-invalid');
+                            usernameInput.title = "Username already taken";
+                        } else {
+                            usernameIcon.innerHTML = '<i class="fas fa-check-circle valid"></i>';
+                            usernameInput.classList.remove('is-invalid');
+                            usernameInput.title = "";
+                        }
+                    })
+                    .catch(() => {
+                        usernameIcon.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i>';
+                    });
+            }, 500);
+        });
+    }
+    
+    
+    // =============================
+    // Email AJAX Validation
+    // =============================
+    const emailInput = document.getElementById('id_email');
+    const emailIcon = document.getElementById('emailIcon');
+    if (emailInput) {
+        let emailTimeout = null;
+    
+        emailInput.addEventListener('input', function() {
+            const value = this.value.trim();
+    
+            if (value.length === 0) {
+                emailIcon.innerHTML = '';
+                return;
+            }
+    
+            const isValidFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+            if (!isValidFormat) {
+                emailIcon.innerHTML = '<i class="fas fa-times-circle invalid"></i>';
+                return;
+            }
+    
+            emailIcon.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+    
+            clearTimeout(emailTimeout);
+            emailTimeout = setTimeout(() => {
+                fetch(`/validate-email/?email=${encodeURIComponent(value)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.exists) {
+                            emailIcon.innerHTML = '<i class="fas fa-times-circle invalid"></i>';
+                            emailInput.classList.add('is-invalid');
+                            emailInput.title = "Email already in use";
+                        } else {
+                            emailIcon.innerHTML = '<i class="fas fa-check-circle valid"></i>';
+                            emailInput.classList.remove('is-invalid');
+                            emailInput.title = "";
+                        }
+                    })
+                    .catch(() => {
+                        emailIcon.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i>';
+                    });
+            }, 500);
+        });
+    }
+    
+    
+    // =============================
+    // Password Strength Indicator
+    // =============================
+    const passwordInput = document.getElementById('id_password1');
+    const strengthText = document.getElementById('passwordStrength');
+    if (passwordInput && strengthText) {
+        passwordInput.addEventListener('input', function() {
+            const value = this.value;
+            if (!value) {
+                strengthText.textContent = "";
+                return;
+            }
+    
+            let strength = 0;
+            if (value.length >= 8) strength++;
+            if (/[a-z]/.test(value)) strength++;
+            if (/[A-Z]/.test(value)) strength++;
+            if (/\d/.test(value)) strength++;
+            if (/[^a-zA-Z0-9]/.test(value)) strength++;
+    
+            if (strength <= 2) {
+                strengthText.textContent = "Weak Password";
+                strengthText.className = "strength-weak";
+            } else if (strength <= 4) {
+                strengthText.textContent = "Moderate Password";
+                strengthText.className = "strength-moderate";
+            } else {
+                strengthText.textContent = "Strong Password";
+                strengthText.className = "strength-strong";
+            }
+        });
+    }
+    
+    
+    // =============================
+    // Password Match Feedback
+    // =============================
+    const confirmInput = document.getElementById('id_password2');
+    const matchFeedback = document.getElementById('matchFeedback');
+    if (confirmInput && matchFeedback && passwordInput) {
+        const checkMatch = () => {
+            if (!confirmInput.value) {
+                matchFeedback.textContent = "";
+                return;
+            }
+    
+            if (confirmInput.value !== passwordInput.value) {
+                matchFeedback.textContent = "Passwords do not match!";
+                matchFeedback.className = "match-feedback nomatch";
+            } else {
+                matchFeedback.textContent = "Passwords match!";
+                matchFeedback.className = "match-feedback match";
+            }
+        };
+    
+        confirmInput.addEventListener('input', checkMatch);
+        passwordInput.addEventListener('input', checkMatch);
+    }
+    
+    
+    // =============================
+    // Bio Character Counter
+    // =============================
+    const bioInput = document.getElementById('id_bio');
+    const charCount = document.getElementById('charCount');
+    if (bioInput && charCount) {
+        bioInput.addEventListener('input', function() {
+            const count = this.value.length;
+            charCount.textContent = count;
+            charCount.style.color = count > 500 ? '#dc3545' : '#6c757d';
+        });
+    }
+    
+    
+    // =============================
+    // Form Submission Validation
+    // =============================
+    document.getElementById('signupForm')?.addEventListener('submit', function(e) {
+        const requiredFields = this.querySelectorAll('[required]');
+        let isValid = true;
+    
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+    
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields');
+        }
+    });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+    </html>
+    

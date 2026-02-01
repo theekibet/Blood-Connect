@@ -1,0 +1,569 @@
+{% load static %}
+{% load widget_tweaks %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Donor Signup</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .help-block { color: #dc3545; font-size: 0.875em; margin-top: 0.25rem; }
+        .help-text { color: #6c757d; font-size: 0.875em; margin-top: 0.25rem; }
+        .validation-feedback { font-size: 0.875em; margin-top: 0.25rem; font-weight: 500; }
+        .validation-success { color: #28a745; }
+        .validation-error { color: #dc3545; }
+        .validation-checking { color: #007bff; }
+        .match-feedback { font-size: 0.875em; margin-top: 0.25rem; }
+        .match { color: #28a745; }
+        .nomatch { color: #dc3545; }
+        #passwordStrength { font-size: 0.875em; margin-top: 0.25rem; font-weight: bold; }
+        .required-asterisk { color: #dc3545; }
+        body { background-color: #f8f9fa; }
+        .card { border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        ul.list-unstyled { margin-bottom: 0; padding-left: 0; }
+        .username-suggestions { 
+            background: #e7f3ff; 
+            border: 1px solid #bee5eb; 
+            border-radius: 5px; 
+            padding: 12px; 
+            margin-top: 10px;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .suggestion-badge {
+            cursor: pointer;
+            margin: 3px;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .suggestion-badge:hover {
+            transform: scale(1.08);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+        }
+        .section-header {
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-9 col-md-11">
+                <div class="card">
+                    <div class="card-header text-center bg-danger text-white py-3">
+                        <h2 class="mb-0">🩸 Donor Registration</h2>
+                        <small>Join us in saving lives through blood donation</small>
+                    </div>
+                    <div class="card-body p-4">
+    
+                        <!-- EMAIL VERIFICATION IMPORTANT NOTICE -->
+                        <div class="alert alert-info mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-envelope fa-2x me-3"></i>
+                                <div>
+                                    <h6 class="mb-1 fw-bold">Email Verification Required</h6>
+                                    <p class="mb-0">
+                                        After registration, you'll receive a verification email. 
+                                        <strong>You must click the link in that email</strong> to activate your account before logging in.
+                                        Check your spam folder if you don't see it.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <!-- Django messages -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message|safe }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+    
+                        <!-- Non-field errors for user_form -->
+                        {% if user_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    {% for error in user_form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+    
+                        <!-- Non-field errors for donor_form -->
+                        {% if donor_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    {% for error in donor_form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+    
+                        <form method="POST" autocomplete="off" enctype="multipart/form-data" id="signupForm">
+                            {% csrf_token %}
+    
+                            <!-- Personal Information Section -->
+                            <h5 class="text-danger section-header"><i class="fas fa-user"></i> Personal Information</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="{{ user_form.first_name.id_for_label }}" class="form-label">
+                                        First Name (as per ID/Passport)<span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if user_form.first_name.errors %}
+                                        {{ user_form.first_name|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in user_form.first_name.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ user_form.first_name|add_class:"form-control" }}
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ user_form.last_name.id_for_label }}" class="form-label">
+                                        Last Name (as per ID/Passport) <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if user_form.last_name.errors %}
+                                        {{ user_form.last_name|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in user_form.last_name.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ user_form.last_name|add_class:"form-control" }}
+                                    {% endif %}
+                                </div>
+                            </div>
+    
+                            <!-- Account Information Section -->
+                            <h5 class="text-danger section-header mt-4"><i class="fas fa-lock"></i> Account Information</h5>
+    
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="{{ user_form.username.id_for_label }}" class="form-label">
+                                        Username <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if user_form.username.errors %}
+                                        {{ user_form.username|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in user_form.username.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        
+                                        <!-- Username Suggestions from server-side validation -->
+                                        {% if username_suggestions %}
+                                            <div class="username-suggestions">
+                                                <small class="text-muted"><strong>💡 Available usernames you can use:</strong></small>
+                                                <div class="mt-2">
+                                                    {% for suggestion in username_suggestions %}
+                                                        <span class="badge bg-primary suggestion-badge" onclick="selectUsername('{{ suggestion }}')">
+                                                            {{ suggestion }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        {{ user_form.username|add_class:"form-control" }}
+                                    {% endif %}
+                                    <div id="usernameFeedback" class="validation-feedback"></div>
+                                    <div id="usernameSuggestions"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ user_form.email.id_for_label }}" class="form-label">
+                                        Email <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if user_form.email.errors %}
+                                        {{ user_form.email|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in user_form.email.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ user_form.email|add_class:"form-control" }}
+                                    {% endif %}
+                                    <div id="emailFeedback" class="validation-feedback"></div>
+                                    <small class="text-muted">This will be used for account verification and communication</small>
+                                </div>
+                            </div>
+    
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-6">
+                                    <label for="{{ user_form.password.id_for_label }}" class="form-label">
+                                        Password <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if user_form.password.errors %}
+                                        {{ user_form.password|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in user_form.password.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ user_form.password|add_class:"form-control" }}
+                                        <small class="help-text">At least 8 characters with letters and numbers</small>
+                                    {% endif %}
+                                    <div id="passwordStrength"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ user_form.confirm_password.id_for_label }}" class="form-label">
+                                        Confirm Password <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if user_form.confirm_password.errors %}
+                                        {{ user_form.confirm_password|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in user_form.confirm_password.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ user_form.confirm_password|add_class:"form-control" }}
+                                    {% endif %}
+                                    <div id="matchFeedback" class="match-feedback"></div>
+                                </div>
+                            </div>
+    
+                            <!-- Donor Details Section -->
+                            <h5 class="text-danger section-header mt-4"><i class="fas fa-heartbeat"></i> Donor Details</h5>
+    
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="{{ donor_form.bloodgroup.id_for_label }}" class="form-label">
+                                        Blood Group
+                                    </label>
+                                    {% if donor_form.bloodgroup.errors %}
+                                        {{ donor_form.bloodgroup|add_class:"form-select is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in donor_form.bloodgroup.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ donor_form.bloodgroup|add_class:"form-select" }}
+                                    {% endif %}
+                                    <small class="help-text">Optional if unsure, will be verified & updated automatically at first appointment</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ donor_form.national_id.id_for_label }}" class="form-label">
+                                        National ID <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if donor_form.national_id.errors %}
+                                        {{ donor_form.national_id|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in donor_form.national_id.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ donor_form.national_id|add_class:"form-control" }}
+                                    {% endif %}
+                                    <div id="nationalIdFeedback" class="validation-feedback"></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ donor_form.dob.id_for_label }}" class="form-label">
+                                        Date of Birth <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if donor_form.dob.errors %}
+                                        {{ donor_form.dob|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in donor_form.dob.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ donor_form.dob|add_class:"form-control" }}
+                                    {% endif %}
+                                    <small class="help-text">Must be 18+ years old</small>
+                                </div>
+                            </div>
+    
+                            <!-- Contact Information Section -->
+                            <h5 class="text-danger section-header mt-4"><i class="fas fa-address-book"></i> Contact Information</h5>
+    
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="{{ donor_form.mobile.id_for_label }}" class="form-label">
+                                        Mobile Number <span class="required-asterisk">*</span>
+                                    </label>
+                                    {% if donor_form.mobile.errors %}
+                                        {{ donor_form.mobile|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in donor_form.mobile.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ donor_form.mobile|add_class:"form-control" }}
+                                    {% endif %}
+                                    <div id="mobileFeedback" class="validation-feedback"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="id_county">Select Your County of Residence</label>
+                                    {% if donor_form.county.errors %}
+                                        {{ donor_form.county|add_class:"form-control is-invalid" }}
+                                        <ul class="help-block list-unstyled">
+                                            {% for error in donor_form.county.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ donor_form.county|add_class:"form-control" }}
+                                    {% endif %}
+                                </div>
+                            </div>
+    
+                            <!-- Profile Picture -->
+                            <div class="mt-3">
+                                <label for="{{ donor_form.profile_pic.id_for_label }}" class="form-label">
+                                    <i class="fas fa-camera"></i> Profile Picture
+                                </label>
+                                {% if donor_form.profile_pic.errors %}
+                                    {{ donor_form.profile_pic|add_class:"form-control is-invalid" }}
+                                    <ul class="help-block list-unstyled">
+                                        {% for error in donor_form.profile_pic.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    {{ donor_form.profile_pic|add_class:"form-control" }}
+                                {% endif %}
+                                <small class="help-text">Optional - Upload a clear photo of yourself</small>
+                            </div>
+    
+                            <!-- Hidden location fields -->
+                            {{ donor_form.latitude }}
+                            {{ donor_form.longitude }}
+    
+                            <!-- Terms and Conditions -->
+                            <div class="card mt-4 border-info">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                                        <label class="form-check-label" for="termsCheck">
+                                            I agree to the 
+                                            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#termsModal">
+                                                Terms and Conditions
+                                            </a>
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="emailConsent" required>
+                                        <label class="form-check-label" for="emailConsent">
+                                            I understand that I must verify my email address before logging in
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <div class="text-center mt-4">
+                                <button type="submit" id="submitBtn" class="btn btn-danger btn-lg px-5" disabled>
+                                    <i class="fas fa-user-plus"></i> Register as Donor
+                                </button>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt"></i> Your information is secure and protected
+                                    </small>
+                                </div>
+                            </div>
+                        </form>
+    
+                        <div class="text-center mt-4">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <a href="{% url 'central_login' %}?user_type=donor" class="btn btn-outline-success btn-block">
+                                        <i class="fas fa-sign-in-alt"></i> Already a Donor? Login Here
+                                    </a>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <a href="{% url 'central_login' %}" class="btn btn-outline-primary btn-block">
+                                        <i class="fas fa-exchange-alt"></i> Other Login Options
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Terms and Conditions Modal -->
+    <div class="modal fade" id="termsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Terms and Conditions</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Email Verification</h6>
+                    <p>You must verify your email address by clicking the link sent to your inbox before you can log in to your account.</p>
+                    
+                    <h6>Account Security</h6>
+                    <p>You are responsible for maintaining the confidentiality of your login credentials.</p>
+                    
+                    <h6>Data Privacy</h6>
+                    <p>Your personal and medical information will be kept confidential and used only for blood donation purposes.</p>
+                    
+                    <h6>Eligibility</h6>
+                    <p>You must meet all donor eligibility criteria to donate blood.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">I Understand</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{% static 'js/ajax-validators.js' %}"></script>
+    <script>
+        // Password strength checker
+        const passwordInput = document.getElementById('id_password');
+        if (passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                const strengthText = document.getElementById('passwordStrength');
+                const value = this.value;
+                
+                if (!value) { 
+                    strengthText.textContent = ""; 
+                    return; 
+                }
+                
+                if (value.length < 8) { 
+                    strengthText.textContent = "⚠️ Too Short"; 
+                    strengthText.style.color = "red"; 
+                }
+                else if (/[a-zA-Z]/.test(value) && /\d/.test(value)) { 
+                    strengthText.textContent = "✓ Strong Password"; 
+                    strengthText.style.color = "green"; 
+                }
+                else { 
+                    strengthText.textContent = "⚠️ Moderate - Add numbers and letters"; 
+                    strengthText.style.color = "orange"; 
+                }
+            });
+        }
+    
+        // Password match checker
+        const confirmInput = document.getElementById('id_confirm_password');
+        if (confirmInput && passwordInput) {
+            confirmInput.addEventListener('input', checkPasswordMatch);
+            passwordInput.addEventListener('input', checkPasswordMatch);
+        }
+    
+        function checkPasswordMatch() {
+            const matchFeedback = document.getElementById('matchFeedback');
+            const password = passwordInput.value;
+            const confirm = confirmInput.value;
+            
+            if (!confirm) {
+                matchFeedback.textContent = "";
+                return;
+            }
+            
+            if (confirm !== password) { 
+                matchFeedback.textContent = "✗ Passwords do not match!";
+                matchFeedback.className = "match-feedback nomatch"; 
+            }
+            else { 
+                matchFeedback.textContent = "✓ Passwords match!";
+                matchFeedback.className = "match-feedback match"; 
+            }
+        }
+    
+        // Geolocation capture
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const latInput = document.querySelector('input[name="latitude"]');
+                    const lonInput = document.querySelector('input[name="longitude"]');
+                    if (latInput) latInput.value = pos.coords.latitude;
+                    if (lonInput) lonInput.value = pos.coords.longitude;
+                },
+                function(error) {
+                    console.log('Geolocation error:', error.message);
+                }
+            );
+        }
+    
+        // Enable submit button only when terms are checked
+        const termsCheck = document.getElementById('termsCheck');
+        const emailConsent = document.getElementById('emailConsent');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        function updateSubmitButton() {
+            if (termsCheck.checked && emailConsent.checked) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register as Donor';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-lock"></i> Accept Terms to Register';
+            }
+        }
+        
+        termsCheck.addEventListener('change', updateSubmitButton);
+        emailConsent.addEventListener('change', updateSubmitButton);
+        
+        // Form submission handling
+        const form = document.getElementById('signupForm');
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registering...';
+                }
+                
+                // Show success message
+                setTimeout(function() {
+                    document.getElementById('successMessage').style.display = 'block';
+                }, 1000);
+            });
+        }
+        
+        // Show verification reminder after successful submission (demo)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || performance.getEntriesByType('navigation')[0].type === 'back_forward') {
+                // Page loaded from cache, show reminder
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('registered') === 'true') {
+                    alert('Please check your email for the verification link!');
+                }
+            }
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    </body>
+</html>

@@ -1,0 +1,454 @@
+{% extends 'blood/adminbase.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    .table th, .table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .profile-pic {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid #ddd;
+    }
+    .action-column {
+        width: 250px;
+        white-space: nowrap;
+    }
+    .action-btn {
+        margin: 2px;
+        padding: 5px 10px;
+        font-size: 0.85rem;
+    }
+    .badge {
+        padding: 0.5em 0.75em;
+        font-size: 0.85rem;
+    }
+    .status-pending {
+        background-color: #ffc107;
+        color: #000;
+    }
+    .status-approved {
+        background-color: #28a745;
+        color: #fff;
+    }
+    .status-rejected {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    .stats-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .stats-card h5 {
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+    }
+    .stats-card h2 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .filter-tabs {
+        margin-bottom: 20px;
+    }
+    .filter-tabs .btn {
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    .search-bar {
+        margin-bottom: 20px;
+    }
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .page-header h2 {
+        margin: 0;
+        font-weight: bold;
+    }
+    .rejection-tooltip {
+        cursor: help;
+        border-bottom: 1px dashed #dc3545;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        color: #dee2e6;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2><i class="fas fa-user-nurse"></i> Nurse Management System</h2>
+        <p class="mb-0">Manage nurse registrations, approvals, and accounts</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="stats-card bg-primary text-white">
+                <h5><i class="fas fa-users"></i> Total Nurses</h5>
+                <h2>{{ total_count|default:0 }}</h2>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="stats-card bg-warning text-dark">
+                <h5><i class="fas fa-clock"></i> Pending Approval</h5>
+                <h2>{{ pending_count|default:0 }}</h2>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="stats-card bg-success text-white">
+                <h5><i class="fas fa-check-circle"></i> Approved</h5>
+                <h2>{{ approved_count|default:0 }}</h2>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="stats-card bg-danger text-white">
+                <h5><i class="fas fa-times-circle"></i> Rejected</h5>
+                <h2>{{ rejected_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        <div class="row">
+            <div class="col-12">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-circle"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Filter Tabs -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="filter-tabs">
+                <a href="?status=all" class="btn {% if status_filter == 'all' or not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    <i class="fas fa-list"></i> All Nurses
+                </a>
+                <a href="?status=pending" class="btn {% if status_filter == 'pending' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}">
+                    <i class="fas fa-clock"></i> Pending 
+                    {% if pending_count > 0 %}
+                        <span class="badge bg-dark">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="?status=approved" class="btn {% if status_filter == 'approved' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    <i class="fas fa-check"></i> Approved
+                </a>
+                <a href="?status=rejected" class="btn {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                    <i class="fas fa-times"></i> Rejected
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <input type="hidden" name="status" value="{{ status_filter|default:'all' }}">
+                <div class="col-md-10">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" 
+                               name="q" 
+                               value="{{ query }}" 
+                               class="form-control" 
+                               placeholder="Search by name, email, phone, registration number, username...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+                {% if query %}
+                    <div class="col-12">
+                        <a href="?status={{ status_filter|default:'all' }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-times"></i> Clear Search
+                        </a>
+                        <span class="text-muted ms-2">Showing results for: <strong>"{{ query }}"</strong></span>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Nurses Table -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-users"></i> 
+                {% if status_filter == 'pending' %}
+                    Pending Nurses
+                {% elif status_filter == 'approved' %}
+                    Approved Nurses
+                {% elif status_filter == 'rejected' %}
+                    Rejected Nurses
+                {% else %}
+                    All Nurses
+                {% endif %}
+                <span class="badge bg-secondary float-end">{{ nurses|length }} nurse{{ nurses|length|pluralize }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Profile</th>
+                            <th>Full Name</th>
+                            <th>Registration #</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Specialization</th>
+                            <th>Donation Center</th>
+                            <th>Status</th>
+                            <th>Dates</th>
+                            <th class="action-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nurse in nurses %}
+                        <tr>
+                            <td>
+                                {% if nurse.profile_pic %}
+                                    <img src="{{ nurse.profile_pic.url }}" alt="{{ nurse.full_name }}" class="profile-pic" />
+                                {% else %}
+                                    <div class="profile-pic d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 50px; height: 50px;">
+                                        {{ nurse.first_name|first|upper }}{{ nurse.last_name|first|upper }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-start">
+                                <strong>{{ nurse.full_name }}</strong><br>
+                                <small class="text-muted">
+                                    <i class="fas fa-user"></i> {{ nurse.user.username }}
+                                </small>
+                            </td>
+                            <td><code class="text-primary">{{ nurse.registration_number }}</code></td>
+                            <td class="text-start">
+                                <small>
+                                    <i class="fas fa-envelope"></i> {{ nurse.user.email }}
+                                </small>
+                            </td>
+                            <td>
+                                <small>
+                                    <i class="fas fa-phone"></i> {{ nurse.phone }}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info text-dark">
+                                    {{ nurse.get_specialization_display }}
+                                </span>
+                            </td>
+                            <td class="text-start">
+                                {% if nurse.donation_center %}
+                                    <strong>{{ nurse.donation_center.name }}</strong><br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-map-marker-alt"></i> {{ nurse.donation_center.city }}
+                                    </small>
+                                {% else %}
+                                    <span class="text-muted"><i>Not assigned</i></span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if nurse.is_approved %}
+                                    <span class="badge status-approved">
+                                        <i class="fas fa-check-circle"></i> Approved
+                                    </span>
+                                    {% if nurse.approved_by %}
+                                        <br><small class="text-muted" style="font-size: 0.75rem;">
+                                            by {{ nurse.approved_by.username }}
+                                        </small>
+                                    {% endif %}
+                                {% elif nurse.rejection_reason %}
+                                    <span class="badge status-rejected">
+                                        <i class="fas fa-times-circle"></i> Rejected
+                                    </span>
+                                    <br><small class="rejection-tooltip text-danger" 
+                                              title="{{ nurse.rejection_reason }}"
+                                              style="font-size: 0.75rem;">
+                                        {{ nurse.rejection_reason|truncatewords:5 }}
+                                    </small>
+                                {% else %}
+                                    <span class="badge status-pending">
+                                        <i class="fas fa-clock"></i> Pending
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-start">
+                                <small>
+                                    <strong>Created:</strong><br>
+                                    {{ nurse.created_at|date:"M d, Y" }}<br>
+                                    <span class="text-muted">{{ nurse.created_at|date:"h:i A" }}</span>
+                                </small>
+                                {% if nurse.approved_at %}
+                                    <br><small class="text-success mt-1 d-block">
+                                        <strong>Approved:</strong><br>
+                                        {{ nurse.approved_at|date:"M d, Y" }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td class="action-column">
+                                <div class="btn-group-vertical" role="group">
+                                    {% if not nurse.is_approved and not nurse.rejection_reason %}
+                                        <!-- Pending - Show Approve/Reject -->
+                                        <a href="{% url 'admin-approve-nurse' nurse.pk %}" 
+                                           class="btn btn-sm btn-success action-btn mb-1" 
+                                           title="Approve this nurse">
+                                          <i class="fas fa-check"></i> Approve
+                                        </a>
+                                        <a href="{% url 'admin-reject-nurse' nurse.pk %}" 
+                                           class="btn btn-sm btn-danger action-btn mb-1" 
+                                           title="Reject this nurse">
+                                          <i class="fas fa-times"></i> Reject
+                                        </a>
+                                    {% elif nurse.is_approved %}
+                                        <!-- Approved - Show Revoke -->
+                                        <a href="{% url 'admin-revoke-nurse' nurse.pk %}" 
+                                           class="btn btn-sm btn-warning action-btn mb-1" 
+                                           title="Revoke approval">
+                                          <i class="fas fa-ban"></i> Revoke
+                                        </a>
+                                    {% else %}
+                                        <!-- Rejected - Show Re-approve -->
+                                        <a href="{% url 'admin-approve-nurse' nurse.pk %}" 
+                                           class="btn btn-sm btn-success action-btn mb-1" 
+                                           title="Re-approve this nurse">
+                                          <i class="fas fa-redo"></i> Re-approve
+                                        </a>
+                                    {% endif %}
+                                    
+                                    <!-- Always show Edit and Delete -->
+                                    <a href="{% url 'admin-nurse-update' nurse.pk %}" 
+                                       class="btn btn-sm btn-outline-primary action-btn mb-1" 
+                                       title="Edit nurse details">
+                                      <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{% url 'admin-nurse-delete' nurse.pk %}" 
+                                       class="btn btn-sm btn-outline-danger action-btn" 
+                                       title="Delete this nurse"
+                                       onclick="return confirm('⚠️ Are you sure you want to delete {{ nurse.full_name }}?\n\nThis will permanently delete:\n- Nurse profile\n- Associated user account\n- All related data\n\nThis action cannot be undone!');">
+                                      <i class="fas fa-trash-alt"></i> Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="fas fa-inbox"></i>
+                                    <h5 class="mt-3">No nurses found</h5>
+                                    <p class="text-muted">
+                                        {% if query %}
+                                            No nurses match your search query "<strong>{{ query }}</strong>"
+                                            <br>
+                                            <a href="?status={{ status_filter|default:'all' }}" class="btn btn-sm btn-primary mt-2">
+                                                <i class="fas fa-times"></i> Clear search
+                                            </a>
+                                        {% elif status_filter == 'pending' %}
+                                            There are no pending nurse applications at the moment.
+                                        {% elif status_filter == 'approved' %}
+                                            There are no approved nurses yet.
+                                        {% elif status_filter == 'rejected' %}
+                                            There are no rejected nurses.
+                                        {% else %}
+                                            No nurses have registered yet.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Summary -->
+    {% if nurses %}
+    <div class="card mt-4 mb-4">
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-12">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Showing {{ nurses|length }} of {{ total_count }} total nurse{{ total_count|pluralize }}
+                        {% if status_filter and status_filter != 'all' %}
+                            (filtered by: <strong>{{ status_filter|title }}</strong>)
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Bootstrap Tooltips Initialization -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Auto-dismiss alerts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        });
+    });
+
+    // Confirmation for bulk actions
+    function confirmBulkAction(action, count) {
+        return confirm(`Are you sure you want to ${action} ${count} selected nurse(s)?`);
+    }
+</script>
+{% endblock %}

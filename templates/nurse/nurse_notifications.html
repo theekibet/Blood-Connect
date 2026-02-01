@@ -1,0 +1,36 @@
+{% extends 'nurse/nursebase.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Notifications</h2>
+
+    {% if notifications %}
+        <div class="list-group shadow-sm rounded">
+            {% for note in notifications %}
+                <div class="list-group-item d-flex justify-content-between align-items-start {% if not note.read %}bg-light{% endif %}">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">
+                            {{ note.title }}
+                            {% if not note.read %}
+                                <span class="badge bg-primary ms-2">New</span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">
+                            {{ note.created_at|date:"M d, Y H:i" }}
+                        </small>
+                        <p class="mb-1">{{ note.message }}</p>
+                    </div>
+                    {% if not note.read %}
+                        <a href="{% url 'mark-nurse-notification-read' note.id %}" 
+                           class="btn btn-sm btn-outline-success">
+                            Mark as read
+                        </a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">No notifications.</div>
+    {% endif %}
+</div>
+{% endblock %}

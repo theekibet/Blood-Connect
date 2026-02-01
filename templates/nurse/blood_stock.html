@@ -1,0 +1,191 @@
+{% extends 'nurse/nursebase.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  .card {
+    border-radius: 15px;
+    box-shadow: 0 6px 18px rgba(220, 53, 69, 0.15);
+    margin-bottom: 20px;
+    transition: transform 0.3s;
+  }
+  .card:hover {
+    transform: scale(1.03);
+  }
+  .card-header {
+    background: linear-gradient(90deg, #dc3545 60%, #e17055 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.2rem;
+    border-radius: 15px 15px 0 0;
+  }
+  .table-warning {
+    background-color: #fff3cd !important;
+  }
+  .table-danger {
+    background-color: #f8d7da !important;
+  }
+  .collapse {
+    transition: all 0.35s ease;
+  }
+</style>
+
+<div class="blood-stock-container mt-4">
+
+  <!-- Your Centre's Blood Stock -->
+  <div class="card">
+    <div class="card-header">Your Centre's Blood Stock</div>
+    <div class="card-body">
+
+      <!-- 🔍 Search Bar -->
+      <form method="get" class="row g-3 align-items-center mb-3">
+        <div class="col-auto">
+          <input type="text" name="q" value="{{ query }}" 
+                 placeholder="Search by blood group, units, or barcode"
+                 class="form-control">
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-danger">Search</button>
+        </div>
+      </form>
+
+      {% if blood_stock_totals %}
+        <table class="table table-bordered table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Blood Group</th>
+              <th>Total Units (ml)</th>
+              <th>Earliest Expiry Date</th>
+              <th>Batches Count</th>
+              <th>Actions</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stock in blood_stock_totals %}
+              {% with collapse_id="details-"|add:stock.bloodgroup|slugify %}
+              <tr
+                {% if stock.total_units < 500 %} class="table-warning" {% endif %}
+                {% if stock.earliest_expiry and stock.earliest_expiry < today_date %} class="table-danger" {% endif %}
+              >
+                <td>{{ stock.bloodgroup }}</td>
+                <td>{{ stock.total_units }}</td>
+                <td>{{ stock.earliest_expiry|date:"M d, Y" }}</td>
+                <td>{{ stock.batches_count }}</td>
+                <td>
+                  {% if stock.total_units < 500 %}
+                    <a href="{% url 'create-blood-request' %}?blood_group={{ stock.bloodgroup }}"
+                       class="btn btn-sm btn-danger">Request Blood</a>
+                  {% elif stock.earliest_expiry and stock.earliest_expiry < today_date %}
+                    <a href="{% url 'create-blood-request' %}?blood_group={{ stock.bloodgroup }}"
+                       class="btn btn-sm btn-danger">Request Blood</a>
+                  {% else %}
+                    <span class="text-muted">Sufficient</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-link" type="button" data-toggle="collapse"
+                    data-target="#{{ collapse_id }}" aria-expanded="false" aria-controls="{{ collapse_id }}">
+                    Show Details
+                  </button>
+                </td>
+              </tr>
+              <tr class="collapse" id="{{ collapse_id }}">
+                <td colspan="6">
+                  <strong>Batches for {{ stock.bloodgroup }}:</strong>
+                  {% if stock.detailed_batches %}
+                    <table class="table table-sm mt-2">
+                      <thead>
+                        <tr>
+                          <th>Batch ID</th>
+                          <th>Unit (ml)</th>
+                          <th>Expiry Date</th>
+                          <th>Barcode</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for batch in stock.detailed_batches %}
+                          <tr>
+                            <td>{{ batch.id }}</td>
+                            <td>{{ batch.unit }}</td>
+                            <td>{{ batch.expiry_date|date:"M d, Y" }}</td>
+                            <td>{{ batch.barcode }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  {% else %}
+                    <em>No batches found for this blood group.</em>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="mt-2"><small><strong>Legend:</strong> 
+          <span class="badge bg-warning text-dark">Low stock (&lt; 500 ml)</span>, 
+          <span class="badge bg-danger">Expired stock</span>
+        </small></p>
+      {% else %}
+        <p>No blood stock data available for your centre.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Track Blood Stock in Other Centres -->
+  <div class="card">
+    <div class="card-header">Track Blood Stock in Other Centres</div>
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-center mb-3">
+        <div class="col-auto">
+          <label for="centreSelect" class="col-form-label">Select Centre:</label>
+        </div>
+        <div class="col-auto">
+          <select id="centreSelect" name="centre" class="form-select" onchange="this.form.submit()">
+            <option value="">-- Choose Centre --</option>
+            {% for centre in all_centres %}
+              <option value="{{ centre.id }}" {% if selected_centre and centre.id == selected_centre.id %}selected{% endif %}>
+                {{ centre.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <noscript>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Search</button>
+          </div>
+        </noscript>
+      </form>
+
+      {% if other_centers_stock %}
+        <div class="table-responsive">
+          <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>Centre</th>
+                <th>Blood Group</th>
+                <th>Units (ml)</th>
+                <th>Expiry Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for stock in other_centers_stock %}
+                <tr>
+                  <td>{{ stock.center.name }}</td>
+                  <td>{{ stock.bloodgroup }}</td>
+                  <td>{{ stock.unit }}</td>
+                  <td>{{ stock.expiry_date|default:"N/A"|date:"M d, Y" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% elif selected_centre %}
+        <p>No blood stock data available for {{ selected_centre.name }}.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

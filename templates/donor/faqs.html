@@ -1,0 +1,136 @@
+{% extends 'donor/donorbase.html' %}
+{% block content %}
+<div class="container py-10 px-4 mx-auto max-w-6xl">
+    <!-- FAQ Header -->
+    <div class="text-center mb-12">
+        <h2 class="text-5xl font-extrabold text-red-600 mb-4">💉 Frequently Asked Questions</h2>
+        <p class="text-lg text-gray-600">Everything you need to know about donating blood.</p>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mb-10 flex justify-center">
+        <input type="text" id="faqSearch" placeholder="Search FAQs..." class="w-full max-w-xl px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+    </div>
+
+    <!-- FAQ Section -->
+    <div id="faqList" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- FAQ Item 1 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">1. Who can donate blood?</h3>
+            <p class="text-gray-700">
+                Anyone in good health, aged 16 or 17 and older (depending on state laws), weighing at least 110 lbs (50 kg), and meeting other health criteria can donate. Parental consent may be required for donors under 18.
+            </p>
+        </div>
+
+        <!-- FAQ Item 2 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">2. How often can I donate blood?</h3>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+                <li><strong>Whole blood:</strong> Every 56 days (up to 6 times per year).</li>
+                <li><strong>Power Red:</strong> Every 112 days (up to 3 times per year).</li>
+                <li><strong>Platelets:</strong> Every 7 days, up to 24 times per year.</li>
+            </ul>
+        </div>
+
+        <!-- FAQ Item 3 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">3. How much blood is taken during donation?</h3>
+            <p class="text-gray-700">
+                Typically, about 475 mL (1 pint) of whole blood is collected, which is approximately 8–10% of your total blood volume.
+            </p>
+        </div>
+
+        <!-- FAQ Item 4 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">4. Is donating blood safe?</h3>
+            <p class="text-gray-700">
+                Yes! Sterile, single-use equipment is used for each donor. Blood donation is a safe process regulated by health authorities to protect both donors and recipients.
+            </p>
+        </div>
+
+        <!-- FAQ Item 5 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">5. What should I do before donating?</h3>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+                <li>Stay hydrated by drinking plenty of water.</li>
+                <li>Eat a healthy meal rich in iron.</li>
+                <li>Get adequate sleep the night before.</li>
+                <li>Avoid fatty foods and caffeine before donation.</li>
+            </ul>
+        </div>
+
+        <!-- FAQ Item 6 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">6. What happens during the donation?</h3>
+            <p class="text-gray-700">
+                The process includes registration, a brief health screening, blood collection (usually 8–10 minutes for whole blood), and refreshments afterward. Staff will guide you throughout.
+            </p>
+        </div>
+
+        <!-- FAQ Item 7 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">7. What should I do after donating?</h3>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+                <li>Rest for 10–15 minutes.</li>
+                <li>Drink fluids for the next 24 hours.</li>
+                <li>Avoid heavy physical activity for the rest of the day.</li>
+                <li>Keep the bandage on for a few hours to prevent bleeding or infection.</li>
+            </ul>
+        </div>
+
+        <!-- FAQ Item 8 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">8. Can I donate if I recently had a vaccination or illness?</h3>
+            <p class="text-gray-700">
+                Most vaccines, including COVID–19 and flu vaccines, do not prevent you from donating. However, some illnesses or recent travel may require deferral. Always check with your blood center.
+            </p>
+        </div>
+
+        <!-- FAQ Item 9 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">9. Are there any medications or conditions that prevent donation?</h3>
+            <p class="text-gray-700">
+                Certain medications, recent blood transfusions, history of hepatitis, or high-risk behaviors may defer you from donating. Consult your physician or blood center staff for specific eligibility.
+            </p>
+        </div>
+
+        <!-- FAQ Item 10 -->
+        <div class="bg-gray-100 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-xl font-semibold mb-4 text-red-500">10. How is my blood used?</h3>
+            <p class="text-gray-700">
+                Donated blood is separated into components—red cells, platelets, and plasma—to treat trauma victims, surgery patients, premature babies, and people with anemia or chronic diseases.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Tailwind Animations -->
+<style>
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease-in-out;
+}
+</style>
+
+<!-- FAQ Search Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('faqSearch');
+        const faqItems = document.querySelectorAll('#faqList > div');
+
+        searchInput.addEventListener('input', function () {
+            const query = searchInput.value.toLowerCase();
+            faqItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends 'donor/donorbase.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      <!-- Show messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Yellow info box if eligibility explicitly not approved -->
+      {% if eligibility_form.instance and eligibility_form.instance.approved == False %}
+        <div class="alert alert-warning text-center py-4 px-3 mb-4" style="background-color:#FFF7D6; border-color:#FFD60A;">
+          <h2 class="mb-2" style="font-weight:bold; color:#B08900;">Thank you for your interest!</h2>
+          <p style="font-size:1.1em;">
+            Currently, you are <strong>not eligible</strong> to donate blood. This may be a temporary status.<br>
+            Please review the eligibility criteria carefully and update your details below to become eligible soon.
+          </p>
+        </div>
+      {% endif %}
+
+      <!-- Display donor age -->
+      {% if donor_age %}
+        <div class="mb-3">
+          <strong>Your age:</strong> {{ donor_age }}
+        </div>
+      {% endif %}
+
+      <!-- Eligibility Form Card -->
+      <div class="card shadow-sm border rounded-lg">
+        <div class="card-header bg-primary text-white rounded-top text-center">
+          <h3 class="mb-0 font-weight-bold"><i class="fas fa-user-check mr-2"></i> Donor Eligibility Form</h3>
+        </div>
+        <div class="card-body px-5 py-5">
+
+          <p class="lead text-secondary mb-4">
+            Please complete this form to confirm (or update) your eligibility for blood donation.
+          </p>
+
+          <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <!-- Hidden field for donor age -->
+            <input type="hidden" name="age" value="{{ donor_age }}">
+
+            {% if eligibility_form.non_field_errors %}
+              <div class="alert alert-danger mb-4 small">
+                <ul class="mb-0 pl-3">
+                  {% for err in eligibility_form.non_field_errors %}
+                    <li>{{ err }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            <!-- Weight -->
+            <div class="form-group mb-4">
+              <label for="{{ eligibility_form.weight.id_for_label }}" class="font-weight-bold">Weight (kg)</label>
+              {{ eligibility_form.weight|add_class:"form-control form-control-lg" }}
+              {% for err in eligibility_form.weight.errors %}
+                <small class="text-danger d-block">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <!-- Gender -->
+            <div class="form-group mb-4">
+              <label for="{{ eligibility_form.gender.id_for_label }}" class="font-weight-bold">Gender</label>
+              {{ eligibility_form.gender|add_class:"form-control form-control-lg" }}
+              {% for err in eligibility_form.gender.errors %}
+                <small class="text-danger d-block">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <!-- Good Health -->
+            <fieldset class="form-group mb-4">
+              <legend class="font-weight-bold mb-3">Are you in good health?</legend>
+              <div>
+                {% for radio in eligibility_form.good_health %}
+                  <div class="form-check form-check-inline">
+                    {{ radio }}
+                  </div>
+                {% endfor %}
+              </div>
+              {% for err in eligibility_form.good_health.errors %}
+                <small class="text-danger d-block">{{ err }}</small>
+              {% endfor %}
+            </fieldset>
+
+            <!-- Travel History -->
+            <fieldset class="form-group mb-4">
+              <legend class="font-weight-bold mb-3">Have you traveled outside the country recently?</legend>
+              <div>
+                {% for radio in eligibility_form.travel_history %}
+                  <div class="form-check form-check-inline">
+                    {{ radio }}
+                  </div>
+                {% endfor %}
+              </div>
+              {% for err in eligibility_form.travel_history.errors %}
+                <small class="text-danger d-block">{{ err }}</small>
+              {% endfor %}
+            </fieldset>
+
+            <!-- Pregnant (if female) -->
+            {% if eligibility_form.data.gender == 'Female' or eligibility_form.initial.gender == 'Female' %}
+              <fieldset class="form-group mb-4">
+                <legend class="font-weight-bold mb-3">Are you currently pregnant?</legend>
+                <div>
+                  {% for radio in eligibility_form.pregnant %}
+                    <div class="form-check form-check-inline">
+                      {{ radio }}
+                      <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                  {% endfor %}
+                </div>
+                {% for err in eligibility_form.pregnant.errors %}
+                  <small class="text-danger d-block">{{ err }}</small>
+                {% endfor %}
+              </fieldset>
+            {% endif %}
+
+            <!-- Medical Conditions -->
+            <div class="form-group mb-4">
+              <label for="{{ eligibility_form.medical_conditions.id_for_label }}" class="font-weight-bold">Medical Conditions / Allergies</label>
+              {{ eligibility_form.medical_conditions|add_class:"form-control form-control-lg" }}
+              {% for err in eligibility_form.medical_conditions.errors %}
+                <small class="text-danger d-block">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <!-- Terms -->
+            <div class="form-group form-check mb-4">
+              {{ eligibility_form.agree_to_terms|add_class:"form-check-input" }}
+              <label class="form-check-label" for="{{ eligibility_form.agree_to_terms.id_for_label }}">
+                {{ eligibility_form.agree_to_terms.label }}
+              </label>
+              {% for err in eligibility_form.agree_to_terms.errors %}
+                <small class="text-danger d-block">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block shadow-sm">
+              <i class="fas fa-check-circle mr-2"></i> Submit Eligibility
+            </button>
+          </form>
+        </div>
+      </div> <!-- card -->
+
+    </div>
+  </div>
+</div>
+{% endblock %}

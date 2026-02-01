@@ -1,0 +1,167 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-image: url('{% static "image/aboutus.jpg" %}');
+            background-size: cover; 
+            background-attachment: fixed; 
+        }
+        .about-us-container { 
+            max-width: 900px; 
+            margin: auto; 
+            padding: 30px; 
+            background-color: rgba(255, 255, 255, 0.88); 
+            border-radius: 12px; 
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.15); 
+        }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 25px; 
+            animation: fadeInDown 1s; 
+            color: #002b3a;
+        }
+        .section { 
+            margin-bottom: 30px; 
+        }
+        .section h2 { 
+            margin-bottom: 10px; 
+            animation: fadeInLeft 1s; 
+            color: #004d61;
+        }
+        .section p { 
+            font-size: 1.05rem; 
+            color: #444; 
+            line-height: 1.6; 
+            animation: fadeInRight 1s;
+        }
+        .values-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .values-list li {
+            margin-bottom: 6px;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .btn-custom { 
+            background-color: rgb(0, 200, 255); 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            border: none; 
+            transition: background-color 0.3s ease; 
+            text-decoration: none;
+        }
+        .btn-custom:hover { 
+            background-color: rgb(0, 180, 230); 
+        }
+        .back-button { 
+            display: inline-block; 
+            margin-top: 10px; 
+        }
+
+        .contact-info { 
+            margin-top: 30px; 
+            text-align: center; 
+        }
+        .contact-info a { 
+            margin: 10px; 
+            font-size: 1.2rem; 
+            color: #555; 
+            transition: color 0.3s ease; 
+            display: inline-block;
+        }
+        .contact-info a:hover { 
+            color: rgb(0, 200, 255); 
+        }
+    </style>
+</head>
+
+<body>
+    <div class="about-us-container">
+
+        <h1><i class="fa-solid fa-droplet" style="color:#009bd6;"></i> About BloodConnect</h1>
+
+        <!-- Mission -->
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Our Mission</h2>
+            <p>
+                BloodConnect exists to bridge the gap between generous donors and patients in urgent need.  
+                Through technology, automation, and real-time communication, we work to make blood donation  
+                safer, easier, and more accessible for everyone.  
+                Our mission is simple: <strong>to save lives through innovation and community connection.</strong>
+            </p>
+        </div>
+
+        <!-- Vision -->
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Our Vision</h2>
+            <p>
+                We envision a future where no life is lost due to lack of timely blood.  
+                A future where digital tools empower donors, hospitals, and communities to collaborate effortlessly.  
+                <br><br>
+                BloodConnect aims to become the most trusted, transparent, and intelligent blood management system  
+                in the region.
+            </p>
+        </div>
+
+        <!-- Values -->
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Our Core Values</h2>
+            <ul class="values-list">
+                <li><i class="fa-solid fa-heart text-danger"></i> Compassion – Every donation is an act of love.</li>
+                <li><i class="fa-solid fa-shield-halved"></i> Safety – We prioritize donor and patient wellbeing.</li>
+                <li><i class="fa-solid fa-robot"></i> Innovation – Leveraging AI to transform healthcare systems.</li>
+                <li><i class="fa-solid fa-users"></i> Community – We believe in collective impact.</li>
+                <li><i class="fa-solid fa-handshake-angle"></i> Trust – Integrity guides everything we do.</li>
+            </ul>
+        </div>
+
+        <!-- Team -->
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Our Team</h2>
+            <p>
+                Behind BloodConnect is a passionate and diverse team of developers, healthcare partners,  
+                and community volunteers committed to reimagining the blood donation ecosystem.  
+                Together, we design solutions that improve response times, reliability, and accessibility.
+            </p>
+        </div>
+
+        <!-- Get Involved -->
+        <div class="section animate__animated animate__fadeIn">
+            <h2>Get Involved</h2>
+            <p>
+                Whether you are a donor, a healthcare worker, or simply someone who wants to make a difference,  
+                you are welcome to be part of this journey.  
+                Click the button below to see how you can contribute.
+            </p>
+            <a href="#" class="btn-custom">Join the Initiative</a>
+        </div>
+
+        <!-- Contact -->
+        <div class="contact-info">
+            <p><strong>Stay Connected</strong></p>
+            <a href="tel:+254781024762"><i class="fa-solid fa-phone"></i> +254 781 024 762</a>
+            <a href="mailto:allankibet1820@gmail.com"><i class="fa-solid fa-envelope"></i> allankibet1820@gmail.com</a>
+        </div>
+
+        <!-- Back -->
+        <div class="back-button">
+            <button onclick="history.back()" class="btn btn-custom">Back</button>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,133 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+{% block content %}
+
+<style>
+  .profile-container { max-width: 700px; margin: 2rem auto; }
+  .profile-card {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 2rem;
+    background: #fff;
+  }
+  .profile-img {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid #007bff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  .profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .profile-name { font-weight: 700; font-size: 1.8rem; color: #343a40; margin-top: 1rem; }
+  .profile-info table { width: 100%; border-collapse: collapse; }
+  .profile-info th {
+    width: 40%;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 12px 15px;
+    border: none;
+    text-align: left;
+  }
+  .profile-info td { padding: 12px 15px; border: none; color: #555; }
+  .profile-info tr:not(:last-child) td { border-bottom: 1px solid #dee2e6; }
+  .btn-edit {
+    background-color:rgb(12, 221, 240);
+    border-color:rgb(241, 244, 247);
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+  }
+  .btn-edit:hover { background-color:rgb(230, 235, 235); border-color: #0056b3; }
+  @media (max-width: 575.98px) {
+    .profile-name { font-size: 1.5rem; }
+  }
+</style>
+
+<div class="profile-container">
+  <div class="profile-card">
+
+    <!-- Profile header -->
+    <div class="profile-header">
+      {% if donor.profile_pic %}
+        <img src="{{ donor.profile_pic.url }}" alt="{{ user.get_full_name }}" class="profile-img" />
+      {% else %}
+        <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" class="profile-img" />
+      {% endif %}
+      <div class="profile-name">{{ user.get_full_name|default:"Donor Name" }}</div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Profile details table -->
+    <div class="profile-info">
+      <table>
+        <tbody>
+          <tr>
+            <th>Blood Group</th>
+            <td>{{ donor.bloodgroup|default:"Not Provided" }}</td>
+          </tr>
+          <tr>
+            <th>County of Residence</th>
+            <td>{{ donor.county|default:"Not Provided" }}</td>
+          </tr>
+          <tr>
+            <th>Mobile</th>
+            <td>{{ donor.mobile|default:"Not Provided" }}</td>
+          </tr>
+          <tr>
+            <th>National ID</th>
+            <td>{{ donor.national_id|default:"Not Provided" }}</td>
+          </tr>
+          <tr>
+            <th>Date of Birth</th>
+            <td>{% if donor.dob %}{{ donor.dob|date:"M d, Y" }}{% else %}Not Provided{% endif %}</td>
+          </tr>
+          <tr>
+            <th>Points Earned</th>
+            <td>{{ donor.points }}</td>
+          </tr>
+          <tr>
+            <th>Last Donation Date</th>
+            <td>{% if donor.last_donation_date %}{{ donor.last_donation_date|date:"M d, Y" }}{% else %}N/A{% endif %}</td>
+          </tr>
+          <tr>
+            <th>Next Eligible Donation Date</th>
+            <td>{% if next_donation_date %}{{ next_donation_date|date:"M d, Y" }}{% else %}N/A{% endif %}</td>
+          </tr>
+          <tr>
+            <th>Days Until Next Donation</th>
+            <td>{{ days_until_next }}</td>
+          </tr>
+          <tr>
+            <th>Current Location</th>
+            <td>{{ donor.location_name|default:"Not Set" }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Edit Profile Button -->
+    <div class="text-center mt-4">
+      <a href="{% url 'donor-edit-profile' %}" class="btn btn-edit">Edit Profile</a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

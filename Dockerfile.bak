@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create celery non-root user (Debian syntax - FIXED)
+RUN groupadd -g 1000 celery && \
+    useradd -u 1000 -g celery -s /bin/sh -m celery && \
+    mkdir -p /var/log/celery /var/run/celery /app && \
+    chown -R celery:celery /var/log/celery /var/run/celery /app /tmp
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first (for better caching)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project
+COPY . /app
+RUN chown -R celery:celery /app
+
+# Switch to non-root user
+USER celery
+
+# Expose port (Railway requirement)
+EXPOSE $PORT
+
+# Run gunicorn + celery (matches your Procfile)
+CMD ["sh", "-c", "gunicorn bloodbankmanagement.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 && celery -A bloodbankmanagement worker --loglevel=info --concurrency=4 &"]

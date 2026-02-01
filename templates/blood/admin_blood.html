@@ -1,0 +1,486 @@
+{% extends 'blood/adminbase.html' %}
+{% load static %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+    .stats-card {
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stats-card h5 {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    
+    .stats-card h3 {
+        font-size: 32px;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .bg-primary-light { background: linear-gradient(135deg, #cce5ff 0%, #b8daff 100%); color: #004085; }
+    .bg-success-light { background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); color: #155724; }
+    .bg-warning-light { background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404; }
+    .bg-danger-light { background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); color: #721c24; }
+    
+    .search-filter-section {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .table thead th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 13px;
+        border: none;
+        padding: 15px;
+    }
+    
+    .table tbody tr {
+        transition: all 0.2s;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+    
+    .status-badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .status-expired { background: #dc3545; color: white; }
+    .status-expiring { background: #ffc107; color: #856404; }
+    .status-available { background: #28a745; color: white; }
+    
+    .blood-group-badge {
+        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+</style>
+
+<div class="container-fluid mt-4 px-4">
+    <h2 class="mb-4">
+        <i class="fas fa-tint"></i> Blood Stock Management
+    </h2>
+
+    <!-- Success & Error Messages -->
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card bg-primary-light">
+                <h5><i class="fas fa-box"></i> Total Stock</h5>
+                <h3>{{ stats.total_batches }}</h3>
+                <small>{{ stats.total_units }} ml</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card bg-success-light">
+                <h5><i class="fas fa-hospital"></i> Donation Centers</h5>
+                <h3>{{ centers.count }}</h3>
+                <small>Active locations</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card bg-warning-light">
+                <h5><i class="fas fa-exclamation-triangle"></i> Expiring Soon</h5>
+                <h3>{{ stats.expiring_soon }}</h3>
+                <small>Within 7 days</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card bg-danger-light">
+                <h5><i class="fas fa-times-circle"></i> Expired</h5>
+                <h3>{{ stats.expired }}</h3>
+                <small>Units expired</small>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Add Stock Unit Form & Donation Center Button -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <form method="post" action="{% url 'admin-blood' %}" class="flex-grow-1 me-3">
+            {% csrf_token %}
+            <input type="hidden" name="submit_stockunit" value="1">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    {{ stockForm.center.label_tag }}
+                    {{ stockForm.center }}
+                    {% for error in stockForm.center.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ stockForm.bloodgroup.label_tag }}
+                    {{ stockForm.bloodgroup }}
+                    {% for error in stockForm.bloodgroup.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ stockForm.unit.label_tag }}
+                    {{ stockForm.unit }}
+                    {% for error in stockForm.unit.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ stockForm.expiry_date.label_tag }}
+                    {{ stockForm.expiry_date }}
+                    {% for error in stockForm.expiry_date.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ stockForm.barcode.label_tag }}
+                    {{ stockForm.barcode }}
+                    {% for error in stockForm.barcode.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Add Donation Center Button -->
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDonationCenterModal">
+            <i class="fas fa-hospital"></i> Add Center
+        </button>
+    </div>
+
+    <!-- Add Donation Center Modal -->
+    <div class="modal fade" id="addDonationCenterModal" tabindex="-1" aria-labelledby="addDonationCenterLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <form method="post" action="{% url 'admin-blood' %}">
+            {% csrf_token %}
+            <input type="hidden" name="submit_donation_center" value="1">
+            <div class="modal-header">
+              <h5 class="modal-title" id="addDonationCenterLabel">
+                  <i class="fas fa-hospital"></i> Add Donation Center
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              {{ donation_center_form.as_p }}
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i> Add Center
+              </button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="search-filter-section">
+        <form method="get" action="{% url 'admin-blood' %}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        <i class="fas fa-search"></i> Search
+                    </label>
+                    <input type="text" 
+                           name="q" 
+                           class="form-control" 
+                           placeholder="Search barcode, blood group, or center..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">
+                        <i class="fas fa-hospital"></i> Donation Center
+                    </label>
+                    <select name="center_id" class="form-select">
+                        <option value="all">All Centers</option>
+                        {% for center in centers %}
+                        <option value="{{ center.id }}" {% if selected_center_id == center.id|stringformat:"s" %}selected{% endif %}>
+                            {{ center.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">
+                        <i class="fas fa-tint"></i> Blood Group
+                    </label>
+                    <select name="bloodgroup" class="form-select">
+                        <option value="all">All Blood Groups</option>
+                        {% for bg in blood_groups %}
+                        <option value="{{ bg }}" {% if selected_bloodgroup == bg %}selected{% endif %}>
+                            {{ bg }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    {% if search_query or selected_center_id != 'all' or selected_bloodgroup != 'all' %}
+                    <a href="{% url 'admin-blood' %}" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aggregated Stock Table -->
+    <div class="row mt-4">
+        <div class="col-md-12 mb-4">
+            <h4><i class="fas fa-chart-bar"></i> Aggregated Stock by Center</h4>
+            {% for center_id, data in center_stock_map.items %}
+                <h5 class="mt-3">{{ data.name }}</h5>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Blood Group</th>
+                            <th>Total Units (ml)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bg, units in data.stock.items %}
+                        <tr>
+                            <td><span class="blood-group-badge">{{ bg }}</span></td>
+                            <td><strong>{{ units }}</strong> ml</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% empty %}
+                <p class="text-muted">No aggregated stock data available.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Detailed Stock Units List -->
+    <div class="row">
+        <div class="col-md-12">
+            <h4><i class="fas fa-list"></i> Detailed Stock Units</h4>
+            <div class="table-container">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-hospital"></i> Center</th>
+                            <th><i class="fas fa-tint"></i> Blood Group</th>
+                            <th><i class="fas fa-flask"></i> Units (ml)</th>
+                            <th><i class="fas fa-calendar-alt"></i> Expiry Date</th>
+                            <th><i class="fas fa-barcode"></i> Barcode</th>
+                            <th><i class="fas fa-clock"></i> Added On</th>
+                            <th><i class="fas fa-info-circle"></i> Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in stock_units %}
+                        <tr>
+                            <td>{{ stock.center.name }}</td>
+                            <td><span class="blood-group-badge">{{ stock.bloodgroup }}</span></td>
+                            <td><strong>{{ stock.unit }}</strong> ml</td>
+                            <td>
+                                {% if stock.expiry_date < today_date %}
+                                    <span class="text-danger fw-bold">
+                                        <i class="fas fa-exclamation-circle"></i> 
+                                        {{ stock.expiry_date|date:"M d, Y" }}
+                                    </span>
+                                {% elif stock.expiry_date <= expiring_threshold %}
+                                    <span class="text-warning fw-bold">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        {{ stock.expiry_date|date:"M d, Y" }}
+                                    </span>
+                                {% else %}
+                                    {{ stock.expiry_date|date:"M d, Y" }}
+                                {% endif %}
+                            </td>
+                            <td><code>{{ stock.barcode }}</code></td>
+                            <td class="text-muted">
+                                <small>{{ stock.added_on|date:"M d, Y H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if stock.expiry_date < today_date %}
+                                    <span class="status-badge status-expired">
+                                        <i class="fas fa-times-circle"></i> Expired
+                                    </span>
+                                {% elif stock.expiry_date <= expiring_threshold %}
+                                    <span class="status-badge status-expiring">
+                                        <i class="fas fa-clock"></i> Expiring Soon
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-available">
+                                        <i class="fas fa-check-circle"></i> Available
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No stock units found.</p>
+                                {% if search_query %}
+                                <a href="{% url 'admin-blood' %}" class="btn btn-primary">
+                                    <i class="fas fa-list"></i> View All Stock
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script>
+const chartData = {{ chart_data_json|safe }};
+const allBloodGroups = {{ blood_groups|safe }};
+const ctx = document.getElementById('dynamicStockChart').getContext('2d');
+
+const centersMap = {};
+chartData.forEach(item => {
+    centersMap[item.center_id] = item.center;
+});
+const centers = Object.keys(centersMap);
+
+function getChartDataset(selectedCenter, selectedBloodGroup) {
+    let labels = [];
+    let datasets = [];
+
+    if (selectedCenter === "all" && selectedBloodGroup === "all") {
+        labels = centers.map(id => centersMap[id]);
+        datasets = allBloodGroups.map((bg, idx) => ({
+            label: bg,
+            data: centers.map(id => {
+                const centerData = chartData.find(item => item.center_id == id);
+                return centerData ? centerData.stock[bg] || 0 : 0;
+            }),
+            backgroundColor: `rgba(${50+idx*20},${100+idx*10},${200-idx*10},0.7)`
+        }));
+    } else if (selectedCenter === "all") {
+        labels = centers.map(id => centersMap[id]);
+        datasets = [{
+            label: selectedBloodGroup,
+            data: centers.map(id => {
+                const centerData = chartData.find(item => item.center_id == id);
+                return centerData ? centerData.stock[selectedBloodGroup] || 0 : 0;
+            }),
+            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+        }];
+    } else if (selectedBloodGroup === "all") {
+        const centerData = chartData.find(item => item.center_id == selectedCenter);
+        labels = allBloodGroups;
+        datasets = [{
+            label: centersMap[selectedCenter],
+            data: allBloodGroups.map(bg => centerData ? centerData.stock[bg] || 0 : 0),
+            backgroundColor: allBloodGroups.map((bg, idx) => `rgba(${50+idx*20},${100+idx*10},${200-idx*10},0.7)`)
+        }];
+    } else {
+        const centerData = chartData.find(item => item.center_id == selectedCenter);
+        labels = [selectedBloodGroup];
+        datasets = [{
+            label: `${centersMap[selectedCenter]} - ${selectedBloodGroup}`,
+            data: [centerData ? centerData.stock[selectedBloodGroup] || 0 : 0],
+            backgroundColor: 'rgba(255,99,132,0.7)'
+        }];
+    }
+    return { labels, datasets };
+}
+
+let currentCenter = "all";
+let currentBloodGroup = "all";
+let stockChart = null;
+
+function updateChart() {
+    const { labels, datasets } = getChartDataset(currentCenter, currentBloodGroup);
+    if (stockChart) {
+        stockChart.data.labels = labels;
+        stockChart.data.datasets = datasets;
+        stockChart.update();
+    } else {
+        stockChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { 
+                        stacked: false, 
+                        title: { display: true, text: currentCenter === "all" ? "Centers" : "Blood Groups" }
+                    },
+                    y: { 
+                        beginAtZero: true, 
+                        title: { display: true, text: 'Stock (ml)' }
+                    }
+                }
+            }
+        });
+    }
+}
+
+updateChart();
+</script>
+
+<script>
+// Add today_date and expiring_threshold for template
+const today_date = new Date();
+const expiring_threshold = new Date();
+expiring_threshold.setDate(expiring_threshold.getDate() + 7);
+</script>
+
+{% endblock %}

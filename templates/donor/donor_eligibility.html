@@ -1,0 +1,95 @@
+{% extends 'donor/donorbase.html' %}
+{% block content %}
+<style>
+  .achievement-card {
+    border-radius: 1.25rem;
+    overflow: hidden;
+    border: 2px solid #f3c04f;
+    box-shadow: 0 4px 20px rgba(243, 192, 79, 0.3);
+  }
+
+  .achievement-card-header {
+    background: linear-gradient(90deg, #fdc830, #f37335);
+    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top-left-radius: 1.25rem;
+    border-top-right-radius: 1.25rem;
+    color: white;
+  }
+
+  .achievement-card-header .fa-trophy,
+  .achievement-card-header .fa-medal {
+    color: #ffe066;
+    filter: drop-shadow(0 8px 12px rgba(243,192,79,0.25));
+    font-size: 4rem;
+    margin-right: 1rem;
+  }
+
+  .achievement-card .badge-pill {
+    background: linear-gradient(90deg, #43cea2, #185a9d);
+    color: #fff;
+    font-size: 1.25rem;
+    box-shadow: 0 2px 8px rgba(24, 90, 157, 0.07),
+      0 1.2rem 1.4rem -1.1rem #f37335;
+  }
+
+  .achievement-card .btn-success {
+    background: linear-gradient(90deg, #38ef7d, #11998e);
+    border: none;
+    transition: background 0.25s ease;
+  }
+
+  .achievement-card .btn-success:hover {
+    background: linear-gradient(90deg, #11998e, #38ef7d);
+  }
+
+  .achievement-card .card-footer {
+    border-top: 0;
+    color: #555;
+    font-style: italic;
+    text-align: center;
+  }
+</style>
+
+<div class="container mt-5" style="max-width: 700px;">
+  {% if eligible %}
+    <!-- Eligible Donor Achievement Card -->
+    <div class="card achievement-card mb-5 shadow">
+      <div class="achievement-card-header">
+        <i class="fas fa-trophy"></i>
+        <div>
+          <h2 class="mb-0 font-weight-bold">You Are a Lifesaver!</h2>
+          <small class="text-white-50">Elite Donor Status</small>
+        </div>
+      </div>
+      <div class="card-body text-center">
+        <p class="lead mb-4">
+          Your dedication to donating blood is making a real difference in people’s lives.
+        </p>
+        <span class="badge badge-pill badge-success mb-4 px-4 py-2">Gold Level Donor</span>
+        <br />
+        <a href="{% url 'donate-blood' %}" class="btn btn-success btn-lg shadow">
+          Donate Again <i class="fas fa-heart ml-2"></i>
+        </a>
+      </div>
+      <div class="card-footer">
+        <small>Last donation date: June 2025</small>
+      </div>
+    </div>
+  {% else %}
+    <!-- Not Eligible Message -->
+    <div class="alert alert-warning shadow-sm text-center" role="alert">
+      <h2 class="font-weight-bold mb-3">Thank you for your interest!</h2>
+      <p class="mb-4">
+        Currently, you are <strong>not eligible</strong> to donate blood. This may be a temporary status.
+      </p>
+      <p>Please review the eligibility criteria carefully and maintain good health to become eligible soon.</p>
+      <a href="{% url 'donor-profile' %}" class="btn btn-warning mt-3 px-5">
+        Update Your Health Info
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

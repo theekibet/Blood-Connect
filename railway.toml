@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+
+[[services]]
+name = "web"
+startCommand = "python manage.py migrate && gunicorn bloodbankmanagement.wsgi:application --bind 0.0.0.0:$PORT"
+
+[[services]]
+name = "worker"
+startCommand = "celery -A bloodbankmanagement worker --loglevel=info"

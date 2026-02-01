@@ -1,0 +1,91 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4"><i class="fas fa-history"></i> My Donation History</h2>
+
+  {% if has_donations %}
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Date</th>
+            <th>Blood Group</th>
+            <th>Units (ml)</th>
+            <th>Donation Center</th>
+            <th>Appointment Date & Time</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for donation in donations %}
+          <tr>
+            <td>{{ donation.date|date:"M d, Y" }}</td>
+            <td>{{ donation.bloodgroup|default:"N/A" }}</td>
+            <td>{{ donation.unit|default:"N/A" }}</td>
+            <td>{{ donation.donation_center.name|default:"N/A" }}</td>
+            <td>
+              {% if donation.appointment %}
+                {{ donation.appointment.date|date:"M d, Y" }}
+                <br>
+                {{ donation.appointment.date|date:"h:i A" }}
+              {% else %}
+                <span class="text-muted">No appointment</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if donation.display_status %}
+                {% if donation.display_status == 'pending' %}
+                  <span class="badge bg-warning text-dark">Appointment Pending Approval</span>
+                {% elif donation.display_status == 'approved' %}
+                  <span class="badge bg-success">Appointment Approved</span>
+                {% elif donation.display_status == 'completed' %}
+                  <span class="badge bg-primary">Appointment Completed</span>
+                {% elif donation.display_status == 'cancelled' %}
+                  <span class="badge bg-secondary">Appointment Cancelled</span>
+                {% elif donation.display_status == 'rejected' %}
+                  <span class="badge bg-danger">Appointment Rejected</span>
+                {% else %}
+                  <span class="badge bg-info">{{ donation.display_status|title }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">Unknown</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if donation.display_status in 'pending,approved' %}
+              <form method="POST" action="{% url 'cancel-donation' donation.id %}" class="d-inline-block" onsubmit="return confirmCancel(event);">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="fas fa-times-circle"></i> Cancel Appointment
+                </button>
+              </form>
+              {% else %}
+                <span class="text-muted">N/A</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> You have no blood donation history yet.
+    </div>
+  {% endif %}
+</div>
+
+<!-- ✅ Confirmation Script -->
+<script>
+  function confirmCancel(event) {
+    if (!confirm("Are you sure you want to cancel this donation appointment?")) {
+      event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Blood Stock Tracker</h2>
+    
+    <form method="GET" class="form-inline my-3">
+        <label for="id_center" class="mr-2">Select Donation Center:</label>
+        <select name="center" id="id_center" class="form-control mr-2">
+            <option value="">-- Select Center --</option>
+            {% for center in centers %}
+            <option value="{{ center.id }}" {% if selected_center and center.id == selected_center.id %}selected{% endif %}>
+                {{ center.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">View Stock</button>
+    </form>
+    
+    {% if stock_data %}
+        <table class="table table-bordered table-hover">
+            <thead class="thead-light">
+                <tr>
+                    <th>Blood Group</th>
+                    <th>Total Units (ml)</th>
+                    <th>Earliest Expiry</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stock_data %}
+                <tr {% if stock.earliest_expiry and stock.earliest_expiry <= today|add:"7 days" %}class="table-danger"{% endif %}>
+                    <td>{{ stock.bloodgroup }}</td>
+                    <td>{{ stock.total_units }}</td>
+                    <td>{{ stock.earliest_expiry|date:"M d, Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif selected_center %}
+        <p>No stock data available for this center.</p>
+    {% else %}
+        <p>Please select a donation center to view blood stock details.</p>
+    {% endif %}
+</div>
+{% endblock %}

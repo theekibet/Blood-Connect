@@ -1,0 +1,128 @@
+{% extends 'nurse/nursebase.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<style>
+  .profile-container { max-width: 700px; margin: 2rem auto; }
+  .profile-card {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 2rem;
+    background: #fff;
+  }
+  .profile-img {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid #ff0018;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .profile-name { font-weight: 700; font-size: 1.8rem; color: #343a40; }
+  .profile-info table { width: 100%; border-collapse: collapse; }
+  .profile-info th {
+    width: 40%;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 12px 15px;
+    border: none;
+    text-align: left;
+  }
+  .profile-info td { padding: 12px 15px; border: none; color: #555; }
+  .profile-info tr:not(:last-child) td { border-bottom: 1px solid #dee2e6; }
+  .btn-edit {
+    background-color: #ff0018;
+    border-color: #ff0018;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+  }
+  .btn-edit:hover { background-color: #cc0013; border-color: #cc0013; }
+  @media (max-width: 575.98px) {
+    .profile-header { flex-direction: column; align-items: center; text-align: center; }
+    .profile-name { font-size: 1.5rem; }
+  }
+</style>
+
+<div class="profile-container">
+  <div class="profile-card">
+
+    <!-- Profile header -->
+    <div class="profile-header">
+      {% if nurse.profile_pic %}
+        <img src="{{ nurse.profile_pic.url }}" alt="{{ nurse.get_full_name }}" class="profile-img" />
+      {% else %}
+        <img src="{% static 'images/default-profile.png' %}" alt="No Profile Picture" class="profile-img" />
+      {% endif %}
+      <div class="profile-name">{{ nurse.get_full_name|default:"Nurse Name" }}</div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Profile details table -->
+    <div class="profile-info">
+      <table>
+        <tbody>
+          <tr>
+            <th>Username</th>
+            <td>{{ nurse.user.username|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ nurse.user.email|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <th>First Name</th>
+            <td>{{ nurse.user.first_name|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <th>Last Name</th>
+            <td>{{ nurse.user.last_name|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <th>Specialization</th>
+            <td>{{ nurse.get_specialization_display|default:"Not specified" }}</td>
+          </tr>
+          <tr>
+            <th>Phone</th>
+            <td>{{ nurse.phone|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <th>Registration Number</th>
+            <td>{{ nurse.registration_number|default:"Not provided" }}</td>
+          </tr>
+          <tr>
+            <th>Donation Center</th>
+            <td>{{ nurse.donation_center.name|default:"Not assigned" }}</td>
+          </tr>
+          <tr>
+            <th>Bio</th>
+            <td>{% if nurse.bio %}{{ nurse.bio|linebreaksbr }}{% else %}<em>No bio available</em>{% endif %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Edit Profile Button -->
+    <a href="{% url 'nurse-profile-edit' nurse.pk %}" class="btn btn-edit mt-4">Edit Profile</a>
+  </div>
+</div>
+
+{% endblock %}

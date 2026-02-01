@@ -1,0 +1,399 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Appointment Details - {{ appointment.barcode }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Back Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'admin-appointment-search' %}" class="btn btn-secondary mb-3">
+                <i class="fas fa-arrow-left"></i> Back to Search
+            </a>
+            <h2 class="mb-0">
+                <i class="fas fa-calendar-check text-primary"></i> Appointment Details
+            </h2>
+        </div>
+    </div>
+
+    <!-- Barcode Display -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Appointment Barcode</h5>
+                    <svg id="barcode"></svg>
+                    <p class="mt-2 mb-0"><strong>{{ appointment.barcode }}</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Status Card -->
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Status Information</h5>
+                            <p class="mb-2">
+                                <strong>Current Status:</strong> 
+                                {% if appointment.status == 'completed' %}
+                                    <span class="badge badge-success badge-lg">Completed</span>
+                                {% elif appointment.status == 'approved' %}
+                                    <span class="badge badge-info badge-lg">Approved</span>
+                                {% elif appointment.status == 'pending' %}
+                                    <span class="badge badge-warning badge-lg">Pending</span>
+                                {% elif appointment.status == 'cancelled' %}
+                                    <span class="badge badge-secondary badge-lg">Cancelled</span>
+                                {% elif appointment.status == 'rejected' %}
+                                    <span class="badge badge-danger badge-lg">Rejected</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Type:</strong> 
+                                {% if appointment.is_donation %}
+                                    <span class="badge badge-success">Donation</span>
+                                {% elif appointment.is_blood_request %}
+                                    <span class="badge badge-info">Blood Request</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Other</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Timeline</h5>
+                            <p class="mb-1">
+                                <small><strong>Created:</strong> {{ appointment.created_at|date:"M d, Y g:i A" }}</small>
+                            </p>
+                            {% if time_to_approval %}
+                            <p class="mb-1">
+                                <small><strong>Time to Approval:</strong> {{ time_to_approval }}</small>
+                            </p>
+                            {% endif %}
+                            {% if time_to_completion %}
+                            <p class="mb-1">
+                                <small><strong>Time to Completion:</strong> {{ time_to_completion }}</small>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Details -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Appointment Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="40%">Appointment Date:</th>
+                            <td>{{ appointment.date|date:"l, F d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Time:</th>
+                            <td>{{ appointment.date|date:"g:i A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Donation Center:</th>
+                            <td>
+                                {% if appointment.donation_center %}
+                                    <i class="fas fa-hospital"></i> {{ appointment.donation_center.name }}
+                                {% else %}
+                                    <span class="text-muted">Not specified</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Nurse:</th>
+                            <td>
+                                <i class="fas fa-user-md"></i> 
+                                {{ appointment.nurse.user.get_full_name }}
+                                <br><small class="text-muted">{{ appointment.nurse.user.email }}</small>
+                            </td>
+                        </tr>
+                        {% if appointment.notes %}
+                        <tr>
+                            <th>Notes:</th>
+                            <td>{{ appointment.notes }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Participant Information</h5>
+                </div>
+                <div class="card-body">
+                    {% if appointment.donor %}
+                    <h6 class="text-success"><i class="fas fa-hand-holding-heart"></i> Donor Details</h6>
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="40%">Name:</th>
+                            <td>{{ appointment.donor.user.get_full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ appointment.donor.user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Blood Group:</th>
+                            <td><span class="badge badge-danger">{{ appointment.donor.bloodgroup }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>{{ appointment.donor.mobile_no }}</td>
+                        </tr>
+                    </table>
+                    {% elif appointment.patient %}
+                    <h6 class="text-danger"><i class="fas fa-user-injured"></i> Patient Details</h6>
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="40%">Name:</th>
+                            <td>{{ appointment.patient.user.get_full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ appointment.patient.user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Blood Group:</th>
+                            <td><span class="badge badge-danger">{{ appointment.patient.bloodgroup }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>{{ appointment.patient.mobile_no }}</td>
+                        </tr>
+                    </table>
+                    {% else %}
+                    <p class="text-muted">No participant information available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Tracking Details -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Status History & Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Status Changes</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-plus-circle text-primary"></i> 
+                                    <strong>Created:</strong> {{ appointment.created_at|date:"M d, Y g:i A" }}
+                                </li>
+                                
+                                {% if appointment.approved_by_nurse %}
+                                <li class="mb-2">
+                                    <i class="fas fa-check-circle text-info"></i> 
+                                    <strong>Approved:</strong> {{ appointment.approved_at_nurse|date:"M d, Y g:i A" }}
+                                    <br><small class="text-muted ml-4">By: {{ appointment.approved_by_nurse.get_full_name }}</small>
+                                </li>
+                                {% endif %}
+                                
+                                {% if appointment.completed_by_nurse %}
+                                <li class="mb-2">
+                                    <i class="fas fa-check-double text-success"></i> 
+                                    <strong>Completed:</strong> {{ appointment.completed_at_nurse|date:"M d, Y g:i A" }}
+                                    <br><small class="text-muted ml-4">By: {{ appointment.completed_by_nurse.get_full_name }}</small>
+                                </li>
+                                {% endif %}
+                                
+                                {% if appointment.rejected_at %}
+                                <li class="mb-2">
+                                    <i class="fas fa-times-circle text-danger"></i> 
+                                    <strong>Rejected:</strong> {{ appointment.rejected_at|date:"M d, Y g:i A" }}
+                                </li>
+                                {% endif %}
+                                
+                                {% if appointment.cancelled_at %}
+                                <li class="mb-2">
+                                    <i class="fas fa-ban text-secondary"></i> 
+                                    <strong>Cancelled:</strong> {{ appointment.cancelled_at|date:"M d, Y g:i A" }}
+                                    <br><small class="text-muted ml-4">By: {{ appointment.get_cancelled_by_display }}
+                                    {% if appointment.cancelled_by_user %}
+                                        ({{ appointment.cancelled_by_user.get_full_name }})
+                                    {% endif %}
+                                    </small>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Last Status Update</h6>
+                            {% if appointment.status_changed_at %}
+                            <p class="mb-2">
+                                <strong>Date:</strong> {{ appointment.status_changed_at|date:"M d, Y g:i A" }}
+                            </p>
+                            {% if appointment.status_changed_by %}
+                            <p class="mb-2">
+                                <strong>Changed by:</strong> {{ appointment.status_changed_by.get_full_name }}
+                            </p>
+                            {% endif %}
+                            {% else %}
+                            <p class="text-muted">No status changes recorded</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Affected Stock Units -->
+    {% if affected_stock_units or stock_transactions %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-tint"></i> Affected Stock Units</h5>
+                </div>
+                <div class="card-body">
+                    {% if stock_transactions %}
+                    <h6>Stock Transactions</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Transaction Date</th>
+                                    <th>Stock Barcode</th>
+                                    <th>Blood Group</th>
+                                    <th>Units</th>
+                                    <th>Transaction Type</th>
+                                    <th>Center</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in stock_transactions %}
+                                <tr>
+                                    <td>{{ transaction.transaction_date|date:"M d, Y g:i A" }}</td>
+                                    <td><code>{{ transaction.stock_unit.barcode }}</code></td>
+                                    <td><span class="badge badge-danger">{{ transaction.stock_unit.bloodgroup }}</span></td>
+                                    <td>{{ transaction.units_affected }} ml</td>
+                                    <td>{{ transaction.transaction_type|title }}</td>
+                                    <td>{{ transaction.stock_unit.center.name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    
+                    {% if affected_stock_units %}
+                    <h6 class="mt-4">Stock Units Involved</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Barcode</th>
+                                    <th>Blood Group</th>
+                                    <th>Available Units</th>
+                                    <th>Expiry Date</th>
+                                    <th>Center</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in affected_stock_units %}
+                                <tr>
+                                    <td><code>{{ stock.barcode }}</code></td>
+                                    <td><span class="badge badge-danger">{{ stock.bloodgroup }}</span></td>
+                                    <td>{{ stock.unit }} ml</td>
+                                    <td>{{ stock.expiry_date|date:"M d, Y" }}</td>
+                                    <td>{{ stock.center.name }}</td>
+                                    <td>
+                                        {% if stock.unit == 0 %}
+                                            <span class="badge badge-secondary">Depleted</span>
+                                        {% elif stock.expiry_date < today %}
+                                            <span class="badge badge-danger">Expired</span>
+                                        {% else %}
+                                            <span class="badge badge-success">Available</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    
+                    {% if not stock_transactions and not affected_stock_units %}
+                    <p class="text-muted">No stock units affected by this appointment</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Request Information -->
+    {% if appointment.request %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-file-medical"></i> Related Request Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Request Type:</strong> {{ appointment.request_content_type.model|title }}</p>
+                    <p><strong>Request ID:</strong> #{{ appointment.request_object_id }}</p>
+                    {% if appointment.request.bloodgroup %}
+                    <p><strong>Blood Group Needed:</strong> <span class="badge badge-danger">{{ appointment.request.bloodgroup }}</span></p>
+                    {% endif %}
+                    {% if appointment.request.unit %}
+                    <p><strong>Units Needed:</strong> {{ appointment.request.unit }} ml</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Generate barcode using JsBarcode
+    JsBarcode("#barcode", "{{ appointment.barcode }}", {
+        format: "CODE128",
+        width: 2,
+        height: 50,
+        displayValue: false
+    });
+</script>
+
+<style>
+    .badge-lg {
+        font-size: 1rem;
+        padding: 0.5em 0.8em;
+    }
+    .table th {
+        font-weight: 600;
+    }
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}

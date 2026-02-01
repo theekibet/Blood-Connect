@@ -1,0 +1,69 @@
+{% extends 'donor/donorbase.html' %}
+{% block content %}
+<div class="container py-10 px-4 mx-auto max-w-6xl animate-fade-in">
+    <div class="text-center mb-12">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-4">🩺 Health Tips for Blood Donation</h2>
+        
+    </div>
+
+    <!-- Tip Sections -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Before Donation -->
+        <div class="bg-red-50 rounded-2xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-2xl font-semibold mb-4 text-red-600">Before Your Donation</h3>
+            <ul class="space-y-3 list-disc list-inside text-gray-700">
+                <li><strong>Stay Hydrated:</strong> Drink water 24 hours before and a few hours before donating. Avoid caffeine.</li>
+                <li><strong>Eat a Healthy Meal:</strong> Eat 1–2 hours before donating. Include iron-rich foods like spinach, red meat, beans, and fortified cereals.</li>
+                <li><strong>Get Enough Sleep:</strong> Rest 7–9 hours the night before to stay strong and alert.</li>
+                <li><strong>Avoid Fatty Foods:</strong> These can interfere with blood tests and make your blood unusable.</li>
+                <li><strong>Bring Identification:</strong> A valid ID like a driver’s license or national id, donor card, or student ID is required.</li>
+                <li><strong>Wear Comfortable Clothing:</strong> Short or loose-fitting sleeves allow easier access to your arm.</li>
+            </ul>
+        </div>
+
+        <!-- During Donation -->
+        <div class="bg-blue-50 rounded-2xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-2xl font-semibold mb-4 text-blue-600">💉 During Your Donation</h3>
+            <ul class="space-y-3 list-disc list-inside text-gray-700">
+                <li><strong>Relax and Communicate:</strong> Stay calm and tell staff if you feel dizzy or anxious.</li>
+                <li><strong>Follow Instructions:</strong> Trust the phlebotomist—they're trained professionals.</li>
+                <li><strong>Squeeze the Ball:</strong> Helps maintain a steady blood flow.</li>
+                <li><strong>Donation Time:</strong> Blood draw takes 8–10 minutes. Expect about an hour total for the visit.</li>
+            </ul>
+        </div>
+
+        <!-- After Donation -->
+        <div class="bg-green-50 rounded-2xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-2xl font-semibold mb-4 text-green-600">🛌 After Your Donation</h3>
+            <ul class="space-y-3 list-disc list-inside text-gray-700">
+                <li><strong>Rest and Refresh:</strong> Relax for 10–15 minutes after. Enjoy the snacks and drink provided.</li>
+                <li><strong>Keep Hydrating:</strong> Drink fluids for the next 24 hours to recover.</li>
+                <li><strong>Avoid Heavy Activity:</strong> No intense physical activity for the rest of the day.</li>
+                <li><strong>Watch for Side Effects:</strong> Mild dizziness or bruising is normal. Lie down if faint.</li>
+                <li><strong>Keep the Bandage On:</strong> Leave it for a few hours and keep it dry to avoid infection or bleeding.</li>
+            </ul>
+        </div>
+
+        <!-- Bonus Tips -->
+        <div class="bg-pink-50 rounded-2xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <h3 class="text-2xl font-semibold mb-4 text-pink-600">❤️ Bonus Tips for Repeat Donors</h3>
+            <ul class="space-y-3 list-disc list-inside text-gray-700">
+                <li><strong>Track Your Donations:</strong> Use apps or cards provided by centers.</li>
+                <li><strong>Schedule Ahead:</strong> Whole blood donation is allowed every 8 weeks.</li>
+                <li><strong>Encourage Others:</strong> Bring a friend or share your story online!</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Tailwind Animations -->
+<style>
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+    animation: fade-in 1s ease-in-out;
+}
+</style>
+{% endblock %}

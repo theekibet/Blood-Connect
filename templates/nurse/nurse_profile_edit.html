@@ -1,0 +1,332 @@
+{% extends 'nurse/nursebase.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<style>
+  .edit-profile-container { max-width: 700px; margin: 2rem auto; }
+  .edit-profile-card {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  }
+  .edit-profile-header { 
+    font-weight: 700; 
+    font-size: 1.8rem; 
+    color: #343a40; 
+    margin-bottom: 1.5rem; 
+    text-align: center; 
+  }
+  .section-header {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #ff0018;
+  }
+  .section-header i { margin-right: 0.5rem; }
+  
+  form .form-group { margin-bottom: 1.2rem; }
+  label { font-weight: 600; color: #495057; }
+  
+  input[type="text"], input[type="email"], input[type="file"], textarea, select {
+    border-radius: 6px; 
+    border: 1px solid #ced4da; 
+    padding: 0.5rem 0.75rem; 
+    font-size: 1rem; 
+    width: 100%;
+    transition: border-color 0.2s ease-in-out;
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    outline: none; 
+    border-color: #ff0018; 
+    box-shadow: 0 0 0 0.2rem rgba(255,0,24,0.25);
+  }
+  
+  /* Read-only field styling */
+  input[readonly], select[disabled] {
+    background-color: #e9ecef !important;
+    cursor: not-allowed !important;
+    opacity: 0.8;
+  }
+  
+  .readonly-notice {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+  
+  textarea { min-height: 80px; resize: vertical; }
+  
+  .btn-save { 
+    background-color: #ff0018; 
+    border-color: #ff0018; 
+    font-weight: 600; 
+    width: 100%; 
+    transition: 0.3s; 
+  }
+  .btn-save:hover { 
+    background-color: #cc0013; 
+    border-color: #cc0013; 
+  }
+  
+  .btn-cancel { 
+    background-color: #6c757d; 
+    border-color: #6c757d; 
+    color: #fff; 
+    width: 100%; 
+    margin-top: 0.75rem; 
+    text-align: center; 
+    display: block; 
+  }
+  .btn-cancel:hover { 
+    background-color: #5a6268; 
+    border-color: #545b62; 
+    color: #fff; 
+    text-decoration: none; 
+  }
+
+  .custom-file-upload {
+    display: inline-block; 
+    cursor: pointer; 
+    background-color: #ff0018; 
+    color: white; 
+    padding: 10px 20px;
+    border-radius: 8px; 
+    font-weight: 600; 
+    transition: 0.3s; 
+    margin-bottom: 1rem;
+  }
+  .custom-file-upload:hover { background-color: #cc0013; }
+  
+  input[type="file"] { display: none; }
+  
+  #profilePicPreview {
+    display: block; 
+    max-width: 180px; 
+    max-height: 180px; 
+    border-radius: 50%; 
+    margin: 0 auto 1rem;
+    object-fit: cover; 
+    border: 3px solid #ff0018; 
+    box-shadow: 0 0 8px rgba(255,0,24,0.4);
+  }
+  
+  .form-check { margin-top: 0.75rem; }
+  
+  .lock-icon {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+  }
+</style>
+
+<div class="edit-profile-container">
+  <div class="edit-profile-card">
+    <h2 class="edit-profile-header">
+      <i class="fas fa-user-edit"></i> Edit Profile: {{ nurse.user.get_full_name }}
+    </h2>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <!-- Profile Picture Section -->
+      <div class="text-center mb-4">
+        {% if nurse.profile_pic %}
+          <img src="{{ nurse.profile_pic.url }}" id="profilePicPreview" alt="Profile Picture Preview" />
+        {% else %}
+          <img src="{% static 'images/default-profile.png' %}" id="profilePicPreview" alt="No Profile Picture" />
+        {% endif %}
+
+        <div class="form-group">
+          <label for="id_profile_pic" class="custom-file-upload">
+            <i class="fas fa-upload"></i> Choose Image
+          </label>
+          {{ nurse_form.profile_pic }}
+
+          {% if nurse.profile_pic %}
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="clear_profile_pic" name="clear_profile_pic">
+              <label class="form-check-label" for="clear_profile_pic">Remove current picture</label>
+            </div>
+          {% endif %}
+
+          {% for error in nurse_form.profile_pic.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Editable Account Information -->
+      <h5 class="section-header">
+        <i class="fas fa-edit"></i> Editable Account Information
+      </h5>
+      
+      {% for field in user_form %}
+        {% if field.name in "first_name,last_name" %}
+          <div class="form-group">
+            {{ field.label_tag }}
+            {{ field|add_class:"form-control" }}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Editable Profile Information -->
+      <h5 class="section-header">
+        <i class="fas fa-edit"></i> Editable Profile Information
+      </h5>
+      
+      {% for field in nurse_form %}
+        {% if field.name in "phone,specialization,bio" %}
+          <div class="form-group">
+            {{ field.label_tag }}
+            {{ field|add_class:"form-control" }}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Read-Only Information -->
+      <h5 class="section-header">
+        <i class="fas fa-lock"></i> Read-Only Information
+      </h5>
+      
+      <div class="readonly-notice">
+        <i class="fas fa-info-circle"></i> 
+        <strong>Note:</strong> The following fields are locked for security and verification purposes. 
+        Contact your system administrator if you need to update these details.
+      </div>
+
+      <!-- Read-only email from user_form -->
+      {% for field in user_form %}
+        {% if field.name == "email" %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">
+              {{ field.label }}
+              <i class="fas fa-lock lock-icon"></i>
+            </label>
+            {{ field|add_class:"form-control" }}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Read-only fields from nurse_form -->
+      {% for field in nurse_form %}
+        {% if field.name in "registration_number,donation_center" %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">
+              {{ field.label }}
+              <i class="fas fa-lock lock-icon"></i>
+            </label>
+            {{ field|add_class:"form-control" }}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Action Buttons -->
+      <div class="mt-4">
+        <button type="submit" class="btn btn-save">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+        <a href="{% url 'nurse-profile' nurse.pk %}" class="btn btn-cancel">
+          <i class="fas fa-times"></i> Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Profile picture live preview
+  const fileInput = document.getElementById('id_profile_pic');
+  const previewImg = document.getElementById('profilePicPreview');
+
+  if(fileInput) {
+    fileInput.addEventListener('change', function(){
+      const file = this.files[0];
+      if (file) {
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('File size must be less than 5MB');
+          this.value = '';
+          return;
+        }
+        
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+          alert('Only JPG, JPEG, PNG, and GIF files are allowed');
+          this.value = '';
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e){
+          previewImg.setAttribute('src', e.target.result);
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // Prevent form submission on Enter key in read-only fields
+  document.querySelectorAll('input[readonly], select[disabled]').forEach(field => {
+    field.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+      }
+    });
+    
+    // Visual feedback on click
+    field.addEventListener('click', function() {
+      if (this.hasAttribute('readonly') || this.hasAttribute('disabled')) {
+        this.style.border = '2px solid #ffc107';
+        setTimeout(() => {
+          this.style.border = '1px solid #ced4da';
+        }, 1000);
+      }
+    });
+  });
+</script>
+{% endblock %}

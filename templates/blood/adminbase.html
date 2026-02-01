@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Admin Dashboard{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet" />
+
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+        crossorigin="anonymous" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            list-style: none;
+            text-decoration: none;
+            font-family: 'Josefin Sans', sans-serif;
+        }
+
+        body {
+            background-color: #f3f5f9;
+        }
+
+        /* Wrapper and Sidebar */
+        .wrapper {
+            display: flex;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        .wrapper .sidebar {
+            width: 220px;
+            background-color: #343a40;
+            padding: 30px 0;
+            position: fixed;
+            height: 100vh;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .wrapper .sidebar h2 {
+            color: #fff;
+            text-transform: uppercase;
+            text-align: center;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .wrapper .sidebar ul {
+            padding-left: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .wrapper .sidebar ul li {
+            padding: 15px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .wrapper .sidebar ul li:hover {
+            background-color: #495057;
+        }
+
+        .wrapper .sidebar ul li a {
+            color: #bdb8d7;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            transition: color 0.3s ease;
+            font-weight: 500;
+            font-size: 1.05em;
+        }
+
+        .wrapper .sidebar ul li:hover a,
+        .wrapper .sidebar ul li.active a {
+            color: white;
+        }
+
+        .wrapper .sidebar ul li a .fas {
+            width: 25px;
+            font-size: 1.3em;
+            margin-right: 15px;
+        }
+
+        /* Notification badge */
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 50%;
+            margin-left: auto;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Navbar */
+        nav.navbar {
+            background-color: #dc3545;
+            padding: 0.5rem 1rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1030;
+        }
+
+        nav.navbar .navbar-brand {
+            color: white;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+        }
+
+        nav.navbar .navbar-brand i {
+            margin-right: 8px;
+        }
+
+        nav.navbar .nav-link {
+            color: white !important;
+            font-weight: 500;
+        }
+
+        nav.navbar .nav-link:hover {
+            color: #f8d7da !important;
+        }
+
+        /* Main Content */
+        .wrapper .main_content {
+            margin-left: 220px;
+            padding: 90px 30px 30px 30px; /* top padding includes navbar height */
+            width: calc(100% - 220px);
+            min-height: 100vh;
+            background-color: white;
+            box-shadow: inset 0 0 15px #f0f0f0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .wrapper {
+                flex-direction: column;
+            }
+
+            .wrapper .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
+
+            .wrapper .main_content {
+                margin-left: 0;
+                width: 100%;
+                padding: 100px 15px 15px 15px;
+            }
+        }
+
+        /* ===== CHATBOT STYLES ===== */
+        
+        /* Chatbot toggle button */
+        .chatbot-toggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff0018, #dc143c);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 0, 24, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 0, 24, 0.6);
+        }
+
+        .chatbot-toggle i {
+            color: white;
+            font-size: 28px;
+        }
+
+        .chatbot-toggle.active {
+            background: #dc143c;
+        }
+
+        /* Chatbot container */
+        .chatbot-container {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 380px;
+            height: 550px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .chatbot-container.active {
+            display: flex;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Chatbot header */
+        .chatbot-header {
+            background: linear-gradient(135deg, #ff0018, #dc143c);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chatbot-header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chatbot-avatar {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .chatbot-title h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chatbot-title p {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .chatbot-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 24px;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .chatbot-close:hover {
+            transform: rotate(90deg);
+        }
+
+        /* Chatbot messages area */
+        .chatbot-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .chatbot-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chatbot-messages::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 3px;
+        }
+
+        /* Message bubbles */
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #ff0018, #dc143c);
+            color: white;
+        }
+
+        .message.user .message-avatar {
+            background: #6c757d;
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.bot .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.user .message-content {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #ff0018, #dc143c);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            padding: 0 8px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 18px;
+            border: 1px solid #e9ecef;
+            width: fit-content;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: #999;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Chatbot input area */
+        .chatbot-input {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chatbot-input input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            padding: 12px 20px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chatbot-input input:focus {
+            border-color: #ff0018;
+        }
+
+        .chatbot-input button {
+            width: 45px;
+            height: 45px;
+            border: none;
+            background: linear-gradient(135deg, #ff0018, #dc143c);
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .chatbot-input button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(255, 0, 24, 0.4);
+        }
+
+        .chatbot-input button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* Quick actions */
+        .quick-actions {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action-btn {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #495057;
+        }
+
+        .quick-action-btn:hover {
+            background: #ff0018;
+            color: white;
+            border-color: #ff0018;
+        }
+
+        /* Welcome message */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .welcome-message i {
+            font-size: 48px;
+            color: #ff0018;
+            margin-bottom: 15px;
+        }
+
+        .welcome-message h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .welcome-message p {
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .chatbot-container {
+                width: calc(100% - 20px);
+                height: calc(100% - 120px);
+                right: 10px;
+                bottom: 80px;
+            }
+
+            .wrapper .main_content {
+                margin-left: 0;
+            }
+
+            .wrapper .sidebar {
+                transform: translateX(-100%);
+            }
+        }
+        /* ========================================
+   CRITICAL MOBILE RESPONSIVE FIXES
+   Add these styles to ALL base templates
+   ======================================== */
+
+/* 1. MOBILE NAVBAR TOGGLE BUTTON FIX */
+.navbar-toggler {
+    border: 2px solid var(--primary) !important;
+    padding: 0.5rem 0.75rem;
+    background: rgba(220, 38, 38, 0.1);
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(220, 38, 38, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+
+/* 2. HAMBURGER MENU (Mobile Sidebar Toggle) */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 90px;
+    left: 15px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+    z-index: 1001;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+}
+
+@media (max-width: 992px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    .mobile-menu-toggle.active {
+        left: 265px; /* Sidebar width - 15px */
+        transition: left 0.3s ease;
+    }
+}
+
+/* 3. SIDEBAR MOBILE IMPROVEMENTS */
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: none;
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Overlay when sidebar is open */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .main_content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* 4. NAVBAR MOBILE FIXES */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0.75rem 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    .navbar-brand i {
+        font-size: 1.4rem;
+    }
+    
+    /* Mobile dropdown menu */
+    .navbar-collapse {
+        background: white;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .navbar-nav {
+        align-items: flex-start !important;
+    }
+    
+    .nav-item {
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+}
+
+/* 5. NOTIFICATION ICON MOBILE */
+@media (max-width: 768px) {
+    .notification-icon {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .notification-badge {
+        min-width: 18px;
+        height: 18px;
+        font-size: 0.65rem;
+    }
+}
+
+/* 6. PROFILE DROPDOWN MOBILE */
+@media (max-width: 768px) {
+    .profile-dropdown {
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .profile-dropdown img {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .dropdown-menu {
+        width: 100%;
+        left: 0 !important;
+        right: 0 !important;
+        margin: 0.5rem 0;
+    }
+}
+
+/* 7. CHATBOT MOBILE IMPROVEMENTS */
+@media (max-width: 768px) {
+    .chatbot-container {
+        width: calc(100% - 20px);
+        height: calc(100vh - 100px);
+        right: 10px;
+        bottom: 80px;
+    }
+    
+    .chatbot-toggle {
+        width: 55px;
+        height: 55px;
+        bottom: 15px;
+        right: 15px;
+    }
+    
+    .chatbot-toggle i {
+        font-size: 24px;
+    }
+    
+    .chatbot-header {
+        padding: 1rem;
+    }
+    
+    .chatbot-avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+    
+    .chatbot-title h3 {
+        font-size: 1rem;
+    }
+    
+    .chatbot-title p {
+        font-size: 0.75rem;
+    }
+    
+    .quick-actions {
+        padding: 0.75rem;
+    }
+    
+    .quick-action-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    .chatbot-messages {
+        padding: 1rem;
+    }
+    
+    .message-bubble {
+        max-width: 90%;
+        font-size: 0.9rem;
+    }
+}
+
+/* 8. MESSAGES/ALERTS MOBILE */
+@media (max-width: 768px) {
+    .messages {
+        right: 0.5rem;
+        left: 0.5rem;
+        max-width: none;
+        top: 80px;
+    }
+    
+    .alert {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+    }
+}
+
+/* 9. SIDEBAR SOCIAL MEDIA MOBILE */
+@media (max-width: 992px) {
+    .social_media {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        justify-content: center;
+        margin-top: 2rem;
+        padding: 1rem;
+    }
+}
+
+/* 10. MAIN CONTENT PADDING MOBILE */
+@media (max-width: 768px) {
+    .main_content {
+        padding: 1rem;
+    }
+    
+    .wrapper {
+        margin-top: 70px;
+    }
+}
+
+/* 11. PREVENT HORIZONTAL SCROLL */
+body {
+    overflow-x: hidden;
+}
+
+html {
+    overflow-x: hidden;
+}
+
+/* 12. TOUCH-FRIENDLY BUTTONS */
+@media (max-width: 768px) {
+    .sidebar ul li a {
+        padding: 1.2rem 1.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .sidebar ul li a .fas {
+        font-size: 1.1rem;
+    }
+    
+    /* Make all clickable elements touch-friendly */
+    button,
+    a,
+    .btn {
+        min-height: 44px; /* Apple's recommended touch target size */
+        min-width: 44px;
+    }
+}
+
+/* 13. FORMS MOBILE OPTIMIZATION */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        -webkit-appearance: none;
+        border-radius: 8px;
+    }
+}
+
+/* 14. TABLES MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        font-size: 0.85rem;
+    }
+    
+    th, td {
+        padding: 0.5rem;
+        white-space: nowrap;
+    }
+}
+
+/* 15. CARDS/CONTENT BOXES MOBILE */
+@media (max-width: 768px) {
+    .card,
+    .content-area {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-title,
+    h1, h2, h3 {
+        font-size: calc(1rem + 0.5vw);
+    }
+}
+
+/* 16. FIX FIXED ELEMENTS ON MOBILE */
+@media (max-width: 768px) {
+    .navbar.fixed-top {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 1030;
+    }
+}
+
+/* 17. LANDSCAPE MODE OPTIMIZATION */
+@media (max-width: 768px) and (orientation: landscape) {
+    .chatbot-container {
+        height: 90vh;
+    }
+    
+    .sidebar {
+        padding: 1rem 0;
+    }
+    
+    .sidebar h2 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+}
+
+/* 18. iOS SAFE AREA (Notch Support) */
+@supports (padding: max(0px)) {
+    .navbar {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+    
+    .sidebar {
+        padding-left: max(0px, env(safe-area-inset-left));
+    }
+    
+    .chatbot-toggle {
+        right: max(15px, env(safe-area-inset-right));
+        bottom: max(15px, env(safe-area-inset-bottom));
+    }
+}
+
+/* 19. SMALL SCREENS (< 375px) */
+@media (max-width: 375px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .sidebar {
+        width: 260px;
+    }
+    
+    .sidebar h2 {
+        font-size: 1.2rem;
+    }
+    
+    .chatbot-container {
+        width: calc(100% - 10px);
+        right: 5px;
+    }
+}
+
+/* 20. ACCESSIBILITY - FOCUS STATES */
+*:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+button:focus,
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand navbar-light">
+
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'logout' %}">Logout <i class="fas fa-sign-out-alt"></i></a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>Admin Panel</h2>
+            <ul>
+                <li class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
+                    <a href="{% url 'admin-dashboard' %}"><i class="fas fa-home"></i> Dashboard</a>
+                </li>
+
+                <li class="{% if request.resolver_match.url_name == 'admin-patient' %}active{% endif %}">
+                    <a href="{% url 'admin-patient' %}"><i class="fas fa-user-injured"></i> Patients</a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-nurse' %}active{% endif %}">
+                    <a href="{% url 'admin-nurse' %}"><i class="fas fa-user-md"></i> Nurses</a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-donor' %}active{% endif %}">
+                    <a href="{% url 'admin-donor' %}"><i class="fas fa-hand-holding-heart"></i> Donors</a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-donation' %}active{% endif %}">
+                    <a href="{% url 'admin-donation' %}">
+                        <i class="fas fa-hand-holding-medical"></i> Donations
+                        {% if new_donations_count|default:0 > 0 %}
+                        <span class="badge badge-danger">{{ new_donations_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="{% if request.resolver_match.url_name == 'admin-request' %}active{% endif %}">
+                    <a href="{% url 'admin-request' %}">
+                        <i class="fas fa-spinner"></i> Blood Requests
+                        {% if new_requests_count|default:0 > 0 %}
+                        <span class="badge badge-danger">{{ new_requests_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li> <a href="{% url 'admin-nurse-blood-requests' %}">Nurses Blood Requests</a>
+                </li>
+
+                <li><a href="{% url 'admin-blood' %}"><i class="fas fa-tint"></i> Blood Stock</a></li>
+                <li><a href="{% url 'admin_contacts' %}"><i class="fas fa-address-book"></i> Contacts</a></li>
+                <li><a href="{% url 'admin-post-notification' %}"><i class="fas fa-bell"></i> Post Notification</a></li>
+
+                {% if current_blood_request %}
+                <a href="{% url 'blood_request_stock_transactions' blood_request_id=current_blood_request.id %}" class="btn btn-primary">
+                    View Stock Units Affected
+                </a>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Main content -->
+        <div class="main_content">
+            <!-- Django messages block -->
+            {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}
+            <!-- Page specific contents go here -->
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- Chatbot Toggle Button -->
+    <div class="chatbot-toggle" id="chatbotToggle">
+        <i class="fas fa-comments"></i>
+    </div>
+
+    <!-- Chatbot Container -->
+    <div class="chatbot-container" id="chatbotContainer">
+        <!-- Header -->
+        <div class="chatbot-header">
+            <div class="chatbot-header-content">
+                <div class="chatbot-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="chatbot-title">
+                    <h3>BloodBot Assistant</h3>
+                    <p>Online • Here to help</p>
+                </div>
+            </div>
+            <button class="chatbot-close" id="chatbotClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="quick-action-btn" data-message="My profile">👤 My Profile</button>
+            <button class="quick-action-btn" data-message="Blood stock">🩸 Stock Info</button>
+            <button class="quick-action-btn" data-message="Donation centers">📍 Centers</button>
+            <button class="quick-action-btn" data-message="Eligibility">✅ Eligibility</button>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="welcome-message">
+                <i class="fas fa-comments"></i>
+                <h4>Welcome to BloodBot!</h4>
+                <p>I'm here to help you with information about blood donations, requests, and more.</p>
+                <p style="font-size: 13px;">Try asking: "What's my blood type?" or "Show donation centers"</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chatbot-input">
+            <input
+                type="text"
+                id="chatbotInput"
+                placeholder="Type your message..."
+                autocomplete="off"
+            />
+            <button id="chatbotSend">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS dependencies -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        crossorigin="anonymous"></script>
+
+    <script>
+        // Chatbot functionality
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const chatbotClose = document.getElementById('chatbotClose');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSend = document.getElementById('chatbotSend');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+
+        // Generate session ID
+        let sessionId = sessionStorage.getItem('chatbot_session_id');
+        if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('chatbot_session_id', sessionId);
+        }
+
+        // Toggle chatbot
+        chatbotToggle.addEventListener('click', function () {
+            chatbotContainer.classList.toggle('active');
+            chatbotToggle.classList.toggle('active');
+            if (chatbotContainer.classList.contains('active')) {
+                chatbotInput.focus();
+            }
+        });
+
+        chatbotClose.addEventListener('click', function () {
+            chatbotContainer.classList.remove('active');
+            chatbotToggle.classList.remove('active');
+        });
+
+        // Quick action buttons
+        document.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const message = this.getAttribute('data-message');
+                sendMessage(message);
+            });
+        });
+
+        // Send message on button click
+        chatbotSend.addEventListener('click', function () {
+            const message = chatbotInput.value.trim();
+            if (message) {
+                sendMessage(message);
+            }
+        });
+
+        // Send message on Enter key
+        chatbotInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                const message = chatbotInput.value.trim();
+                if (message) {
+                    sendMessage(message);
+                }
+            }
+        });
+
+        // Function to send message
+        function sendMessage(message) {
+            // Clear input
+            chatbotInput.value = '';
+
+            // Remove welcome message if it exists
+            const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+
+            // Add user message to chat
+            addMessage(message, 'user');
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Disable input while processing
+            chatbotInput.disabled = true;
+            chatbotSend.disabled = true;
+
+            // Get CSRF token
+            const csrftoken = getCookie('csrftoken');
+
+            // Send to backend
+            fetch('/chatbot/api/chatbot/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId
+                })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide typing indicator
+                    hideTypingIndicator();
+
+                    // Add bot response
+                    if (data.reply) {
+                        addMessage(data.reply, 'bot');
+                    } else if (data.error) {
+                        addMessage(`Error: ${data.error}`, 'bot');
+                        console.error('API Error:', data.error);
+                    } else {
+                        addMessage('Sorry, I received an unexpected response.', 'bot');
+                    }
+
+                    // Re-enable input
+                    chatbotInput.disabled = false;
+                    chatbotSend.disabled = false;
+                    chatbotInput.focus();
+                })
+                .catch(error => {
+                    console.error('Fetch Error:', error);
+                    hideTypingIndicator();
+
+                    // More specific error message
+                    let errorMsg = 'Sorry, I\'m having trouble connecting. ';
+                    if (error.message.includes('404')) {
+                        errorMsg += 'API endpoint not found. Please check the URL configuration.';
+                    } else if (error.message.includes('403')) {
+                        errorMsg += 'Authentication error. Please refresh the page.';
+                    } else if (error.message.includes('500')) {
+                        errorMsg += 'Server error. Please try again later.';
+                    } else {
+                        errorMsg += 'Please check your connection and try again.';
+                    }
+
+                    addMessage(errorMsg, 'bot');
+                    chatbotInput.disabled = false;
+                    chatbotSend.disabled = false;
+                });
+        }
+
+        // Function to add message to chat
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            const avatar = type === 'bot'
+                ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
+                : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
+
+            messageDiv.innerHTML = `
+                ${avatar}
+                <div class="message-content">
+                    <div class="message-bubble">${formatMessage(text)}</div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Format message (preserve line breaks and emojis)
+        function formatMessage(text) {
+            return text.replace(/\n/g, '<br>');
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'message bot';
+            indicator.id = 'typingIndicator';
+            indicator.innerHTML = `
+                <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="typing-indicator active">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            chatbotMessages.appendChild(indicator);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        // ========================================
+// MOBILE MENU FUNCTIONALITY
+// Add this script before closing </body> tag
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Create mobile menu toggle button
+    const mobileToggle = document.createElement('div');
+    mobileToggle.className = 'mobile-menu-toggle';
+    mobileToggle.innerHTML = '<i class="fas fa-bars"></i>';
+    document.body.appendChild(mobileToggle);
+    
+    // Create overlay for mobile sidebar
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+    
+    const sidebar = document.querySelector('.sidebar');
+    
+    // Toggle sidebar on mobile
+    mobileToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        mobileToggle.classList.toggle('active');
+        
+        // Change icon
+        const icon = mobileToggle.querySelector('i');
+        if (sidebar.classList.contains('active')) {
+            icon.className = 'fas fa-times';
+        } else {
+            icon.className = 'fas fa-bars';
+        }
+        
+        // Prevent body scroll when sidebar is open
+        if (sidebar.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    });
+    
+    // Close sidebar when clicking overlay
+    overlay.addEventListener('click', function() {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        mobileToggle.classList.remove('active');
+        mobileToggle.querySelector('i').className = 'fas fa-bars';
+        document.body.style.overflow = '';
+    });
+    
+    // Close sidebar when clicking a link (mobile only)
+    if (window.innerWidth <= 992) {
+        const sidebarLinks = sidebar.querySelectorAll('a');
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                mobileToggle.classList.remove('active');
+                mobileToggle.querySelector('i').className = 'fas fa-bars';
+                document.body.style.overflow = '';
+            });
+        });
+    }
+    
+    // Handle window resize
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            // Close sidebar on desktop
+            if (window.innerWidth > 992) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                mobileToggle.classList.remove('active');
+                mobileToggle.querySelector('i').className = 'fas fa-bars';
+                document.body.style.overflow = '';
+            }
+        }, 250);
+    });
+    
+    // Prevent zoom on double-tap (iOS)
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(event) {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+    
+    // Fix iOS 100vh issue
+    function setVH() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+});
+
+// ========================================
+// IMPROVED CHATBOT FOR MOBILE
+// ========================================
+
+// Modify existing chatbot toggle to work better on mobile
+const existingChatbotToggle = document.getElementById('chatbotToggle');
+const existingChatbotContainer = document.getElementById('chatbotContainer');
+
+if (existingChatbotToggle && existingChatbotContainer) {
+    existingChatbotToggle.addEventListener('click', function() {
+        if (window.innerWidth <= 768) {
+            // On mobile, prevent body scroll when chatbot is open
+            if (existingChatbotContainer.classList.contains('active')) {
+                document.body.style.overflow = '';
+            } else {
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    });
+    
+    const existingChatbotClose = document.getElementById('chatbotClose');
+    if (existingChatbotClose) {
+        existingChatbotClose.addEventListener('click', function() {
+            document.body.style.overflow = '';
+        });
+    }
+}
+
+// ========================================
+// MOBILE NAVBAR IMPROVEMENTS
+// ========================================
+
+// Auto-close mobile navbar after clicking a link
+document.addEventListener('DOMContentLoaded', function() {
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    const navbarCollapse = document.querySelector('.navbar-collapse');
+    
+    if (navbarCollapse && navbarToggler) {
+        // Close navbar when clicking outside
+        document.addEventListener('click', function(event) {
+            const isClickInsideNav = navbarCollapse.contains(event.target);
+            const isClickOnToggler = navbarToggler.contains(event.target);
+            
+            if (!isClickInsideNav && !isClickOnToggler && navbarCollapse.classList.contains('show')) {
+                navbarToggler.click();
+            }
+        });
+        
+        // Close navbar when clicking a nav link (mobile only)
+        if (window.innerWidth <= 992) {
+            const navLinks = navbarCollapse.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (navbarCollapse.classList.contains('show')) {
+                        navbarToggler.click();
+                    }
+                });
+            });
+        }
+    }
+});
+
+// ========================================
+// TOUCH IMPROVEMENTS
+// ========================================
+
+// Add active state to touch elements
+document.addEventListener('DOMContentLoaded', function() {
+    const touchElements = document.querySelectorAll('a, button, .btn, .card, .sidebar ul li a');
+    
+    touchElements.forEach(element => {
+        element.addEventListener('touchstart', function() {
+            this.style.opacity = '0.7';
+        }, {passive: true});
+        
+        element.addEventListener('touchend', function() {
+            this.style.opacity = '1';
+        }, {passive: true});
+        
+        element.addEventListener('touchcancel', function() {
+            this.style.opacity = '1';
+        }, {passive: true});
+    });
+});
+
+// ========================================
+// FORM INPUT ZOOM PREVENTION (iOS)
+// ========================================
+
+// Prevent iOS from zooming in on input focus
+if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.style.fontSize === '' || parseInt(input.style.fontSize) < 16) {
+                input.style.fontSize = '16px';
+            }
+        });
+    });
+}
+
+// ========================================
+// SMOOTH SCROLL FOR ANCHOR LINKS
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href !== '#' && href !== '#!') {
+                const target = document.querySelector(href);
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+    });
+});
+
+// ========================================
+// ONLINE/OFFLINE DETECTION
+// ========================================
+
+window.addEventListener('online', function() {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success';
+    alert.innerHTML = '✅ You are back online!';
+    alert.style.position = 'fixed';
+    alert.style.top = '100px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    document.body.appendChild(alert);
+    
+    setTimeout(() => alert.remove(), 3000);
+});
+
+window.addEventListener('offline', function() {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-warning';
+    alert.innerHTML = '⚠️ You are offline. Some features may not work.';
+    alert.style.position = 'fixed';
+    alert.style.top = '100px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    document.body.appendChild(alert);
+    
+    setTimeout(() => alert.remove(), 5000);
+});
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+{% extends 'blood/adminbase.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Same blood-drives styles from the artifact */
+</style>
+
+<div style="padding: 4rem 2rem; max-width: 1200px; margin: 0 auto;">
+    <h1 style="text-align: center; font-size: 2.5rem; margin-bottom: 1rem;">All Blood Drive Events</h1>
+    <p style="text-align: center; color: #6b7280; margin-bottom: 3rem;">Join us at these upcoming events and help save lives</p>
+    
+    <div class="blood-drives-grid">
+        {% for drive in blood_drives %}
+        <div class="drive-card" onclick="window.location.href='{% url 'blood-drive-detail' drive.pk %}'">
+            <div class="drive-image">
+                {% if drive.image %}
+                <img src="{{ drive.image.url }}" alt="{{ drive.title }}">
+                {% else %}
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <i class="fas fa-calendar-alt" style="font-size: 4rem; color: white;"></i>
+                </div>
+                {% endif %}
+            </div>
+            <div class="drive-content">
+                <h3 class="drive-title">{{ drive.title }}</h3>
+                <div class="drive-location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ drive.location }}</span>
+                </div>
+                <div class="drive-date">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ drive.event_date|date:"F d, Y - g:i A" }}</span>
+                </div>
+                <p class="drive-description">{{ drive.description|truncatewords:20 }}</p>
+                <a href="{% url 'blood-drive-detail' drive.pk %}" class="drive-cta">
+                    View Details <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 4rem; grid-column: 1/-1;">
+            <i class="fas fa-calendar-times" style="font-size: 4rem; color: #d1d5db; margin-bottom: 1rem;"></i>
+            <p style="color: #6b7280; font-size: 1.2rem;">No upcoming blood drives at the moment.</p>
+            <a href="{% url 'home' %}" style="display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #dc2626; color: white; border-radius: 8px; text-decoration: none;">Back to Home</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

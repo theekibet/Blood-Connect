@@ -1,0 +1,786 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Load Font Awesome CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" />
+
+<style>
+  :root {
+    --primary-color: #dc3545;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --danger-color: #dc3545;
+    --light-bg: #f8f9fa;
+    --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --hover-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  }
+
+  body {
+    background-color: #f5f5f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* Welcome Card */
+  .welcome-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+  
+  .welcome-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  /* Dashboard Cards */
+  .dashboard-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+    border: none;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .dashboard-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  .dashboard-card-body {
+    padding: 2rem 1.5rem;
+  }
+
+  .dashboard-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .requests-made-icon { color: #E44D26; }
+  .pending-requests-icon { color: #29ABE2; }
+  .approved-requests-icon { color: #2ECC71; }
+  .rejected-requests-icon { color: #95A5A6; }
+
+  .card-count {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+
+  .card-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-description {
+    font-size: 0.85rem;
+    color: #999;
+  }
+
+  /* Avatar */
+  .donor-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid rgba(255,255,255,0.3);
+    margin-right: 1.5rem;
+  }
+
+  .avatar-placeholder {
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    margin-right: 1.5rem;
+    font-size: 4rem;
+  }
+
+  /* Location Info */
+  .location-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.9);
+    flex-wrap: wrap;
+  }
+
+  .location-info i {
+    color: #ffd700;
+  }
+
+  #updateLocationBtn {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    transition: all 0.3s;
+  }
+
+  #updateLocationBtn:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.5);
+  }
+
+  /* Countdown */
+  #countdown {
+    color: var(--danger-color);
+    font-weight: bold;
+    font-size: 1.3rem;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    background: #fff3cd;
+    border-radius: 8px;
+  }
+
+  .eligible-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--success-color);
+    color: white;
+    border-radius: 50px;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .not-eligible-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 50px;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  /* Buttons */
+  .btn-impact {
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 50rem;
+    padding: 0.75rem 2rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    border: none;
+  }
+
+  .btn-impact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    color: white;
+    text-decoration: none;
+  }
+
+  .btn-nearby {
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: var(--card-shadow);
+  }
+
+  .btn-nearby:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  /* Progress Circle */
+  .progress-circle-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 2rem auto;
+  }
+
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .progress-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--success-color);
+  }
+
+  .progress-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+
+  /* Info Cards */
+  .info-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s;
+    background: white;
+    border: none;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  .info-card-body {
+    padding: 1.5rem;
+  }
+
+  .info-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .health-tips .info-icon { color: #e74c3c; }
+  .faqs .info-icon { color: #3498db; }
+  .advice .info-icon { color: #9b59b6; }
+  .resources .info-icon { color: #f39c12; }
+
+  /* Recent Donations Table */
+  .recent-donations-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    background: white;
+    margin-top: 2rem;
+  }
+
+  .table-responsive {
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .donations-table {
+    margin-bottom: 0;
+  }
+
+  .donations-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .donations-table th {
+    font-weight: 600;
+    border: none;
+    padding: 1rem;
+  }
+
+  .donations-table td {
+    padding: 1rem;
+    vertical-align: middle;
+  }
+
+  .status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .status-approved { background: #d4edda; color: #155724; }
+  .status-pending { background: #fff3cd; color: #856404; }
+  .status-rejected { background: #f8d7da; color: #721c24; }
+
+  /* Milestone Section */
+  .milestone-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+    margin-top: 2rem;
+  }
+
+  .milestone-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .milestone-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .milestone-count {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 1rem 0;
+  }
+
+  /* Section Headers */
+  .section-header {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2rem 0 1.5rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-header i {
+    color: var(--primary-color);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .dashboard-card-body {
+      padding: 1.5rem 1rem;
+    }
+    
+    .card-count {
+      font-size: 2rem;
+    }
+    
+    .welcome-card {
+      text-align: center;
+    }
+    
+    .donor-avatar, .avatar-placeholder {
+      margin: 0 auto 1rem;
+    }
+  }
+
+  /* Animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animated {
+    animation: fadeIn 0.5s ease-out;
+  }
+</style>
+<div class="container mt-4">
+  <!-- Enhanced Greeting Card -->
+  {% include 'shared/greetings_card.html' %}
+  
+  <!-- Location -->
+  {% if donor %}
+    <div class="location-info" id="locationDisplay">
+      <i class="fas fa-home"></i>
+      <span>
+        {% if donor.county %}
+          {{ donor.county }}
+        {% else %}
+          County not set
+        {% endif %}
+      </span>
+      
+      {% if donor.location_name %}
+        <span class="mx-2">|</span>
+        <i class="fas fa-map-marker-alt"></i>
+        <span id="locationName">{{ donor.location_name }}</span>
+      {% endif %}
+      
+      <button id="updateLocationBtn" class="btn btn-sm ms-2" type="button">
+        <i class="fas fa-sync-alt"></i> Update Location
+      </button>
+      
+      <!-- Hidden latitude/longitude for backend use -->
+      {% if donor.latitude %}
+        <span id="latText" style="display:none;">{{ donor.latitude }}</span>
+      {% endif %}
+      {% if donor.longitude %}
+        <span id="lonText" style="display:none;">{{ donor.longitude }}</span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- Dashboard Stats -->
+  <div class="row g-4 mt-4 animated">
+    {% for item in dashboard_stats %}
+      <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-card">
+          <div class="dashboard-card-body">
+            <i class="fas {{ item.icon }} dashboard-icon {{ item.color }}"></i>
+            <div class="card-count">{{ item.count }}</div>
+            <div class="card-label">{{ item.label }}</div>
+            <div class="card-description">{{ item.description }}</div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Points & Next Donation Row -->
+  <div class="row g-4 mt-3 animated">
+    <!-- Points Card -->
+    <div class="col-md-6">
+      <div class="card dashboard-card">
+        <div class="dashboard-card-body">
+          <h5 class="mb-3"><i class="fas fa-trophy text-warning"></i> Reward Points</h5>
+          {% if points > 0 %}
+            <div class="card-count text-success">{{ points }}</div>
+            <p class="mb-0">From {{ total_donations }} approved donation{{ total_donations|pluralize }}</p>
+            <small class="text-muted">Keep donating to earn more rewards!</small>
+          {% else %}
+            <div class="card-count text-muted">0</div>
+            <p class="mb-0 text-danger">No points yet</p>
+            <small class="text-muted">Donate your first unit to start earning!</small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Donation Card -->
+    <div class="col-md-6">
+      <div class="card dashboard-card">
+        <div class="dashboard-card-body">
+          <h5 class="mb-3"><i class="fas fa-calendar-alt text-danger"></i> Next Eligible Donation</h5>
+          {% if next_donation_date %}
+            <p class="mb-2">You can donate again on:</p>
+            <div class="card-count text-primary" style="font-size: 1.5rem;">{{ next_donation_date }}</div>
+            {% if days_until_next == 0 %}
+              <div class="eligible-badge">
+                <i class="fas fa-check-circle"></i> You're eligible now!
+              </div>
+            {% else %}
+              <p id="countdown">Calculating...</p>
+            {% endif %}
+            <div class="mt-3">
+              <a href="{% url 'sickle_cell' %}" class="btn-impact">
+                <i class="fas fa-heart"></i> See Your Impact
+              </a>
+            </div>
+          {% else %}
+            <p class="mb-2">No previous donations recorded</p>
+            <div class="eligible-badge">
+              <i class="fas fa-hand-holding-heart"></i> Ready to donate!
+            </div>
+            <div class="mt-3">
+              <a href="{% url 'donate-blood' %}" class="btn-impact">
+                <i class="fas fa-tint"></i> Schedule Donation
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nearby Centers Buttons -->
+  <div class="text-center mt-4 animated">
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="{% url 'nearby-compatible-patients' %}" class="btn btn-primary btn-nearby">
+        <i class="fas fa-users"></i> Find Compatible Patients Nearby
+      </a>
+      <a href="{% url 'nearby-centers' %}" class="btn btn-success btn-nearby">
+        <i class="fas fa-hospital"></i> Find Donation Centers Nearby
+      </a>
+    </div>
+  </div>
+
+  <!-- Progress Circle -->
+  <div class="row mt-4 animated">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-body text-center">
+          <h5 class="mb-4"><i class="fas fa-bullseye"></i> Your Donation Goal Progress</h5>
+          <div class="progress-circle-container">
+            <svg width="180" height="180" role="img" aria-label="Donation progress">
+              <circle cx="90" cy="90" r="70" stroke="#e6e6e6" stroke-width="12" fill="none" />
+              <circle cx="90" cy="90" r="70" stroke="#28a745" stroke-width="12" fill="none"
+                      stroke-dasharray="440" stroke-dashoffset="{{ stroke_dashoffset }}"
+                      transform="rotate(-90 90 90)" 
+                      style="transition: stroke-dashoffset 1s ease;" />
+            </svg>
+            <div class="progress-text">
+              <div class="progress-number">{{ total_donations }}/{{ goal }}</div>
+              <div class="progress-label">Donations</div>
+            </div>
+          </div>
+          <p class="text-muted mt-3">{{ progress }}% towards your goal of {{ goal }} donations</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Milestone Card -->
+  {% if next_milestone %}
+  <div class="milestone-card animated mt-4">
+    <i class="fas fa-medal milestone-icon"></i>
+    <div class="milestone-text">Next Milestone</div>
+    <div class="milestone-count">{{ next_milestone }} Donations</div>
+    <p class="mb-0">Only {{ donations_to_milestone }} more donation{{ donations_to_milestone|pluralize }} to reach your next milestone!</p>
+  </div>
+  {% endif %}
+
+  <!-- Info Cards Section -->
+  <div class="section-header animated mt-4">
+    <i class="fas fa-info-circle"></i>
+    <span>Resources & Information</span>
+  </div>
+  <div class="row g-4 animated">
+    {% for item in info_cards %}
+      <div class="col-lg-3 col-md-6">
+        <div class="card info-card {{ item.color }}">
+          <div class="info-card-body">
+            <i class="fas {{ item.icon }} info-icon"></i>
+            <h5 class="mb-3">{{ item.title }}</h5>
+            <p class="text-muted mb-0">{{ item.desc }}</p>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Recent Donations Section -->
+  {% if recent_donations %}
+  <div class="section-header animated mt-4">
+    <i class="fas fa-history"></i>
+    <span>Recent Donation History</span>
+  </div>
+  <div class="recent-donations-card animated">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table donations-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Donation Center</th>
+              <th>Units</th>
+              <th>Status</th>
+              <th>Disease</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for donation in recent_donations %}
+            <tr>
+              <td>{{ donation.date|date:"M d, Y" }}</td>
+              <td>
+                {% if donation.donation_center %}
+                  {{ donation.donation_center.hospital_name }}
+                {% else %}
+                  N/A
+                {% endif %}
+              </td>
+              <td>{{ donation.unit }}</td>
+              <td>
+                <span class="status-badge status-{{ donation.status }}">
+                  {% if donation.status == 'approved' %}
+                    <i class="fas fa-check"></i>
+                  {% elif donation.status == 'pending' %}
+                    <i class="fas fa-clock"></i>
+                  {% else %}
+                    <i class="fas fa-times"></i>
+                  {% endif %}
+                  {{ donation.status|title }}
+                </span>
+              </td>
+              <td>{{ donation.disease|default:"None reported" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Last Donation Info -->
+  {% if last_donation_date %}
+  <div class="alert alert-info mt-4 animated" style="border-radius: 15px;">
+    <i class="fas fa-info-circle"></i>
+    <strong>Last Donation:</strong> {{ last_donation_date|date:"F d, Y" }}
+    ({{ last_donation_date|timesince }} ago)
+  </div>
+  {% endif %}
+</div>
+
+<!-- Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Countdown Timer
+  const nextDonationIso = "{{ next_donation_date_iso|default:'' }}";
+  const daysUntilNext = {{ days_until_next|default:0 }};
+
+  if (nextDonationIso && daysUntilNext > 0) {
+    const countdownElem = document.getElementById("countdown");
+    const countDownDate = new Date(nextDonationIso).getTime();
+    
+    const timerInterval = setInterval(function() {
+      const now = new Date().getTime();
+      const distance = countDownDate - now;
+      
+      if (distance <= 0) {
+        clearInterval(timerInterval);
+        countdownElem.innerHTML = '<span class="eligible-badge"><i class="fas fa-check-circle"></i> You are eligible to donate now!</span>';
+        return;
+      }
+      
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      
+      countdownElem.innerHTML = `
+        <i class="fas fa-hourglass-half"></i> 
+        ${days}d ${hours}h ${minutes}m ${seconds}s remaining
+      `;
+    }, 1000);
+  }
+
+  // Get CSRF Token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Update Location Button
+  const updateBtn = document.getElementById('updateLocationBtn');
+  if (updateBtn) {
+    updateBtn.addEventListener('click', function() {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+      }
+
+      // Show loading state
+      updateBtn.disabled = true;
+      updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const lat = position.coords.latitude.toFixed(6);
+          const lon = position.coords.longitude.toFixed(6);
+          
+          // Create hidden elements if they don't exist
+          let latText = document.getElementById('latText');
+          let lonText = document.getElementById('lonText');
+          
+          if (!latText) {
+            latText = document.createElement('span');
+            latText.id = 'latText';
+            latText.style.display = 'none';
+            document.getElementById('locationDisplay').appendChild(latText);
+          }
+          if (!lonText) {
+            lonText = document.createElement('span');
+            lonText.id = 'lonText';
+            lonText.style.display = 'none';
+            document.getElementById('locationDisplay').appendChild(lonText);
+          }
+          
+          latText.textContent = lat;
+          lonText.textContent = lon;
+
+          const data = new URLSearchParams();
+          data.append('latitude', lat);
+          data.append('longitude', lon);
+
+          fetch("{% url 'save-user-location' %}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: data.toString()
+          })
+          .then(res => res.json())
+          .then(json => {
+            console.log('Location update response:', json);
+            
+            if (json.status === 'success' && json.location_name) {
+              let locNameElem = document.getElementById('locationName');
+              if (!locNameElem) {
+                const locationDisplay = document.getElementById('locationDisplay');
+                const separator = document.createElement('span');
+                separator.className = 'mx-2';
+                separator.textContent = '|';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-map-marker-alt';
+                const span = document.createElement('span');
+                span.id = 'locationName';
+                span.textContent = json.location_name;
+                locationDisplay.appendChild(separator);
+                locationDisplay.appendChild(icon);
+                locationDisplay.appendChild(span);
+              } else {
+                locNameElem.textContent = json.location_name;
+              }
+            }
+            
+            alert(json.message || 'Location updated successfully!');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
+          })
+          .catch(err => {
+            console.error('Fetch error:', err);
+            alert("Failed to update location. Please try again.");
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
+          });
+        },
+        function(error) {
+          alert("Error getting location: " + error.message);
+          updateBtn.disabled = false;
+          updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
+        }
+      );
+    });
+  }
+
+  // Add scroll animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.animated').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(el);
+  });
+});
+</script>
+{% endblock %}

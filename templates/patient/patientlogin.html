@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Login - BloodConnect</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #dc3545;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .content-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            width: 100%;
+            max-width: 450px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .card-heading {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #c82333 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .card-heading i {
+            margin-right: 10px;
+        }
+
+        .card-body {
+            padding: 30px;
+            background: white;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .show-password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 40px;
+            cursor: pointer;
+            color: var(--secondary-color);
+            transition: color 0.3s;
+        }
+
+        .show-password-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        #loginBtn {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #c82333 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        #loginBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .alert i {
+            font-size: 1.2rem;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .alert-warning i {
+            color: var(--warning-color);
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .alert-success i {
+            color: var(--success-color);
+        }
+
+        .text-right a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .text-right a:hover {
+            color: #c82333;
+            text-decoration: underline;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: var(--secondary-color);
+        }
+
+        .register-link a {
+            color: var(--primary-color);
+            font-weight: 600;
+            text-decoration: none;
+            margin-left: 5px;
+            transition: color 0.3s;
+        }
+
+        .register-link a:hover {
+            color: #c82333;
+            text-decoration: underline;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+        }
+
+        .btn-custom {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 50px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-custom:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateX(-5px);
+        }
+
+        .verification-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .verification-section h6 {
+            color: var(--warning-color);
+            margin-bottom: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            .content-wrapper {
+                padding: 10px;
+            }
+            
+            .card-heading {
+                font-size: 1.5rem;
+                padding: 20px;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+            
+            .back-button {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            
+            .btn-custom {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <div class="card shadow" role="main" aria-labelledby="patient-login-heading">
+            <div class="card-heading" id="patient-login-heading">
+                <i class="fas fa-heartbeat"></i> Patient Login
+            </div>
+            
+            <div class="card-body">
+                <!-- Success Messages (e.g., after registration) -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} d-flex align-items-center">
+                            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i> 
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Email Verification Reminder (if applicable) -->
+                {% if request.GET.verification == 'required' %}
+                    <div class="verification-section">
+                        <h6><i class="fas fa-envelope me-2"></i>Email Verification Required</h6>
+                        <p class="mb-2 small">Please verify your email to access your account.</p>
+                        <a href="{% url 'resend_verification' %}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-redo me-1"></i> Resend Verification Email
+                        </a>
+                    </div>
+                {% endif %}
+
+                <form method="POST" autocomplete="on" aria-label="Patient Login Form" id="loginForm">
+                    {% csrf_token %}
+                    
+                    <!-- Username Field -->
+                    <div class="form-group">
+                        <label for="{{ form.username.id_for_label }}">
+                            <i class="fas fa-user me-1"></i> Username or Email
+                        </label>
+                        <input type="text" 
+                               name="username" 
+                               id="id_username"
+                               class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                               placeholder="Enter your username or email"
+                               value="{{ form.username.value|default:'' }}"
+                               autofocus
+                               required>
+                        {% if form.username.errors %}
+                            <span class="error-message" role="alert">
+                                <i class="fas fa-exclamation-circle me-1"></i> 
+                                {{ form.username.errors|striptags }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="form-group position-relative">
+                        <label for="{{ form.password.id_for_label }}">
+                            <i class="fas fa-lock me-1"></i> Password
+                        </label>
+                        <input type="password" 
+                               name="password" 
+                               id="id_password"
+                               class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                               placeholder="Enter your password"
+                               required>
+                        <span class="show-password-toggle" tabindex="0" 
+                              aria-label="Show or hide password" 
+                              onclick="togglePassword()"
+                              onkeypress="if(event.key==='Enter'){togglePassword();}">
+                            <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                        </span>
+                        
+                        {% if form.password.errors %}
+                            <span class="error-message" role="alert">
+                                <i class="fas fa-exclamation-circle me-1"></i> 
+                                {{ form.password.errors|striptags }}
+                            </span>
+                        {% endif %}
+                        
+                        <!-- Caps Lock Warning -->
+                        <span id="capsLockWarning" class="error-message" style="display:none;">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+                        </span>
+                    </div>
+
+                    <!-- Non-field errors (e.g., invalid credentials, inactive account) -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                    {% if 'inactive' in error %}
+                                        <small class="mt-1 d-block">
+                                            <a href="{% url 'resend_verification' %}" class="alert-link">
+                                                <i class="fas fa-redo me-1"></i> Resend verification email
+                                            </a>
+                                        </small>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+                        <span id="loginBtnText">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </span>
+                        <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" 
+                              role="status" aria-hidden="true"></span>
+                    </button>
+
+                    <!-- Forgot Password Link -->
+                    <div class="text-right mt-3">
+                      <a href="{% url 'password_reset' %}" class="text-secondary">
+                        <i class="fas fa-key mr-1"></i> Forgot password?
+                    </a>
+                    </div>
+                </form>
+
+                <!-- Registration Link -->
+                <div class="register-link">
+                    <span>New to BloodConnect?</span>
+                    <a href="{% url 'patientsignup' %}">
+                        <i class="fas fa-user-plus me-1"></i> Create Account
+                    </a>
+                </div>
+
+                <!-- Additional Help Links -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        Need help? 
+                        <a href="mailto:support@bloodconnect.com" class="text-decoration-none">
+                            <i class="fas fa-envelope me-1"></i> Contact Support
+                        </a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="back-button">
+        <button onclick="history.back()" class="btn btn-custom">
+            <i class="fas fa-arrow-left me-1"></i> Back
+        </button>
+    </div>
+
+    <!-- Bootstrap & jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordField = document.getElementById('id_password');
+            const icon = document.getElementById('togglePasswordIcon');
+            
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordField.type = "password";
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Show spinner on form submit
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const btnText = document.getElementById('loginBtnText');
+            const spinner = document.getElementById('loginSpinner');
+            
+            btnText.classList.add('d-none');
+            spinner.classList.remove('d-none');
+            
+            // Disable submit button to prevent double submission
+            document.getElementById('loginBtn').disabled = true;
+        });
+
+        // Caps Lock detection
+        const passwordInput = document.getElementById('id_password');
+        const capsLockWarning = document.getElementById('capsLockWarning');
+
+        passwordInput.addEventListener('keyup', function(event) {
+            if (event.getModifierState('CapsLock')) {
+                capsLockWarning.style.display = 'block';
+                passwordInput.classList.add('shake');
+                setTimeout(() => {
+                    passwordInput.classList.remove('shake');
+                }, 500);
+            } else {
+                capsLockWarning.style.display = 'none';
+            }
+        });
+
+        passwordInput.addEventListener('blur', function() {
+            capsLockWarning.style.display = 'none';
+        });
+
+        // Auto-focus username field
+        document.addEventListener('DOMContentLoaded', function() {
+            const usernameField = document.getElementById('id_username');
+            if (usernameField) {
+                usernameField.focus();
+            }
+        });
+
+        // Handle Enter key in password field
+        passwordInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.getElementById('loginForm').submit();
+            }
+        });
+
+        // Auto-dismiss alerts after 8 seconds
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 8000);
+
+        // Prevent form submission on Enter key for non-submit actions
+        document.querySelectorAll('.form-control').forEach(function(input) {
+            input.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' && input.type !== 'submit') {
+                    event.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

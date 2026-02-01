@@ -1,0 +1,282 @@
+{% extends 'blood/adminbase.html' %}
+{% load widget_tweaks %}
+{% load static %}
+
+<head>
+  <!-- Font special for pages -->
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i,800,800i" rel="stylesheet" />
+  <!-- Main CSS -->
+  <link href="{% static 'css/main.css' %}" rel="stylesheet" media="all" />
+</head>
+
+{% block content %}
+<style>
+  .page-wrapper {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+  .wrapper--w790 {
+    max-width: 790px;
+    margin: 0 auto;
+  }
+  .card-5 {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  .card-heading {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .card-heading .title {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: #343a40;
+  }
+  form .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    align-items: center;
+  }
+  .form-row .name {
+    flex: 0 0 130px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 1rem;
+  }
+  .form-row .value {
+    flex: 1;
+  }
+  .input-group {
+    width: 100%;
+  }
+  /* Inputs and selects consistency */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea,
+  input[type="file"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    font-size: 1rem;
+    transition: border-color 0.2s ease-in-out;
+    font-family: 'Open Sans', sans-serif;
+  }
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  select:focus,
+  textarea:focus,
+  input[type="file"]:focus {
+    outline: none;
+    border-color: #ff0018;
+    box-shadow: 0 0 0 0.2rem rgba(255, 0, 24, 0.25);
+  }
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: url("data:image/svg+xml;charset=US-ASCII,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3e%3cpath fill='%236c757d' d='M12 6L8 10 4 6z'/%3e%3c/svg%3e") no-repeat right 10px center/12px 12px;
+    padding-right: 2rem;
+    cursor: pointer;
+  }
+  /* Style select wrapper */
+  .select--no-search {
+    position: relative;
+  }
+
+  /* Button styles */
+  .btn {
+    font-weight: 700;
+    font-family: 'Open Sans', sans-serif;
+  }
+  .btn-danger {
+    background-color: #ff0018;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.5rem;
+    border-radius: 50px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+  }
+  .btn-danger:hover,
+  .btn-danger:focus {
+    background-color: #cc0013;
+    outline: none;
+  }
+  .btn-custom {
+    background-color: #6c757d;
+    border: none;
+    color: #fff;
+    padding: 0.5rem 1.4rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-weight: 600;
+    font-family: 'Open Sans', sans-serif;
+    margin-top: 0.8rem;
+  }
+  .btn-custom i {
+    margin-right: 0.5rem;
+  }
+  .btn-custom:hover,
+  .btn-custom:focus {
+    background-color: #545b62;
+    outline: none;
+  }
+  /* Responsive for small screens */
+  @media (max-width: 575.98px) {
+    .form-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .form-row .name {
+      margin-bottom: 0.3rem;
+    }
+  }
+</style>
+
+<div class="page-wrapper bg-gra-03 p-t-45 p-b-50">
+  <div class="wrapper wrapper--w790">
+    <div class="card card-5">
+      <div class="card-heading">
+        <h2 class="title">Update Patient</h2>
+      </div>
+      <div class="card-body">
+        <form method="POST" autocomplete="off" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="form-row">
+            <div class="name">First Name</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field userForm.first_name|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Last Name</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field userForm.last_name|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Username</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field userForm.username|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Password</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field userForm.password|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Age</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field patientForm.age|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Blood Group</div>
+            <div class="value">
+              <div class="input-group">
+                <div class="rs-select2 js-select-simple select--no-search">
+                  <select name="bloodgroup" required>
+                    <option disabled="disabled" selected="selected">Choose option</option>
+                    <option>O+</option>
+                    <option>O-</option>
+                    <option>A+</option>
+                    <option>A-</option>
+                    <option>B+</option>
+                    <option>B-</option>
+                    <option>AB+</option>
+                    <option>AB-</option>
+                  </select>
+                  <div class="select-dropdown"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Disease (if any)</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field patientForm.disease|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Doctor</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field patientForm.doctorname|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Address</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field patientForm.address|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Mobile</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field patientForm.mobile|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="name">Profile Pic</div>
+            <div class="value">
+              <div class="input-group">
+                {% render_field patientForm.profile_pic|attr:'required:true'  class="input--style-5"  %}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <button class="btn btn-danger" type="submit">Update</button>
+          </div>
+          <div>
+            <button onclick="history.back()" type="button" class="btn btn-custom">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+          </div>
+        </form>
+        <br>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

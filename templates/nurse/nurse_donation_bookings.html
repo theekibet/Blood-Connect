@@ -1,0 +1,716 @@
+{% extends 'nurse/nursebase.html' %}
+{% load static %}
+{% block content %}
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+  <style>
+    :root{--primary-color:#dc3545;--nurse-color:#17a2b8;--success-color:#28a745;--warning-color:#ffc107;--danger-color:#dc3545;--border-radius:12px;--shadow:0 6px 18px rgba(23,162,184,0.15);--transition:all .3s ease;}
+    .container{max-width:1600px;margin:auto;padding:20px;}
+    .page-header{background:linear-gradient(135deg,#17a2b8 0%,#20c997 100%);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:30px;box-shadow:var(--shadow);}
+    .page-header h1{margin:0;font-weight:700;display:flex;align-items:center;gap:15px;}
+    .stats-row{display:flex;gap:15px;margin-top:15px;}
+    .stat-card{background:rgba(255,255,255,0.15);padding:10px 15px;border-radius:8px;flex:1;}
+    .stat-card .number{font-size:1.5rem;font-weight:700;}
+    .message-container{margin-bottom:20px;}
+    .search-section{background:#fff;padding:20px;border-radius:var(--border-radius);box-shadow:var(--shadow);margin-bottom:30px;}
+    .table-container{background:#fff;border-radius:var(--border-radius);box-shadow:var(--shadow);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{padding:12px 10px;text-align:left;vertical-align:middle;border-bottom:1px solid #eee;font-size:0.9rem;}
+    thead th{background:linear-gradient(135deg,#17a2b8 0%,#20c997 100%);color:#fff;font-weight:700;position:sticky;top:0;z-index:10;}
+    tbody tr:hover{background-color:#f0fdff;}
+    .status-badge{padding:6px 12px;border-radius:20px;font-size:.85rem;font-weight:600;text-transform:uppercase;}
+    .status-pending{background:#fff3cd;color:#856404;}
+    .status-approved{background:#d4edda;color:#155724;}
+    .status-completed{background:#d1ecf1;color:#0c5460;}
+    .status-rejected{background:#f8d7da;color:#721c24;}
+    .status-cancelled{background:#e2e3e5;color:#383d41;}
+    .btn{padding:8px 16px;border:none;border-radius:6px;font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:6px;margin:2px;}
+    .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+    .btn-success{background:var(--success-color);color:#fff;}
+    .btn-danger{background:var(--danger-color);color:#fff;}
+    .btn-info{background:#17a2b8;color:#fff;}
+    .btn-secondary{background:#6c757d;color:#fff;}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+    .profile-img{width:50px;height:50px;border-radius:50%;border:2px solid var(--nurse-color);object-fit:cover;}
+    .donor-info{display:flex;flex-direction:column;}
+    .donor-name{font-weight:700;color:#2c3e50;}
+    .info-box{background:#f8f9fa;padding:8px;border-radius:6px;margin-top:5px;}
+    .blood-type{font-weight:700;font-size:1.1rem;color:var(--primary-color);}
+    .modal-content{border-radius:var(--border-radius);border:none;box-shadow:0 10px 30px rgba(0,0,0,.3);}
+    .modal-header{background:linear-gradient(135deg,#17a2b8 0%,#20c997 100%);color:#fff;border-radius:var(--border-radius) var(--border-radius) 0 0;}
+    .form-control,.form-select{border:2px solid #e9ecef;border-radius:8px;padding:10px 15px;}
+    
+    /* Safety Verification Styles */
+    .safety-radio-group{display:flex;gap:20px;padding:15px;background:#f8f9fa;border-radius:8px;margin-bottom:20px;}
+    .safety-option{flex:1;position:relative;}
+    .safety-option input[type="radio"]{position:absolute;opacity:0;}
+    .safety-option label{display:flex;flex-direction:column;align-items:center;padding:20px;border:3px solid #dee2e6;border-radius:8px;cursor:pointer;transition:var(--transition);background:#fff;}
+    .safety-option input[type="radio"]:checked + label{border-color:currentColor;transform:scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+    .safety-safe label{color:#28a745;}
+    .safety-unsafe label{color:#dc3545;}
+    .safety-icon{font-size:3rem;margin-bottom:10px;}
+    
+    /* Impact Indicators */
+    .safe-impact{background:#d4edda!important;border-left:5px solid #28a745!important;}
+    .unsafe-impact{background:#f8d7da!important;border-left:5px solid #dc3545!important;}
+    
+    .loading-spinner{display:inline-block;width:1rem;height:1rem;border:.2rem solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+  </style>
+</head>
+
+<div class="container">
+  <div class="page-header">
+    <h1><i class="fas fa-user-nurse"></i> My Donation Appointments</h1>
+    <p class="mb-2">Manage and process donor appointments with safety verification</p>
+    <div class="stats-row">
+      <div class="stat-card"><div class="number">{{ total_count|default:0 }}</div><div class="label">Total</div></div>
+      <div class="stat-card"><div class="number">{{ pending_count|default:0 }}</div><div class="label">Pending</div></div>
+      <div class="stat-card"><div class="number">{{ approved_count|default:0 }}</div><div class="label">Approved</div></div>
+      <div class="stat-card"><div class="number">{{ completed_count|default:0 }}</div><div class="label">Completed</div></div>
+    </div>
+  </div>
+
+  <div id="nurse-messages" class="message-container"></div>
+
+  <div class="search-section">
+    <input type="search" id="donationSearch" class="form-control" placeholder="Search appointments...">
+  </div>
+
+  {% if donor_donations %}
+  <div class="table-container">
+    <div style="max-height: 700px; overflow-y: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Barcode</th><th>Donor</th><th>Contact</th><th>Photo</th>
+            <th>Blood</th><th>Center</th><th>Date</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in donor_donations %}
+          {% with appointment=item.appointment donor_details=item.donor_details bd_details=item.blood_donate_details %}
+          <tr data-appointment-id="{{ appointment.id }}">
+            <td><div style="font-weight:700;">{{ appointment.barcode|default:appointment.id }}</div></td>
+            <td><div class="donor-name">{{ donor_details.full_name|default:"N/A" }}</div></td>
+            <td><div class="info-box"><i class="fas fa-phone"></i> {{ donor_details.mobile|default:"N/A" }}</div></td>
+            <td>
+              {% if donor_details.profile_pic %}
+                <img src="{{ donor_details.profile_pic.url }}" class="profile-img"/>
+              {% else %}
+                <div class="profile-img bg-light"><i class="fas fa-user fa-2x"></i></div>
+              {% endif %}
+            </td>
+            <td><div class="blood-type">{{ bd_details.bloodgroup|default:"N/A" }}</div><div>{{ bd_details.unit|default:"N/A" }} ml</div></td>
+            <td>{{ bd_details.donation_center_name|default:"N/A" }}</td>
+            <td>{{ appointment.date|date:"M d, Y" }}</td>
+            <td><span class="status-badge status-{{ appointment.status }}">{{ appointment.status|title }}</span></td>
+            
+            <!-- CORRECTED Actions Column -->
+            <td>
+              {% if appointment.status == "completed" or appointment.status == "cancelled" or appointment.status == "rejected" %}
+                <div class="text-muted">
+                  <i class="fas fa-lock"></i>
+                  <em>No actions</em>
+                </div>
+              {% else %}
+                <div class="action-buttons">
+                  {% if appointment.status == "pending" %}
+                    <button class="btn btn-success update-status-btn"
+                            data-id="{{ appointment.id }}" 
+                            data-action="approve"
+                            data-original-text="<i class='fas fa-check'></i> Approve">
+                      <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-danger update-status-btn"
+                            data-id="{{ appointment.id }}" 
+                            data-action="reject"
+                            data-original-text="<i class='fas fa-times'></i> Reject">
+                      <i class="fas fa-times"></i> Reject
+                    </button>
+                  {% elif appointment.status == "approved" %}
+                    <button class="btn btn-info open-complete-modal"
+                            data-appointment-id="{{ appointment.id }}"
+                            data-donor-name="{{ donor_details.full_name }}"
+                            data-donor-verified="{{ item.donor.bloodgroup_verified|yesno:'true,false' }}"
+                            data-donor-bloodgroup="{{ item.donor.bloodgroup|default:'' }}"
+                            data-bloodgroup="{{ bd_details.bloodgroup }}"
+                            data-unit="{{ bd_details.unit|default:450 }}">
+                      <i class="fas fa-check-double"></i> Complete
+                    </button>
+                    <button class="btn btn-secondary update-status-btn"
+                            data-id="{{ appointment.id }}" 
+                            data-action="cancelled"
+                            data-original-text="<i class='fas fa-ban'></i> Cancel">
+                      <i class="fas fa-ban"></i> Cancel
+                    </button>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Complete Modal with Safety Verification -->
+  <div class="modal fade" id="completeModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <form id="completeModalForm">
+          <div class="modal-header">
+            <h5><i class="fas fa-check-double"></i> Complete Donation - <span id="modal-donor-name"></span></h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Donor Info -->
+            <div class="alert alert-info" id="modal-donor-info"></div>
+
+            <!-- Blood Group Verification -->
+            <div id="verification-status-alert"></div>
+
+            <div class="row g-3">
+              <!-- Blood Group -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold">
+                  <i class="fas fa-tint"></i> Blood Group * <span id="verification-badge"></span>
+                </label>
+                <div id="bloodgroup-field-container"></div>
+              </div>
+
+              <!-- Units -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold"><i class="fas fa-flask"></i> Units (ml) *</label>
+                <input type="number" name="unit" id="modal-unit" min="450" max="2700" step="50" class="form-control" required>
+              </div>
+            </div>
+
+            <!-- ===== SAFETY VERIFICATION SECTION ===== -->
+            <div class="mt-4">
+              <h6 class="fw-bold mb-3">
+                <i class="fas fa-shield-alt"></i> Blood Safety Verification *
+                <span class="badge bg-warning">REQUIRED</span>
+              </h6>
+
+              <div class="safety-radio-group">
+                <div class="safety-option safety-safe">
+                  <input type="radio" name="safety_status" id="safety-safe" value="safe" required>
+                  <label for="safety-safe">
+                    <div class="safety-icon">✅</div>
+                    <strong>SAFE FOR USE</strong>
+                    <small class="text-muted">Blood passed all quality checks</small>
+                  </label>
+                </div>
+
+                <div class="safety-option safety-unsafe">
+                  <input type="radio" name="safety_status" id="safety-unsafe" value="unsafe">
+                  <label for="safety-unsafe">
+                    <div class="safety-icon">⚠️</div>
+                    <strong>UNSAFE - DO NOT USE</strong>
+                    <small class="text-muted">Quality issues detected</small>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Unsafe Reason (shown only when unsafe selected) -->
+              <div id="unsafe-reason-container" style="display:none;" class="mt-3">
+                <label class="form-label fw-bold text-danger">
+                  <i class="fas fa-exclamation-triangle"></i> Reason for Marking Unsafe *
+                </label>
+                <select name="unsafe_reason" id="unsafe-reason-select" class="form-select">
+                  <option value="">-- Select Reason --</option>
+                  <option value="contamination">Contamination Detected</option>
+                  <option value="disease_markers">Disease Markers Present</option>
+                  <option value="quality_issues">Quality Issues</option>
+                  <option value="improper_storage">Improper Storage</option>
+                  <option value="expired">Expired</option>
+                  <option value="other">Other Reason</option>
+                </select>
+              </div>
+
+              <!-- Safety Notes -->
+              <div class="mt-3">
+                <label class="form-label fw-bold">
+                  <i class="fas fa-notes-medical"></i> Safety Notes (Optional)
+                </label>
+                <textarea name="safety_notes" id="safety-notes" class="form-control" rows="2" 
+                          placeholder="Add any notes about test results, observations, etc."></textarea>
+              </div>
+            </div>
+
+            <input type="hidden" name="action" value="completed">
+            <input type="hidden" id="modal-appointment-id">
+
+            <!-- Dynamic Impact Alert (changes based on safety status) -->
+            <div class="alert mt-3 mb-0" id="completion-impact-alert">
+              <h6><i class="fas fa-info-circle"></i> Completing This Donation Will:</h6>
+              <ul class="mb-0" id="completion-impact-list">
+                <!-- Will be populated dynamically -->
+              </ul>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-info btn-lg" id="modal-submit-btn">
+              <i class="fas fa-check"></i> Verify Safety & Complete
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <div class="table-container">
+    <div class="text-center p-5">
+      <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+      <h4>No Appointments Found</h4>
+    </div>
+  </div>
+{% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 Nurse donation page initialized');
+  
+  // Utility functions
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie) {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function showMessage(type, message, autoHide = true) {
+    const container = document.getElementById('nurse-messages');
+    if (!container) return;
+    
+    const icons = {
+      'success': 'fa-check-circle', 
+      'danger': 'fa-exclamation-circle', 
+      'warning': 'fa-exclamation-triangle', 
+      'info': 'fa-info-circle'
+    };
+    
+    const alertId = 'alert-' + Date.now();
+    container.innerHTML = `
+      <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show">
+        <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+    
+    if (autoHide && type === 'success') {
+      setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) alert.remove();
+      }, 5000);
+    }
+  }
+
+  // Search functionality
+  const searchInput = document.getElementById('donationSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase().trim();
+      const rows = document.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = query === '' || text.includes(query) ? '' : 'none';
+      });
+    });
+  }
+
+  // Safety status toggle handler
+  function setupSafetyToggle() {
+    const safeRadio = document.getElementById('safety-safe');
+    const unsafeRadio = document.getElementById('safety-unsafe');
+    const unsafeContainer = document.getElementById('unsafe-reason-container');
+    const unsafeSelect = document.getElementById('unsafe-reason-select');
+    const impactAlert = document.getElementById('completion-impact-alert');
+    const impactList = document.getElementById('completion-impact-list');
+    
+    if (!safeRadio || !unsafeRadio) return;
+    
+    function updateImpactList(isSafe) {
+      if (isSafe) {
+        impactAlert.className = 'alert alert-success safe-impact mt-3 mb-0';
+        impactList.innerHTML = `
+          <li><i class="fas fa-plus-circle text-success"></i> Add blood to <strong>SAFE STOCK</strong> (available for issuance)</li>
+          <li><i class="fas fa-barcode text-primary"></i> Generate unique tracking barcode</li>
+          <li><i class="fas fa-star text-warning"></i> Award donor points for successful donation</li>
+          <li><i class="fas fa-calendar-plus text-info"></i> Set expiry date (46 days from today)</li>
+          <li><i class="fas fa-check-circle text-success"></i> Update donor's last donation date</li>
+        `;
+      } else {
+        impactAlert.className = 'alert alert-danger unsafe-impact mt-3 mb-0';
+        impactList.innerHTML = `
+          <li><i class="fas fa-ban text-danger"></i> Mark blood as <strong>UNSAFE</strong> and quarantine</li>
+          <li><i class="fas fa-exclamation-triangle text-warning"></i> <strong>DO NOT</strong> add to usable stock</li>
+          <li><i class="fas fa-times-circle text-danger"></i> <strong>NO</strong> donor points awarded</li>
+          <li><i class="fas fa-shield-alt text-warning"></i> Unit removed from circulation</li>
+          <li><i class="fas fa-flag text-danger"></i> Log safety issue for review</li>
+        `;
+      }
+    }
+    
+    // Initial state
+    updateImpactList(true);
+    
+    // Event listeners
+    safeRadio.addEventListener('change', () => {
+      unsafeContainer.style.display = 'none';
+      unsafeSelect.required = false;
+      updateImpactList(true);
+    });
+    
+    unsafeRadio.addEventListener('change', () => {
+      unsafeContainer.style.display = 'block';
+      unsafeSelect.required = true;
+      updateImpactList(false);
+    });
+  }
+
+  // Status update buttons (Approve, Reject, Cancel)
+  document.querySelectorAll('.update-status-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const appointmentId = button.dataset.id;
+      const action = button.dataset.action;
+      const donorRow = button.closest('tr');
+      const donorName = donorRow.querySelector('.donor-name')?.textContent.trim() || 'this donor';
+      const originalText = button.dataset.originalText;
+      
+      const messages = {
+        'approve': `Approve donation appointment for ${donorName}?`,
+        'reject': `Reject donation appointment for ${donorName}?`,
+        'cancelled': `Cancel this appointment?`
+      };
+      
+      if (!confirm(messages[action])) return;
+
+      // Get reason for reject/cancel
+      let reason = '';
+      if (action === 'reject' || action === 'cancelled') {
+        reason = prompt(`Reason for ${action}:`);
+        if (reason === null) return; // User cancelled
+      }
+
+      button.disabled = true;
+      button.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+      const formData = new URLSearchParams();
+      formData.append('action', action);
+      if (reason) formData.append('reason', reason);
+
+      fetch(`/nurse/appointment/${appointmentId}/update_status/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showMessage('success', `✅ ${data.message}`);
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          showMessage('danger', `❌ ${data.error}`, false);
+          button.disabled = false;
+          button.innerHTML = originalText;
+        }
+      })
+      .catch(error => {
+        showMessage('danger', `❌ Network error: ${error.message}`, false);
+        button.disabled = false;
+        button.innerHTML = originalText;
+      });
+    });
+  });
+
+  // Open complete modal with all data
+  document.querySelectorAll('.open-complete-modal').forEach(button => {
+    button.addEventListener('click', () => {
+      console.log('🔵 Opening complete modal');
+      
+      const appointmentId = button.dataset.appointmentId;
+      const donorName = button.dataset.donorName;
+      const isVerified = button.dataset.donorVerified === 'true';
+      const donorBloodgroup = button.dataset.donorBloodgroup;
+      const bloodgroup = button.dataset.bloodgroup;
+      const unit = button.dataset.unit;
+      
+      // Populate basic fields
+      document.getElementById('modal-donor-name').textContent = donorName;
+      document.getElementById('modal-appointment-id').value = appointmentId;
+      document.getElementById('modal-unit').value = unit;
+      
+      // Donor info alert
+      document.getElementById('modal-donor-info').innerHTML = `
+        <div class="row">
+          <div class="col-md-8">
+            <strong><i class="fas fa-user"></i> Donor:</strong> ${donorName}<br>
+            <strong><i class="fas fa-tint"></i> Blood Group:</strong> ${bloodgroup || 'Not specified'}<br>
+            <strong><i class="fas fa-flask"></i> Volume:</strong> ${unit} ml
+          </div>
+          <div class="col-md-4 text-end">
+            <span class="badge ${isVerified ? 'bg-success' : 'bg-warning text-dark'}">
+              <i class="fas fa-${isVerified ? 'shield-alt' : 'exclamation-triangle'}"></i>
+              ${isVerified ? 'Blood Group Verified' : 'First Donation - Verification Required'}
+            </span>
+          </div>
+        </div>
+      `;
+      
+      // Blood group field based on verification status
+      const bloodgroupContainer = document.getElementById('bloodgroup-field-container');
+      const verificationAlert = document.getElementById('verification-status-alert');
+      
+      if (isVerified) {
+        // Verified donor - locked field
+        bloodgroupContainer.innerHTML = `
+          <input type="text" 
+                 class="form-control" 
+                 value="${donorBloodgroup}" 
+                 readonly 
+                 style="background: #d4edda; border: 2px solid #28a745; cursor: not-allowed; font-weight: bold;">
+          <input type="hidden" name="bloodgroup" value="${donorBloodgroup}">
+          <div class="form-text text-success">
+            <i class="fas fa-lock"></i> Verified blood group (permanently locked)
+          </div>
+        `;
+        
+        verificationAlert.innerHTML = `
+          <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            <strong>Blood Group Verified:</strong> ${donorBloodgroup} (cannot be changed)
+          </div>
+        `;
+      } else {
+        // First-time donor - dropdown
+        const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+        let options = '<option value="">⚠️ SELECT BLOOD GROUP</option>';
+        bloodGroups.forEach(bg => {
+          const selected = bg === bloodgroup ? 'selected' : '';
+          options += `<option value="${bg}" ${selected}>${bg}</option>`;
+        });
+        
+        bloodgroupContainer.innerHTML = `
+          <select name="bloodgroup" 
+                  id="modal-bloodgroup-select"
+                  class="form-select" 
+                  required 
+                  style="font-weight: bold; border: 2px solid #ffc107;">
+            ${options}
+          </select>
+          <div class="form-text text-danger">
+            <i class="fas fa-exclamation-circle"></i> 
+            This will permanently verify the donor's blood group
+          </div>
+        `;
+        
+        verificationAlert.innerHTML = `
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>First Donation - Verification Required</strong><br>
+            The blood group you select will be <strong>permanently saved</strong> to the donor's profile.
+          </div>
+        `;
+      }
+      
+      // Reset safety fields
+      document.getElementById('safety-safe').checked = true;
+      document.getElementById('unsafe-reason-container').style.display = 'none';
+      document.getElementById('safety-notes').value = '';
+      
+      // Setup safety toggle
+      setupSafetyToggle();
+      
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('completeModal'));
+      modal.show();
+    });
+  });
+
+  // Submit form handler
+  document.getElementById('completeModalForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    console.log('📝 Form submission started');
+    
+    const form = e.target;
+    const appointmentId = document.getElementById('modal-appointment-id').value;
+    const donorName = document.getElementById('modal-donor-name').textContent;
+    const safetyStatus = form.querySelector('input[name="safety_status"]:checked');
+    
+    // Validate safety status
+    if (!safetyStatus) {
+      showMessage('warning', '⚠️ Please select blood safety status (Safe or Unsafe)', false);
+      return;
+    }
+    
+    // Validate unsafe reason if applicable
+    if (safetyStatus.value === 'unsafe') {
+      const unsafeReason = document.getElementById('unsafe-reason-select').value;
+      if (!unsafeReason) {
+        showMessage('warning', '⚠️ Please select a reason for marking blood as unsafe', false);
+        return;
+      }
+      
+      // Extra confirmation for unsafe marking
+      const unsafeConfirm = confirm(
+        `⚠️ WARNING: UNSAFE BLOOD CONFIRMATION\n\n` +
+        `You are marking this blood as UNSAFE for:\n• ${donorName}\n• Reason: ${unsafeReason}\n\n` +
+        `This will:\n• Quarantine the blood unit\n• Make it unavailable for issuance\n• Zero out the stock count\n• NO points awarded to donor\n\n` +
+        `Are you ABSOLUTELY sure?`
+      );
+      
+      if (!unsafeConfirm) return;
+    }
+    
+    // Validate blood group for unverified donors
+    const openButton = document.querySelector(`.open-complete-modal[data-appointment-id="${appointmentId}"]`);
+    const isVerified = openButton?.dataset.donorVerified === 'true';
+    
+    if (!isVerified) {
+      const bloodgroupSelect = document.getElementById('modal-bloodgroup-select');
+      if (!bloodgroupSelect || !bloodgroupSelect.value) {
+        showMessage('warning', '⚠️ Please select blood group for first-time verification', false);
+        bloodgroupSelect.focus();
+        return;
+      }
+      
+      // Extra confirmation for blood group verification
+      const selectedBG = bloodgroupSelect.value;
+      const bgConfirm = confirm(
+        `🩸 FINAL BLOOD GROUP VERIFICATION\n\n` +
+        `You are about to PERMANENTLY verify donor's blood group as:\n\n` +
+        `        ${selectedBG}\n\n` +
+        `This action CANNOT be undone.\nAll future donations will use this blood group.\n\n` +
+        `Are you SURE this is correct?`
+      );
+      
+      if (!bgConfirm) {
+        console.log('❌ User cancelled blood group verification');
+        return;
+      }
+    }
+    
+    // Validate unit amount
+    const unit = parseInt(document.getElementById('modal-unit').value);
+    if (!unit || unit < 450 || unit > 2700 || unit % 50 !== 0) {
+      showMessage('warning', '⚠️ Units must be 450-2700 ml in multiples of 50', false);
+      return;
+    }
+    
+    // Final confirmation
+    const finalMsg = safetyStatus.value === 'safe' 
+      ? `Complete donation for ${donorName}?\n\n✅ Blood will be added to SAFE stock`
+      : `Complete donation for ${donorName}?\n\n⚠️ Blood will be marked as UNSAFE and quarantined`;
+    
+    if (!confirm(finalMsg)) {
+      console.log('❌ User cancelled final confirmation');
+      return;
+    }
+    
+    // Disable submit button
+    const submitBtn = document.getElementById('modal-submit-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+    
+    // Prepare form data
+    const formData = new FormData(form);
+    
+    console.log('📤 Sending request to server:', {
+      appointmentId,
+      bloodgroup: formData.get('bloodgroup'),
+      unit: formData.get('unit'),
+      safety_status: formData.get('safety_status'),
+      unsafe_reason: formData.get('unsafe_reason')
+    });
+    
+    // Submit to server
+    fetch(`/nurse/appointment/${appointmentId}/update_status/`, {
+      method: 'POST',
+      headers: { 
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Accept': 'application/json'
+      },
+      body: formData
+    })
+    .then(response => {
+      console.log('📥 Response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('✅ Server response:', data);
+      
+      if (data.success) {
+        let message = `✅ ${data.message}`;
+        
+        if (data.barcode) {
+          message += `<br><strong>Barcode:</strong> ${data.barcode}`;
+        }
+        
+        if (data.safety_status === 'unsafe') {
+          message += `<br><span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Blood marked as UNSAFE and quarantined</span>`;
+          if (data.unsafe_reason) {
+            message += `<br><small>Reason: ${data.unsafe_reason}</small>`;
+          }
+        }
+        
+        if (data.bloodgroup_verified) {
+          message += `<br><span class="text-success"><i class="fas fa-shield-alt"></i> Blood group verified: ${data.verified_bloodgroup}</span>`;
+        }
+        
+        if (data.donor_stats) {
+          message += `<br><small>Donor points: ${data.donor_stats.points}</small>`;
+        }
+        
+        showMessage('success', message);
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('completeModal'));
+        if (modal) modal.hide();
+        
+        // Reload page after delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 2500);
+      } else {
+        showMessage('danger', `❌ Error: ${data.error || 'Unknown error'}`, false);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    })
+    .catch(error => {
+      console.error('❌ Fetch error:', error);
+      showMessage('danger', `❌ Network error: ${error.message}`, false);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    });
+  });
+  
+  console.log('✅ Nurse donation template fully loaded');
+});
+</script>
+{% endblock %}

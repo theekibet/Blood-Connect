@@ -1,0 +1,198 @@
+{% extends 'blood/adminbase.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<style>
+  .update-nurse-container {
+    max-width: 700px;
+    margin: 3rem auto 4rem;
+    background: #fff;
+    padding: 2rem 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  }
+
+  h3 {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: #343a40;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  form .form-group {
+    margin-bottom: 1.2rem;
+  }
+
+  label {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="file"],
+  textarea,
+  select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    width: 100%;
+    transition: border-color 0.2s ease-in-out;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #ff0018;
+    box-shadow: 0 0 0 0.2rem rgba(255,0,24,0.25);
+  }
+
+  textarea { min-height: 100px; resize: vertical; }
+
+  .btn-primary {
+    background-color: #ff0018;
+    border-color: #ff0018;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 0.6rem 1.5rem;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+    margin-right: 1rem;
+  }
+
+  .btn-primary:hover, .btn-primary:focus {
+    background-color: #cc0013;
+    border-color: #cc0013;
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-secondary:hover, .btn-secondary:focus {
+    background-color: #5a6268;
+    border-color: #545b62;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  #profilePicPreview {
+    display: block;
+    max-width: 180px;
+    max-height: 180px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    object-fit: cover;
+    border: 3px solid #ff0018;
+    box-shadow: 0 0 8px rgba(255,0,24,0.4);
+  }
+
+  @media (max-width: 575.98px) {
+    .update-nurse-container { margin: 1.5rem 1rem 3rem; padding: 1.5rem; }
+    .btn-primary, .btn-secondary { width: 100%; text-align: center; margin: 0.5rem 0; }
+  }
+</style>
+
+<div class="update-nurse-container">
+    <h3>Update Nurse Profile</h3>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <h5>User Info</h5>
+        {% for field in userForm %}
+            <div class="form-group">
+                {{ field.label_tag }}
+                {{ field|add_class:"form-control" }}
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <h5 class="mt-3">Nurse Info</h5>
+        {% for field in nurseForm %}
+            {% if field.name != "profile_pic" %}
+                <div class="form-group">
+                    {{ field.label_tag }}
+                    {{ field|add_class:"form-control" }}
+                    {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Profile picture -->
+        <div class="form-group">
+            <label for="id_profile_pic">Profile Picture</label><br>
+            {% if nurseForm.instance.profile_pic %}
+                <img src="{{ nurseForm.instance.profile_pic.url }}" id="profilePicPreview" alt="Profile Picture Preview" />
+            {% else %}
+                <img src="{% static 'images/default-profile.png' %}" id="profilePicPreview" alt="No Profile Picture" />
+            {% endif %}
+
+            <label for="id_profile_pic" class="btn btn-outline-secondary mt-1">
+                <i class="fas fa-upload"></i> Choose Image
+            </label>
+            {{ nurseForm.profile_pic }}
+
+            {% if nurseForm.instance.profile_pic %}
+                <div class="form-check mt-2">
+                    <input type="checkbox" class="form-check-input" id="clear_profile_pic" name="clear_profile_pic">
+                    <label class="form-check-label" for="clear_profile_pic">Remove current picture</label>
+                </div>
+            {% endif %}
+
+            {% for error in nurseForm.profile_pic.errors %}
+                <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{% url 'admin-nurse' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<script>
+const fileInput = document.getElementById('id_profile_pic');
+const previewImg = document.getElementById('profilePicPreview');
+
+if(fileInput) {
+    fileInput.addEventListener('change', function(){
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e){
+                previewImg.setAttribute('src', e.target.result);
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+}
+</script>
+{% endblock %}

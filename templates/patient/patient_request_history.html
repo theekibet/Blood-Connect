@@ -1,0 +1,96 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+  <!-- Title -->
+  <h2 class="mb-4"><i class="fas fa-hand-holding-medical"></i> My Blood Request History</h2>
+
+  {% if blood_requests %}
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Blood Group</th>
+            <th>Units (ml)</th>
+            <th>Donation Center</th>
+            <th>Request Date</th>
+            <th>Appointment Date & Time</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for req in blood_requests %}
+          <tr>
+            <td>{{ req.bloodgroup|default:"N/A" }}</td>
+            <td>{{ req.unit|default:"N/A" }}</td>
+            <td>{{ req.donation_center.name|default:"N/A" }}</td>
+            <td>{{ req.created_at|date:"M d, Y h:i A" }}</td>
+
+            <td>
+              {% if req.appointment %}
+                {{ req.appointment.date|date:"M d, Y" }}
+                <br>
+                {{ req.appointment.date|date:"h:i A" }}
+              {% else %}
+                <span class="text-muted">Not scheduled</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if req.appointment %}
+                {% if req.appointment.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">Appointment Pending Approval</span>
+                {% elif req.appointment.status == 'approved' %}
+                  <span class="badge bg-success">Appointment Approved</span>
+                {% elif req.appointment.status == 'rejected' %}
+                  <span class="badge bg-danger">Appointment Rejected</span>
+                {% elif req.appointment.status == 'completed' %}
+                  <span class="badge bg-primary">Appointment Completed</span>
+                {% elif req.appointment.status == 'cancelled' %}
+                  <span class="badge bg-secondary">Appointment Cancelled</span>
+                {% else %}
+                  <span class="badge bg-info">{{ req.appointment.status|capfirst }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">No appointment</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if req.appointment and req.appointment.date > now and req.appointment.status|lower in "pending approved" %}
+                <form method="POST" action="{% url 'cancel-request' req.id %}" class="d-inline-block" onsubmit="return confirmCancel(event);">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-times-circle"></i> Cancel Appointment
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-muted">N/A</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> You have not made any blood requests yet.
+    </div>
+  {% endif %}
+</div>
+
+<!-- ✅ Confirmation Script -->
+<script>
+  function confirmCancel(event) {
+    if (!confirm("Are you sure you want to cancel this blood request appointment?")) {
+      event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+</script>
+{% endblock %}

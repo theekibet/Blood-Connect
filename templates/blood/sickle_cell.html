@@ -1,0 +1,42 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <title>Sickle Cell Awareness | Blood Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #d32f2f, #ff0018); margin: 0; padding: 0; min-height: 100vh; color: white; display: flex; justify-content: center; align-items: center; text-align: center; }
+        .container { background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 40px 30px; max-width: 700px; box-shadow: 0 8px 24px rgba(211, 47, 47, 0.4); color: #333; }
+        h1 { color: #d32f2f; font-weight: 700; margin-bottom: 20px; font-size: 2.8rem; }
+        p { font-size: 1.1rem; line-height: 1.6; margin-bottom: 25px; }
+        ul { text-align: left; max-width: 600px; margin: 0 auto 30px auto; padding-left: 20px; color: #555; }
+        ul li { margin-bottom: 12px; font-weight: 600; }
+        .btn-primary { background: linear-gradient(135deg, #d32f2f, #ff0018); border: none; padding: 15px 40px; border-radius: 30px; font-weight: 700; font-size: 1.2rem; color: white; cursor: pointer; box-shadow: 0 0 15px #d32f2f; transition: box-shadow 0.3s ease; text-decoration: none; display: inline-block; }
+        .btn-primary:hover { box-shadow: 0 0 30px #ff0018; }
+        @media (max-width: 600px) { .container { padding: 30px 20px; } h1 { font-size: 2rem; } p, ul li { font-size: 1rem; } }
+    </style>
+</head>
+
+<body>
+    <div class="container" role="main" aria-labelledby="page-title">
+        <h1 id="page-title">How Blood Donation Helps Sickle Cell Patients</h1>
+        <p>Sickle cell disease causes red blood cells to become misshapen and sticky, blocking blood flow and causing severe pain, anemia, and organ damage.</p>
+        <p>Your blood donation provides healthy red blood cells that:</p>
+        <ul>
+            <li>Improve oxygen delivery throughout the body</li>
+            <li>Reduce painful vaso-occlusive crises</li>
+            <li>Lower the risk of stroke and acute chest syndrome</li>
+            <li>Prevent severe anemia and organ damage</li>
+            <li>Enhance quality of life and longevity</li>
+        </ul>
+        <a href="{% url 'donate-blood' %}" class="btn-primary" role="button" aria-label="Donate blood to help sickle cell patients">Donate Now <i class="fas fa-heartbeat" style="margin-left: 10px;"></i></a>
+    </div>
+</body>
+
+</html>

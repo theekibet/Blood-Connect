@@ -1,0 +1,184 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+
+{% block content %}
+<style>
+  .card {
+    border-radius: 15px;
+    box-shadow: 0 6px 18px rgba(220, 53, 69, 0.15);
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
+  }
+  .card:hover {
+    transform: scale(1.02);
+  }
+  table th {
+    background-color: #dc3545;
+    color: white;
+    text-align: center;
+  }
+  table td {
+    text-align: center;
+    vertical-align: middle;
+  }
+  .btn-cancel {
+    border-radius: 10px;
+    padding: 5px 12px;
+  }
+  .badge {
+    font-size: 0.9rem;
+  }
+</style>
+
+<div class="container mt-5 mb-5">
+  <div class="card">
+    <div class="card-header bg-danger text-white text-center">
+      <h4><i class="fas fa-tint"></i> My Blood Requests</h4>
+    </div>
+    <div class="card-body">
+      {% if donor_requests %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                
+                <th>Patient Name</th>
+                <th>Date of Birth</th>
+                <th>Blood Group</th>
+                <th>Units (ml)</th>
+                <th>Donation Center</th>
+                <th>Urgency</th>
+                <th>Status</th>
+                <th>Requested On</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for req in donor_requests %}
+              <tr id="row-{{ req.id }}">
+                
+                <td>{{ req.patient_first_name }} {{ req.patient_last_name }}</td>
+                <td>{% if req.patient_dob %}{{ req.patient_dob|date:"M d, Y" }}{% else %}—{% endif %}</td>
+                <td>{{ req.bloodgroup }}</td>
+                <td>{{ req.unit }} ml</td>
+                <td>{% if req.donation_center %}{{ req.donation_center.name }}{% else %}—{% endif %}</td>
+                <td>{{ req.urgency_level }}</td>
+                <td id="status-{{ req.id }}">
+                  {% if req.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                  {% elif req.status == 'approved' %}
+                    <span class="badge bg-success">Approved</span>
+                  {% elif req.status == 'rejected' %}
+                    <span class="badge bg-danger">Rejected</span>
+                  {% elif req.status == 'cancelled' %}
+                    <span class="badge bg-secondary">Cancelled</span>
+                  {% elif req.status == 'completed' %}
+                    <span class="badge bg-primary">Completed</span>
+                  {% else %}
+                    <span class="badge bg-info">{{ req.status|title }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
+                <td id="action-{{ req.id }}">
+                  {% if req.status == 'pending' or req.status == 'approved' %}
+
+                    <button class="btn btn-sm btn-outline-danger btn-cancel"
+                            data-id="{{ req.id }}"
+                            data-url="{% url 'cancel-donor-request' req.id %}">
+                      <i class="fas fa-times-circle"></i> Cancel Appointment
+                    </button>
+                  {% else %}
+                    <span class="text-muted">N/A</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info text-center">
+          <i class="fas fa-info-circle"></i> You haven’t made any blood requests yet.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const cancelButtons = document.querySelectorAll(".btn-cancel");
+
+  cancelButtons.forEach(button => {
+    button.addEventListener("click", function() {
+      const requestId = this.getAttribute("data-id");
+      const url = this.getAttribute("data-url");
+
+      Swal.fire({
+        title: "Cancel Blood Request?",
+        text: "Are you sure you want to cancel this blood request? This action cannot be undone.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Yes, cancel it",
+        cancelButtonText: "No, keep it"
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(url, {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+          })
+          .then(response => {
+            if (response.ok) {
+              Swal.fire({
+                title: "Cancelled!",
+                text: "Your blood request has been cancelled.",
+                icon: "success",
+                timer: 2000,
+                showConfirmButton: false
+              });
+              // Update UI
+              const statusCell = document.getElementById(`status-${requestId}`);
+              const actionCell = document.getElementById(`action-${requestId}`);
+              if (statusCell && actionCell) {
+                statusCell.innerHTML = '<span class="badge bg-secondary">Cancelled</span>';
+                actionCell.innerHTML = '<span class="text-muted">N/A</span>';
+              }
+            } else {
+              Swal.fire("Error", "Failed to cancel request. Try again later.", "error");
+            }
+          })
+          .catch(error => {
+            console.error(error);
+            Swal.fire("Error", "Something went wrong.", "error");
+          });
+        }
+      });
+    });
+  });
+
+  // CSRF helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+});
+</script>
+{% endblock %}

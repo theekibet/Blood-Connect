@@ -1,0 +1,12 @@
+.pulse { animation: pulse 2s infinite; }
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+.progress-bar-low { background-color: #dc3545 !important; }
+.progress-bar-medium { background-color: #ffc107 !important; }
+.progress-bar-high { background-color: #28a745 !important; }
+.badge-critical { background-color: #dc3545; }
+.badge-warning { background-color: #ffc107; color: #212529; }
+.badge-normal { background-color: #28a745; }

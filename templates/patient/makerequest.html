@@ -1,0 +1,1042 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
+<style>
+  :root {
+    --primary: #dc2626;
+    --primary-dark: #b91c1c;
+    --primary-light: #fee2e2;
+    --secondary: #0891b2;
+    --success: #059669;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--gray-900);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInDown 0.6s ease-out;
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .page-header p {
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  @media (min-width: 1024px) {
+    .content-grid {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+  }
+
+  .card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    padding: 2.5rem;
+    animation: fadeInUp 0.6s ease-out;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 70px rgba(0,0,0,0.2);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--gray-100);
+  }
+
+  .card-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+  }
+
+  .alert {
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+    animation: slideIn 0.4s ease-out;
+  }
+
+  .alert i { margin-top: 2px; }
+
+  .alert-warning {
+    background: #fef3c7;
+    border-left: 4px solid var(--warning);
+    color: #92400e;
+  }
+
+  .alert-danger {
+    background: #fee2e2;
+    border-left: 4px solid var(--danger);
+    color: #991b1b;
+  }
+
+  .alert-success {
+    background: #d1fae5;
+    border-left: 4px solid var(--success);
+    color: #065f46;
+  }
+
+  .form-section {
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .form-row {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .form-label i {
+    color: var(--primary);
+    font-size: 1rem;
+  }
+
+  .form-label .required {
+    color: var(--danger);
+    margin-left: 2px;
+  }
+
+  .input--style-5 {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+  }
+
+  .input--style-5:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+
+  .input--style-5[readonly] {
+    background: var(--gray-50);
+    cursor: not-allowed;
+    border-color: var(--gray-200);
+  }
+
+  .input--style-5::placeholder {
+    color: var(--gray-300);
+  }
+
+  .form-row.two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .form-row.two-column {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .help-text {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    margin-top: 0.375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .errorlist {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0 0;
+  }
+
+  .errorlist li {
+    color: var(--danger);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+  }
+
+  .errorlist li::before {
+    content: "⚠";
+  }
+
+  .btn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    width: 100%;
+  }
+
+  .btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Appointment Picker Styles */
+  .appointment-section {
+    background: var(--gray-50);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  #timeSlots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  #timeSlots label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    font-weight: 600;
+    color: var(--gray-700);
+    user-select: none;
+  }
+
+  #timeSlots label:hover:not(.disabled) {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    transform: scale(1.05);
+  }
+
+  #timeSlots input[type="radio"] {
+    display: none;
+  }
+
+  #timeSlots input[type="radio"]:checked + span {
+    background: var(--primary);
+    color: white;
+  }
+
+  #timeSlots label.disabled {
+    background: var(--gray-100);
+    color: var(--gray-300);
+    cursor: not-allowed;
+    opacity: 0.6;
+    border-color: var(--gray-200);
+    position: relative;
+  }
+
+  #timeSlots label.disabled::after {
+    content: "Booked";
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 0.65rem;
+    background: var(--gray-300);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+
+  #timeSlots label:not(.disabled) span {
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 0.5rem;
+    width: 100%;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  #timeSlots input[type="radio"]:checked + span {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+
+  #summaryBox {
+    background: linear-gradient(135deg, var(--primary-light), #fef3c7);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.8;
+    animation: slideIn 0.4s ease-out;
+  }
+
+  #summaryBox strong {
+    color: var(--primary-dark);
+  }
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .summary-icon {
+    width: 32px;
+    height: 32px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1rem;
+  }
+
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+</style>
+
+
+  <div class="content-grid">
+    <!-- Request Form Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">
+          <i class="fa-solid fa-clipboard-list"></i>
+        </div>
+        <h2 class="card-title">Blood Request Booking Form</h2>
+      </div>
+
+      {% if pending_request %}
+  <div class="alert alert-warning">
+    <i class="fa-solid fa-clock"></i>
+    <div>
+      <strong>Pending Request</strong><br>
+      You currently have a pending blood request. Below is a summary of your request and appointment status.
+    </div>
+  </div>
+
+  <!-- Pending Request Summary Card -->
+  <div class="card" style="margin-top: 20px;">
+    <div class="card-header">
+      <div class="card-icon">
+        <i class="fa-solid fa-info-circle"></i>
+      </div>
+      <h2 class="card-title">My Current Request</h2>
+    </div>
+
+    <div class="summary-section">
+      <div class="summary-item">
+        <div class="summary-icon"><i class="fa-solid fa-droplet"></i></div>
+        <div>
+          <strong>Blood Group:</strong> {{ pending_request.bloodgroup }}
+        </div>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon"><i class="fa-solid fa-vial"></i></div>
+        <div>
+          <strong>Requested Volume:</strong> {{ pending_request.unit }} ml
+        </div>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon"><i class="fa-solid fa-hospital"></i></div>
+        <div>
+          <strong>Donation Center:</strong> {{ pending_request.donation_center.name }}
+        </div>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon"><i class="fa-solid fa-user-nurse"></i></div>
+        <div>
+          <strong>Assigned Nurse:</strong> 
+          {% if pending_request.appointment and pending_request.appointment.nurse %}
+            {{ pending_request.appointment.nurse.get_full_name }}
+          {% else %}
+            <em>Not assigned yet</em>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon"><i class="fa-solid fa-calendar"></i></div>
+        <div>
+          <strong>Appointment Date:</strong> 
+          {% if pending_request.appointment %}
+            {{ pending_request.appointment.date|date:"M d, Y h:i A" }}
+          {% else %}
+            <em>Awaiting scheduling</em>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon"><i class="fa-solid fa-circle-info"></i></div>
+        <div>
+          <strong>Status:</strong>
+          {% if pending_request.appointment %}
+            {% if pending_request.appointment.status == 'pending' %}
+              <span class="badge bg-warning text-dark">Pending Approval</span>
+            {% elif pending_request.appointment.status == 'approved' %}
+              <span class="badge bg-success">Approved</span>
+            {% elif pending_request.appointment.status == 'rejected' %}
+              <span class="badge bg-danger">Rejected</span>
+            {% elif pending_request.appointment.status == 'cancelled' %}
+              <span class="badge bg-secondary">Cancelled</span>
+            {% elif pending_request.appointment.status == 'completed' %}
+              <span class="badge bg-info text-dark">Completed</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ pending_request.appointment.status|capfirst }}</span>
+            {% endif %}
+          {% else %}
+            <span class="badge bg-warning text-dark">Awaiting Appointment</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if pending_request.appointment and pending_request.appointment.status|lower in "pending approved" %}
+      <div class="summary-actions" style="margin-top: 15px; text-align: right;">
+        <a href="{% url 'cancel-request' pending_request.id %}" class="btn btn-warning">
+          <i class="fa-solid fa-ban"></i> Cancel Request
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="info-note" style="margin-top: 20px; color: #555; font-size: 0.9rem;">
+    <i class="fa-solid fa-info-circle"></i> You’ll be notified once your appointment is approved or updated.  
+    You cannot submit a new request until this one is resolved.
+  </div>
+{% else %}
+
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+            <i class="fa-solid fa-{% if 'success' in message.tags %}circle-check{% elif 'error' in message.tags or 'danger' in message.tags %}circle-exclamation{% else %}info-circle{% endif %}"></i>
+            <div>{{ message }}</div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="POST" enctype="multipart/form-data" novalidate id="bloodRequestForm">
+        {% csrf_token %}
+
+        <!-- Error summaries -->
+        {% if request_form.non_field_errors or form_errors.non_field_errors or form_errors.appointment %}
+          <div class="alert alert-danger">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <ul style="margin: 0; padding-left: 1.25rem;">
+              {% for error in request_form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+              {% for error in form_errors.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+              {% for error in form_errors.appointment %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <!-- Patient Information Section -->
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fa-solid fa-user-circle"></i>
+            Patient Information
+          </div>
+
+          <div class="form-row two-column">
+            <div>
+              <label class="form-label" for="id_first_name">
+                <i class="fa-solid fa-user"></i>
+                First Name<span class="required">*</span>
+              </label>
+              {{ request_form.first_name|add_class:"input--style-5" }}
+              {% if request_form.first_name.errors %}
+                <ul class="errorlist">
+                  {% for error in request_form.first_name.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="form-label" for="id_last_name">
+                <i class="fa-solid fa-user"></i>
+                Last Name<span class="required">*</span>
+              </label>
+              {{ request_form.last_name|add_class:"input--style-5" }}
+              {% if request_form.last_name.errors %}
+                <ul class="errorlist">
+                  {% for error in request_form.last_name.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_patient_age">
+              <i class="fa-solid fa-calendar"></i>
+              Age<span class="required">*</span>
+            </label>
+            {{ request_form.patient_age|add_class:"input--style-5" }}
+            {% if request_form.patient_age.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.patient_age.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_contact_number">
+              <i class="fa-solid fa-phone"></i>
+              Contact Number<span class="required">*</span>
+            </label>
+            {{ request_form.contact_number|add_class:"input--style-5" }}
+            {% if request_form.contact_number.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.contact_number.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_emergency_contact">
+              <i class="fa-solid fa-phone-volume"></i>
+              Emergency Contact
+            </label>
+            {{ request_form.emergency_contact|add_class:"input--style-5" }}
+            {% if request_form.emergency_contact.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.emergency_contact.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_national_id">
+              <i class="fa-solid fa-id-card"></i>
+              National ID
+            </label>
+            {{ request_form.national_id|add_class:"input--style-5" }}
+            {% if request_form.national_id.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.national_id.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Blood Request Details Section -->
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fa-solid fa-droplet"></i>
+            Blood Request Details
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_bloodgroup">
+              <i class="fa-solid fa-tint"></i>
+              Blood Group
+            </label>
+            {{ request_form.bloodgroup|add_class:"input--style-5" }}
+            {% if request_form.bloodgroup.help_text %}
+              <div class="help-text">
+                <i class="fa-solid fa-circle-info"></i>
+                {{ request_form.bloodgroup.help_text }}
+              </div>
+            {% endif %}
+            {% if request_form.bloodgroup.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.bloodgroup.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_unit">
+              <i class="fa-solid fa-vial"></i>
+              Required Volume (ml)
+            </label>
+            {{ request_form.unit|add_class:"input--style-5" }}
+            {% if request_form.unit.help_text %}
+              <div class="help-text">
+                <i class="fa-solid fa-circle-info"></i>
+                {{ request_form.unit.help_text }}
+              </div>
+            {% endif %}
+            {% if request_form.unit.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.unit.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+
+        <!-- Location & Appointment Section -->
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fa-solid fa-location-dot"></i>
+            Location & Staff
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="id_donation_center">
+              <i class="fa-solid fa-hospital"></i>
+              Donation Center<span class="required">*</span>
+            </label>
+            {{ request_form.donation_center|add_class:"input--style-5" }}
+            {% if request_form.donation_center.errors %}
+              <ul class="errorlist">
+                {% for error in request_form.donation_center.errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="nurseDropdown">
+              <i class="fa-solid fa-user-nurse"></i>
+              Assigned Nurse<span class="required">*</span>
+            </label>
+            <select id="nurseDropdown" name="nurse" class="input--style-5" required disabled>
+              <option value="">Select a donation center first</option>
+            </select>
+            {% if form_errors.nurse %}
+              <ul class="errorlist">
+                {% for error in form_errors.nurse %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+
+          {% if form_errors.date %}
+            <div class="form-row">
+              <ul class="errorlist">
+                {% for error in form_errors.date %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <input type="hidden" name="date" id="appointmentDateTimeHidden" value="{{ appointment_date }}">
+        </div>
+
+        <button class="btn" type="submit" id="submitBtn">
+          <i class="fa-solid fa-paper-plane"></i>
+          Submit Blood Request
+        </button>
+      </form>
+
+      {% endif %}
+    </div>
+
+    <!-- Appointment Scheduler Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">
+          <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <h2 class="card-title">Schedule Appointment</h2>
+      </div>
+
+      <div class="appointment-section">
+        <div class="form-row">
+          <label class="form-label" for="appointmentDate">
+            <i class="fa-solid fa-calendar-days"></i>
+            Select Date
+          </label>
+          <input 
+            type="text" 
+            id="appointmentDate" 
+            placeholder="Choose appointment date" 
+            autocomplete="off" 
+            disabled 
+            class="input--style-5"
+          />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">
+            <i class="fa-solid fa-clock"></i>
+            Available Time Slots
+          </label>
+          <div id="timeSlots" role="radiogroup" aria-label="Available appointment times"></div>
+        </div>
+
+        <div id="summaryBox" style="display: none;">
+          <div class="summary-item">
+            <div class="summary-icon"><i class="fa-solid fa-calendar"></i></div>
+            <div><strong>Date:</strong> <span id="summaryDate"></span></div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-icon"><i class="fa-solid fa-clock"></i></div>
+            <div><strong>Time:</strong> <span id="summaryTime"></span></div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-icon"><i class="fa-solid fa-user-nurse"></i></div>
+            <div><strong>Nurse:</strong> <span id="summaryNurse"></span></div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div><strong>Blood Group:</strong> <span id="summaryBlood"></span></div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-icon"><i class="fa-solid fa-vial"></i></div>
+            <div><strong>Volume:</strong> <span id="summaryUnit"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+const centerDropdown = document.getElementById('id_donation_center');
+const nurseDropdown = document.getElementById('nurseDropdown');
+const appointmentDateInput = document.getElementById('appointmentDate');
+const appointmentDateTimeHidden = document.getElementById('appointmentDateTimeHidden');
+const timeSlotsDiv = document.getElementById('timeSlots');
+const summaryBox = document.getElementById('summaryBox');
+const submitBtn = document.getElementById('submitBtn');
+
+const timeOptions = ["09:00 AM", "10:30 AM", "12:00 PM", "02:00 PM", "04:00 PM"];
+let selectedDate = "";
+let selectedTime = "";
+
+// Initialize Flatpickr
+flatpickr("#appointmentDate", {
+  minDate: "today",
+  dateFormat: "Y-m-d",
+  disableMobile: true,
+  onChange: function(selectedDates, dateStr) {
+    selectedDate = dateStr;
+    selectedTime = "";
+    renderTimeSlots();
+    updateSummary();
+  }
+});
+
+// Fetch booked time slots
+async function fetchBookedTimeSlots(nurseId, date) {
+  if (!nurseId || !date) return [];
+  try {
+    const response = await fetch(`{% url 'ajax_booked_timeslots' %}?nurse_id=${nurseId}&date=${date}`);
+    const data = await response.json();
+    return data.booked_times || [];
+  } catch (err) {
+    console.error('Error fetching booked slots:', err);
+    return [];
+  }
+}
+
+// Render time slots with booked status
+async function renderTimeSlots() {
+  timeSlotsDiv.innerHTML = '';
+  const nurseId = nurseDropdown.value;
+  
+  if (!nurseId || !selectedDate) {
+    timeSlotsDiv.innerHTML = '<p style="color: var(--gray-600); text-align: center; padding: 1rem;">Please select a nurse and date</p>';
+    return;
+  }
+
+  timeSlotsDiv.innerHTML = '<div style="text-align: center; padding: 1rem;"><div class="loading-spinner"></div></div>';
+
+  const bookedSlots = await fetchBookedTimeSlots(nurseId, selectedDate);
+  timeSlotsDiv.innerHTML = '';
+
+  timeOptions.forEach(slot => {
+    const isBooked = bookedSlots.includes(slot);
+    const label = document.createElement('label');
+    label.className = isBooked ? 'disabled' : '';
+    
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'appointment_time_radio';
+    input.value = slot;
+    input.disabled = isBooked;
+    
+    const span = document.createElement('span');
+    span.textContent = slot;
+    
+    label.appendChild(input);
+    label.appendChild(span);
+    
+    if (!isBooked) {
+      input.addEventListener('change', () => {
+        selectedTime = slot;
+        const [timePart, meridian] = slot.split(" ");
+        let [hour, minute] = timePart.split(":");
+        hour = parseInt(hour, 10);
+        
+        if (meridian === "PM" && hour < 12) hour += 12;
+        if (meridian === "AM" && hour === 12) hour = 0;
+        
+        hour = hour.toString().padStart(2, "0");
+        const finalDateTime = `${selectedDate}T${hour}:${minute}`;
+        appointmentDateTimeHidden.value = finalDateTime;
+        updateSummary();
+      });
+    }
+    
+    timeSlotsDiv.appendChild(label);
+  });
+}
+
+// Update summary box
+function updateSummary() {
+  const nurse = nurseDropdown.options[nurseDropdown.selectedIndex]?.text || '';
+  const bloodgroup = document.getElementById('id_bloodgroup')?.value || 'Not specified';
+  const unit = document.getElementById('id_unit')?.value || 'Not specified';
+
+  if (selectedDate && selectedTime && nurse) {
+    document.getElementById('summaryDate').textContent = selectedDate;
+    document.getElementById('summaryTime').textContent = selectedTime;
+    document.getElementById('summaryNurse').textContent = nurse;
+    document.getElementById('summaryBlood').textContent = bloodgroup;
+    document.getElementById('summaryUnit').textContent = unit ? `${unit} ml` : 'Not specified';
+    summaryBox.style.display = 'block';
+  } else {
+    summaryBox.style.display = 'none';
+  }
+}
+
+// Handle donation center change
+function toggleAppointmentFields() {
+  const centerId = centerDropdown.value;
+  
+  if (centerId) {
+    nurseDropdown.innerHTML = '<option value="">Loading nurses...</option>';
+    nurseDropdown.disabled = true;
+    
+    fetch(`{% url 'ajax_get_nurses' %}?center_id=${centerId}`)
+      .then(res => res.json())
+      .then(data => {
+        let options = '<option value="">Select a nurse</option>';
+        data.nurses.forEach(nurse => {
+          options += `<option value="${nurse.id}">${nurse.name}</option>`;
+        });
+        nurseDropdown.innerHTML = options;
+        nurseDropdown.disabled = false;
+        appointmentDateInput.disabled = true;
+        timeSlotsDiv.innerHTML = '<p style="color: var(--gray-600); text-align: center; padding: 1rem;">Select a nurse first</p>';
+        summaryBox.style.display = 'none';
+      })
+      .catch(err => {
+        console.error('Error fetching nurses:', err);
+        nurseDropdown.innerHTML = '<option value="">Error loading nurses</option>';
+      });
+  } else {
+    nurseDropdown.innerHTML = '<option value="">Select a donation center first</option>';
+    nurseDropdown.disabled = true;
+    appointmentDateInput.disabled = true;
+    timeSlotsDiv.innerHTML = '';
+    summaryBox.style.display = 'none';
+  }
+}
+
+// Handle nurse selection
+nurseDropdown.addEventListener('change', () => {
+  if (nurseDropdown.value) {
+    appointmentDateInput.disabled = false;
+    selectedDate = "";
+    selectedTime = "";
+    appointmentDateInput.value = "";
+    renderTimeSlots();
+    updateSummary();
+  } else {
+    appointmentDateInput.disabled = true;
+    timeSlotsDiv.innerHTML = '';
+    summaryBox.style.display = 'none';
+  }
+});
+
+centerDropdown.addEventListener('change', toggleAppointmentFields);
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+  nurseDropdown.disabled = true;
+  appointmentDateInput.disabled = true;
+  toggleAppointmentFields();
+  
+  // Add form submission loading state
+  const form = document.getElementById('bloodRequestForm');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<div class="loading-spinner"></div> Processing...';
+    });
+  }
+});
+</script>
+{% endblock %}

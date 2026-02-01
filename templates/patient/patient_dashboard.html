@@ -1,0 +1,613 @@
+{% extends 'patient/patientbase.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Load Font Awesome CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" />
+
+<style>
+  :root {
+    --primary-color: #dc3545;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --danger-color: #dc3545;
+    --light-bg: #f8f9fa;
+    --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --hover-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  }
+
+  body {
+    background-color: #f5f5f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* Dashboard Cards */
+  .dashboard-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+    border: none;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .dashboard-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  .dashboard-card-body {
+    padding: 2rem 1.5rem;
+  }
+
+  .dashboard-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .requests-icon { color: #E44D26; }
+  .pending-icon { color: #29ABE2; }
+  .approved-icon { color: #2ECC71; }
+  .rejected-icon { color: #95A5A6; }
+
+  .card-count {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+
+  .card-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-description {
+    font-size: 0.85rem;
+    color: #999;
+  }
+
+  /* Location Info */
+  .location-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #666;
+    flex-wrap: wrap;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #0d6efd;
+  }
+
+  .location-info i {
+    color: #0d6efd;
+  }
+
+  #updateLocationBtn {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    background: #0d6efd;
+    border: 1px solid #0d6efd;
+    color: white;
+    transition: all 0.3s;
+    padding: 5px 15px;
+    border-radius: 5px;
+  }
+
+  #updateLocationBtn:hover {
+    background: #0b5ed7;
+    border-color: #0b5ed7;
+  }
+
+  /* Buttons */
+  .btn-impact {
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 50rem;
+    padding: 0.75rem 2rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    border: none;
+  }
+
+  .btn-impact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    color: white;
+    text-decoration: none;
+  }
+
+  .btn-nearby {
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: var(--card-shadow);
+  }
+
+  .btn-nearby:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  /* Appointments Section */
+  .appointments-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    background: white;
+    margin-top: 2rem;
+  }
+
+  .appointment-item {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    transition: background 0.3s;
+  }
+
+  .appointment-item:last-child {
+    border-bottom: none;
+  }
+
+  .appointment-item:hover {
+    background: #f8f9fa;
+  }
+
+  .appointment-date {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .appointment-time {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+
+  .appointment-doctor {
+    font-weight: 600;
+    color: #667eea;
+  }
+
+  .status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .status-approved { background: #d4edda; color: #155724; }
+  .status-pending { background: #fff3cd; color: #856404; }
+  .status-rejected { background: #f8d7da; color: #721c24; }
+
+  /* Info Cards */
+  .info-card {
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s;
+    background: white;
+    border: none;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+  }
+
+  .info-card-body {
+    padding: 1.5rem;
+  }
+
+  .info-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .health-tips .info-icon { color: #e74c3c; }
+  .support .info-icon { color: #3498db; }
+  .resources .info-icon { color: #9b59b6; }
+  .contact .info-icon { color: #f39c12; }
+
+  /* Section Headers */
+  .section-header {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2rem 0 1.5rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-header i {
+    color: var(--primary-color);
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+  }
+
+  .empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .dashboard-card-body {
+      padding: 1.5rem 1rem;
+    }
+    
+    .card-count {
+      font-size: 2rem;
+    }
+    
+    .location-info {
+      justify-content: center;
+      text-align: center;
+    }
+  }
+
+  /* Animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animated {
+    animation: fadeIn 0.5s ease-out;
+  }
+</style>
+
+<div class="container mt-4">
+  <!-- Enhanced Greeting Card -->
+  {% include 'shared/greetings_card.html' %}
+  
+  <!-- Location Section -->
+  {% if patient %}
+    <div class="location-info animated" id="locationDisplay">
+      <i class="fas fa-map-marker-alt"></i>
+      <span>
+        {% if patient.county %}
+          {{ patient.county|truncatechars:40 }}
+        {% else %}
+          County not set
+        {% endif %}
+      </span>
+      {% if patient.location_name %}
+        <span class="mx-2">|</span>
+        <i class="fas fa-location-arrow"></i>
+        <span id="locationName">{{ patient.location_name }}</span>
+      {% endif %}
+      <button id="updateLocationBtn" class="btn btn-sm ms-2" type="button">
+        <i class="fas fa-sync-alt"></i> Update Location
+      </button>
+      <!-- Hidden latitude/longitude for backend use -->
+      <span id="latText" style="display:none;">{{ patient.latitude }}</span>
+      <span id="lonText" style="display:none;">{{ patient.longitude }}</span>
+    </div>
+  {% endif %}
+
+  <!-- Dashboard Stats -->
+  <div class="row g-4 mt-4 animated">
+    {% for stat in blood_request_stats %}
+      <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-card">
+          <div class="dashboard-card-body">
+            <i class="fas {{ stat.icon_class }} dashboard-icon {{ stat.color_class }}"></i>
+            <div class="card-count">{{ stat.count }}</div>
+            <div class="card-label">{{ stat.label }}</div>
+            <div class="card-description">{{ stat.description|default:"Track your requests" }}</div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="text-center mt-4 animated">
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="{% url 'nearby-eligible-donors' %}" class="btn btn-success btn-nearby">
+        <i class="fas fa-users"></i> Find Eligible Donors Nearby
+      </a>
+      <a href="{% url 'nearby-centers' %}" class="btn btn-primary btn-nearby">
+        <i class="fas fa-hospital"></i> Find Donation Centers Nearby
+      </a>
+    </div>
+  </div>
+
+  <!-- Upcoming Appointments Section -->
+  {% if upcoming_appointments %}
+  <div class="section-header animated">
+    <i class="fas fa-calendar-check"></i>
+    <span>Upcoming Appointments</span>
+  </div>
+  <div class="appointments-card animated">
+    <div class="card-body p-0">
+      {% for app in upcoming_appointments %}
+      <div class="appointment-item">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+          <div class="flex-grow-1 mb-2 mb-md-0">
+            {% if app.status|lower == 'approved' %}
+              <div class="appointment-doctor">
+                <i class="fas fa-user-md"></i> Dr. {{ app.nurse.user.get_full_name }}
+              </div>
+              <div class="text-muted small mt-1">
+                <i class="fas fa-hospital"></i> {{ app.nurse.donation_center.name }}
+              </div>
+            {% else %}
+              <div class="appointment-doctor">
+                <i class="fas fa-clock"></i> Appointment Pending Review
+              </div>
+              <div class="text-muted small mt-1">Awaiting approval</div>
+            {% endif %}
+          </div>
+          <div class="text-end">
+            {% if app.status|lower == 'approved' %}
+              <div class="appointment-date">{{ app.date|date:"M d, Y" }}</div>
+              <div class="appointment-time">{{ app.date|time:"h:i A" }}</div>
+              <span class="status-badge status-approved mt-2">
+                <i class="fas fa-check"></i> Approved
+              </span>
+            {% else %}
+              <span class="status-badge status-pending">
+                <i class="fas fa-clock"></i> {{ app.status|title }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="section-header animated">
+    <i class="fas fa-calendar-check"></i>
+    <span>Upcoming Appointments</span>
+  </div>
+  <div class="card dashboard-card animated">
+    <div class="card-body">
+      <div class="empty-state">
+        <i class="fas fa-calendar-times"></i>
+        <p class="mb-0">No upcoming appointments scheduled</p>
+        <small class="text-muted">Book an appointment to see it here</small>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Info Cards Section -->
+  <div class="section-header animated">
+    <i class="fas fa-info-circle"></i>
+    <span>Resources & Support</span>
+  </div>
+  <div class="row g-4 animated">
+    <div class="col-lg-3 col-md-6">
+      <div class="card info-card health-tips">
+        <div class="info-card-body">
+          <i class="fas fa-heartbeat info-icon"></i>
+          <h5 class="mb-3">Health Tips</h5>
+          <p class="text-muted mb-3 small">Stay active, hydrate well, and maintain a balanced diet</p>
+          <a href="#" class="btn btn-sm btn-outline-danger">Learn More</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card info-card support">
+        <div class="info-card-body">
+          <i class="fas fa-hands-helping info-icon"></i>
+          <h5 class="mb-3">Get Support</h5>
+          <p class="text-muted mb-3 small">Our team is here to help you 24/7</p>
+          <a href="tel:+254781024762" class="btn btn-sm btn-outline-primary">Call Support</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card info-card resources">
+        <div class="info-card-body">
+          <i class="fas fa-book-medical info-icon"></i>
+          <h5 class="mb-3">Resources</h5>
+          <p class="text-muted mb-3 small">Access guides and educational materials</p>
+          <a href="{% url 'patient-resources' %}" class="btn btn-sm btn-outline-purple">Explore</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card info-card contact">
+        <div class="info-card-body">
+          <i class="fas fa-question-circle info-icon"></i>
+          <h5 class="mb-3">FAQs</h5>
+          <p class="text-muted mb-3 small">Find answers to common questions</p>
+          <a href="{% url 'patient-faqs' %}" class="btn btn-sm btn-outline-warning">View FAQs</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Health Tips -->
+  <div class="section-header animated">
+    <i class="fas fa-lightbulb"></i>
+    <span>Quick Health Tips</span>
+  </div>
+  <div class="row g-4 animated">
+    <div class="col-md-3">
+      <div class="card info-card">
+        <div class="info-card-body text-center">
+          <i class="fas fa-running text-success" style="font-size: 2rem;"></i>
+          <h6 class="mt-2 mb-1">Stay Active</h6>
+          <p class="small text-muted mb-0">Regular exercise boosts immunity</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card info-card">
+        <div class="info-card-body text-center">
+          <i class="fas fa-tint text-danger" style="font-size: 2rem;"></i>
+          <h6 class="mt-2 mb-1">Hydrate Well</h6>
+          <p class="small text-muted mb-0">Drink 8+ glasses of water daily</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card info-card">
+        <div class="info-card-body text-center">
+          <i class="fas fa-apple-alt text-warning" style="font-size: 2rem;"></i>
+          <h6 class="mt-2 mb-1">Eat Healthy</h6>
+          <p class="small text-muted mb-0">Iron-rich foods support recovery</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card info-card">
+        <div class="info-card-body text-center">
+          <i class="fas fa-bed text-primary" style="font-size: 2rem;"></i>
+          <h6 class="mt-2 mb-1">Rest Well</h6>
+          <p class="small text-muted mb-0">7-8 hours of sleep nightly</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Get CSRF Token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Update Location Button
+  const updateBtn = document.getElementById('updateLocationBtn');
+  if (updateBtn) {
+    updateBtn.addEventListener('click', function() {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+      }
+
+      // Show loading state
+      updateBtn.disabled = true;
+      updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const lat = position.coords.latitude.toFixed(6);
+          const lon = position.coords.longitude.toFixed(6);
+          
+          const latText = document.getElementById('latText');
+          const lonText = document.getElementById('lonText');
+          if (latText) latText.textContent = lat;
+          if (lonText) lonText.textContent = lon;
+
+          const data = new URLSearchParams();
+          data.append('latitude', lat);
+          data.append('longitude', lon);
+
+          fetch("{% url 'save-user-location' %}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: data.toString()
+          })
+          .then(res => res.json())
+          .then(json => {
+            console.log('Location update response:', json);
+            
+            if (json.status === 'success' && json.location_name) {
+              let locNameElem = document.getElementById('locationName');
+              if (!locNameElem) {
+                const locationDisplay = document.getElementById('locationDisplay');
+                const separator = document.createElement('span');
+                separator.className = 'mx-2';
+                separator.textContent = '|';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-location-arrow';
+                const span = document.createElement('span');
+                span.id = 'locationName';
+                span.textContent = json.location_name;
+                locationDisplay.appendChild(separator);
+                locationDisplay.appendChild(icon);
+                locationDisplay.appendChild(span);
+              } else {
+                locNameElem.textContent = json.location_name;
+              }
+            }
+            
+            alert(json.message || 'Location updated successfully!');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
+          })
+          .catch(err => {
+            console.error('Fetch error:', err);
+            alert("Failed to update location. Please try again.");
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
+          });
+        },
+        function(error) {
+          alert("Error getting location: " + error.message);
+          updateBtn.disabled = false;
+          updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
+        }
+      );
+    });
+  }
+
+  // Add scroll animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.animated').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(el);
+  });
+});
+</script>
+
+{% endblock %}
