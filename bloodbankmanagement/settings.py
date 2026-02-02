@@ -12,14 +12,10 @@ import sys
 # Load .env (local) or environment variables
 load_dotenv()
 
-
 # =============================
 # BASE DIRECTORIES
 # =============================
 BASE_DIR = Path(__file__).resolve().parent.parent
-TEMPLATE_DIR = BASE_DIR / 'templates'
-STATIC_DIR = BASE_DIR / 'static'
-MEDIA_DIR = BASE_DIR / 'media'
 
 # =============================
 # SECURITY
@@ -92,10 +88,10 @@ INSTALLED_APPS = [
 # =============================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-
-    # WhiteNoise BEFORE Django static middleware
+    
+    # WhiteNoise MUST be here
     'whitenoise.middleware.WhiteNoiseMiddleware',
-
+    
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -144,7 +140,7 @@ ROOT_URLCONF = 'bloodbankmanagement.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR],
+        'DIRS': [BASE_DIR / 'templates'],  # FIXED: Direct reference
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -182,7 +178,6 @@ if DATABASE_URL:
     }
 else:
     # Local development database
-    # UPDATED: PostgreSQL configuration as requested
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -222,25 +217,33 @@ USE_I18N = True
 USE_TZ = True
 
 # =============================
-# STATIC FILES
+# STATIC FILES - FIXED SECTION
 # =============================
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [STATIC_DIR]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Conditional storage backend based on DEBUG mode
-if not DEBUG:
-    # Production: simpler storage to avoid manifest errors
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# For development: Where Django looks for static files (source files)
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',  # Your source static files go here
+]
+
+# For production: Where collectstatic puts files (different directory)
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Different from static/
+
+# WhiteNoise configuration
+if DEBUG:
+    # Development: Use Django's default storage
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 else:
-    # Development: manifest storage for cache-busting
+    # Production: Use WhiteNoise with compression
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    # Prevent 404 errors for missing files
+    WHITENOISE_MANIFEST_STRICT = False
 
 # =============================
 # MEDIA FILES
 # =============================
 MEDIA_URL = '/media/'
-MEDIA_ROOT = MEDIA_DIR
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # =============================
 # CLOUDINARY CONFIGURATION
@@ -451,3 +454,12 @@ if not DEBUG:
 LOG_DIR = BASE_DIR / 'logs'
 if not LOG_DIR.exists():
     LOG_DIR.mkdir(exist_ok=True)
+
+# =============================
+# DEVELOPMENT SETTINGS OVERRIDE
+# =============================
+if DEBUG:
+    # Force static files to work in development
+    import mimetypes
+    mimetypes.add_type("text/css", ".css", True)
+    mimetypes.add_type("text/javascript", ".js", True)

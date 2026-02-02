@@ -672,8 +672,15 @@ def donate_blood_view(request):
 
     if active_donation:
         logger.info(f"Donor {donor.id} has active donation with status '{active_donation.status}'")
+        # Show form but disable submission
+        donate_form = BloodDonateForm(donor=donor)
+        donate_form.fields['donation_center'].disabled = True
+        donate_form.fields['nurse'].disabled = True
+        donate_form.fields['appointment_date'].disabled = True
+        donate_form.fields['appointment_time'].disabled = True
+        
         return render(request, 'donor/donate_blood.html', {
-            'donation_form': BloodDonateForm(donor=donor),
+            'donation_form': donate_form,
             'donor': donor,
             'active_donation': active_donation
         })
@@ -695,20 +702,42 @@ def donate_blood_view(request):
         logger.info(f"Donor {donor.id} verified blood group: {donor.bloodgroup}")
 
     if request.method == 'POST':
+        logger.info("📝 POST request received for donation form")
+        
+        # Log POST data for debugging
+        logger.debug(f"POST data: {request.POST}")
+        
+        # Create form with POST data and donor context
         donate_form = BloodDonateForm(request.POST, donor=donor)
-
+        
         if donate_form.is_valid():
+            logger.info("✅ Form is valid")
             try:
                 with transaction.atomic():
+                    # Log cleaned data
+                    logger.debug(f"Cleaned form data: {donate_form.cleaned_data}")
+                    
                     # Update user profile
                     user = request.user
-                    user.first_name = donate_form.cleaned_data.get('first_name', user.first_name)
-                    user.last_name = donate_form.cleaned_data.get('last_name', user.last_name)
-                    user.save()
-
-                    # Update donor profile
-                    donor.mobile = donate_form.cleaned_data.get('mobile', donor.mobile)
-                    donor.save()
+                    first_name = donate_form.cleaned_data.get('first_name')
+                    last_name = donate_form.cleaned_data.get('last_name')
+                    mobile = donate_form.cleaned_data.get('mobile')
+                    bloodgroup = donate_form.cleaned_data.get('bloodgroup')
+                    unit = donate_form.cleaned_data.get('unit', 0)
+                    
+                    if first_name and first_name != user.first_name:
+                        user.first_name = first_name
+                        user.save()
+                        logger.info(f"Updated first name: {first_name}")
+                    
+                    if last_name and last_name != user.last_name:
+                        user.last_name = last_name
+                        user.save()
+                        logger.info(f"Updated last name: {last_name}")
+                    
+                    if mobile and mobile != donor.mobile:
+                        donor.mobile = mobile
+                        logger.info(f"Updated mobile: {mobile}")
 
                     # Create donation request
                     donation = donate_form.save(commit=False)
@@ -724,17 +753,37 @@ def donate_blood_view(request):
                         logger.info(f"✅ Using verified blood group {donor.bloodgroup} for donation")
                     else:
                         # First donation - blood group is optional (will be verified by nurse)
-                        form_bloodgroup = donate_form.cleaned_data.get('bloodgroup')
-                        donation.bloodgroup = form_bloodgroup if form_bloodgroup else None
+                        donation.bloodgroup = bloodgroup if bloodgroup else None
                         logger.info(f"ℹ️ First donation - blood group: {donation.bloodgroup or 'Not provided (will be verified by nurse)'}")
                     
+                    # Set donation date from appointment_date form field
+                    appointment_date = donate_form.cleaned_data.get('appointment_date')
+                    if appointment_date:
+                        donation.date = appointment_date  # Map to model's 'date' field
+                        logger.info(f"Setting donation date to: {appointment_date}")
+                    else:
+                        donation.date = timezone.now().date()
+                        logger.warning(f"No appointment date provided, using current date: {donation.date}")
+                    
+                    # Set donation volume (unit)
+                    donation.unit = unit
+                    logger.info(f"Setting donation unit to: {donation.unit} ml")
+                    
+                    # Save donor if mobile was updated
+                    donor.save()
+                    
+                    # Save donation
                     donation.save()
                     logger.info(f"✅ Created BloodDonate ID: {donation.id}")
+                    logger.info(f"   ├─ Donation Center: {donation.donation_center}")
+                    logger.info(f"   ├─ Nurse: {donation.nurse}")
+                    logger.info(f"   ├─ Date: {donation.date}")  # Changed from appointment_date to date
+                    logger.info(f"   ├─ Unit: {donation.unit} ml")
+                    logger.info(f"   └─ Status: {donation.status}")
 
                     # ==========================================
                     # CRITICAL FIX: Get ContentType for BloodDonate MODEL CLASS
                     # ==========================================
-                    # Use the BloodDonate class directly, not the instance
                     donation_ct = ContentType.objects.get_for_model(BloodDonate)
                     
                     # Detailed logging for verification
@@ -749,37 +798,54 @@ def donate_blood_view(request):
                     appointment_time_str = donate_form.cleaned_data.get('appointment_time')
 
                     if not appointment_date or not appointment_time_str:
+                        logger.error("❌ Missing appointment date or time")
                         messages.error(request, "❌ Please select a valid appointment date and time.")
                         return render(request, 'donor/donate_blood.html', {
                             'donation_form': donate_form,
-                            'donor': donor
+                            'donor': donor,
+                            'bloodgroup_verified': donor.bloodgroup_verified,
+                            'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
                         })
 
                     try:
                         # Handle both string and time object types
                         if isinstance(appointment_time_str, str):
-                            appointment_time = datetime.strptime(appointment_time_str.strip(), '%I:%M %p').time()
+                            # Handle 24-hour format (09:00, 10:30, etc.)
+                            if ':' in appointment_time_str:
+                                if len(appointment_time_str) == 5:  # 09:00 format
+                                    appointment_time = datetime.strptime(appointment_time_str.strip(), '%H:%M').time()
+                                else:
+                                    appointment_time = datetime.strptime(appointment_time_str.strip(), '%I:%M %p').time()
+                            else:
+                                raise ValueError(f"Invalid time format: {appointment_time_str}")
                         else:
                             appointment_time = appointment_time_str
+                        logger.info(f"Parsed appointment time: {appointment_time}")
                     except (ValueError, TypeError) as e:
-                        logger.error(f"Time parsing error: {e}")
+                        logger.error(f"❌ Time parsing error: {e} for time string: '{appointment_time_str}'")
                         messages.error(request, "❌ Invalid appointment time format. Please select a valid time.")
                         return render(request, 'donor/donate_blood.html', {
                             'donation_form': donate_form,
-                            'donor': donor
+                            'donor': donor,
+                            'bloodgroup_verified': donor.bloodgroup_verified,
+                            'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
                         })
 
                     appointment_datetime = timezone.make_aware(
                         datetime.combine(appointment_date, appointment_time)
                     )
+                    logger.info(f"Appointment datetime: {appointment_datetime}")
 
                     # Get nurse from form
                     nurse = donate_form.cleaned_data.get('nurse')
                     if not nurse:
+                        logger.error("❌ No nurse selected")
                         messages.error(request, "❌ Please select a nurse.")
                         return render(request, 'donor/donate_blood.html', {
                             'donation_form': donate_form,
-                            'donor': donor
+                            'donor': donor,
+                            'bloodgroup_verified': donor.bloodgroup_verified,
+                            'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
                         })
 
                     logger.info(f"🔍 Selected nurse: {nurse.user.get_full_name()} (ID: {nurse.id})")
@@ -794,6 +860,7 @@ def donate_blood_view(request):
                     ).exists()
 
                     if conflict_exists:
+                        logger.warning(f"❌ Conflict found for nurse {nurse.id} at {appointment_datetime}")
                         messages.error(
                             request,
                             f"❌ Nurse {nurse.user.get_full_name()} is already booked during this slot. "
@@ -801,7 +868,9 @@ def donate_blood_view(request):
                         )
                         return render(request, 'donor/donate_blood.html', {
                             'donation_form': donate_form,
-                            'donor': donor
+                            'donor': donor,
+                            'bloodgroup_verified': donor.bloodgroup_verified,
+                            'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
                         })
 
                     # ==========================================
@@ -876,19 +945,38 @@ def donate_blood_view(request):
                 return redirect('donation-history')
 
             except ValidationError as ve:
+                logger.error(f"❌ Validation Error: {ve}")
                 messages.error(request, f"❌ Validation Error: {str(ve)}")
-                logger.error(f"Validation Error: {ve}")
             except ValueError as ve:
+                logger.error(f"❌ ValueError: {ve}")
                 messages.error(request, f"❌ System Error: {str(ve)}")
-                logger.error(f"ValueError: {ve}", exc_info=True)
             except Exception as e:
-                messages.error(request, f"❌ An error occurred: {str(e)}")
-                logger.exception("Exception during donate_blood_view POST")
+                logger.exception("❌ Exception during donate_blood_view POST")
+                messages.error(request, f"❌ An unexpected error occurred: {str(e)}")
         else:
+            logger.warning(f"❌ Form is invalid. Errors: {donate_form.errors}")
             messages.error(request, "⚠️ Please correct the errors in the form below.")
-            logger.debug(f"Form errors: {donate_form.errors}")
+            
+            # Debug form errors
+            for field, errors in donate_form.errors.items():
+                logger.debug(f"Field '{field}' errors: {errors}")
     else:
+        # GET request - initialize form with donor data
         donate_form = BloodDonateForm(donor=donor)
+        
+        # Pre-fill form with donor data
+        initial_data = {
+            'first_name': donor.user.first_name,
+            'last_name': donor.user.last_name,
+            'mobile': donor.mobile,
+        }
+        
+        if donor.bloodgroup:
+            initial_data['bloodgroup'] = donor.bloodgroup
+            
+        donate_form.initial.update(initial_data)
+        
+        logger.info(f"Form initialized for donor {donor.id}")
 
     # Add blood group verification info to context
     context = {

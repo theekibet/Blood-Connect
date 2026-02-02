@@ -5,1107 +5,1128 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
 <style>
-  * { box-sizing: border-box; }
-  body { 
-    background: linear-gradient(135deg, #ff4b1f, #1fddff); 
-    font-family: 'Segoe UI', Tahoma, sans-serif; 
-    color: #333; 
-    min-height: 100vh;
-  }
-  
-  .container { 
-    max-width: 1200px; 
-    margin: 40px auto; 
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    padding: 20px;
-  }
-  
-  .card { 
-    background: #fff; 
-    border-radius: 16px; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15); 
-    padding: 35px;
-    animation: fadeIn 0.5s ease-in;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  .title { 
-    font-size: 1.9rem; 
-    margin-bottom: 30px; 
-    color: #ff4b1f; 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    font-weight: 700; 
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-    border-bottom: 3px solid #ff4b1f;
-    padding-bottom: 15px;
-  }
-  
-  .form-row { 
-    display: flex; 
-    flex-direction: column; 
-    margin-bottom: 22px;
-    position: relative;
-  }
-  
-  .form-row .name { 
-    font-weight: 600; 
-    margin-bottom: 8px; 
-    color: #333; 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-    font-size: 0.95rem;
-  }
-  
-  .form-row .name i { 
-    color: #ff4b1f; 
-    width: 20px;
-  }
-  
-  .input--style-5 {
-    width: 100%; 
-    padding: 12px 16px; 
-    border: 2px solid #e0e0e0; 
-    border-radius: 10px; 
-    font-size: 1rem; 
-    transition: all 0.3s ease;
-    background: #fafafa;
 
-    /* Fix for spaces not appearing */
-    white-space: normal;
-    word-break: normal;
-    text-transform: none;
-    letter-spacing: normal;
-}
-  
-  .input--style-5:focus { 
-    outline: none; 
-    border-color: #ff4b1f; 
-    box-shadow: 0 0 0 4px rgba(255, 75, 31, 0.1);
-    background: #fff;
-  }
-  
-  .input--style-5:disabled {
-    background: #f5f5f5;
-    cursor: not-allowed;
-    color: #999;
-  }
-  
-  .errorlist { 
-    list-style: none; 
-    padding: 8px 12px; 
-    margin: 8px 0 0 0; 
-    background: #fee; 
-    border-left: 4px solid #d93025;
-    border-radius: 6px;
-  }
-  
-  .errorlist li { 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-    font-size: 0.85rem;
-    color: #d93025;
-  }
-  
-  .errorlist li::before {
-    content: '⚠';
-    font-weight: bold;
-  }
-  
-  .alert {
-    padding: 15px 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: slideIn 0.3s ease-out;
-  }
-  
-  @keyframes slideIn {
-    from { transform: translateX(-20px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  
-  .alert-warning {
-    background: #fff3cd;
-    border-left: 4px solid #ffc107;
-    color: #856404;
-  }
-  
-  .alert-danger {
-    background: #fee;
-    border-left: 4px solid #dc3545;
-    color: #721c24;
-  }
-  
-  .alert-success {
-    background: #d4edda;
-    border-left: 4px solid #28a745;
-    color: #155724;
-  }
-  
-  .alert-info {
-    background: #d1ecf1;
-    border-left: 4px solid #17a2b8;
-    color: #0c5460;
-  }
-  
-  .btn { 
-    background: linear-gradient(135deg, #ff4b1f, #ff9068); 
-    color: white; 
-    border: none; 
-    padding: 14px 32px; 
-    border-radius: 30px; 
-    font-weight: 700; 
-    font-size: 1.1rem; 
-    cursor: pointer; 
-    display: inline-flex; 
-    align-items: center; 
-    gap: 10px; 
-    justify-content: center; 
-    transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(255, 75, 31, 0.3);
-    width: 100%;
-  }
-  
-  .btn:hover:not(:disabled) { 
-    background: linear-gradient(135deg, #e03e16, #ff7043);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 75, 31, 0.4);
-  }
-  
-  .btn:active {
-    transform: translateY(0);
-  }
-  
-  .btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-  
-  #timeSlots { 
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
-  }
-  
-  #timeSlots label { 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    color: #333;
-    transition: all 0.3s ease;
-    background: #fafafa;
-    user-select: none;
-  }
-  
-  #timeSlots label:hover:not(.disabled) {
-    border-color: #ff4b1f;
-    background: #fff5f2;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-  
-  #timeSlots input[type="radio"] { 
-    display: none;
-  }
-  
-  #timeSlots label.selected {
-    background: linear-gradient(135deg, #ff4b1f, #ff9068);
-    color: white;
-    border-color: #ff4b1f;
-    box-shadow: 0 4px 12px rgba(255, 75, 31, 0.3);
-  }
-  
-  #timeSlots label.disabled { 
-    background: #f5f5f5;
-    color: #999;
-    cursor: not-allowed;
-    border-color: #e0e0e0;
-    position: relative;
-  }
-  
-  #timeSlots label.disabled::after {
-    content: '✕';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 2rem;
-    color: #d93025;
-    opacity: 0.3;
-  }
-  
-  #summaryBox { 
-    margin-top: 10px; 
-    background: linear-gradient(135deg, #fff5f2, #ffe8e0);
-    border: 2px solid #ff4b1f; 
-    border-radius: 12px; 
-    padding: 20px; 
-    font-weight: 600; 
-    color: #333; 
-    font-size: 1rem; 
-    display: none; 
-    line-height: 1.8;
-    box-shadow: 0 4px 12px rgba(255, 75, 31, 0.1);
-  }
-  
-  #summaryBox.show {
-    display: block;
-    animation: fadeIn 0.3s ease-in;
-  }
-  
-  #summaryBox .summary-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  
-  #summaryBox .summary-item i {
-    color: #ff4b1f;
-    width: 20px;
-  }
-  
-  .loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255, 75, 31, 0.3);
-    border-radius: 50%;
-    border-top-color: #ff4b1f;
-    animation: spin 0.8s linear infinite;
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
-  .help-text {
-    font-size: 0.85rem;
-    color: #666;
-    margin-top: 5px;
-    font-style: italic;
-  }
-  
-  .required::after {
-    content: ' *';
-    color: #d93025;
-  }
-  
-  .progress-indicator {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 30px;
-    position: relative;
-  }
-  
-  .progress-indicator::before {
-    content: '';
-    position: absolute;
-    top: 15px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #e0e0e0;
-    z-index: 0;
-  }
-  
-  .progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    position: relative;
-    z-index: 1;
-    background: white;
-    padding: 0 10px;
-  }
-  
-  .progress-step-circle {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: #e0e0e0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #999;
-    transition: all 0.3s;
-  }
-  
-  .progress-step.active .progress-step-circle {
-    background: #ff4b1f;
-    color: white;
-    box-shadow: 0 0 0 4px rgba(255, 75, 31, 0.2);
-  }
-  
-  .progress-step.completed .progress-step-circle {
-    background: #28a745;
-    color: white;
-  }
-  
-  .progress-step-label {
-    font-size: 0.75rem;
-    color: #666;
-    text-align: center;
-  }
-
-  .consent-checkbox {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    border: 2px solid #e0e0e0;
-    cursor: pointer;
-    transition: all 0.3s;
-  }
-
-  .consent-checkbox:hover {
-    border-color: #ff4b1f;
-    background: #fff5f2;
-  }
-
-  .consent-checkbox input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    accent-color: #ff4b1f;
-    cursor: pointer;
-    margin-top: 2px;
-  }
-
-  .consent-checkbox label {
-    flex: 1;
-    cursor: pointer;
-    margin: 0;
-  }
-  
-  @media (max-width: 1024px) {
-    .container { 
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    #timeSlots {
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    }
-    
-    .title {
-      font-size: 1.5rem;
-    }
-    
-    .progress-indicator {
-      display: none;
-    }
-  }
 </style>
 
-<div class="container">
-  <!-- Request Form Card -->
-  <div class="card">
-    <h2 class="title"><i class="fa-solid fa-droplet"></i> Request Blood & Book Appointment</h2>
-    
-    {% if pending_request %}
-      <div class="alert alert-warning">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>You already have a pending blood request. Please wait for it to be approved or declined before making a new request.</span>
+<div class="main-container">
+  <!-- Hero Header -->
+  <div class="hero-header animate__animated animate__fadeInDown">
+    <div class="hero-content">
+      <h1>
+        <i class="fas fa-hand-holding-heart"></i>
+        Request Blood on Behalf of a Patient
+        <span style="font-size: 1rem; opacity: 0.9; display: block; margin-top: 0.5rem;">
+          Help save lives by facilitating blood requests
+        </span>
+      </h1>
+      <p>As a registered donor, you can help patients in need by requesting blood on their behalf. Please provide accurate patient information to ensure timely assistance.</p>
+    </div>
+    <div class="donor-badge">
+      <div class="badge-icon">
+        <i class="fas fa-user"></i>
       </div>
-    {% else %}
-
-    <!-- Progress Indicator -->
-    <div class="progress-indicator">
-      <div class="progress-step active" data-step="1">
-        <div class="progress-step-circle">1</div>
-        <div class="progress-step-label">Patient Info</div>
-      </div>
-      <div class="progress-step" data-step="2">
-        <div class="progress-step-circle">2</div>
-        <div class="progress-step-label">Blood Details</div>
-      </div>
-      <div class="progress-step" data-step="3">
-        <div class="progress-step-circle">3</div>
-        <div class="progress-step-label">Appointment</div>
-      </div>
-      <div class="progress-step" data-step="4">
-        <div class="progress-step-circle">4</div>
-        <div class="progress-step-label">Review</div>
+      <div>
+        <div style="font-size: 0.9rem; opacity: 0.9;">Donor ID</div>
+        <div style="font-size: 1.3rem;">{{ request.user.id|stringformat:"06d" }}</div>
       </div>
     </div>
-
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
-          <i class="fa-solid fa-circle-info"></i>
-          <span>{{ message }}</span>
-        </div>
-      {% endfor %}
-    {% endif %}
-
-    <!-- General non-field errors -->
-    {% if request_form.non_field_errors %}
-      <div class="alert alert-danger">
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <ul style="margin: 0; padding-left: 20px;">
-          {% for error in request_form.non_field_errors %}
-            <li>{{ error }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-
-    {% if form_errors.non_field_errors %}
-      <div class="alert alert-danger">
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <ul style="margin: 0; padding-left: 20px;">
-          {% for error in form_errors.non_field_errors %}
-            <li>{{ error }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-
-    {% if form_errors.appointment %}
-      <div class="alert alert-danger">
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <ul style="margin: 0; padding-left: 20px;">
-          {% for error in form_errors.appointment %}
-            <li>{{ error }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-
-    <form method="POST" id="bloodRequestForm" enctype="multipart/form-data" novalidate>
-      {% csrf_token %}
-
-      <!-- Patient First Name -->
-      <div class="form-row {% if request_form.patient_first_name.errors %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-user"></i> Patient First Name</div>
-        <div class="value">
-          {{ request_form.patient_first_name|add_class:"input--style-5"|attr:"placeholder:Enter patient's first name" }}
-          {% if request_form.patient_first_name.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.patient_first_name.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Patient Last Name -->
-      <div class="form-row {% if request_form.patient_last_name.errors %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-user"></i> Patient Last Name</div>
-        <div class="value">
-          {{ request_form.patient_last_name|add_class:"input--style-5"|attr:"placeholder:Enter patient's last name" }}
-          {% if request_form.patient_last_name.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.patient_last_name.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Patient Date of Birth -->
-      <div class="form-row {% if request_form.patient_dob.errors %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-cake-candles"></i> Patient Date of Birth</div>
-        <div class="value">
-          {{ request_form.patient_dob|add_class:"input--style-5" }}
-          {% if request_form.patient_dob.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.patient_dob.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Contact Number -->
-      <div class="form-row {% if request_form.contact_number.errors %}has-error{% endif %}">
-        <div class="name"><i class="fa-solid fa-phone"></i> Contact Number</div>
-        <div class="value">
-          {{ request_form.contact_number|add_class:"input--style-5"|attr:"placeholder:e.g., +254712345678" }}
-          <div class="help-text">Optional: Enter a contact number for updates</div>
-          {% if request_form.contact_number.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.contact_number.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Blood Group -->
-      <div class="form-row {% if request_form.bloodgroup.errors %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-droplet"></i> Blood Group</div>
-        <div class="value">
-          {{ request_form.bloodgroup|add_class:"input--style-5" }}
-          {% if request_form.bloodgroup.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.bloodgroup.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Unit -->
-      <div class="form-row {% if request_form.unit.errors %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-vial"></i> Unit (ml)</div>
-        <div class="value">
-          {{ request_form.unit|add_class:"input--style-5" }}
-          {% if request_form.unit.help_text %}
-            <div class="help-text">{{ request_form.unit.help_text }}</div>
-          {% endif %}
-          {% if request_form.unit.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.unit.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-
-
-      <!-- Donation Center -->
-      <div class="form-row {% if request_form.donation_center.errors %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-house-medical"></i> Donation Center</div>
-        <div class="value">
-          {{ request_form.donation_center|add_class:"input--style-5" }}
-          {% if request_form.donation_center.errors %}
-            <ul class="errorlist">
-              {% for error in request_form.donation_center.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Nurse Selection -->
-      <div class="form-row {% if form_errors.nurse %}has-error{% endif %}">
-        <div class="name required"><i class="fa-solid fa-user-nurse"></i> Select Nurse</div>
-        <div class="value">
-          <select id="nurseDropdown" name="nurse" class="input--style-5" required disabled>
-            <option value="">Select a donation center first</option>
-          </select>
-          {% if form_errors.nurse %}
-            <ul class="errorlist">
-              {% for error in form_errors.nurse %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Consent Checkbox -->
-      <div class="form-row {% if request_form.consent_confirmed.errors %}has-error{% endif %}">
-        <div class="consent-checkbox">
-          {{ request_form.consent_confirmed }}
-          <label for="{{ request_form.consent_confirmed.id_for_label }}" class="required">
-            I confirm consent to proceed with this blood request on behalf of the patient
-          </label>
-        </div>
-        {% if request_form.consent_confirmed.errors %}
-          <ul class="errorlist">
-            {% for error in request_form.consent_confirmed.errors %}
-              <li>{{ error }}</li>
-            {% endfor %}
-          </ul>
-        {% endif %}
-      </div>
-
-      <!-- Appointment date/time errors -->
-      {% if form_errors.appointment_date %}
-        <div class="alert alert-danger">
-          <i class="fa-solid fa-calendar-xmark"></i>
-          <ul style="margin: 0; padding-left: 20px;">
-            {% for error in form_errors.appointment_date %}
-              <li>{{ error }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endif %}
-
-      {% if form_errors.appointment_time %}
-        <div class="alert alert-danger">
-          <i class="fa-solid fa-clock"></i>
-          <ul style="margin: 0; padding-left: 20px;">
-            {% for error in form_errors.appointment_time %}
-              <li>{{ error }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endif %}
-
-      <!-- Hidden Appointment Fields -->
-      <input type="hidden" name="appointment_date" id="appointmentDateHidden">
-      <input type="hidden" name="appointment_time" id="appointmentTimeHidden">
-
-      <!-- Submit Button -->
-      <div class="form-row" style="margin-top: 30px;">
-        <button class="btn" type="submit" id="submitBtn" disabled>
-          <i class="fa-solid fa-paper-plane"></i> Submit Request
-        </button>
-      </div>
-    </form>
-    {% endif %}
   </div>
 
-  <!-- Appointment Info & Summary Card -->
-  <div class="card">
-    <h2 class="title"><i class="fa-solid fa-calendar-check"></i> Schedule Appointment</h2>
-
-    <div class="form-row">
-      <div class="name required"><i class="fa-solid fa-calendar-days"></i> Appointment Date</div>
-      <div class="value">
-        <input type="text" id="appointmentDate" placeholder="Select date" autocomplete="off" disabled class="input--style-5"/>
-        <div class="help-text">Select a nurse first to enable date selection</div>
+  <!-- Donor Profile -->
+  <div class="donor-profile animate__animated animate__fadeIn">
+    <div class="profile-header">
+      <div class="profile-avatar">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div class="profile-info">
+        <h3>{{ request.user.get_full_name }}</h3>
+        <p><i class="fas fa-heart" style="color: var(--primary-red);"></i> Registered Blood Donor</p>
       </div>
     </div>
-
-    <div class="form-row">
-      <div class="name required"><i class="fa-solid fa-clock"></i> Appointment Time</div>
-      <div class="value" id="timeSlots" role="radiogroup" aria-label="Available appointment times">
-        <div style="text-align: center; color: #999; padding: 20px;">
-          Select a date to view available time slots
+    
+    <div class="profile-stats">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-droplet"></i>
+        </div>
+        <div class="stat-content">
+          <h4>Blood Type</h4>
+          <p>{{ request.user.donor.bloodgroup|default:"Not specified" }}</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-hand-holding-medical"></i>
+        </div>
+        <div class="stat-content">
+          <h4>Total Donations</h4>
+          <p>{{ total_donations|default:"0" }} successful donations</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h4>Last Donation</h4>
+          <p>{{ last_donation|default:"Never" }}</p>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="form-row">
-      <div class="name"><i class="fa-solid fa-clipboard-check"></i> Appointment Summary</div>
-      <div class="value">
-        <div id="summaryBox" role="region" aria-live="polite">
-          <div style="text-align: center; color: #999;">
-            Complete the form to see appointment summary
+  {% if pending_request %}
+    <!-- Pending Request Alert -->
+    <div class="medical-card animate__animated animate__fadeIn">
+      <div class="card-header-medical">
+        <div class="card-icon-medical">
+          <i class="fas fa-clock"></i>
+        </div>
+        <h2 class="card-title-medical">Active Request in Progress</h2>
+      </div>
+
+      <div class="alert-medical warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+          <h4 style="margin: 0 0 0.5rem 0;">Active Blood Request</h4>
+          <p>You currently have a pending blood request on behalf of a patient. Please wait for it to be approved or completed before making a new request.</p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-title">
+          <i class="fas fa-clipboard-list"></i> Current Request Details
+        </div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">
+              <i class="fas fa-user"></i> Patient
+            </div>
+            <div class="summary-value">
+              {{ pending_request.patient_first_name }} {{ pending_request.patient_last_name }}
+            </div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">
+              <i class="fas fa-droplet"></i> Blood Group
+            </div>
+            <div class="summary-value">
+              <span class="blood-group-badge">{{ pending_request.bloodgroup }}</span>
+            </div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">
+              <i class="fas fa-vial"></i> Amount Needed
+            </div>
+            <div class="summary-value">{{ pending_request.unit }} ml</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">
+              <i class="fas fa-hospital"></i> Center
+            </div>
+            <div class="summary-value">{{ pending_request.donation_center.name }}</div>
+          </div>
+          
+          <div class="summary-item">
+            <div class="summary-label">
+              <i class="fas fa-calendar"></i> Status
+            </div>
+            <div class="summary-value">
+              {% if pending_request.status == 'pending' %}
+                <span style="color: var(--warning-amber); font-weight: 700;">Pending Review</span>
+              {% elif pending_request.status == 'approved' %}
+                <span style="color: var(--success-green); font-weight: 700;">Approved</span>
+              {% elif pending_request.status == 'rejected' %}
+                <span style="color: var(--primary-red); font-weight: 700;">Rejected</span>
+              {% elif pending_request.status == 'completed' %}
+                <span style="color: var(--secondary-blue); font-weight: 700;">Completed</span>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+
+  {% else %}
+    <!-- Progress Tracker -->
+    <div class="progress-tracker animate__animated animate__fadeIn">
+      <div class="progress-step active" id="step1-indicator">
+        <div class="step-indicator">1</div>
+        <div class="step-label">Patient Info</div>
+      </div>
+      <div class="progress-step" id="step2-indicator">
+        <div class="step-indicator">2</div>
+        <div class="step-label">Blood Details</div>
+      </div>
+      <div class="progress-step" id="step3-indicator">
+        <div class="step-indicator">3</div>
+        <div class="step-label">Select Center</div>
+      </div>
+      <div class="progress-step" id="step4-indicator">
+        <div class="step-indicator">4</div>
+        <div class="step-label">Schedule</div>
+      </div>
+      <div class="progress-step" id="step5-indicator">
+        <div class="step-indicator">5</div>
+        <div class="step-label">Confirm</div>
+      </div>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="medical-card animate__animated animate__fadeInUp">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert-medical {% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+            <i class="fas fa-{% if 'success' in message.tags %}check-circle{% elif 'error' in message.tags %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+            <div>{{ message }}</div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="POST" id="bloodRequestForm" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <!-- Step 1: Patient Information -->
+        <div class="form-step active" id="step1">
+          <div class="section-title-medical">
+            <i class="fas fa-user-injured"></i> Patient Information
+          </div>
+          <div class="section-subtitle">
+            Please provide accurate information about the patient who needs blood transfusion.
+            All fields are required for proper medical documentation.
+          </div>
+
+          <div class="form-grid-medical">
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="id_patient_first_name">
+                <i class="fas fa-user"></i> First Name <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-user input-icon"></i>
+                {{ request_form.patient_first_name|add_class:"input-medical"|attr:"placeholder:Patient's first name" }}
+              </div>
+              {% if request_form.patient_first_name.errors %}
+                <div class="error-container">
+                  {% for error in request_form.patient_first_name.errors %}
+                    <div class="error-item">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="id_patient_last_name">
+                <i class="fas fa-user"></i> Last Name <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-user input-icon"></i>
+                {{ request_form.patient_last_name|add_class:"input-medical"|attr:"placeholder:Patient's last name" }}
+              </div>
+              {% if request_form.patient_last_name.errors %}
+                <div class="error-container">
+                  {% for error in request_form.patient_last_name.errors %}
+                    <div class="error-item">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-grid-medical">
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="id_patient_dob">
+                <i class="fas fa-calendar-alt"></i> Date of Birth <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-calendar input-icon"></i>
+                {{ request_form.patient_dob|add_class:"input-medical"|attr:"placeholder:YYYY-MM-DD" }}
+              </div>
+              {% if request_form.patient_dob.errors %}
+                <div class="error-container">
+                  {% for error in request_form.patient_dob.errors %}
+                    <div class="error-item">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              <div class="help-text-medical">
+                <i class="fas fa-info-circle"></i> Required for age verification and dosage calculation
+              </div>
+            </div>
+
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="id_contact_number">
+                <i class="fas fa-phone"></i> Contact Number
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-phone input-icon"></i>
+                {{ request_form.contact_number|add_class:"input-medical"|attr:"placeholder:+254 XXX XXX XXX" }}
+              </div>
+              {% if request_form.contact_number.errors %}
+                <div class="error-container">
+                  {% for error in request_form.contact_number.errors %}
+                    <div class="error-item">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              <div class="help-text-medical">
+                <i class="fas fa-info-circle"></i> For appointment updates and emergency contact
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-actions">
+            <button type="button" class="btn-medical btn-secondary" disabled>
+              <i class="fas fa-arrow-left"></i> Previous
+            </button>
+            <button type="button" class="btn-medical btn-primary" onclick="nextStep(1, 2)">
+              Next: Blood Details <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Blood Details -->
+        <div class="form-step" id="step2">
+          <div class="section-title-medical">
+            <i class="fas fa-prescription-bottle-medical"></i> Blood Transfusion Requirements
+          </div>
+          <div class="section-subtitle">
+            Specify the blood requirements for the patient. Accurate information ensures proper matching and dosage.
+          </div>
+
+          <div class="alert-medical info">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Important:</strong> The blood group must match the patient's medical records. 
+              Inaccurate information can lead to serious complications.
+            </div>
+          </div>
+
+          <div class="form-grid-medical">
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="id_bloodgroup">
+                <i class="fas fa-droplet"></i> Required Blood Group <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-tint input-icon"></i>
+                {{ request_form.bloodgroup|add_class:"input-medical" }}
+              </div>
+              {% if request_form.bloodgroup.errors %}
+                <div class="error-container">
+                  {% for error in request_form.bloodgroup.errors %}
+                    <div class="error-item">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              <div class="help-text-medical">
+                <i class="fas fa-info-circle"></i> Must match patient's medical records exactly
+              </div>
+            </div>
+
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="id_unit">
+                <i class="fas fa-vial"></i> Amount Needed (ml) <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-weight input-icon"></i>
+                {{ request_form.unit|add_class:"input-medical"|attr:"placeholder:e.g., 450" }}
+              </div>
+              {% if request_form.unit.errors %}
+                <div class="error-container">
+                  {% for error in request_form.unit.errors %}
+                    <div class="error-item">
+                      <i class="fas fa-exclamation-circle"></i>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% if request_form.unit.help_text %}
+                <div class="help-text-medical">
+                  <i class="fas fa-info-circle"></i> {{ request_form.unit.help_text }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="btn-actions">
+            <button type="button" class="btn-medical btn-secondary" onclick="prevStep(2, 1)">
+              <i class="fas fa-arrow-left"></i> Previous
+            </button>
+            <button type="button" class="btn-medical btn-primary" onclick="nextStep(2, 3)">
+              Next: Select Center <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Center Selection -->
+        <div class="form-step" id="step3">
+          <div class="section-title-medical">
+            <i class="fas fa-hospital"></i> Select Donation Center
+          </div>
+          <div class="section-subtitle">
+            Choose a donation center where the patient will receive the blood transfusion.
+            Available nurses and appointment slots vary by center.
+          </div>
+
+          <div class="form-group-medical">
+            <label class="form-label-medical" for="id_donation_center">
+              <i class="fas fa-map-marker-alt"></i> Donation Center <span class="required-star">*</span>
+            </label>
+            <div class="input-wrapper">
+              <i class="fas fa-hospital input-icon"></i>
+              {{ request_form.donation_center|add_class:"input-medical" }}
+            </div>
+            {% if request_form.donation_center.errors %}
+              <div class="error-container">
+                {% for error in request_form.donation_center.errors %}
+                  <div class="error-item">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <div class="help-text-medical">
+              <i class="fas fa-info-circle"></i> Choose a center convenient for the patient
+            </div>
+          </div>
+
+          <div class="form-group-medical">
+            <label class="form-label-medical" for="nurseDropdown">
+              <i class="fas fa-user-nurse"></i> Assigned Nurse <span class="required-star">*</span>
+            </label>
+            <div class="input-wrapper">
+              <i class="fas fa-user-md input-icon"></i>
+              <select id="nurseDropdown" name="nurse" class="input-medical" required disabled>
+                <option value="">Please select a donation center first</option>
+              </select>
+            </div>
+            {% if form_errors.nurse %}
+              <div class="error-container">
+                {% for error in form_errors.nurse %}
+                  <div class="error-item">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <div class="help-text-medical">
+              <i class="fas fa-info-circle"></i> Nurses are assigned based on availability and specialization
+            </div>
+          </div>
+
+          <div class="btn-actions">
+            <button type="button" class="btn-medical btn-secondary" onclick="prevStep(3, 2)">
+              <i class="fas fa-arrow-left"></i> Previous
+            </button>
+            <button type="button" class="btn-medical btn-primary" onclick="nextStep(3, 4)" id="btnStep3Next">
+              Next: Schedule <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 4: Appointment Scheduling -->
+        <div class="form-step" id="step4">
+          <div class="section-title-medical">
+            <i class="fas fa-calendar-plus"></i> Schedule Appointment
+          </div>
+          <div class="section-subtitle">
+            Select a convenient date and time for the patient's blood transfusion appointment.
+            Appointments typically last 1-2 hours.
+          </div>
+
+          <div class="alert-medical info">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Patient Instructions:</strong> The patient should arrive 30 minutes before the appointment,
+              bring valid ID, and be accompanied if possible.
+            </div>
+          </div>
+
+          <div class="form-grid-medical">
+            <div class="form-group-medical">
+              <label class="form-label-medical" for="appointmentDate">
+                <i class="fas fa-calendar-day"></i> Appointment Date <span class="required-star">*</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fas fa-calendar input-icon"></i>
+                <input type="text" id="appointmentDate" 
+                       placeholder="Select appointment date" 
+                       class="input-medical" disabled>
+              </div>
+              <div class="help-text-medical">
+                <i class="fas fa-info-circle"></i> Select within the next 30 days
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group-medical">
+            <label class="form-label-medical">
+              <i class="fas fa-clock"></i> Available Time Slots <span class="required-star">*</span>
+            </label>
+            <div class="time-slots-container">
+              <p id="timeSlotMessage" class="text-muted" style="font-size: 1rem;">
+                <i class="fas fa-calendar-check"></i> Select a date to view available time slots
+              </p>
+              <div class="time-slots-grid" id="timeSlotsGrid"></div>
+            </div>
+          </div>
+
+          <input type="hidden" name="appointment_date" id="appointmentDateHidden">
+          <input type="hidden" name="appointment_time" id="appointmentTimeHidden">
+
+          <div class="btn-actions">
+            <button type="button" class="btn-medical btn-secondary" onclick="prevStep(4, 3)">
+              <i class="fas fa-arrow-left"></i> Previous
+            </button>
+            <button type="button" class="btn-medical btn-primary" onclick="nextStep(4, 5)">
+              Next: Review & Confirm <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 5: Review & Consent -->
+        <div class="form-step" id="step5">
+          <div class="section-title-medical">
+            <i class="fas fa-clipboard-check"></i> Review & Confirmation
+          </div>
+          <div class="section-subtitle">
+            Please review all information carefully before submitting the blood request.
+            You are responsible for the accuracy of patient information.
+          </div>
+
+          <!-- Summary Card -->
+          <div class="summary-card">
+            <div class="summary-title">
+              <i class="fas fa-file-medical-alt"></i> Request Summary
+            </div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-user-injured"></i> Patient Name
+                </div>
+                <div class="summary-value" id="summaryPatientName">Not specified</div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-droplet"></i> Blood Group
+                </div>
+                <div class="summary-value">
+                  <span class="blood-group-badge" id="summaryBloodGroup">-</span>
+                </div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-vial"></i> Amount
+                </div>
+                <div class="summary-value" id="summaryUnit">0 ml</div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-hospital"></i> Center
+                </div>
+                <div class="summary-value" id="summaryCenter">Not selected</div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-user-nurse"></i> Nurse
+                </div>
+                <div class="summary-value" id="summaryNurse">Not assigned</div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-calendar"></i> Appointment Date
+                </div>
+                <div class="summary-value" id="summaryDate">Not selected</div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-clock"></i> Appointment Time
+                </div>
+                <div class="summary-value" id="summaryTime">Not selected</div>
+              </div>
+              
+              <div class="summary-item">
+                <div class="summary-label">
+                  <i class="fas fa-user-tie"></i> Requested By
+                </div>
+                <div class="summary-value">{{ request.user.get_full_name }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Consent Box -->
+          <div class="consent-box">
+            <div class="consent-content">
+              <input type="checkbox" id="id_consent_confirmed" name="consent_confirmed" 
+                     class="consent-checkbox" required>
+              <div class="consent-text">
+                <h4>Authorization & Consent</h4>
+                <p>
+                  I confirm that I have obtained proper consent from the patient to submit this blood request on their behalf. 
+                  I verify that all information provided is accurate to the best of my knowledge. 
+                  I understand that providing false information may have serious medical consequences.
+                </p>
+              </div>
+            </div>
+            {% if request_form.consent_confirmed.errors %}
+              <div class="error-container" style="margin-top: 1rem;">
+                {% for error in request_form.consent_confirmed.errors %}
+                  <div class="error-item">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="btn-actions">
+            <button type="button" class="btn-medical btn-secondary" onclick="prevStep(5, 4)">
+              <i class="fas fa-arrow-left"></i> Previous
+            </button>
+            <button type="submit" class="btn-medical btn-primary" id="submitBtn">
+              <i class="fas fa-paper-plane"></i> Submit Blood Request
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  {% endif %}
 </div>
 
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-  // Get CSRF token
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-  const csrftoken = getCookie('csrftoken');
-  const centerDropdown = document.getElementById('{{ request_form.donation_center.id_for_label }}');
-  const nurseDropdown = document.getElementById('nurseDropdown');
-  const appointmentDateInput = document.getElementById('appointmentDate');
-  const appointmentDateHidden = document.getElementById('appointmentDateHidden');
-  const appointmentTimeHidden = document.getElementById('appointmentTimeHidden');
-  const timeSlotsDiv = document.getElementById('timeSlots');
-  const summaryBox = document.getElementById('summaryBox');
-  const submitBtn = document.getElementById('submitBtn');
-  const form = document.getElementById('bloodRequestForm');
-
-  const timeOptions = ["09:00 AM", "10:30 AM", "12:00 PM", "02:00 PM", "04:00 PM"];
-
-  let flatpickrInstance;
-
-  // Initialize Flatpickr
-  function initializeFlatpickr() {
-    if (flatpickrInstance) {
-      flatpickrInstance.destroy();
-    }
-    flatpickrInstance = flatpickr("#appointmentDate", {
-      minDate: "today",
-      maxDate: new Date().fp_incr(90),
-      dateFormat: "Y-m-d",
-      disableMobile: true,
-      disable: [
-        function(date) {
-          return date.getDay() === 0; // Disable Sundays
-        }
-      ],
-      onChange: function(selectedDates, dateStr) {
-        appointmentDateHidden.value = dateStr;
-        renderTimeSlots();
-        updateProgressIndicator(3);
-      }
-    });
-  }
-
-  // Fetch booked slots
-  async function fetchBookedTimeSlots(nurseId, date) {
-    if (!nurseId || !date) return [];
-
-    timeSlotsDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner"></div><div style="margin-top: 10px; color: #666;">Loading available times...</div></div>';
-
-    try {
-      const response = await fetch(`{% url 'ajax_booked_timeslots' %}?nurse_id=${nurseId}&date=${date}`, {
-        method: 'GET',
-        headers: {
-          'X-CSRFToken': csrftoken,
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      return data.booked_times || [];
-    } catch (err) {
-      console.error('Error fetching booked time slots:', err);
-      timeSlotsDiv.innerHTML = '<div style="color: #d93025; text-align: center; padding: 20px;"><i class="fa-solid fa-triangle-exclamation"></i><br>Error loading time slots. Please try again.</div>';
-      return [];
-    }
-  }
-
-  // Render time slots
-  async function renderTimeSlots() {
-    const nurseId = nurseDropdown.value;
-    const dateStr = appointmentDateHidden.value;
-
-    if (!nurseId || !dateStr) {
-      timeSlotsDiv.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Select a date to view available time slots</div>';
-      return;
-    }
-
-    const bookedSlots = await fetchBookedTimeSlots(nurseId, dateStr);
-    timeSlotsDiv.innerHTML = '';
-
-    if (timeOptions.length === 0) {
-      timeSlotsDiv.innerHTML = '<div style="color: #d93025; text-align: center; padding: 20px;">No time slots available for this date</div>';
-      return;
-    }
-
-    let hasAvailableSlot = false;
-
-    timeOptions.forEach(slot => {
-      const isBooked = bookedSlots.includes(slot);
-      if (!isBooked) hasAvailableSlot = true;
-
-      const label = document.createElement('label');
-      label.className = isBooked ? 'disabled' : '';
-      label.title = isBooked ? 'This time slot is already booked' : `Select ${slot}`;
-
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = 'appointment_time_radio';
-      input.value = slot;
-      input.disabled = isBooked;
-
-      label.appendChild(input);
-      label.appendChild(document.createTextNode(` ${slot}`));
-
-      if (!isBooked) {
-        label.addEventListener('click', function() {
-          document.querySelectorAll('#timeSlots label').forEach(l => l.classList.remove('selected'));
-          this.classList.add('selected');
-          appointmentTimeHidden.value = slot;
-          updateSummary();
-          updateProgressIndicator(4);
-          validateForm();
-        });
-      }
-
-      timeSlotsDiv.appendChild(label);
-    });
-
-    if (!hasAvailableSlot) {
-      const noSlotsMsg = document.createElement('div');
-      noSlotsMsg.style.cssText = 'grid-column: 1/-1; text-align: center; color: #d93025; padding: 10px; background: #fee; border-radius: 8px; margin-top: 10px;';
-      noSlotsMsg.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> All time slots are booked for this date. Please select another date.';
-      timeSlotsDiv.appendChild(noSlotsMsg);
-    }
-  }
-
-  // Update summary
-  function updateSummary() {
-    const date = appointmentDateInput.value;
-    const time = appointmentTimeHidden.value;
-    const nurse = nurseDropdown.options[nurseDropdown.selectedIndex]?.text || '';
-    const center = centerDropdown.options[centerDropdown.selectedIndex]?.text || '';
-    const bloodgroup = document.querySelector('[name="bloodgroup"]')?.value || '';
-    const unit = document.querySelector('[name="unit"]')?.value || '';
-    const patientFirstName = document.querySelector('[name="patient_first_name"]')?.value || '';
-    const patientLastName = document.querySelector('[name="patient_last_name"]')?.value || '';
-    const patientName = `${patientFirstName} ${patientLastName}`.trim();
-
-    if (date && time && nurse && patientName && bloodgroup) {
-      summaryBox.classList.add('show');
-      summaryBox.innerHTML = `
-        <div class="summary-item"><i class="fa-solid fa-user"></i> <strong>Patient:</strong> ${patientName || 'Not specified'}</div>
-        <div class="summary-item"><i class="fa-solid fa-droplet"></i> <strong>Blood Group:</strong> ${bloodgroup || 'Not selected'}</div>
-        <div class="summary-item"><i class="fa-solid fa-vial"></i> <strong>Amount:</strong> ${unit || '0'} ml</div>
-        <div class="summary-item"><i class="fa-solid fa-house-medical"></i> <strong>Center:</strong> ${center}</div>
-        <div class="summary-item"><i class="fa-solid fa-user-nurse"></i> <strong>Nurse:</strong> ${nurse}</div>
-        <div class="summary-item"><i class="fa-solid fa-calendar-days"></i> <strong>Date:</strong> ${date}</div>
-        <div class="summary-item"><i class="fa-solid fa-clock"></i> <strong>Time:</strong> ${time}</div>
-      `;
-    } else {
-      summaryBox.classList.remove('show');
-      summaryBox.innerHTML = '<div style="text-align: center; color: #999;">Complete the form to see appointment summary</div>';
-    }
-  }
-
-  // Validate form
-  function validateForm() {
-    const patientFirstName = document.querySelector('[name="patient_first_name"]')?.value.trim();
-    const patientLastName = document.querySelector('[name="patient_last_name"]')?.value.trim();
-    const patientDob = document.querySelector('[name="patient_dob"]')?.value.trim();
-    const bloodgroup = document.querySelector('[name="bloodgroup"]')?.value.trim();
-    const unit = document.querySelector('[name="unit"]')?.value.trim();
-    const donationCenter = centerDropdown?.value.trim();
-    const nurse = nurseDropdown?.value.trim();
-    const consent = document.querySelector('[name="consent_confirmed"]')?.checked;
-    const appointmentDate = appointmentDateHidden?.value.trim();
-    const appointmentTime = appointmentTimeHidden?.value.trim();
-
-    // Removed urgencyLevel check since urgency field removed
-    const allRequired = patientFirstName && patientLastName && patientDob &&
-                       bloodgroup && unit && donationCenter &&
-                       nurse && appointmentDate && appointmentTime && consent;
-
-    submitBtn.disabled = !allRequired;
-
-    return allRequired;
-  }
-
-  // Update progress indicator
-  function updateProgressIndicator(currentStep) {
-    const steps = document.querySelectorAll('.progress-step');
-    steps.forEach((step, index) => {
-      const stepNum = index + 1;
-      if (stepNum < currentStep) {
-        step.classList.add('completed');
-        step.classList.remove('active');
-      } else if (stepNum === currentStep) {
-        step.classList.add('active');
-        step.classList.remove('completed');
-      } else {
-        step.classList.remove('active', 'completed');
-      }
-    });
-  }
-
-  // Fetch nurses based on center
-  async function fetchNurses(centerId) {
-    if (!centerId) {
-      nurseDropdown.innerHTML = '<option value="">Select a donation center first</option>';
-      nurseDropdown.disabled = true;
-      appointmentDateInput.disabled = true;
-      timeSlotsDiv.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Select a nurse first to enable appointments</div>';
-      summaryBox.classList.remove('show');
-      summaryBox.innerHTML = '<div style="text-align: center; color: #999;">Complete the form to see appointment summary</div>';
-      appointmentDateInput.value = '';
-      appointmentDateHidden.value = '';
-      appointmentTimeHidden.value = '';
-      validateForm();
-      return;
-    }
-
-    nurseDropdown.innerHTML = '<option value="">Loading nurses...</option>';
-    nurseDropdown.disabled = true;
-
-    try {
-      const response = await fetch(`{% url 'ajax_get_nurses' %}?center_id=${centerId}`, {
-        method: 'GET',
-        headers: {
-          'X-CSRFToken': csrftoken,
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-
-      let options = '<option value="">Select a nurse</option>';
-      if (data.nurses && data.nurses.length > 0) {
-        data.nurses.forEach(nurse => {
-          options += `<option value="${nurse.id}">${nurse.name}</option>`;
-        });
-      } else {
-        options = '<option value="">No nurses available at this center</option>';
-      }
-
-      nurseDropdown.innerHTML = options;
-      nurseDropdown.disabled = data.nurses.length === 0;
-
-      if (data.nurses.length > 0) {
-        updateProgressIndicator(2);
-      }
-    } catch (err) {
-      console.error('Error fetching nurses:', err);
-      nurseDropdown.innerHTML = '<option value="">Error loading nurses. Please try again.</option>';
-      nurseDropdown.disabled = true;
-    }
-  }
-
-  // Event listeners
-  if (centerDropdown) {
-    centerDropdown.addEventListener('change', function() {
-      fetchNurses(this.value);
-      appointmentDateInput.disabled = true;
-      appointmentDateInput.value = '';
-      appointmentDateHidden.value = '';
-      appointmentTimeHidden.value = '';
-      timeSlotsDiv.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Select a nurse first</div>';
-      summaryBox.classList.remove('show');
-      summaryBox.innerHTML = '<div style="text-align: center; color: #999;">Complete the form to see appointment summary</div>';
-
-      // Remove selected class from time slots
-      document.querySelectorAll('#timeSlots label').forEach(l => l.classList.remove('selected'));
-
-      validateForm();
-    });
-  }
-
-  if (nurseDropdown) {
-    nurseDropdown.addEventListener('change', function() {
-      if (this.value) {
-        appointmentDateInput.disabled = false;
-        initializeFlatpickr();
-        updateProgressIndicator(3);
-        updateSummary();
-      } else {
-        appointmentDateInput.disabled = true;
-        appointmentDateInput.value = '';
-        appointmentDateHidden.value = '';
-        appointmentTimeHidden.value = '';
-        timeSlotsDiv.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Select a nurse first</div>';
-        summaryBox.classList.remove('show');
-      }
-      validateForm();
-    });
-  }
-
-  // Form input listeners for validation and progress
-  if (form) {
-    form.addEventListener('input', function(e) {
-      const fieldName = e.target.name;
-
-      if (fieldName === 'patient_first_name' || fieldName === 'patient_last_name' || fieldName === 'patient_dob') {
-        const firstName = document.querySelector('[name="patient_first_name"]')?.value.trim();
-        const lastName = document.querySelector('[name="patient_last_name"]')?.value.trim();
-        const dob = document.querySelector('[name="patient_dob"]')?.value.trim();
-
-        if (firstName && lastName && dob) {
-          updateProgressIndicator(2);
-        } else {
-          updateProgressIndicator(1);
-        }
-      } else if (fieldName === 'bloodgroup' || fieldName === 'unit') {
-        const bloodgroup = document.querySelector('[name="bloodgroup"]')?.value.trim();
-        const unit = document.querySelector('[name="unit"]')?.value.trim();
-
-        if (bloodgroup && unit) {
-          const centerSelected = centerDropdown?.value.trim();
-          if (centerSelected) {
-            updateProgressIndicator(2);
-          }
-        }
-      }
-
-      updateSummary();
-      validateForm();
-    });
-
-    form.addEventListener('change', function(e) {
-      updateSummary();
-      validateForm();
-    });
-
-    // Form submission validation
-    form.addEventListener('submit', function(e) {
-      if (!appointmentDateHidden.value || !appointmentTimeHidden.value) {
-        e.preventDefault();
-        alert('⚠️ Please select both an appointment date and time before submitting.');
-        return false;
-      }
-
-      if (!document.querySelector('[name="consent_confirmed"]')?.checked) {
-        e.preventDefault();
-        alert('⚠️ You must confirm consent to proceed with this blood request.');
-        return false;
-      }
-
-      if (!validateForm()) {
-        e.preventDefault();
-        alert('⚠️ Please fill in all required fields before submitting.');
-        return false;
-      }
-
-      // Show loading state
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<div class="loading-spinner"></div> Submitting Request...';
-
-      // Allow form to submit
-      return true;
-    });
-  }
-
-  // Initialize on page load
   document.addEventListener('DOMContentLoaded', function() {
-    if (nurseDropdown) {
-      nurseDropdown.disabled = true;
+    // Initialize variables
+    let currentStep = 1;
+    let selectedDate = "";
+    let selectedTime = "";
+    let bookedSlots = [];
+    let flatpickrInstance = null;
+    
+    // Form elements
+    const centerDropdown = document.getElementById('id_donation_center');
+    const nurseDropdown = document.getElementById('nurseDropdown');
+    const appointmentDateInput = document.getElementById('appointmentDate');
+    const appointmentDateHidden = document.getElementById('appointmentDateHidden');
+    const appointmentTimeHidden = document.getElementById('appointmentTimeHidden');
+    const timeSlotsGrid = document.getElementById('timeSlotsGrid');
+    const timeSlotMessage = document.getElementById('timeSlotMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('bloodRequestForm');
+    const btnStep3Next = document.getElementById('btnStep3Next');
+    
+    // Summary elements
+    const summaryPatientName = document.getElementById('summaryPatientName');
+    const summaryBloodGroup = document.getElementById('summaryBloodGroup');
+    const summaryUnit = document.getElementById('summaryUnit');
+    const summaryCenter = document.getElementById('summaryCenter');
+    const summaryNurse = document.getElementById('summaryNurse');
+    const summaryDate = document.getElementById('summaryDate');
+    const summaryTime = document.getElementById('summaryTime');
+    
+    // Time slots configuration
+    const timeSlots = [
+      { time: "09:00", label: "9:00 AM", period: "Morning" },
+      { time: "10:30", label: "10:30 AM", period: "Morning" },
+      { time: "12:00", label: "12:00 PM", period: "Noon" },
+      { time: "14:00", label: "2:00 PM", period: "Afternoon" },
+      { time: "16:00", label: "4:00 PM", period: "Afternoon" }
+    ];
+    
+    // Step navigation functions
+    window.nextStep = function(current, next) {
+      if (validateStep(current)) {
+        showStep(next);
+        updateProgress(next);
+        updateSummary();
+      }
+    };
+    
+    window.prevStep = function(current, prev) {
+      showStep(prev);
+      updateProgress(prev);
+    };
+    
+    function showStep(stepNumber) {
+      // Hide all steps
+      document.querySelectorAll('.form-step').forEach(step => {
+        step.classList.remove('active');
+      });
+      
+      // Show current step
+      const stepElement = document.getElementById(`step${stepNumber}`);
+      if (stepElement) {
+        stepElement.classList.add('active');
+        currentStep = stepNumber;
+        scrollToTop();
+      }
+      
+      // Special handling for step 3 (center selection)
+      if (stepNumber === 3) {
+        initializeCenterSelection();
+      }
+      
+      // Special handling for step 4 (appointment)
+      if (stepNumber === 4) {
+        initializeAppointmentScheduling();
+      }
     }
-    if (appointmentDateInput) {
-      appointmentDateInput.disabled = true;
+    
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
-    validateForm();
-    updateProgressIndicator(1);
-
-    // Check if center is already selected (on form resubmission with errors)
+    
+    function updateProgress(stepNumber) {
+      // Update progress indicators
+      document.querySelectorAll('.progress-step').forEach((step, index) => {
+        const stepNum = index + 1;
+        if (stepNum < stepNumber) {
+          step.classList.add('completed');
+          step.classList.remove('active');
+        } else if (stepNum === stepNumber) {
+          step.classList.add('active');
+          step.classList.remove('completed');
+        } else {
+          step.classList.remove('active', 'completed');
+        }
+      });
+    }
+    
+    function validateStep(stepNumber) {
+      switch(stepNumber) {
+        case 1:
+          const firstName = document.getElementById('id_patient_first_name').value.trim();
+          const lastName = document.getElementById('id_patient_last_name').value.trim();
+          const dob = document.getElementById('id_patient_dob').value.trim();
+          
+          if (!firstName || !lastName || !dob) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Missing Patient Information',
+              text: 'Please fill in all patient details before proceeding',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          return true;
+          
+        case 2:
+          const bloodgroup = document.getElementById('id_bloodgroup').value.trim();
+          const unit = document.getElementById('id_unit').value.trim();
+          
+          if (!bloodgroup || !unit) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Blood Details Required',
+              text: 'Please specify both blood group and required amount',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          
+          if (parseInt(unit) <= 0 || parseInt(unit) > 2000) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Invalid Amount',
+              text: 'Please enter a valid blood amount (1-2000 ml)',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          return true;
+          
+        case 3:
+          if (!centerDropdown.value) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Center Required',
+              text: 'Please select a donation center',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          
+          if (!nurseDropdown.value) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Nurse Required',
+              text: 'Please select an available nurse',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          return true;
+          
+        case 4:
+          if (!appointmentDateHidden.value) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Date Required',
+              text: 'Please select an appointment date',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          
+          if (!appointmentTimeHidden.value) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Time Required',
+              text: 'Please select an appointment time slot',
+              confirmButtonColor: 'var(--primary-red)',
+              confirmButtonText: 'Okay'
+            });
+            return false;
+          }
+          return true;
+          
+        default:
+          return true;
+      }
+    }
+    
+    // Center selection functionality
+    function initializeCenterSelection() {
+      if (btnStep3Next) {
+        btnStep3Next.disabled = true;
+      }
+      
+      centerDropdown.addEventListener('change', function() {
+        const centerId = this.value;
+        
+        if (btnStep3Next) {
+          btnStep3Next.disabled = true;
+        }
+        
+        if (centerId) {
+          // Show loading state
+          nurseDropdown.innerHTML = '<option value="">Loading available nurses...</option>';
+          nurseDropdown.disabled = true;
+          nurseDropdown.classList.add('input-medical');
+          
+          // Fetch nurses for selected center
+          fetch(`{% url 'ajax_get_nurses' %}?center_id=${centerId}`)
+            .then(res => {
+              if (!res.ok) throw new Error('Network response was not ok');
+              return res.json();
+            })
+            .then(data => {
+              let options = '<option value="">Select a nurse</option>';
+              if (data.nurses && data.nurses.length > 0) {
+                data.nurses.forEach(nurse => {
+                  options += `<option value="${nurse.id}">Nurse ${nurse.name} (Available)</option>`;
+                });
+                nurseDropdown.innerHTML = options;
+                nurseDropdown.disabled = false;
+                updateSummaryCenter(centerDropdown.options[centerDropdown.selectedIndex]?.text);
+                
+                if (btnStep3Next) {
+                  btnStep3Next.disabled = false;
+                }
+                
+                // Update progress
+                updateProgress(3);
+              } else {
+                nurseDropdown.innerHTML = '<option value="">No nurses available at this center</option>';
+                Swal.fire({
+                  icon: 'info',
+                  title: 'No Nurses Available',
+                  text: 'Please select another donation center or check back later',
+                  confirmButtonColor: 'var(--primary-red)'
+                });
+              }
+            })
+            .catch(err => {
+              console.error('Error fetching nurses:', err);
+              nurseDropdown.innerHTML = '<option value="">Error loading nurses</option>';
+              Swal.fire({
+                icon: 'error',
+                title: 'Connection Error',
+                text: 'Failed to load nurse information. Please try again.',
+                confirmButtonColor: 'var(--primary-red)'
+              });
+            });
+        } else {
+          nurseDropdown.innerHTML = '<option value="">Select a donation center first</option>';
+          nurseDropdown.disabled = true;
+          updateSummaryCenter('Not selected');
+        }
+        
+        updateSummary();
+      });
+      
+      // Nurse selection handler
+      nurseDropdown.addEventListener('change', function() {
+        updateSummaryNurse(this.options[this.selectedIndex]?.text || 'Not selected');
+      });
+    }
+    
+    // Appointment scheduling functionality
+    function initializeAppointmentScheduling() {
+      if (nurseDropdown.value && !flatpickrInstance) {
+        flatpickrInstance = flatpickr("#appointmentDate", {
+          minDate: "today",
+          maxDate: new Date().fp_incr(30), // 30 days from today
+          dateFormat: "Y-m-d",
+          disableMobile: true,
+          onChange: function(selectedDates, dateStr) {
+            selectedDate = dateStr;
+            selectedTime = "";
+            appointmentDateHidden.value = dateStr;
+            fetchBookedTimeSlots();
+            updateSummaryDate(dateStr);
+            updateProgress(4);
+          }
+        });
+        
+        appointmentDateInput.disabled = false;
+      }
+    }
+    
+    // Fetch booked time slots
+    async function fetchBookedTimeSlots() {
+      const nurseId = nurseDropdown.value;
+      
+      if (!nurseId || !selectedDate) {
+        timeSlotMessage.innerHTML = '<i class="fas fa-calendar-check"></i> Select a date to view available time slots';
+        timeSlotMessage.className = 'text-muted';
+        timeSlotsGrid.innerHTML = '';
+        return;
+      }
+      
+      timeSlotMessage.innerHTML = '<div style="display: flex; align-items: center; gap: 0.5rem;"><div class="loading-spinner" style="border-top-color: var(--primary-red);"></div> Loading available slots...</div>';
+      timeSlotsGrid.innerHTML = '';
+      
+      try {
+        const response = await fetch(`{% url 'ajax_booked_timeslots' %}?nurse_id=${nurseId}&date=${selectedDate}`);
+        const data = await response.json();
+        bookedSlots = data.booked_times || [];
+        renderTimeSlots();
+      } catch (err) {
+        console.error('Error fetching booked slots:', err);
+        bookedSlots = [];
+        renderTimeSlots();
+        Swal.fire({
+          icon: 'error',
+          title: 'Connection Error',
+          text: 'Failed to load available time slots',
+          confirmButtonColor: 'var(--primary-red)'
+        });
+      }
+    }
+    
+    // Render time slots
+    function renderTimeSlots() {
+      timeSlotsGrid.innerHTML = '';
+      
+      if (bookedSlots.length === timeSlots.length) {
+        timeSlotMessage.innerHTML = '<i class="fas fa-calendar-times"></i> No available time slots for this date';
+        timeSlotMessage.className = 'text-danger';
+        return;
+      }
+      
+      timeSlotMessage.innerHTML = '<i class="fas fa-clock"></i> Select your preferred time slot';
+      timeSlotMessage.className = 'text-muted';
+      
+      timeSlots.forEach(slot => {
+        const isBooked = bookedSlots.includes(slot.time);
+        const timeSlotElement = document.createElement('div');
+        timeSlotElement.className = `time-slot-medical ${isBooked ? 'booked' : ''}`;
+        
+        timeSlotElement.innerHTML = `
+          <div class="slot-time">${slot.label}</div>
+          <div class="slot-period">${slot.period}</div>
+        `;
+        
+        if (!isBooked) {
+          timeSlotElement.addEventListener('click', () => {
+            // Remove selected class from all slots
+            document.querySelectorAll('.time-slot-medical').forEach(el => {
+              el.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked slot
+            timeSlotElement.classList.add('selected');
+            
+            // Update selected time
+            selectedTime = slot.label;
+            
+            // Set hidden field value
+            const [timePart, meridian] = slot.label.split(" ");
+            let [hour, minute] = timePart.split(":");
+            hour = parseInt(hour, 10);
+            
+            if (meridian === "PM" && hour < 12) hour += 12;
+            if (meridian === "AM" && hour === 12) hour = 0;
+            
+            hour = hour.toString().padStart(2, "0");
+            const finalDateTime = `${selectedDate}T${hour}:${minute}`;
+            appointmentTimeHidden.value = finalDateTime;
+            
+            // Update summary
+            updateSummaryTime(slot.label);
+            updateProgress(5);
+          });
+        }
+        
+        timeSlotsGrid.appendChild(timeSlotElement);
+      });
+    }
+    
+    // Update summary functions
+    function updateSummary() {
+      // Patient name
+      const firstName = document.getElementById('id_patient_first_name').value.trim();
+      const lastName = document.getElementById('id_patient_last_name').value.trim();
+      summaryPatientName.textContent = `${firstName} ${lastName}`.trim() || 'Not specified';
+      
+      // Blood group
+      const bloodgroup = document.getElementById('id_bloodgroup').value.trim();
+      summaryBloodGroup.textContent = bloodgroup || '-';
+      
+      // Unit
+      const unit = document.getElementById('id_unit').value.trim();
+      summaryUnit.textContent = unit ? `${unit} ml` : '0 ml';
+      
+      // Center
+      summaryCenter.textContent = centerDropdown.options[centerDropdown.selectedIndex]?.text || 'Not selected';
+      
+      // Nurse
+      summaryNurse.textContent = nurseDropdown.options[nurseDropdown.selectedIndex]?.text || 'Not assigned';
+      
+      // Date
+      if (appointmentDateHidden.value) {
+        const dateObj = new Date(appointmentDateHidden.value);
+        summaryDate.textContent = dateObj.toLocaleDateString('en-US', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } else {
+        summaryDate.textContent = 'Not selected';
+      }
+      
+      // Time
+      summaryTime.textContent = appointmentTimeHidden.value || 'Not selected';
+    }
+    
+    // Form submission
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Final validation
+        if (!validateStep(5)) {
+          return false;
+        }
+        
+        const consent = document.getElementById('id_consent_confirmed').checked;
+        if (!consent) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Consent Required',
+            text: 'You must confirm consent to submit this blood request',
+            confirmButtonColor: 'var(--primary-red)',
+            confirmButtonText: 'Okay'
+          });
+          return false;
+        }
+        
+        // Show confirmation dialog
+        Swal.fire({
+          title: 'Submit Blood Request?',
+          html: `
+            <div style="text-align: left; margin: 1rem 0;">
+              <p><strong>Please confirm:</strong></p>
+              <ul style="padding-left: 1.5rem;">
+                <li>Patient information is accurate</li>
+                <li>You have proper consent</li>
+                <li>Appointment details are correct</li>
+              </ul>
+              <p style="color: var(--primary-red); font-weight: 600; margin-top: 1rem;">
+                This request will be reviewed by medical staff.
+              </p>
+            </div>
+          `,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: 'var(--primary-red)',
+          cancelButtonColor: 'var(--gray-600)',
+          confirmButtonText: 'Yes, Submit Request',
+          cancelButtonText: 'Review Again',
+          reverseButtons: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Show loading state
+            submitBtn.innerHTML = '<div class="loading-spinner"></div> Submitting Request...';
+            submitBtn.disabled = true;
+            
+            // Submit the form
+            form.submit();
+          }
+        });
+      });
+    }
+    
+    // Auto-update summary on input changes
+    const formInputs = form.querySelectorAll('input, select');
+    formInputs.forEach(input => {
+      input.addEventListener('change', updateSummary);
+      input.addEventListener('input', updateSummary);
+    });
+    
+    // Initialize on page load
     if (centerDropdown && centerDropdown.value) {
-      fetchNurses(centerDropdown.value);
+      setTimeout(() => {
+        centerDropdown.dispatchEvent(new Event('change'));
+      }, 100);
     }
+    
+    // Initialize progress
+    updateProgress(1);
+    updateSummary();
   });
 </script>
 {% endblock %}

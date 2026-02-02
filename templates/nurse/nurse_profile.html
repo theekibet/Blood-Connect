@@ -4,51 +4,7 @@
 
 {% block content %}
 <style>
-  .profile-container { max-width: 700px; margin: 2rem auto; }
-  .profile-card {
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-    border-radius: 12px;
-    padding: 2rem;
-    background: #fff;
-  }
-  .profile-img {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 5px solid #ff0018;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-  .profile-header {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-  }
-  .profile-name { font-weight: 700; font-size: 1.8rem; color: #343a40; }
-  .profile-info table { width: 100%; border-collapse: collapse; }
-  .profile-info th {
-    width: 40%;
-    background-color: #f8f9fa;
-    font-weight: 600;
-    padding: 12px 15px;
-    border: none;
-    text-align: left;
-  }
-  .profile-info td { padding: 12px 15px; border: none; color: #555; }
-  .profile-info tr:not(:last-child) td { border-bottom: 1px solid #dee2e6; }
-  .btn-edit {
-    background-color: #ff0018;
-    border-color: #ff0018;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
-  }
-  .btn-edit:hover { background-color: #cc0013; border-color: #cc0013; }
-  @media (max-width: 575.98px) {
-    .profile-header { flex-direction: column; align-items: center; text-align: center; }
-    .profile-name { font-size: 1.5rem; }
-  }
+
 </style>
 
 <div class="profile-container">
