@@ -661,26 +661,35 @@ def get_nurses_by_center(request):
     if not center_id:
         return JsonResponse({'nurses': []})
 
-    nurses = Nurse.objects.filter(donation_center_id=center_id)
+    nurses = Nurse.objects.filter(
+        donation_center_id=center_id,
+        is_approved=True  # Only approved nurses
+    ).select_related('user')
 
     nurse_data = []
     for nurse in nurses:
-        full_name = f"{nurse.user.first_name} {nurse.user.last_name}".strip()
+        # USE NURSE'S FIELDS, NOT USER'S
+        full_name = f"{nurse.first_name} {nurse.last_name}".strip()
+        
+        # Fallback to user if nurse fields are empty
         if not full_name:
-            continue  # Skips nurses with empty names
-
+            full_name = f"{nurse.user.first_name} {nurse.user.last_name}".strip()
+        
+        if not full_name:
+            full_name = nurse.user.username  # Last resort
+        
         nurse_data.append({
             'id': nurse.id,
             'name': full_name,
-            'specialization': getattr(nurse, 'specialization', 'General Practitioner'),
-            'email': getattr(nurse.user, 'email', ''),
-            'phone': getattr(nurse, 'phone', ''),
-            'bio': getattr(nurse, 'bio', ''),
-            'profile_pic_url': nurse.profile_pic.url if getattr(nurse, 'profile_pic', None) else None,
+            'specialization': nurse.specialization or 'General Practitioner',
+            'email': nurse.user.email or '',
+            'phone': nurse.phone or '',
+            'bio': nurse.bio or '',
+            'profile_pic_url': nurse.profile_pic.url if nurse.profile_pic else None,
         })
 
+    print(f"DEBUG: Center {center_id} - Found {len(nurse_data)} nurses")  # Debug line
     return JsonResponse({'nurses': nurse_data})
-
 # -------------------------------
 # Center stock ajax
 # -------------------------------

@@ -1,0 +1,296 @@
+<!-- shared_templates/donation_facts/home.html -->
+{% extends 'shared/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 text-danger mb-3">💡 Did You Know?</h1>
+        <p class="lead">Discover amazing facts about blood donation! Test your knowledge, learn something new, and share with others.</p>
+    </div>
+
+    <!-- Daily Challenge -->
+    <div class="card shadow-lg mb-5 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">🎯 Daily Challenge</h4>
+        </div>
+        <div class="card-body">
+            {% if daily_challenge.fact.has_quiz %}
+            <h5>{{ daily_challenge.fact.quiz_question }}</h5>
+            <div class="quiz-options mt-4">
+                <button class="btn btn-outline-danger btn-lg m-2 quiz-btn" data-answer="{{ daily_challenge.fact.correct_answer }}">
+                    {{ daily_challenge.fact.correct_answer }}
+                </button>
+                {% if daily_challenge.fact.wrong_answer_1 %}
+                <button class="btn btn-outline-danger btn-lg m-2 quiz-btn" data-answer="{{ daily_challenge.fact.wrong_answer_1 }}">
+                    {{ daily_challenge.fact.wrong_answer_1 }}
+                </button>
+                {% endif %}
+                {% if daily_challenge.fact.wrong_answer_2 %}
+                <button class="btn btn-outline-danger btn-lg m-2 quiz-btn" data-answer="{{ daily_challenge.fact.wrong_answer_2 }}">
+                    {{ daily_challenge.fact.wrong_answer_2 }}
+                </button>
+                {% endif %}
+            </div>
+            <div id="quiz-result" class="mt-4" style="display:none;">
+                <div class="alert" id="result-alert"></div>
+                <p id="explanation"></p>
+            </div>
+            {% endif %}
+            <div class="mt-3">
+                <small class="text-muted">
+                    <span id="challenge-stats">{{ daily_challenge.total_participants }}</span> people attempted today • 
+                    <span id="challenge-accuracy">
+                        {% if daily_challenge.total_participants > 0 %}
+                            {{ daily_challenge.correct_answers|floatformat:0 }}/{{ daily_challenge.total_participants }} correct
+                        {% else %}
+                            Be the first to try!
+                        {% endif %}
+                    </span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Navigation -->
+    <div class="row mb-5">
+        {% for cat_key, cat_name in categories %}
+        <div class="col-md-4 col-lg-2 mb-3">
+            <a href="{% url 'fact_category' category=cat_key %}" class="btn btn-outline-danger w-100">
+                {% if cat_key == 'blood' %}🩸
+                {% elif cat_key == 'donation' %}💉
+                {% elif cat_key == 'health' %}💪
+                {% elif cat_key == 'myths' %}❌
+                {% elif cat_key == 'impact' %}❤️
+                {% elif cat_key == 'fun' %}😄
+                {% endif %}
+                {{ cat_name }}
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Random Fact of the Day -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>🎲 Random Fact</h5>
+        </div>
+        <div class="card-body">
+            <div id="random-fact">
+                <h6>{{ random_fact.title }}</h6>
+                <p>{{ random_fact.fact_text }}</p>
+                {% if random_fact.image_url %}
+                <img src="{{ random_fact.image_url }}" class="img-fluid rounded mb-3" alt="Fact Image" style="max-height: 200px;">
+                {% endif %}
+                <button class="btn btn-sm btn-outline-danger" id="new-random-fact">
+                    🔄 New Random Fact
+                </button>
+                <button class="btn btn-sm btn-outline-danger like-btn" data-id="{{ random_fact.id|default:0 }}">
+                    ❤️ Like (<span id="likes-count">{{ random_fact.likes|default:0 }}</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Facts Carousel -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>⚡ Quick Facts</h5>
+        </div>
+        <div class="card-body">
+            <div id="quickFactsCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for fact in quick_facts %}
+                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                        <div class="p-4 text-center">
+                            <p class="h5">{{ fact }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#quickFactsCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#quickFactsCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Quiz Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5>🧠 Test Your Knowledge</h5>
+        </div>
+        <div class="card-body">
+            <p>Take our interactive quiz to see how much you know about blood donation!</p>
+            <a href="{% url 'interactive_quiz' %}" class="btn btn-danger btn-lg">
+                Start Quiz 🚀
+            </a>
+            <div class="mt-3">
+                <small class="text-muted">5 questions • Instant feedback • Learn as you go</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Section -->
+    <div class="text-center mt-5">
+        <h5>Share these facts and save lives!</h5>
+        <button class="btn btn-outline-danger m-2 share-btn" data-platform="twitter">
+            <i class="fab fa-twitter"></i> Twitter
+        </button>
+        <button class="btn btn-outline-danger m-2 share-btn" data-platform="facebook">
+            <i class="fab fa-facebook"></i> Facebook
+        </button>
+        <button class="btn btn-outline-danger m-2 share-btn" data-platform="whatsapp">
+            <i class="fab fa-whatsapp"></i> WhatsApp
+        </button>
+    </div>
+</div>
+
+<!-- JavaScript for interactivity -->
+<script>
+// Daily Challenge Quiz
+document.querySelectorAll('.quiz-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const userAnswer = this.getAttribute('data-answer');
+        const correctAnswer = '{{ daily_challenge.fact.correct_answer|escapejs }}';
+        const isCorrect = (userAnswer === correctAnswer);
+        
+        // Show result
+        const resultDiv = document.getElementById('quiz-result');
+        const alertDiv = document.getElementById('result-alert');
+        const explanation = document.getElementById('explanation');
+        
+        if (isCorrect) {
+            alertDiv.className = 'alert alert-success';
+            alertDiv.innerHTML = '✅ Correct! Well done!';
+        } else {
+            alertDiv.className = 'alert alert-danger';
+            alertDiv.innerHTML = '❌ Not quite! The correct answer is: ' + correctAnswer;
+        }
+        
+        explanation.innerHTML = '{{ daily_challenge.fact.explanation|escapejs }}';
+        resultDiv.style.display = 'block';
+        
+        // Update stats via AJAX
+        fetch('{% url "check_quiz_answer" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `fact_id={{ daily_challenge.fact.id|default:0 }}&answer=${encodeURIComponent(userAnswer)}`
+        });
+    });
+});
+
+// New Random Fact
+document.getElementById('new-random-fact').addEventListener('click', function() {
+    fetch('{% url "random_fact_api" %}')
+        .then(response => response.json())
+        .then(data => {
+            const factDiv = document.getElementById('random-fact');
+            factDiv.innerHTML = `
+                <h6>${data.title}</h6>
+                <p>${data.fact_text}</p>
+                ${data.image_url ? `<img src="${data.image_url}" class="img-fluid rounded mb-3" style="max-height: 200px;">` : ''}
+                <button class="btn btn-sm btn-outline-danger" id="new-random-fact">
+                    🔄 New Random Fact
+                </button>
+                <button class="btn btn-sm btn-outline-danger like-btn" data-id="${data.id || 0}">
+                    ❤️ Like (<span id="likes-count">0</span>)
+                </button>
+            `;
+            // Re-attach event listener
+            document.getElementById('new-random-fact').addEventListener('click', arguments.callee);
+        });
+});
+
+// Like functionality
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.like-btn')) {
+        const btn = e.target.closest('.like-btn');
+        const factId = btn.getAttribute('data-id');
+        
+        fetch('{% url "like_fact" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `fact_id=${factId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            const likesSpan = btn.querySelector('#likes-count') || document.getElementById('likes-count');
+            if (likesSpan) {
+                likesSpan.textContent = data.likes;
+            }
+            btn.innerHTML = `❤️ Liked (${data.likes})`;
+            btn.disabled = true;
+        });
+    }
+});
+
+// Share buttons
+document.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const platform = this.getAttribute('data-platform');
+        const text = "Check out these amazing blood donation facts! 🩸 #BloodDonation #SaveLives";
+        const url = window.location.href;
+        
+        let shareUrl = '';
+        switch(platform) {
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+                break;
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                break;
+            case 'whatsapp':
+                shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url)}`;
+                break;
+        }
+        
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+    });
+});
+
+// Update challenge stats periodically
+function updateChallengeStats() {
+    fetch('{% url "daily_challenge_progress" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.error) {
+                document.getElementById('challenge-stats').textContent = data.total_participants;
+                document.getElementById('challenge-accuracy').textContent = 
+                    `${data.correct_answers}/${data.total_participants} correct (${data.accuracy}%)`;
+            }
+        });
+}
+
+// Update every 30 seconds
+setInterval(updateChallengeStats, 30000);
+</script>
+
+<style>
+.card {
+    transition: transform 0.3s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.quiz-btn {
+    min-width: 200px;
+}
+.carousel-item {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+{% endblock %}

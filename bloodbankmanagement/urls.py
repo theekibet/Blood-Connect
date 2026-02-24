@@ -167,12 +167,28 @@ urlpatterns = [
     path('ajax/check-nurse-registration/', blood_views.ajax_check_nurse_registration, name='ajax_check_nurse_registration'),
     path('ajax/check-nurse-phone/', blood_views.ajax_check_nurse_phone, name='ajax_check_nurse_phone'),
     
-    
-     path('blood-drives/', views.blood_drives_list, name='blood-drives-list'),
-    path('blood-drive/<int:pk>/', views.blood_drive_detail, name='blood-drive-detail'),
+    # Blood drives
+path('blood-drives/', views.blood_drives_list, name='blood-drives-list'),
+path('blood-drive/<int:pk>/', views.blood_drive_detail, name='blood-drive-detail'),
+
+# Donation Facts Section
+path('did-you-know/', views.did_you_know_home, name='did_you_know_home'),
+path('facts/category/<str:category>/', views.fact_category, name='fact_category'),  # Changed
+path('facts/detail/<int:fact_id>/', views.fact_detail, name='fact_detail'),  # Added
+path('facts/search/', views.search_facts, name='search_facts'),  # Added
+path('interactive-quiz/', views.interactive_quiz, name='interactive_quiz'),
+path('quiz/submit/', views.submit_quiz, name='submit_quiz'),  # Added
+
+# User progress
+path('my-progress/', views.user_progress, name='user_progress'),  # Added
+
+# AJAX endpoints
+path('api/random-fact/', views.random_fact_api, name='random_fact_api'),
+path('api/check-quiz/', views.check_quiz_answer, name='check_quiz_answer'),
+path('api/like-fact/', views.like_fact, name='like_fact'),
+path('api/challenge-stats/', views.daily_challenge_progress, name='daily_challenge_progress'),
 ]
 
 # Media files serving in development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

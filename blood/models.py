@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 import uuid
+from django.contrib.auth.models import User
 from nurse.models import Appointment
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, post_delete
@@ -467,3 +468,138 @@ class HomePageStats(models.Model):
 
     def __str__(self):
         return self.stat_name
+    
+
+class DonationFunFact(models.Model):
+    """Interactive fun facts that users can explore"""
+    FACT_CATEGORIES = [
+        ('blood', 'Blood Science & Biology'),  # Updated label
+        ('donation', 'Donation Process & Impact'),  # Updated label
+        ('health', 'Health Benefits'),
+        ('myths', 'Myth Busters'),
+        ('fun', 'Fun Facts & History'),  # Added - used in fact_data.py
+        ('local', 'Kenyan Context'),  # Added - used in fact_data.py
+    ]
+    
+    category = models.CharField(max_length=20, choices=FACT_CATEGORIES)
+    title = models.CharField(max_length=200)
+    fact_text = models.TextField()
+    image_url = models.CharField(max_length=500, blank=True, null=True, 
+                                help_text="URL to an image (can be Unsplash, Pexels, etc.)")
+    is_verified = models.BooleanField(default=True)
+    
+    # Interactive elements
+    has_quiz = models.BooleanField(default=False)
+    quiz_question = models.TextField(blank=True, null=True)
+    correct_answer = models.CharField(max_length=200, blank=True, null=True)
+    wrong_answer_1 = models.CharField(max_length=200, blank=True, null=True)
+    wrong_answer_2 = models.CharField(max_length=200, blank=True, null=True)
+    explanation = models.TextField(blank=True, null=True)
+    
+    # Engagement metrics
+    likes = models.IntegerField(default=0)
+    shares = models.IntegerField(default=0)
+    times_viewed = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)  # Added - good practice
+    
+    def __str__(self):
+        return f"{self.get_category_display()}: {self.title}"
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Donation Fun Fact"
+        verbose_name_plural = "Donation Fun Facts"
+class UserFactInteraction(models.Model):
+    """Track how users interact with facts"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    fact = models.ForeignKey(DonationFunFact, on_delete=models.CASCADE)
+    session_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    INTERACTION_TYPES = [
+        ('view', 'Viewed'),
+        ('like', 'Liked'),
+        ('share', 'Shared'),
+        ('quiz_attempt', 'Quiz Attempted'),
+        ('quiz_correct', 'Quiz Correct'),
+        ('quiz_wrong', 'Quiz Wrong'),
+    ]
+    
+    interaction_type = models.CharField(max_length=20, choices=INTERACTION_TYPES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user_answer = models.CharField(max_length=500, blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "User Fact Interaction"
+        verbose_name_plural = "User Fact Interactions"
+    
+    def __str__(self):
+        user_display = self.user.username if self.user else f"Anonymous ({self.session_id[:8]}...)"
+        return f"{user_display} - {self.get_interaction_type_display()} - {self.fact.title}"
+
+class DailyFactChallenge(models.Model):
+    """Daily challenge for users"""
+    date = models.DateField(unique=True)
+    fact = models.ForeignKey(DonationFunFact, on_delete=models.CASCADE)
+    total_participants = models.IntegerField(default=0)
+    correct_answers = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-date']
+        verbose_name = "Daily Fact Challenge"
+        verbose_name_plural = "Daily Fact Challenges"
+    
+    def __str__(self):
+        return f"Challenge: {self.date} - {self.fact.title}"
+    
+    @property
+    def accuracy_percentage(self):
+        if self.total_participants > 0:
+            return round((self.correct_answers / self.total_participants) * 100, 1)
+        return 0
+
+class QuizAttempt(models.Model):
+    """Track quiz attempts and scores - MISSING FROM YOUR MODELS"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    total_questions = models.IntegerField()
+    correct_answers = models.IntegerField()
+    score = models.DecimalField(max_digits=5, decimal_places=2)  # Percentage
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.score}% ({self.created_at})"
+    
+    class Meta:
+        ordering = ['-created_at']
+
+
+class FactContribution(models.Model):
+    """Allow users to suggest new facts - MISSING FROM YOUR MODELS"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.CharField(max_length=20, choices=DonationFunFact.FACT_CATEGORIES)
+    title = models.CharField(max_length=200)
+    fact_text = models.TextField()
+    source = models.URLField(blank=True, null=True, help_text="Source URL for verification")
+    
+    # Optional quiz elements
+    has_quiz = models.BooleanField(default=False)
+    quiz_question = models.TextField(blank=True, null=True)
+    correct_answer = models.CharField(max_length=200, blank=True, null=True)
+    wrong_answer_1 = models.CharField(max_length=200, blank=True, null=True)
+    wrong_answer_2 = models.CharField(max_length=200, blank=True, null=True)
+    
+    # Moderation
+    is_approved = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, 
+                                    null=True, blank=True, related_name='reviewed_facts')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Contribution by {self.user.username}: {self.title}"
+    
+    class Meta:
+        ordering = ['-created_at']

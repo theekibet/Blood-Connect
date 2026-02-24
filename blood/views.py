@@ -27,7 +27,7 @@ from patient.models import BloodRequest
 from donor.models import DonorEligibility, BloodDonate
 from django.db.models import Max
 from donor.models import Donor 
-from .models import Notification
+from .models import Notification,QuizAttempt
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from patient.models import Patient
@@ -72,8 +72,9 @@ import re
 
 from django.http import HttpResponseServerError
 import requests
-
-
+from .models import DonationFunFact, UserFactInteraction, DailyFactChallenge
+from .fact_data import FACT_DATABASE, QUICK_FACTS, DONATION_TIPS, ELIGIBILITY_CRITERIA
+from django.db.models import Avg
 logger = logging.getLogger(__name__)
 
 def home_view(request):
@@ -2007,3 +2008,453 @@ def resend_verification_view(request):
     
     # GET request - show form
     return render(request, 'shared/resend_verification.html')
+def load_fact_from_database(fact_id=None, category=None):
+    """Load fact from database or generate from FACT_DATABASE"""
+    # Try database first
+    if DonationFunFact.objects.exists():
+        facts = DonationFunFact.objects.filter(is_verified=True)
+        
+        if category:
+            facts = facts.filter(category=category)
+        
+        if fact_id:
+            try:
+                return facts.get(id=fact_id)
+            except DonationFunFact.DoesNotExist:
+                pass
+        
+        if facts.exists():
+            return random.choice(facts)
+    
+    # Fallback to FACT_DATABASE
+    available_facts = FACT_DATABASE
+    if category:
+        available_facts = [f for f in FACT_DATABASE if f.get('category') == category]
+    
+    if available_facts:
+        fact_data = random.choice(available_facts)
+        # Create a temporary fact object
+        return type('Fact', (), {
+            **fact_data,
+            'id': None,
+            'likes': 0,
+            'times_viewed': 0,
+            'get_category_display': lambda: dict(DonationFunFact.FACT_CATEGORIES).get(fact_data.get('category', ''), 'Unknown')
+        })()
+    
+    return None
+
+
+def did_you_know_home(request):
+    """Main interactive facts page with enhanced features"""
+    today = timezone.now().date()
+    
+    # Get or create daily challenge
+    daily_challenge = None
+    try:
+        daily_challenge = DailyFactChallenge.objects.select_related('fact').get(date=today)
+    except DailyFactChallenge.DoesNotExist:
+        if DonationFunFact.objects.filter(has_quiz=True, is_verified=True).exists():
+            quiz_facts = DonationFunFact.objects.filter(has_quiz=True, is_verified=True)
+            random_fact = random.choice(quiz_facts)
+            daily_challenge = DailyFactChallenge.objects.create(
+                date=today,
+                fact=random_fact
+            )
+    
+    # Get facts by category
+    all_facts = DonationFunFact.objects.filter(is_verified=True)
+    
+    if all_facts.exists():
+        random_fact = random.choice(all_facts)
+        trending_facts = all_facts.order_by('-likes', '-times_viewed')[:5]
+        recent_facts = all_facts.order_by('-created_at')[:5]
+        
+        # Category breakdown
+        category_stats = {}
+        for cat_key, cat_name in DonationFunFact.FACT_CATEGORIES:
+            count = all_facts.filter(category=cat_key).count()
+            if count > 0:
+                category_stats[cat_key] = {
+                    'name': cat_name,
+                    'count': count,
+                    'sample': all_facts.filter(category=cat_key).first()
+                }
+    else:
+        # Fallback to sample data
+        random_fact = load_fact_from_database()
+        trending_facts = []
+        recent_facts = []
+        
+        # Create category stats from FACT_DATABASE
+        category_stats = {}
+        for cat_key, cat_name in DonationFunFact.FACT_CATEGORIES:
+            cat_facts = [f for f in FACT_DATABASE if f.get('category') == cat_key]
+            if cat_facts:
+                category_stats[cat_key] = {
+                    'name': cat_name,
+                    'count': len(cat_facts),
+                    'sample': None
+                }
+    
+    # User statistics (if authenticated)
+    user_stats = None
+    if request.user.is_authenticated:
+        user_stats = {
+            'facts_viewed': UserFactInteraction.objects.filter(
+                user=request.user,
+                interaction_type='view'
+            ).count(),
+            'quizzes_taken': QuizAttempt.objects.filter(user=request.user).count(),
+            'average_score': QuizAttempt.objects.filter(user=request.user).aggregate(
+                avg=Avg('score')
+            )['avg'] or 0,
+            'liked_facts': UserFactInteraction.objects.filter(
+                user=request.user,
+                interaction_type='like'
+            ).count(),
+        }
+    
+    context = {
+        'daily_challenge': daily_challenge,
+        'random_fact': random_fact,
+        'trending_facts': trending_facts,
+        'recent_facts': recent_facts,
+        'category_stats': category_stats,
+        'quick_facts': random.sample(QUICK_FACTS, min(8, len(QUICK_FACTS))),
+        'categories': DonationFunFact.FACT_CATEGORIES,
+        'donation_tips': DONATION_TIPS,
+        'eligibility_criteria': ELIGIBILITY_CRITERIA,
+        'user_stats': user_stats,
+        'total_facts': all_facts.count() if all_facts.exists() else len(FACT_DATABASE),
+    }
+    
+    return render(request, 'shared/home.html', context)
+
+
+def fact_detail(request, fact_id):
+    """Detailed view of a single fact"""
+    try:
+        fact = DonationFunFact.objects.get(id=fact_id, is_verified=True)
+        
+        # Track view
+        fact.times_viewed += 1
+        fact.save(update_fields=['times_viewed'])
+        
+        if request.user.is_authenticated:
+            UserFactInteraction.objects.get_or_create(
+                user=request.user,
+                fact=fact,
+                interaction_type='view'
+            )
+        
+        # Get related facts
+        related_facts = DonationFunFact.objects.filter(
+            category=fact.category,
+            is_verified=True
+        ).exclude(id=fact.id).order_by('?')[:3]
+        
+        # Check if user has liked this fact
+        user_liked = False
+        if request.user.is_authenticated:
+            user_liked = UserFactInteraction.objects.filter(
+                user=request.user,
+                fact=fact,
+                interaction_type='like'
+            ).exists()
+        
+        context = {
+            'fact': fact,
+            'related_facts': related_facts,
+            'user_liked': user_liked,
+            'categories': DonationFunFact.FACT_CATEGORIES,
+        }
+        
+        return render(request, 'shared/donation_facts/fact_detail.html', context)
+        
+    except DonationFunFact.DoesNotExist:
+        return redirect('did_you_know_home')
+
+
+def fact_category(request, category=None):
+    """Show facts by category with pagination"""
+    if category and category not in dict(DonationFunFact.FACT_CATEGORIES):
+        return redirect('did_you_know_home')
+    
+    # Get facts from database
+    if category:
+        facts = DonationFunFact.objects.filter(category=category, is_verified=True)
+        category_name = dict(DonationFunFact.FACT_CATEGORIES).get(category)
+    else:
+        facts = DonationFunFact.objects.filter(is_verified=True)
+        category_name = "All Facts"
+    
+    # If no facts in database, use FACT_DATABASE
+    use_fallback = False
+    if not facts.exists():
+        use_fallback = True
+        if category:
+            facts = [f for f in FACT_DATABASE if f.get('category') == category]
+        else:
+            facts = FACT_DATABASE
+    
+    # Pagination
+    if not use_fallback:
+        paginator = Paginator(facts.order_by('-created_at'), 12)  # 12 facts per page
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+    else:
+        page_obj = facts  # No pagination for fallback data
+    
+    context = {
+        'facts': page_obj if not use_fallback else facts,
+        'selected_category': category,
+        'category_name': category_name,
+        'categories': DonationFunFact.FACT_CATEGORIES,
+        'use_fallback': use_fallback,
+        'total_facts': facts.count() if not use_fallback else len(facts),
+    }
+    
+    return render(request, 'shared/fact_list.html', context)
+
+
+def interactive_quiz(request):
+    """Interactive quiz page with scoring"""
+    # Get quiz facts from database
+    quiz_facts = DonationFunFact.objects.filter(has_quiz=True, is_verified=True)
+    
+    use_fallback = False
+    if not quiz_facts.exists():
+        use_fallback = True
+        quiz_facts = [f for f in FACT_DATABASE if f.get('has_quiz', False)]
+        selected_facts = random.sample(quiz_facts, min(5, len(quiz_facts)))
+    else:
+        # Select 10 random quiz questions
+        selected_facts = random.sample(list(quiz_facts), min(10, quiz_facts.count()))
+    
+    context = {
+        'quiz_facts': selected_facts,
+        'use_fallback': use_fallback,
+        'total_questions': len(selected_facts),
+    }
+    
+    return render(request, 'shared/quiz.html', context)
+
+
+@csrf_exempt
+def submit_quiz(request):
+    """Submit completed quiz and get score"""
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        
+        answers = data.get('answers', {})
+        total_questions = len(answers)
+        correct_answers = sum(1 for is_correct in answers.values() if is_correct)
+        score_percentage = (correct_answers / total_questions * 100) if total_questions > 0 else 0
+        
+        # Save quiz attempt if user is authenticated
+        if request.user.is_authenticated:
+            QuizAttempt.objects.create(
+                user=request.user,
+                total_questions=total_questions,
+                correct_answers=correct_answers,
+                score=score_percentage
+            )
+        
+        return JsonResponse({
+            'total': total_questions,
+            'correct': correct_answers,
+            'score': round(score_percentage, 1),
+            'passed': score_percentage >= 70
+        })
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@csrf_exempt
+def check_quiz_answer(request):
+    """AJAX endpoint to check individual quiz answers"""
+    if request.method == 'POST':
+        fact_id = request.POST.get('fact_id')
+        user_answer = request.POST.get('answer')
+        
+        try:
+            fact = DonationFunFact.objects.get(id=fact_id)
+            is_correct = (user_answer == fact.correct_answer)
+            
+            # Update daily challenge stats
+            today = timezone.now().date()
+            try:
+                challenge = DailyFactChallenge.objects.get(date=today, fact=fact)
+                challenge.total_participants += 1
+                if is_correct:
+                    challenge.correct_answers += 1
+                challenge.save()
+            except DailyFactChallenge.DoesNotExist:
+                pass
+            
+            # Track interaction
+            if request.user.is_authenticated:
+                UserFactInteraction.objects.create(
+                    user=request.user,
+                    fact=fact,
+                    interaction_type='quiz_correct' if is_correct else 'quiz_wrong',
+                    user_answer=user_answer
+                )
+            
+            return JsonResponse({
+                'correct': is_correct,
+                'correct_answer': fact.correct_answer,
+                'explanation': fact.explanation
+            })
+        except DonationFunFact.DoesNotExist:
+            # Fallback to sample data
+            for fact_data in FACT_DATABASE:
+                if str(fact_data.get('id')) == str(fact_id) or fact_data.get('title') == fact_id:
+                    is_correct = (user_answer == fact_data.get('correct_answer', ''))
+                    return JsonResponse({
+                        'correct': is_correct,
+                        'correct_answer': fact_data.get('correct_answer', ''),
+                        'explanation': fact_data.get('explanation', '')
+                    })
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@csrf_exempt
+def like_fact(request):
+    """AJAX endpoint to like a fact"""
+    if request.method == 'POST':
+        fact_id = request.POST.get('fact_id')
+        
+        try:
+            fact = DonationFunFact.objects.get(id=fact_id)
+            
+            # Check if user already liked
+            if request.user.is_authenticated:
+                existing_like = UserFactInteraction.objects.filter(
+                    user=request.user,
+                    fact=fact,
+                    interaction_type='like'
+                ).exists()
+                
+                if existing_like:
+                    return JsonResponse({'error': 'Already liked', 'likes': fact.likes}, status=400)
+            
+            fact.likes += 1
+            fact.save(update_fields=['likes'])
+            
+            if request.user.is_authenticated:
+                UserFactInteraction.objects.create(
+                    user=request.user,
+                    fact=fact,
+                    interaction_type='like'
+                )
+            
+            return JsonResponse({'likes': fact.likes, 'success': True})
+        except DonationFunFact.DoesNotExist:
+            return JsonResponse({'error': 'Fact not found', 'likes': 0}, status=404)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+def random_fact_api(request):
+    """API endpoint to get a random fact (for AJAX)"""
+    category = request.GET.get('category')
+    fact = load_fact_from_database(category=category)
+    
+    if not fact:
+        return JsonResponse({'error': 'No facts available'}, status=404)
+    
+    # Track view if it's a database fact
+    if hasattr(fact, 'id') and fact.id:
+        fact.times_viewed += 1
+        fact.save(update_fields=['times_viewed'])
+    
+    fact_data = {
+        'id': fact.id if hasattr(fact, 'id') else 0,
+        'title': fact.title,
+        'fact_text': fact.fact_text,
+        'category': fact.category,
+        'image_url': fact.image_url if hasattr(fact, 'image_url') else None,
+        'has_quiz': fact.has_quiz,
+        'likes': fact.likes if hasattr(fact, 'likes') else 0,
+    }
+    
+    return JsonResponse(fact_data)
+
+
+def daily_challenge_progress(request):
+    """Track daily challenge progress"""
+    today = timezone.now().date()
+    challenge = DailyFactChallenge.objects.filter(date=today).first()
+    
+    if challenge:
+        accuracy = round((challenge.correct_answers / challenge.total_participants * 100), 1) if challenge.total_participants > 0 else 0
+        return JsonResponse({
+            'total_participants': challenge.total_participants,
+            'correct_answers': challenge.correct_answers,
+            'accuracy': accuracy,
+            'date': str(today)
+        })
+    
+    return JsonResponse({'error': 'No challenge today'}, status=404)
+
+
+@login_required
+def user_progress(request):
+    """Show user's learning progress and achievements"""
+    interactions = UserFactInteraction.objects.filter(user=request.user)
+    quiz_attempts = QuizAttempt.objects.filter(user=request.user).order_by('-created_at')
+    
+    stats = {
+        'total_facts_viewed': interactions.filter(interaction_type='view').count(),
+        'facts_liked': interactions.filter(interaction_type='like').count(),
+        'quizzes_taken': quiz_attempts.count(),
+        'average_score': quiz_attempts.aggregate(avg=Avg('score'))['avg'] or 0,
+        'best_score': quiz_attempts.aggregate(max=Max('score'))['max'] or 0,
+        'quiz_history': quiz_attempts[:10],  # Last 10 quizzes
+    }
+    
+    context = {
+        'stats': stats,
+        'categories': DonationFunFact.FACT_CATEGORIES,
+    }
+    
+    return render(request, 'shared/user_progress.html', context)
+
+
+def search_facts(request):
+    """Search facts by keyword"""
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return redirect('did_you_know_home')
+    
+    # Search in database
+    facts = DonationFunFact.objects.filter(
+        Q(title__icontains=query) | 
+        Q(fact_text__icontains=query) |
+        Q(explanation__icontains=query),
+        is_verified=True
+    ).order_by('-times_viewed')
+    
+    # Also search in FACT_DATABASE if needed
+    fallback_facts = []
+    if not facts.exists():
+        fallback_facts = [
+            f for f in FACT_DATABASE 
+            if query.lower() in f.get('title', '').lower() or 
+               query.lower() in f.get('fact_text', '').lower()
+        ]
+    
+    context = {
+        'facts': facts if facts.exists() else fallback_facts,
+        'query': query,
+        'use_fallback': not facts.exists(),
+        'categories': DonationFunFact.FACT_CATEGORIES,
+    }
+    
+    return render(request, 'shared/search_results.html', context)
+   

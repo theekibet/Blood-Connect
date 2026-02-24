@@ -70,7 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'cloudinary',
     'django.contrib.staticfiles',
-
+    'django.contrib.humanize',
     # Third-party
     'widget_tweaks',
     'django_extensions',
