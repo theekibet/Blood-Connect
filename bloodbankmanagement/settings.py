@@ -134,31 +134,20 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bloodbankmanagement.wsgi.application'
 
 # =============================
-# DATABASE (Render or local)
+# DATABASE
 # =============================
 DATABASE_URL = os.getenv('DATABASE_URL')
 
-if DATABASE_URL:
-    # Production - Use the DATABASE_URL from environment
-    DATABASES = {
-        'default': dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
-    # Local development database
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'bloodconnect',
-            'USER': 'allan',
-            'PASSWORD': 'Bokelo@360',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set!")
+
+DATABASES = {
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
