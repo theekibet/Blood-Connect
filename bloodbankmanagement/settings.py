@@ -20,7 +20,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # =============================
 # SECURITY
 # =============================
-# FIXED: Remove default fallback secret key - must be set in environment
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 if not SECRET_KEY:
@@ -34,30 +33,12 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'blood-connect-production.up.railway.app',
-    '.railway.app',  # Wildcard for all Railway subdomains
-    'blood-connect-f6jb.onrender.com',
 ]
 
-# Add Railway domain
-RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')
-RAILWAY_PUBLIC_DOMAIN = os.getenv('RAILWAY_PUBLIC_DOMAIN')
-
-if RAILWAY_STATIC_URL:
-    # Extract domain from Railway static URL
-    domain = RAILWAY_STATIC_URL.replace('https://', '').replace('http://', '').split('/')[0]
-    if domain not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(domain)
-
-if RAILWAY_PUBLIC_DOMAIN:
-    if RAILWAY_PUBLIC_DOMAIN not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
-
-# Add Render domain (for backward compatibility)
+# Add Render domain dynamically
 RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
-    if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # =============================
 # INSTALLED APPS
@@ -89,7 +70,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     
-    # WhiteNoise MUST be here
+    # WhiteNoise MUST be here (right after SecurityMiddleware)
     'whitenoise.middleware.WhiteNoiseMiddleware',
     
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -117,20 +98,11 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     X_FRAME_OPTIONS = 'DENY'
 
-# Trust Railway's proxy - MUST include https://
-CSRF_TRUSTED_ORIGINS = [
-    'https://blood-connect-production.up.railway.app',
-]
+# CSRF Trusted Origins for Render
+CSRF_TRUSTED_ORIGINS = []
 
-# Add Railway domains with https://
-if RAILWAY_STATIC_URL:
-    if not RAILWAY_STATIC_URL.startswith('http'):
-        CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_STATIC_URL}'.rstrip('/'))
-    else:
-        CSRF_TRUSTED_ORIGINS.append(RAILWAY_STATIC_URL.rstrip('/'))
-
-if RAILWAY_PUBLIC_DOMAIN:
-    CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_PUBLIC_DOMAIN}')
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
 ROOT_URLCONF = 'bloodbankmanagement.urls'
 
@@ -140,7 +112,7 @@ ROOT_URLCONF = 'bloodbankmanagement.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # FIXED: Direct reference
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -162,7 +134,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bloodbankmanagement.wsgi.application'
 
 # =============================
-# DATABASE (Railway, Render, or local)
+# DATABASE (Render or local)
 # =============================
 DATABASE_URL = os.getenv('DATABASE_URL')
 
@@ -173,7 +145,6 @@ if DATABASE_URL:
             DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=not DEBUG  # SSL required in production
         )
     }
 else:
@@ -188,13 +159,6 @@ else:
             'PORT': '5432',
         }
     }
-
-# =============================
-# DATABASE POOLING (for production)
-# =============================
-# For production environments with high traffic
-if not DEBUG:
-    DATABASES['default']['CONN_MAX_AGE'] = 60  # Connection reuse for 60 seconds
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -217,27 +181,23 @@ USE_I18N = True
 USE_TZ = True
 
 # =============================
-# STATIC FILES - FIXED SECTION
+# STATIC FILES
 # =============================
 STATIC_URL = '/static/'
 
 # For development: Where Django looks for static files (source files)
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',  # Your source static files go here
+    BASE_DIR / 'static',
 ]
 
-# For production: Where collectstatic puts files (different directory)
-STATIC_ROOT = BASE_DIR / 'staticfiles'  # Different from static/
+# For production: Where collectstatic puts files
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # WhiteNoise configuration
-if DEBUG:
-    # Development: Use Django's default storage
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-else:
-    # Production: Use WhiteNoise with compression
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    # Prevent 404 errors for missing files
-    WHITENOISE_MANIFEST_STRICT = False
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Prevent 404 errors for missing files in production
+WHITENOISE_MANIFEST_STRICT = False
 
 # =============================
 # MEDIA FILES
@@ -287,8 +247,8 @@ SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_NAME = 'bloodconnect_sessionid'
-SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
-SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # =============================
 # EMAIL CONFIG
@@ -298,7 +258,6 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 
-# Use environment variables or hardcoded for local development
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@bloodconnect.com'
@@ -312,7 +271,7 @@ if not DEBUG:
         logger.warning("Email credentials not configured. Email functionality will not work.")
 
 # =============================
-# CELERY CONFIGURATION
+# CELERY CONFIGURATION (Optional)
 # =============================
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -324,7 +283,7 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 
 # =============================
-# LOGGING (SECURE - NO SENSITIVE DATA)
+# LOGGING
 # =============================
 LOGGING = {
     'version': 1,
@@ -339,19 +298,6 @@ LOGGING = {
             'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
-        'secure': {
-            'format': '{levelname} {asctime} {module} - {message}',
-            'style': '{',
-        },
-    },
-
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
     },
 
     'handlers': {
@@ -359,22 +305,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
             'stream': sys.stdout,
-            'formatter': 'secure',  # Changed to secure formatter
-        },
-        'console_debug': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'verbose',
-        },
-        'file': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs/django_errors.log',
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
+            'formatter': 'simple',
         },
     },
 
@@ -390,38 +321,13 @@ LOGGING = {
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
         },
         'django.db.backends': {
-            'handlers': ['console_debug'] if DEBUG else ['console'],
+            'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'WARNING',
-            'propagate': False,
-        },
-        'django.security': {
-            'handlers': ['console', 'file'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'blood': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'donor': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'patient': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'nurse': {
-            'handlers': ['console'],
-            'level': 'INFO',
             'propagate': False,
         },
     },
@@ -430,7 +336,6 @@ LOGGING = {
 # =============================
 # CUSTOM SETTINGS
 # =============================
-# Application-specific settings
 MAX_DONATIONS_PER_DAY = 50
 BLOOD_REQUEST_EXPIRY_DAYS = 7
 DONOR_MIN_AGE = 18
@@ -449,11 +354,6 @@ if not DEBUG:
     missing = [key for key, value in required_settings.items() if not value]
     if missing:
         raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
-
-# Create logs directory if it doesn't exist
-LOG_DIR = BASE_DIR / 'logs'
-if not LOG_DIR.exists():
-    LOG_DIR.mkdir(exist_ok=True)
 
 # =============================
 # DEVELOPMENT SETTINGS OVERRIDE
