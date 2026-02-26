@@ -2,12 +2,6 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<style>
-
-</style>
-
 <div class="container-fluid mt-4">
     <!-- Page Header -->
     <div class="page-header">
@@ -18,25 +12,25 @@
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stats-card bg-primary text-white">
+            <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <h5><i class="fas fa-users"></i> Total Nurses</h5>
                 <h2>{{ total_count|default:0 }}</h2>
             </div>
         </div>
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stats-card bg-warning text-dark">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: #212529;">
                 <h5><i class="fas fa-clock"></i> Pending Approval</h5>
                 <h2>{{ pending_count|default:0 }}</h2>
             </div>
         </div>
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stats-card bg-success text-white">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
                 <h5><i class="fas fa-check-circle"></i> Approved</h5>
                 <h2>{{ approved_count|default:0 }}</h2>
             </div>
         </div>
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stats-card bg-danger text-white">
+            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;">
                 <h5><i class="fas fa-times-circle"></i> Rejected</h5>
                 <h2>{{ rejected_count|default:0 }}</h2>
             </div>
@@ -45,25 +39,13 @@
 
     <!-- Django Messages -->
     {% if messages %}
-        <div class="row">
-            <div class="col-12">
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        {% if message.tags == 'success' %}
-                            <i class="fas fa-check-circle"></i>
-                        {% elif message.tags == 'error' %}
-                            <i class="fas fa-exclamation-circle"></i>
-                        {% elif message.tags == 'warning' %}
-                            <i class="fas fa-exclamation-triangle"></i>
-                        {% else %}
-                            <i class="fas fa-info-circle"></i>
-                        {% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
+        {% endfor %}
     {% endif %}
 
     <!-- Filter Tabs -->
@@ -123,7 +105,7 @@
 
     <!-- Nurses Table -->
     <div class="card">
-        <div class="card-header bg-light">
+        <div class="card-header">
             <h5 class="mb-0">
                 <i class="fas fa-users"></i> 
                 {% if status_filter == 'pending' %}
@@ -141,7 +123,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-dark">
+                    <thead>
                         <tr>
                             <th>Profile</th>
                             <th>Full Name</th>
@@ -158,38 +140,34 @@
                     <tbody>
                         {% for nurse in nurses %}
                         <tr>
-                            <td>
+                            <td data-label="Profile">
                                 {% if nurse.profile_pic %}
-                                    <img src="{{ nurse.profile_pic.url }}" alt="{{ nurse.full_name }}" class="profile-pic" />
+                                    <img src="{{ nurse.profile_pic.url }}" alt="{{ nurse.full_name }}" class="profile-pic">
                                 {% else %}
-                                    <div class="profile-pic d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 50px; height: 50px;">
+                                    <div class="profile-pic-initials">
                                         {{ nurse.first_name|first|upper }}{{ nurse.last_name|first|upper }}
                                     </div>
                                 {% endif %}
                             </td>
-                            <td class="text-start">
+                            <td data-label="Full Name">
                                 <strong>{{ nurse.full_name }}</strong><br>
                                 <small class="text-muted">
                                     <i class="fas fa-user"></i> {{ nurse.user.username }}
                                 </small>
                             </td>
-                            <td><code class="text-primary">{{ nurse.registration_number }}</code></td>
-                            <td class="text-start">
-                                <small>
-                                    <i class="fas fa-envelope"></i> {{ nurse.user.email }}
-                                </small>
+                            <td data-label="Registration #"><code class="text-primary">{{ nurse.registration_number }}</code></td>
+                            <td data-label="Email">
+                                <small>{{ nurse.user.email }}</small>
                             </td>
-                            <td>
-                                <small>
-                                    <i class="fas fa-phone"></i> {{ nurse.phone }}
-                                </small>
+                            <td data-label="Phone">
+                                <small>{{ nurse.phone }}</small>
                             </td>
-                            <td>
-                                <span class="badge bg-info text-dark">
+                            <td data-label="Specialization">
+                                <span class="badge" style="background: #e9ecef; color: #495057;">
                                     {{ nurse.get_specialization_display }}
                                 </span>
                             </td>
-                            <td class="text-start">
+                            <td data-label="Donation Center">
                                 {% if nurse.donation_center %}
                                     <strong>{{ nurse.donation_center.name }}</strong><br>
                                     <small class="text-muted">
@@ -199,32 +177,26 @@
                                     <span class="text-muted"><i>Not assigned</i></span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 {% if nurse.is_approved %}
                                     <span class="badge status-approved">
                                         <i class="fas fa-check-circle"></i> Approved
                                     </span>
                                     {% if nurse.approved_by %}
-                                        <br><small class="text-muted" style="font-size: 0.75rem;">
-                                            by {{ nurse.approved_by.username }}
-                                        </small>
+                                        <br><small class="text-muted">by {{ nurse.approved_by.username }}</small>
                                     {% endif %}
                                 {% elif nurse.rejection_reason %}
                                     <span class="badge status-rejected">
                                         <i class="fas fa-times-circle"></i> Rejected
                                     </span>
-                                    <br><small class="rejection-tooltip text-danger" 
-                                              title="{{ nurse.rejection_reason }}"
-                                              style="font-size: 0.75rem;">
-                                        {{ nurse.rejection_reason|truncatewords:5 }}
-                                    </small>
+                                    <br><small class="text-danger">{{ nurse.rejection_reason|truncatewords:5 }}</small>
                                 {% else %}
                                     <span class="badge status-pending">
                                         <i class="fas fa-clock"></i> Pending
                                     </span>
                                 {% endif %}
                             </td>
-                            <td class="text-start">
+                            <td data-label="Dates">
                                 <small>
                                     <strong>Created:</strong><br>
                                     {{ nurse.created_at|date:"M d, Y" }}<br>
@@ -237,46 +209,42 @@
                                     </small>
                                 {% endif %}
                             </td>
-                            <td class="action-column">
-                                <div class="btn-group-vertical" role="group">
+                            <td data-label="Actions" class="action-column">
+                                <div class="btn-group-vertical">
                                     {% if not nurse.is_approved and not nurse.rejection_reason %}
-                                        <!-- Pending - Show Approve/Reject -->
                                         <a href="{% url 'admin-approve-nurse' nurse.pk %}" 
-                                           class="btn btn-sm btn-success action-btn mb-1" 
+                                           class="btn btn-sm btn-success action-btn" 
                                            title="Approve this nurse">
                                           <i class="fas fa-check"></i> Approve
                                         </a>
                                         <a href="{% url 'admin-reject-nurse' nurse.pk %}" 
-                                           class="btn btn-sm btn-danger action-btn mb-1" 
+                                           class="btn btn-sm btn-danger action-btn" 
                                            title="Reject this nurse">
                                           <i class="fas fa-times"></i> Reject
                                         </a>
                                     {% elif nurse.is_approved %}
-                                        <!-- Approved - Show Revoke -->
                                         <a href="{% url 'admin-revoke-nurse' nurse.pk %}" 
-                                           class="btn btn-sm btn-warning action-btn mb-1" 
+                                           class="btn btn-sm btn-warning action-btn" 
                                            title="Revoke approval">
                                           <i class="fas fa-ban"></i> Revoke
                                         </a>
                                     {% else %}
-                                        <!-- Rejected - Show Re-approve -->
                                         <a href="{% url 'admin-approve-nurse' nurse.pk %}" 
-                                           class="btn btn-sm btn-success action-btn mb-1" 
+                                           class="btn btn-sm btn-success action-btn" 
                                            title="Re-approve this nurse">
                                           <i class="fas fa-redo"></i> Re-approve
                                         </a>
                                     {% endif %}
                                     
-                                    <!-- Always show Edit and Delete -->
                                     <a href="{% url 'admin-nurse-update' nurse.pk %}" 
-                                       class="btn btn-sm btn-outline-primary action-btn mb-1" 
+                                       class="btn btn-sm btn-outline-primary action-btn" 
                                        title="Edit nurse details">
                                       <i class="fas fa-edit"></i> Edit
                                     </a>
                                     <a href="{% url 'admin-nurse-delete' nurse.pk %}" 
                                        class="btn btn-sm btn-outline-danger action-btn" 
                                        title="Delete this nurse"
-                                       onclick="return confirm('⚠️ Are you sure you want to delete {{ nurse.full_name }}?\n\nThis will permanently delete:\n- Nurse profile\n- Associated user account\n- All related data\n\nThis action cannot be undone!');">
+                                       onclick="return confirm('⚠️ Are you sure you want to delete {{ nurse.full_name }}?');">
                                       <i class="fas fa-trash-alt"></i> Delete
                                     </a>
                                 </div>
@@ -318,46 +286,32 @@
     <!-- Quick Stats Summary -->
     {% if nurses %}
     <div class="card mt-4 mb-4">
-        <div class="card-body">
-            <div class="row text-center">
-                <div class="col-md-12">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> 
-                        Showing {{ nurses|length }} of {{ total_count }} total nurse{{ total_count|pluralize }}
-                        {% if status_filter and status_filter != 'all' %}
-                            (filtered by: <strong>{{ status_filter|title }}</strong>)
-                        {% endif %}
-                    </small>
-                </div>
-            </div>
+        <div class="card-body text-center">
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Showing {{ nurses|length }} of {{ total_count }} total nurse{{ total_count|pluralize }}
+                {% if status_filter and status_filter != 'all' %}
+                    (filtered by: <strong>{{ status_filter|title }}</strong>)
+                {% endif %}
+            </small>
         </div>
     </div>
     {% endif %}
 </div>
 
-<!-- Bootstrap Tooltips Initialization -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
     // Auto-dismiss alerts after 5 seconds
     document.addEventListener('DOMContentLoaded', function() {
         var alerts = document.querySelectorAll('.alert');
         alerts.forEach(function(alert) {
             setTimeout(function() {
-                var bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
+                alert.style.transition = 'opacity 0.5s';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.remove();
+                }, 500);
             }, 5000);
         });
     });
-
-    // Confirmation for bulk actions
-    function confirmBulkAction(action, count) {
-        return confirm(`Are you sure you want to ${action} ${count} selected nurse(s)?`);
-    }
 </script>
 {% endblock %}

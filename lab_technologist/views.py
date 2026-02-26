@@ -146,16 +146,6 @@ def lab_tech_profile_edit(request, pk):
     return render(request, 'lab_technologist/profile_edit.html', context)
 
 # ======================
-# LOGOUT VIEW
-# ======================
-@login_required
-def logout_view(request):
-    """Lab Technologist logout view"""
-    logout(request)
-    messages.success(request, "You have been successfully logged out.")
-    return redirect('lab_technologist:login')
-
-# ======================
 # DASHBOARD VIEW
 # ======================
 @login_required

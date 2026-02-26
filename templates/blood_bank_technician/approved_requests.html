@@ -176,7 +176,7 @@
                 <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
                 <h5>No Approved Requests</h5>
                 <p class="text-muted">There are no approved or dispatched requests at the moment.</p>
-                <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-primary" style="background: #8B1E3F; border: none;">
+                <a href="{% url 'blood_bank_technician:pending_requests' %}" >
                     View Pending Requests
                 </a>
             </div>
@@ -246,92 +246,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style>
-.stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.stat-box {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    text-align: center;
-    border-left: 4px solid #8B1E3F;
-}
-
-.stat-box h3 {
-    margin: 0;
-    font-size: 2rem;
-    color: #8B1E3F;
-}
-
-.stat-box p {
-    margin: 5px 0 0;
-    color: #666;
-    font-weight: 500;
-}
-
-.badge {
-    padding: 5px 10px;
-    font-weight: 500;
-}
-
-.table td {
-    vertical-align: middle;
-}
-
-.btn-group-sm .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-}
-
-.filter-btn {
-    margin-right: 5px;
-}
-
-.filter-btn.active {
-    background-color: #8B1E3F;
-    border-color: #8B1E3F;
-    color: white;
-}
-
-.card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    border-top: none;
-}
-
-.dispatch-details-row {
-    background-color: #f8f9fa;
-}
-
-.dispatch-details-row td {
-    padding: 1rem !important;
-}
-
-@media (max-width: 768px) {
-    .stats {
-        grid-template-columns: 1fr;
-    }
-    
-    .table-responsive {
-        font-size: 0.9rem;
-    }
-    
-    .btn-group-sm .btn {
-        padding: 0.2rem 0.3rem;
-        font-size: 0.75rem;
-    }
-}
-</style>
 {% endblock %}

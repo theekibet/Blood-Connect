@@ -1,474 +1,95 @@
+{% extends 'shared/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Lab Tech{% endblock %} | BloodConnect</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon" href="{% static 'app/img/favicon.ico' %}">
-    
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        
-        /* Navbar Styles */
-        .navbar {
-            background: white;
-            padding: 10px 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            left: 220px;
-            right: 0;
-            z-index: 1000;
-            height: 70px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #2c3e50;
-            display: none;
-        }
-        
-        .navbar-nav {
-            margin-left: auto;
-            flex-direction: row;
-        }
-        
-        .nav-item {
-            margin: 0 5px;
-        }
-        
-        /* Profile Dropdown */
-        .profile-dropdown {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 5px 15px;
-            background: #f8f9fa;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .profile-dropdown:hover {
-            background: #e9ecef;
-        }
-        
-        .avatar-placeholder {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-            border: 2px solid #3498db;
-        }
-        
-        .profile-dropdown i.fa-chevron-down {
-            color: #6c757d;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-        
-        .dropdown-menu {
-            border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            border-radius: 10px;
-            margin-top: 10px;
-            min-width: 220px;
-        }
-        
-        .dropdown-item {
-            padding: 10px 20px;
-            color: #333;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-        
-        .dropdown-item i {
-            width: 20px;
-            margin-right: 10px;
-            color: #3498db;
-        }
-        
-        .dropdown-item:hover {
-            background: #f8f9fa;
-            padding-left: 25px;
-        }
-        
-        .dropdown-item.text-danger i {
-            color: #dc3545;
-        }
-        
-        .dropdown-divider {
-            margin: 5px 0;
-        }
-        
-        .dropdown-item-text {
-            padding: 10px 20px;
-            font-size: 0.9rem;
-        }
-        
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 220px;
-            height: 100%;
-            background: #2c3e50;
-            padding-top: 20px;
-            z-index: 1001;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .sidebar h4 {
-            color: white;
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #34495e;
-            font-weight: 700;
-        }
-        
-        .sidebar a {
-            display: block;
-            color: #ecf0f1;
-            padding: 12px 20px;
-            text-decoration: none;
-            transition: 0.3s;
-            border-left: 4px solid transparent;
-        }
-        
-        .sidebar a:hover, .sidebar a.active {
-            background: #34495e;
-            padding-left: 25px;
-            border-left-color: #3498db;
-        }
-        
-        .sidebar i {
-            margin-right: 10px;
-            width: 20px;
-        }
-        
-        /* Main Content */
-        .main-content {
-            margin-left: 220px;
-            margin-top: 70px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-            background: #f8f9fa;
-        }
-        
-        /* Notification Bell */
-        .notification-icon {
-            position: relative;
-            font-size: 1.3rem;
-            color: #6c757d;
-            transition: color 0.3s;
-            margin-right: 15px;
-        }
-        
-        .notification-icon:hover {
-            color: #3498db;
-        }
-        
-        .notification-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #dc3545;
-            color: white;
-            border-radius: 50%;
-            padding: 3px 6px;
-            font-size: 10px;
-            font-weight: bold;
-            min-width: 18px;
-            text-align: center;
-        }
-        
-        /* Status Badge */
-        .status-badge {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        
-        .status-active {
-            background: #28a745;
-        }
-        
-        .status-inactive {
-            background: #dc3545;
-        }
-        
-        /* Messages */
-        .messages {
-            margin-bottom: 20px;
-        }
-        
-        .alert {
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-        
-        /* Auth Pages */
-        .auth-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            padding: 20px;
-        }
-        
-        .auth-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-            padding: 30px;
-        }
-        
-        .auth-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .auth-header h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .auth-header p {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        /* Card */
-        .card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 0;
-                overflow: hidden;
-            }
-            
-            .navbar {
-                left: 0;
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .navbar-brand {
-                display: block;
-            }
-        }
-    </style>
-</head>
 
-<body>
-    {% if user.is_authenticated %}
-        <!-- Navbar -->
-        <nav class="navbar navbar-expand-lg">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-flask"></i>
-                Lab Connect
-            </a>
-            
-            <div class="ml-auto">
-                <ul class="navbar-nav align-items-center">
-                    <!-- Notification Bell -->
-                    <li class="nav-item mx-2">
-                        <a class="nav-link" href="#" title="Notifications">
-                            <div class="notification-icon">
-                                <i class="fas fa-bell"></i>
-                                {% if pending_tests_count > 0 %}
-                                    <span class="notification-badge">{{ pending_tests_count }}</span>
-                                {% endif %}
-                            </div>
-                        </a>
-                    </li>
+{% block title %}Lab Technologist Dashboard{% endblock %}
 
-                    <!-- Profile Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle p-0" href="#" id="labTechDropdown" role="button" data-toggle="dropdown">
-                            <div class="profile-dropdown">
-                                {% if user.lab_tech_profile and user.lab_tech_profile.profile_pic %}
-                                    <img src="{{ user.lab_tech_profile.profile_pic.url }}" alt="Profile" 
-                                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #3498db;">
-                                {% else %}
-                                    <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" 
-                                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #3498db;">
-                                {% endif %}
-                                <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <div class="dropdown-item-text">
-                                <strong>{{ user.get_full_name|default:user.username }}</strong><br>
-                                <small class="text-muted">
-                                    {% if user.lab_tech_profile and user.lab_tech_profile.is_active %}
-                                        <span class="status-badge status-active"></span> Active
-                                    {% else %}
-                                        <span class="status-badge status-inactive"></span> Inactive
-                                    {% endif %}
-                                </small>
-                            </div>
-                            <div class="dropdown-divider"></div>
-                            
-                            {% if user.lab_tech_profile %}
-                                <a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile' %}">
-                                    <i class="fas fa-user-circle"></i> View Profile
-                                </a>
-                                <a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}">
-                                    <i class="fas fa-edit"></i> Edit Profile
-                                </a>
-                            {% endif %}
-                            
-                            <div class="dropdown-divider"></div>
-                            
-                            <a class="dropdown-item" href="{% url 'password_change' %}">
-                                <i class="fas fa-key mr-2"></i> Change Password
-                            </a>
-                            
-                            <div class="dropdown-divider"></div>
-                            
-                            <a class="dropdown-item text-danger" href="{% url 'lab_technologist:logout' %}">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-        </nav>
+{% block nav_icon %}fas fa-flask{% endblock %}
+{% block app_name %}Lab Connect{% endblock %}
 
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <h4><i class="fas fa-flask"></i> Lab Tech</h4>
-            <a href="{% url 'lab_technologist:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
-            </a>
-            <a href="{% url 'lab_technologist:pending_tests' %}" class="{% if request.resolver_match.url_name == 'pending_tests' %}active{% endif %}">
-                <i class="fas fa-hourglass-half"></i> Pending Tests
-            </a>
-            <a href="{% url 'lab_technologist:test_history' %}" class="{% if request.resolver_match.url_name == 'test_history' %}active{% endif %}">
-                <i class="fas fa-history"></i> Test History
-            </a>
-        </div>
+{% block sidebar_icon %}fas fa-flask{% endblock %}
+{% block sidebar_title %}Lab Tech Panel{% endblock %}
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Messages -->
-            {% if messages %}
-                <div class="messages">
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="close" data-dismiss="alert">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+{% block user_role_label %}Lab Technologist{% endblock %}
 
-            <!-- Page Content -->
-            {% block content %}{% endblock %}
-        </div>
-    {% else %}
-        <!-- Non-Authenticated Layout (Login Page) -->
-        <div class="auth-container">
-            <div class="auth-card">
-                <div class="auth-header">
-                    <i class="fas fa-flask fa-3x" style="color: #2c3e50;"></i>
-                    <h3>Lab Technologist</h3>
-                    <p>Please login to access the laboratory dashboard</p>
-                </div>
-                
-                <!-- Messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="close" data-dismiss="alert">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+{% block auth_card_class %}lab-tech{% endblock %}
+{% block auth_icon %}fas fa-flask{% endblock %}
+{% block auth_title %}Lab Technologist Login{% endblock %}
 
-                {% block auth_content %}{% endblock %}
-            </div>
-        </div>
+{% block profile_menu %}
+    {% if user.lab_tech_profile %}
+        <a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile' %}">
+            <i class="fas fa-user-circle"></i> View Profile
+        </a>
+        <a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}">
+            <i class="fas fa-edit"></i> Edit Profile
+        </a>
     {% endif %}
+{% endblock %}
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-    
-    <!-- Custom JS for active menu and image error handling -->
-    {% if user.is_authenticated %}
-    <script>
-        // Highlight active menu based on current URL
-        document.addEventListener('DOMContentLoaded', function() {
-            const currentUrl = window.location.pathname;
-            const menuLinks = document.querySelectorAll('.sidebar a');
-            
-            menuLinks.forEach(link => {
-                if (link.getAttribute('href') === currentUrl) {
-                    link.classList.add('active');
-                }
-            });
-        });
+{% block profile_url %}{% url 'lab_technologist:lab_tech_profile' %}{% endblock %}
+{% block edit_profile_url %}{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}{% endblock %}
+{% block notifications_url %}#{% endblock %}
 
+{% block sidebar_menu %}
+    <a href="{% url 'lab_technologist:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="fas fa-tachometer-alt"></i> Dashboard
+    </a>
+    <a href="{% url 'lab_technologist:pending_tests' %}" class="{% if request.resolver_match.url_name == 'pending_tests' %}active{% endif %}">
+        <i class="fas fa-hourglass-half"></i> Pending Tests
+    </a>
+    <a href="{% url 'lab_technologist:test_history' %}" class="{% if request.resolver_match.url_name == 'test_history' %}active{% endif %}">
+        <i class="fas fa-history"></i> Test History
+    </a>
+{% endblock %}
+
+{% block extra_css %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Lab tech-specific JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('✅ Lab Technologist base template loaded');
+        
         // Image error handling for profile pictures
-        document.addEventListener('DOMContentLoaded', function() {
-            const profileImages = document.querySelectorAll('.profile-dropdown img');
-            profileImages.forEach(img => {
-                img.onerror = function() {
-                    this.src = "{% static 'images/default-profile.png' %}";
-                    this.onerror = null; // Prevent infinite loop
-                };
-            });
+        const profileImages = document.querySelectorAll('.profile-dropdown img');
+        profileImages.forEach(img => {
+            img.onerror = function() {
+                this.src = "{% static 'images/default-profile.png' %}";
+                this.onerror = null;
+            };
         });
-    </script>
-    {% endif %}
-</body>
-</html>
+        
+        // Update pending tests count dynamically if needed
+        {% if pending_tests_count > 0 %}
+        console.log('📊 You have {{ pending_tests_count }} pending tests');
+        {% endif %}
+    });
+
+    // Optional: Add real-time pending tests count update
+    function updatePendingTestsCount() {
+        fetch('/lab-tech/api/pending-tests-count/')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.querySelector('.notification-badge');
+                if (badge) {
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => console.error('Error updating pending tests:', error));
+    }
+
+    // Uncomment to enable real-time updates every 30 seconds
+    // setInterval(updatePendingTestsCount, 30000);
+</script>
+{% endblock %}
+
+{% block scripts %}
+<!-- Additional lab tech-specific scripts can go here -->
+{% endblock %}

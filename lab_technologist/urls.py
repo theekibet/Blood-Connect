@@ -10,7 +10,7 @@ urlpatterns = [
     path('profile/', views.lab_tech_profile, name='lab_tech_profile'),
     path('profile/<int:pk>/', views.lab_tech_profile_detail, name='lab_tech_profile_detail'),
     path('profile/<int:pk>/edit/', views.lab_tech_profile_edit, name='lab_tech_profile_edit'),
-    path('logout/', views.logout_view, name='logout'),
+
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),

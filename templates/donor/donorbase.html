@@ -1,695 +1,274 @@
+{% extends 'shared/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Donor Dashboard - BloodConnect</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-    
-    <!-- Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-        <!-- Your Custom CSS -->
-        <link rel="stylesheet" href="/static/css/donor.css">
-    <style>
 
-    </style>
-</head>
-<body>
+{% block title %}Donor Dashboard{% endblock %}
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg fixed-top">
-    <a class="navbar-brand" href="/">
-        <i class="fas fa-hand-holding-heart"></i>
-        BloodConnect Donor
+{% block nav_icon %}fas fa-hand-holding-heart{% endblock %}
+{% block app_name %}Donor Portal{% endblock %}
+
+{% block sidebar_icon %}fas fa-hand-holding-heart{% endblock %}
+{% block sidebar_title %}Donor Panel{% endblock %}
+
+{% block user_role_label %}Donor{% endblock %}
+
+{% block auth_card_class %}donor{% endblock %}
+{% block auth_icon %}fas fa-hand-holding-heart{% endblock %}
+{% block auth_title %}Donor Login{% endblock %}
+
+{% block profile_menu %}
+    <a class="dropdown-item" href="{% url 'donor-profile' %}">
+        <i class="fas fa-user-circle"></i> View Profile
     </a>
-    
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-        <ul class="navbar-nav align-items-center">
-            <!-- Rewards/Eligibility Icon -->
-            <li class="nav-item mx-2">
-                <a class="nav-link" href="{% url 'donor-eligibility-status' %}" title="Rewards / Eligibility">
-                    <div class="rewards-icon">
-                        <i class="fas fa-medal"></i>
-                    </div>
-                </a>
-            </li>
+    <a class="dropdown-item" href="{% url 'donor-edit-profile' %}">
+        <i class="fas fa-edit"></i> Edit Profile
+    </a>
+{% endblock %}
 
-            <!-- Notification Bell -->
-            <li class="nav-item mx-2">
-                <a class="nav-link" href="{% url 'donor-notifications' %}" title="Notifications">
-                    <div class="notification-icon">
-                        <i class="fas fa-bell {% if donor_unread_notification_count > 0 %}animate-shake{% endif %}"></i>
-                        {% if donor_unread_notification_count > 0 %}
-                            <span class="notification-badge">{{ donor_unread_notification_count }}</span>
-                        {% endif %}
-                    </div>
-                </a>
-            </li>
+{% block profile_url %}{% url 'donor-profile' %}{% endblock %}
+{% block edit_profile_url %}{% url 'donor-edit-profile' %}{% endblock %}
+{% block notifications_url %}{% url 'donor-notifications' %}{% endblock %}
 
-            <!-- Profile Dropdown -->
-            {% if request.user.is_authenticated and request.user.donor %}
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle p-0" href="#" id="donorDropdown" role="button" data-toggle="dropdown">
-                    <div class="profile-dropdown">
-                        {% if request.user.donor.profile_pic %}
-                            <img src="{{ request.user.donor.profile_pic.url }}" alt="Profile">
-                        {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" alt="Avatar">
-                        {% endif %}
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                </a>
-                <div class="dropdown-menu dropdown-menu-right">
-                    <a class="dropdown-item" href="{% url 'donor-profile' %}">
-                        <i class="fas fa-user mr-2"></i> View Profile
-                    </a>
-                    <a class="dropdown-item" href="{% url 'donor-edit-profile' %}">
-                        <i class="fas fa-edit mr-2"></i> Edit Profile
-                    </a>
-                    <a class="dropdown-item" href="{% url 'password_change' %}">
-                        <i class="fas fa-key mr-2"></i> Change Password
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </a>
-                </div>
-            </li>
-            {% endif %}
-        </ul>
-    </div>
-</nav>
-
-<!-- Messages Container -->
-<div class="messages">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message|safe }}
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
+{% block extra_nav_items %}
+    <!-- Rewards/Eligibility Icon - Donor specific -->
+    <li class="nav-item mx-2">
+        <a class="nav-link" href="{% url 'donor-eligibility-status' %}" title="Rewards / Eligibility">
+            <div class="rewards-icon">
+                <i class="fas fa-medal"></i>
             </div>
-        {% endfor %}
-    {% endif %}
-</div>
+        </a>
+    </li>
+{% endblock %}
 
-<!-- Main Wrapper -->
-<div class="wrapper">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h2>Donor Panel</h2>
-        <ul>
-            <li>
-                <a href="/">
-                    <i class="fas fa-home"></i> Home
-                </a>
-            </li>
-            <li>
-                <a href="/donor/donate-blood">
-                    <i class="fas fa-hand-holding-medical"></i> Donate Blood
-                </a>
-            </li>
-            <li>
-                <a href="/donor/donation-history">
-                    <i class="fas fa-history"></i> Donation History
-                </a>
-            </li>
-            <li>
-                <a href="/donor/make-request">
-                    <i class="fas fa-sync-alt"></i> Blood Request
-                </a>
-            </li>
-            <li>
-                <a href="/donor/request-history">
-                    <i class="fas fa-history"></i> Request History
-                </a>
-            </li>
-        </ul>
+{% block sidebar_menu %}
+    <a href="/" class="{% if request.path == '/' %}active{% endif %}">
+        <i class="fas fa-home"></i> Home
+    </a>
+    <a href="/donor/donate-blood" class="{% if '/donate-blood' in request.path %}active{% endif %}">
+        <i class="fas fa-hand-holding-medical"></i> Donate Blood
+    </a>
+    <a href="/donor/donation-history" class="{% if '/donation-history' in request.path %}active{% endif %}">
+        <i class="fas fa-history"></i> Donation History
+    </a>
+    <a href="/donor/make-request" class="{% if '/make-request' in request.path %}active{% endif %}">
+        <i class="fas fa-sync-alt"></i> Blood Request
+    </a>
+    <a href="/donor/request-history" class="{% if '/request-history' in request.path %}active{% endif %}">
+        <i class="fas fa-history"></i> Request History
+    </a>
+{% endblock %}
 
-        <div class="social_media">
-            <a href="#" class="fab fa-facebook-f"></a>
-            <a href="#" class="fab fa-twitter"></a>
-            <a href="#" class="fab fa-instagram"></a>
-        </div>
-    </div>
+{% block extra_css %}
+    <!-- No custom CSS needed - all styles come from main.css -->
+    <!-- Delete the donor.css link -->
+{% endblock %}
 
-    <!-- Main Content -->
-    <div class="main_content">
-        {% block content %}
-        <!-- Page content here -->
-        {% endblock %}
-    </div>
-</div>
-
-<!-- Chatbot Toggle -->
-<div class="chatbot-toggle" id="chatbotToggle">
-    <i class="fas fa-comments"></i>
-</div>
-
-<!-- Chatbot Container -->
-<div class="chatbot-container" id="chatbotContainer">
-    <div class="chatbot-header">
-        <div class="chatbot-header-content">
-            <div class="chatbot-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="chatbot-title">
-                <h3>BloodBot Assistant</h3>
-                <p>Online • Here to help</p>
-            </div>
-        </div>
-        <button class="chatbot-close" id="chatbotClose">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    
-    <div class="quick-actions">
-        <button class="quick-action-btn" data-message="My profile">👤 My Profile</button>
-        <button class="quick-action-btn" data-message="Blood stock">🩸 Stock Info</button>
-        <button class="quick-action-btn" data-message="Donation centers">📍 Centers</button>
-        <button class="quick-action-btn" data-message="Eligibility">✅ Eligibility</button>
-    </div>
-    
-    <div class="chatbot-messages" id="chatbotMessages">
-        <div class="welcome-message">
-            <i class="fas fa-comments"></i>
-            <h4>Welcome to BloodBot!</h4>
-            <p>I'm here to help you with information about blood donations, requests, and more.</p>
-            <p style="font-size: 0.85rem; opacity: 0.8;">Try asking: "What's my blood type?" or "Show donation centers"</p>
-        </div>
-    </div>
-    
-    <div class="chatbot-input">
-        <input type="text" id="chatbotInput" placeholder="Type your message..." autocomplete="off" />
-        <button id="chatbotSend">
-            <i class="fas fa-paper-plane"></i>
-        </button>
-    </div>
-</div>
-
-
-<!-- Optional JavaScript -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" crossorigin="anonymous"></script>
-
-
+{% block extra_js %}
 <script>
-  $(document).ready(function(){
-    $('[data-toggle="tooltip"]').tooltip();
-  });
-</script>
-
-<script>
-// Chatbot functionality
-const chatbotToggle = document.getElementById('chatbotToggle');
-const chatbotContainer = document.getElementById('chatbotContainer');
-const chatbotClose = document.getElementById('chatbotClose');
-const chatbotInput = document.getElementById('chatbotInput');
-const chatbotSend = document.getElementById('chatbotSend');
-const chatbotMessages = document.getElementById('chatbotMessages');
-
-
-// Generate session ID
-let sessionId = sessionStorage.getItem('chatbot_session_id');
-if (!sessionId) {
-    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    sessionStorage.setItem('chatbot_session_id', sessionId);
-}
-
-
-// Toggle chatbot
-chatbotToggle.addEventListener('click', function() {
-    chatbotContainer.classList.toggle('active');
-    chatbotToggle.classList.toggle('active');
-    if (chatbotContainer.classList.contains('active')) {
-        chatbotInput.focus();
-    }
-});
-
-
-chatbotClose.addEventListener('click', function() {
-    chatbotContainer.classList.remove('active');
-    chatbotToggle.classList.remove('active');
-});
-
-
-// Quick action buttons
-document.querySelectorAll('.quick-action-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const message = this.getAttribute('data-message');
-        sendMessage(message);
-    });
-});
-
-
-// Send message on button click
-chatbotSend.addEventListener('click', function() {
-    const message = chatbotInput.value.trim();
-    if (message) {
-        sendMessage(message);
-    }
-});
-
-
-// Send message on Enter key
-chatbotInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        const message = chatbotInput.value.trim();
-        if (message) {
-            sendMessage(message);
-        }
-    }
-});
-
-
-// Function to send message
-function sendMessage(message) {
-    // Clear input
-    chatbotInput.value = '';
+    // ========================================
+    // DONOR-SPECIFIC CHATBOT FUNCTIONALITY
+    // ========================================
     
-    // Remove welcome message if it exists
-    const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
-    if (welcomeMsg) {
-        welcomeMsg.remove();
-    }
-    
-    // Add user message to chat
-    addMessage(message, 'user');
-    
-    // Show typing indicator
-    showTypingIndicator();
-    
-    // Disable input while processing
-    chatbotInput.disabled = true;
-    chatbotSend.disabled = true;
-    
-    // Get CSRF token
-    const csrftoken = getCookie('csrftoken');
-    
-    // Send to backend
-    fetch('/chatbot/api/chatbot/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({
-            message: message,
-            session_id: sessionId
-        })
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Received data:', data);
-        // Hide typing indicator
-        hideTypingIndicator();
-        
-        // Add bot response
-        if (data.reply) {
-            addMessage(data.reply, 'bot');
-        } else if (data.error) {
-            addMessage(`Error: ${data.error}`, 'bot');
-            console.error('API Error:', data.error);
-        } else {
-            addMessage('Sorry, I received an unexpected response.', 'bot');
-        }
-        
-        // Re-enable input
-        chatbotInput.disabled = false;
-        chatbotSend.disabled = false;
-        chatbotInput.focus();
-    })
-    .catch(error => {
-        console.error('Fetch Error:', error);
-        hideTypingIndicator();
-        
-        // More specific error message
-        let errorMsg = 'Sorry, I\'m having trouble connecting. ';
-        if (error.message.includes('404')) {
-            errorMsg += 'API endpoint not found. Please check the URL configuration.';
-        } else if (error.message.includes('403')) {
-            errorMsg += 'Authentication error. Please refresh the page.';
-        } else if (error.message.includes('500')) {
-            errorMsg += 'Server error. Please try again later.';
-        } else {
-            errorMsg += 'Please check your connection and try again.';
-        }
-        
-        addMessage(errorMsg, 'bot');
-        chatbotInput.disabled = false;
-        chatbotSend.disabled = false;
-    });
-}
-
-
-// Function to add message to chat
-function addMessage(text, type) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}`;
-    
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    
-    const avatar = type === 'bot' 
-        ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
-        : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
-    
-    messageDiv.innerHTML = `
-        ${avatar}
-        <div class="message-content">
-            <div class="message-bubble">${formatMessage(text)}</div>
-            <div class="message-time">${timeString}</div>
-        </div>
-    `;
-    
-    chatbotMessages.appendChild(messageDiv);
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-}
-
-
-// Format message (preserve line breaks and emojis)
-function formatMessage(text) {
-    return text.replace(/\n/g, '<br>');
-}
-
-
-// Show typing indicator
-function showTypingIndicator() {
-    const indicator = document.createElement('div');
-    indicator.className = 'message bot';
-    indicator.id = 'typingIndicator';
-    indicator.innerHTML = `
-        <div class="message-avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content">
-            <div class="typing-indicator active">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </div>
-    `;
-    chatbotMessages.appendChild(indicator);
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-}
-
-
-// Hide typing indicator
-function hideTypingIndicator() {
-    const indicator = document.getElementById('typingIndicator');
-    if (indicator) {
-        indicator.remove();
-    }
-}
-
-
-// Get CSRF token from cookies
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-// ========================================
-// MOBILE MENU FUNCTIONALITY
-// Add this script before closing </body> tag
-// ========================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Create mobile menu toggle button
-    const mobileToggle = document.createElement('div');
-    mobileToggle.className = 'mobile-menu-toggle';
-    mobileToggle.innerHTML = '<i class="fas fa-bars"></i>';
-    document.body.appendChild(mobileToggle);
-    
-    // Create overlay for mobile sidebar
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    document.body.appendChild(overlay);
-    
-    const sidebar = document.querySelector('.sidebar');
-    
-    // Toggle sidebar on mobile
-    mobileToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-        mobileToggle.classList.toggle('active');
-        
-        // Change icon
-        const icon = mobileToggle.querySelector('i');
-        if (sidebar.classList.contains('active')) {
-            icon.className = 'fas fa-times';
-        } else {
-            icon.className = 'fas fa-bars';
-        }
-        
-        // Prevent body scroll when sidebar is open
-        if (sidebar.classList.contains('active')) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-    });
-    
-    // Close sidebar when clicking overlay
-    overlay.addEventListener('click', function() {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-        mobileToggle.classList.remove('active');
-        mobileToggle.querySelector('i').className = 'fas fa-bars';
-        document.body.style.overflow = '';
-    });
-    
-    // Close sidebar when clicking a link (mobile only)
-    if (window.innerWidth <= 992) {
-        const sidebarLinks = sidebar.querySelectorAll('a');
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                mobileToggle.classList.remove('active');
-                mobileToggle.querySelector('i').className = 'fas fa-bars';
-                document.body.style.overflow = '';
-            });
-        });
-    }
-    
-    // Handle window resize
-    let resizeTimer;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(function() {
-            // Close sidebar on desktop
-            if (window.innerWidth > 992) {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                mobileToggle.classList.remove('active');
-                mobileToggle.querySelector('i').className = 'fas fa-bars';
-                document.body.style.overflow = '';
-            }
-        }, 250);
-    });
-    
-    // Prevent zoom on double-tap (iOS)
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(event) {
-        const now = Date.now();
-        if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
-    
-    // Fix iOS 100vh issue
-    function setVH() {
-        let vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-    }
-    setVH();
-    window.addEventListener('resize', setVH);
-    window.addEventListener('orientationchange', setVH);
-});
-
-// ========================================
-// IMPROVED CHATBOT FOR MOBILE
-// ========================================
-
-// Modify existing chatbot toggle to work better on mobile
-const existingChatbotToggle = document.getElementById('chatbotToggle');
-const existingChatbotContainer = document.getElementById('chatbotContainer');
-
-if (existingChatbotToggle && existingChatbotContainer) {
-    existingChatbotToggle.addEventListener('click', function() {
-        if (window.innerWidth <= 768) {
-            // On mobile, prevent body scroll when chatbot is open
-            if (existingChatbotContainer.classList.contains('active')) {
-                document.body.style.overflow = '';
-            } else {
-                document.body.style.overflow = 'hidden';
-            }
-        }
-    });
-    
-    const existingChatbotClose = document.getElementById('chatbotClose');
-    if (existingChatbotClose) {
-        existingChatbotClose.addEventListener('click', function() {
-            document.body.style.overflow = '';
-        });
-    }
-}
-
-// ========================================
-// MOBILE NAVBAR IMPROVEMENTS
-// ========================================
-
-// Auto-close mobile navbar after clicking a link
-document.addEventListener('DOMContentLoaded', function() {
-    const navbarToggler = document.querySelector('.navbar-toggler');
-    const navbarCollapse = document.querySelector('.navbar-collapse');
-    
-    if (navbarCollapse && navbarToggler) {
-        // Close navbar when clicking outside
-        document.addEventListener('click', function(event) {
-            const isClickInsideNav = navbarCollapse.contains(event.target);
-            const isClickOnToggler = navbarToggler.contains(event.target);
-            
-            if (!isClickInsideNav && !isClickOnToggler && navbarCollapse.classList.contains('show')) {
-                navbarToggler.click();
-            }
-        });
-        
-        // Close navbar when clicking a nav link (mobile only)
-        if (window.innerWidth <= 992) {
-            const navLinks = navbarCollapse.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (navbarCollapse.classList.contains('show')) {
-                        navbarToggler.click();
-                    }
-                });
-            });
-        }
-    }
-});
-
-// ========================================
-// TOUCH IMPROVEMENTS
-// ========================================
-
-// Add active state to touch elements
-document.addEventListener('DOMContentLoaded', function() {
-    const touchElements = document.querySelectorAll('a, button, .btn, .card, .sidebar ul li a');
-    
-    touchElements.forEach(element => {
-        element.addEventListener('touchstart', function() {
-            this.style.opacity = '0.7';
-        }, {passive: true});
-        
-        element.addEventListener('touchend', function() {
-            this.style.opacity = '1';
-        }, {passive: true});
-        
-        element.addEventListener('touchcancel', function() {
-            this.style.opacity = '1';
-        }, {passive: true});
-    });
-});
-
-// ========================================
-// FORM INPUT ZOOM PREVENTION (iOS)
-// ========================================
-
-// Prevent iOS from zooming in on input focus
-if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
     document.addEventListener('DOMContentLoaded', function() {
-        const inputs = document.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            if (input.style.fontSize === '' || parseInt(input.style.fontSize) < 16) {
-                input.style.fontSize = '16px';
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const chatbotClose = document.getElementById('chatbotClose');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSend = document.getElementById('chatbotSend');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+
+        if (!chatbotToggle || !chatbotContainer) return;
+
+        // Generate session ID
+        let sessionId = sessionStorage.getItem('chatbot_session_id');
+        if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('chatbot_session_id', sessionId);
+        }
+
+        // Toggle chatbot
+        chatbotToggle.addEventListener('click', function() {
+            chatbotContainer.classList.toggle('active');
+            chatbotToggle.classList.toggle('active');
+            if (chatbotContainer.classList.contains('active')) {
+                chatbotInput.focus();
+                if (window.innerWidth <= 768) {
+                    document.body.style.overflow = 'hidden';
+                }
+            } else {
+                document.body.style.overflow = '';
             }
         });
-    });
-}
 
-// ========================================
-// SMOOTH SCROLL FOR ANCHOR LINKS
-// ========================================
+        chatbotClose.addEventListener('click', function() {
+            chatbotContainer.classList.remove('active');
+            chatbotToggle.classList.remove('active');
+            document.body.style.overflow = '';
+        });
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            const href = this.getAttribute('href');
-            if (href !== '#' && href !== '#!') {
-                const target = document.querySelector(href);
-                if (target) {
-                    e.preventDefault();
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+        // Quick action buttons
+        document.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const message = this.getAttribute('data-message');
+                sendMessage(message);
+            });
+        });
+
+        // Send message on button click
+        chatbotSend.addEventListener('click', function() {
+            const message = chatbotInput.value.trim();
+            if (message) {
+                sendMessage(message);
+            }
+        });
+
+        // Send message on Enter key
+        chatbotInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const message = chatbotInput.value.trim();
+                if (message) {
+                    sendMessage(message);
                 }
             }
         });
+
+        // Function to send message
+        function sendMessage(message) {
+            // Clear input
+            chatbotInput.value = '';
+            
+            // Remove welcome message if it exists
+            const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Disable input while processing
+            chatbotInput.disabled = true;
+            chatbotSend.disabled = true;
+            
+            // Get CSRF token
+            const csrftoken = getCookie('csrftoken');
+            
+            // Send to backend
+            fetch('/chatbot/api/chatbot/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideTypingIndicator();
+                
+                if (data.reply) {
+                    addMessage(data.reply, 'bot');
+                } else {
+                    addMessage('Sorry, I received an unexpected response.', 'bot');
+                }
+                
+                chatbotInput.disabled = false;
+                chatbotSend.disabled = false;
+                chatbotInput.focus();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                
+                let errorMsg = 'Sorry, I\'m having trouble connecting. Please try again.';
+                addMessage(errorMsg, 'bot');
+                
+                chatbotInput.disabled = false;
+                chatbotSend.disabled = false;
+            });
+        }
+
+        // Function to add message to chat
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const avatar = type === 'bot' 
+                ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
+                : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
+            
+            messageDiv.innerHTML = `
+                ${avatar}
+                <div class="message-content">
+                    <div class="message-bubble">${text.replace(/\n/g, '<br>')}</div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+            
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'message bot';
+            indicator.id = 'typingIndicator';
+            indicator.innerHTML = `
+                <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            chatbotMessages.appendChild(indicator);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
     });
-});
 
-// ========================================
-// ONLINE/OFFLINE DETECTION
-// ========================================
-
-window.addEventListener('online', function() {
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-success';
-    alert.innerHTML = '✅ You are back online!';
-    alert.style.position = 'fixed';
-    alert.style.top = '100px';
-    alert.style.right = '20px';
-    alert.style.zIndex = '9999';
-    document.body.appendChild(alert);
-    
-    setTimeout(() => alert.remove(), 3000);
-});
-
-window.addEventListener('offline', function() {
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-warning';
-    alert.innerHTML = '⚠️ You are offline. Some features may not work.';
-    alert.style.position = 'fixed';
-    alert.style.top = '100px';
-    alert.style.right = '20px';
-    alert.style.zIndex = '9999';
-    document.body.appendChild(alert);
-    
-    setTimeout(() => alert.remove(), 5000);
-});
+    // Donor-specific notification count
+    {% if donor_unread_notification_count > 0 %}
+    console.log('You have {{ donor_unread_notification_count }} unread notifications');
+    {% endif %}
 </script>
-
-</body>
-</html>
+{% endblock %}

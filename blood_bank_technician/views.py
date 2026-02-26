@@ -173,16 +173,6 @@ def blood_bank_tech_profile_edit(request, pk):
     return render(request, 'blood_bank_technician/profile_edit.html', context)
 
 # ======================
-# LOGOUT VIEW
-# ======================
-@login_required
-def logout_view(request):
-    """Blood Bank Technician logout view"""
-    logout(request)
-    messages.success(request, "You have been successfully logged out.")
-    return redirect('blood_bank_technician:login')
-
-# ======================
 # DASHBOARD VIEW - UPDATED WITH REAL STOCK DATA
 # ======================
 @login_required

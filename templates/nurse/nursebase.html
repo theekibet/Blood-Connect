@@ -1,1080 +1,273 @@
+{% extends 'shared/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nurse Dashboard - BloodConnect</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-    
-    <!-- FAVICON -->
-    <link rel="icon" href="{% static 'app/img/favicon.ico' %}">
-    
-    <!-- Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    
-    <!-- Inline CSS - Critical Styles -->
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f5f6fa;
-            color: #2c3e50;
-            overflow-x: hidden;
-        }
+{% block title %}Nurse Dashboard{% endblock %}
 
-        /* Navbar Styles */
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 15px 30px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+{% block nav_icon %}fas fa-user-md{% endblock %}
+{% block app_name %}Nurse Portal{% endblock %}
 
-        .navbar-brand {
-            color: white !important;
-            font-size: 1.5rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+{% block sidebar_icon %}fas fa-user-md{% endblock %}
+{% block sidebar_title %}Nurse Panel{% endblock %}
 
-        .navbar-brand:hover {
-            color: #f8f9fa !important;
-        }
+{% block user_role_label %}Nurse{% endblock %}
 
-        .navbar-toggler {
-            border-color: rgba(255,255,255,0.5);
-            background: rgba(255,255,255,0.2);
-        }
+{% block auth_card_class %}nurse{% endblock %}
+{% block auth_icon %}fas fa-user-md{% endblock %}
+{% block auth_title %}Nurse Login{% endblock %}
 
-        .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-        }
-
-        .nav-link {
-            color: white !important;
-            font-weight: 500;
-            padding: 8px 15px !important;
-            transition: all 0.3s;
-        }
-
-        .nav-link:hover {
-            background: rgba(255,255,255,0.2);
-            border-radius: 8px;
-        }
-
-        /* Notification Icon */
-        .notification-icon {
-            position: relative;
-            cursor: pointer;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #dc3545;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .animate-shake {
-            animation: shake 0.5s infinite;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-
-        /* Profile Dropdown */
-        .profile-dropdown {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 5px 12px;
-            border-radius: 25px;
-            transition: background 0.3s;
-        }
-
-        .profile-dropdown:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .profile-dropdown img {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid white;
-        }
-
-        .dropdown-menu {
-            border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            border-radius: 10px;
-            margin-top: 10px;
-            min-width: 250px;
-        }
-
-        .dropdown-item {
-            padding: 12px 20px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .dropdown-item:hover {
-            background: #f8f9fa;
-            padding-left: 25px;
-        }
-
-        .dropdown-divider {
-            margin: 8px 0;
-        }
-
-        /* Messages Container */
-        .messages {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 400px;
-        }
-
-        .alert {
-            border-radius: 10px;
-            border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 10px;
-        }
-
-        .alert-dismissible .close {
-            padding: 12px 20px;
-        }
-
-        /* Wrapper Layout */
-        .wrapper {
-            display: flex;
-            min-height: 100vh;
-            padding-top: 70px;
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            width: 280px;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-            padding: 30px 0;
-            position: fixed;
-            left: 0;
-            top: 70px;
-            bottom: 0;
-            overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            z-index: 999;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar h2 {
-            color: white;
-            padding: 0 25px 20px;
-            font-size: 1.3rem;
-            font-weight: 700;
-            border-bottom: 2px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
-        }
-
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar ul li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar ul li a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 15px 25px;
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .sidebar ul li a:hover,
-        .sidebar ul li a.active {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border-left: 4px solid #dc3545;
-            padding-left: 21px;
-        }
-
-        .sidebar ul li a i {
-            font-size: 1.1rem;
-            width: 25px;
-        }
-
-        /* Main Content */
-        .main_content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-        }
-
-        /* Chatbot Styles */
-        .chatbot-toggle {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s;
-            z-index: 998;
-        }
-
-        .chatbot-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
-        }
-
-        .chatbot-toggle.active {
-            background: #dc3545;
-        }
-
-        .chatbot-toggle i {
-            color: white;
-            font-size: 1.5rem;
-        }
-
-        .chatbot-container {
-            position: fixed;
-            bottom: 100px;
-            right: 30px;
-            width: 380px;
-            height: 550px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            display: none;
-            flex-direction: column;
-            z-index: 999;
-            overflow: hidden;
-        }
-
-        .chatbot-container.active {
-            display: flex;
-        }
-
-        .chatbot-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .chatbot-header-content {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .chatbot-avatar {
-            width: 45px;
-            height: 45px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-        }
-
-        .chatbot-title h3 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .chatbot-title p {
-            margin: 0;
-            font-size: 0.8rem;
-            opacity: 0.9;
-        }
-
-        .chatbot-close {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .chatbot-close:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .quick-action-btn {
-            background: white;
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-        }
-
-        .quick-action-btn:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-            transform: translateY(-2px);
-        }
-
-        .chatbot-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-
-        .welcome-message {
-            text-align: center;
-            padding: 40px 20px;
-            color: #6c757d;
-        }
-
-        .welcome-message i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #667eea;
-        }
-
-        .welcome-message h4 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .message {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            align-items: flex-start;
-        }
-
-        .message.user {
-            flex-direction: row-reverse;
-        }
-
-        .message-avatar {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .message.bot .message-avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .message.user .message-avatar {
-            background: #dc3545;
-            color: white;
-        }
-
-        .message-content {
-            flex: 1;
-        }
-
-        .message.user .message-content {
-            text-align: right;
-        }
-
-        .message-bubble {
-            background: white;
-            padding: 12px 15px;
-            border-radius: 15px;
-            display: inline-block;
-            max-width: 80%;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .message.user .message-bubble {
-            background: #667eea;
-            color: white;
-        }
-
-        .message-time {
-            font-size: 0.75rem;
-            color: #999;
-            margin-top: 5px;
-        }
-
-        .typing-indicator {
-            background: white;
-            padding: 12px 15px;
-            border-radius: 15px;
-            display: inline-flex;
-            gap: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .typing-indicator.active span {
-            width: 8px;
-            height: 8px;
-            background: #667eea;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out;
-        }
-
-        .typing-indicator.active span:nth-child(1) {
-            animation-delay: -0.32s;
-        }
-
-        .typing-indicator.active span:nth-child(2) {
-            animation-delay: -0.16s;
-        }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        .chatbot-input {
-            padding: 15px;
-            background: white;
-            border-top: 1px solid #e9ecef;
-            display: flex;
-            gap: 10px;
-        }
-
-        .chatbot-input input {
-            flex: 1;
-            border: 1px solid #dee2e6;
-            padding: 12px 15px;
-            border-radius: 25px;
-            outline: none;
-            transition: border 0.3s;
-        }
-
-        .chatbot-input input:focus {
-            border-color: #667eea;
-        }
-
-        .chatbot-input button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-
-        .chatbot-input button:hover {
-            transform: scale(1.1);
-        }
-
-        /* Mobile Menu */
-        .mobile-menu-toggle {
-            display: none;
-            position: fixed;
-            top: 80px;
-            left: 15px;
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 1001;
-            transition: all 0.3s;
-        }
-
-        .mobile-menu-toggle.active {
-            background: #dc3545;
-        }
-
-        .mobile-menu-toggle i {
-            color: white;
-            font-size: 1.2rem;
-        }
-
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 70px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 998;
-        }
-
-        .sidebar-overlay.active {
-            display: block;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-
-            .sidebar.active {
-                transform: translateX(0);
-            }
-
-            .main_content {
-                margin-left: 0;
-            }
-
-            .mobile-menu-toggle {
-                display: flex;
-            }
-
-            .chatbot-container {
-                width: calc(100% - 30px);
-                right: 15px;
-                left: 15px;
-                bottom: 90px;
-            }
-
-            .chatbot-toggle {
-                bottom: 20px;
-                right: 20px;
-            }
-
-            .messages {
-                right: 10px;
-                left: 10px;
-                max-width: none;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 10px 15px;
-            }
-
-            .navbar-brand {
-                font-size: 1.2rem;
-            }
-
-            .main_content {
-                padding: 15px;
-            }
-
-            .chatbot-container {
-                height: calc(100vh - 150px);
-            }
-        }
-
-        /* Additional utility classes */
-        .text-center { text-align: center; }
-        .text-muted { color: #6c757d !important; }
-        .text-danger { color: #dc3545 !important; }
-        .mr-2 { margin-right: 8px; }
-        .bg-light { background-color: #f8f9fa; }
-    </style>
-</head>
-<body>
-
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg fixed-top">
-    <a class="navbar-brand" href="/">
-        <i class="fas fa-user-md"></i>
-        BloodConnect Nurse
+{% block profile_menu %}
+    <a class="dropdown-item" href="{% url 'nurse:nurse-profile' user.nurse.id %}">
+        <i class="fas fa-user-circle"></i> View Profile
     </a>
-    
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-        <ul class="navbar-nav align-items-center">
-            <!-- Notification Bell -->
-            <li class="nav-item mx-2">
-                <a class="nav-link" href="{% url 'nurse:nurse-notifications' %}" title="Notifications">
-                    <div class="notification-icon">
-                        <i class="fas fa-bell {% if unread_count > 0 %}animate-shake{% endif %}"></i>
-                        {% if unread_count > 0 %}
-                            <span class="notification-badge">{{ unread_count }}</span>
-                        {% endif %}
-                    </div>
-                </a>
-            </li>
+    <a class="dropdown-item" href="{% url 'nurse:nurse-profile-edit' user.nurse.pk %}">
+        <i class="fas fa-edit"></i> Edit Profile
+    </a>
+{% endblock %}
 
-            <!-- Profile Dropdown -->
-            {% if user.is_authenticated %}
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle p-0" href="#" id="nurseDropdown" role="button" data-toggle="dropdown">
-                    <div class="profile-dropdown">
-                        {% if user.nurse.profile_pic %}
-                            <img src="{{ user.nurse.profile_pic.url }}" alt="Profile">
-                        {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" alt="Avatar">
-                        {% endif %}
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                </a>
-                <div class="dropdown-menu dropdown-menu-right">
-                    <a class="dropdown-item" href="{% url 'nurse:nurse-profile' user.nurse.id %}">
-                        <i class="fas fa-user mr-2"></i> View Profile
-                    </a>
-                    
-                    <a class="dropdown-item" href="{% url 'nurse:nurse-profile-edit' user.nurse.pk %}">
-                        <i class="fas fa-edit mr-2"></i> Edit Profile
-                    </a>
-                    
-                    <a class="dropdown-item" href="{% url 'password_change' %}">
-                        <i class="fas fa-key mr-2"></i> Change Password
-                    </a>
-                    
-                    <div class="dropdown-divider"></div>
-                    
-                    <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </a>
-                </div>
-            </li>
-            {% endif %}
-        </ul>
-    </div>
-</nav>
+{% block profile_url %}{% url 'nurse:nurse-profile' user.nurse.id %}{% endblock %}
+{% block edit_profile_url %}{% url 'nurse:nurse-profile-edit' user.nurse.pk %}{% endblock %}
+{% block notifications_url %}{% url 'nurse:nurse-notifications' %}{% endblock %}
 
-<!-- Messages Container -->
-<div class="messages">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message|safe }}
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            </div>
-        {% endfor %}
-    {% endif %}
-</div>
+{% block sidebar_menu %}
+    <a href="{% url 'nurse:nurse-dashboard' %}" class="{% if 'dashboard' in request.path %}active{% endif %}">
+        <i class="fas fa-tachometer-alt"></i> Dashboard
+    </a>
+    <a href="{% url 'nurse:nurse-donation-bookings' %}" class="{% if 'bookings' in request.path %}active{% endif %}">
+        <i class="fas fa-calendar-check"></i> Donation Bookings
+    </a>
+{% endblock %}
 
-<!-- Main Wrapper -->
-<div class="wrapper">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h2>Nurse Panel</h2>
-        <ul>
-            <li>
-                <a href="{% url 'nurse:nurse-dashboard' %}">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
-            </li>
-            
-            <li>
-                <a href="{% url 'nurse:nurse-donation-bookings' %}">
-                    <i class="fas fa-calendar-check"></i> Donation Bookings
-                </a>
-            </li>
-        </ul>
-    </div>
+{% block extra_css %}
 
-    <!-- Main Content -->
-    <div class="main_content">
-        {% block content %}
-        <!-- Page content here -->
-        {% endblock %}
-    </div>
-</div>
+{% endblock %}
 
-<!-- Chatbot Toggle -->
-<div class="chatbot-toggle" id="chatbotToggle">
-    <i class="fas fa-comments"></i>
-</div>
-
-<!-- Chatbot Container -->
-<div class="chatbot-container" id="chatbotContainer">
-    <div class="chatbot-header">
-        <div class="chatbot-header-content">
-            <div class="chatbot-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="chatbot-title">
-                <h3>BloodBot Assistant</h3>
-                <p>Online • Here to help</p>
-            </div>
-        </div>
-        <button class="chatbot-close" id="chatbotClose">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    
-    <div class="quick-actions">
-        <button class="quick-action-btn" data-message="My profile">👤 Profile</button>
-        <button class="quick-action-btn" data-message="Blood stock">🩸 Stock</button>
-        <button class="quick-action-btn" data-message="Donation centers">📍 Centers</button>
-        <button class="quick-action-btn" data-message="Eligibility">✅ Help</button>
-    </div>
-    
-    <div class="chatbot-messages" id="chatbotMessages">
-        <div class="welcome-message">
-            <i class="fas fa-comments"></i>
-            <h4>Welcome to BloodBot!</h4>
-            <p>I'm here to assist you with blood donation information, requests, and more.</p>
-            <p style="font-size: 0.85rem; opacity: 0.8;">Try: "Show bookings" or "Blood stock status"</p>
-        </div>
-    </div>
-    
-    <div class="chatbot-input">
-        <input type="text" id="chatbotInput" placeholder="Type your message..." autocomplete="off" />
-        <button id="chatbotSend">
-            <i class="fas fa-paper-plane"></i>
-        </button>
-    </div>
-</div>
-
-<!-- JS Scripts -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" crossorigin="anonymous"></script>
-
+{% block extra_js %}
 <script>
-// Initialize tooltip
-$(document).ready(function(){
-    $('[data-toggle="tooltip"]').tooltip();
-    console.log('✅ Nurse base template loaded');
-});
-
-// Chatbot functionality
-const chatbotToggle = document.getElementById('chatbotToggle');
-const chatbotContainer = document.getElementById('chatbotContainer');
-const chatbotClose = document.getElementById('chatbotClose');
-const chatbotInput = document.getElementById('chatbotInput');
-const chatbotSend = document.getElementById('chatbotSend');
-const chatbotMessages = document.getElementById('chatbotMessages');
-
-// Generate session ID
-let sessionId = sessionStorage.getItem('chatbot_session_id');
-if (!sessionId) {
-    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    sessionStorage.setItem('chatbot_session_id', sessionId);
-}
-
-// Toggle chatbot
-chatbotToggle.addEventListener('click', function() {
-    chatbotContainer.classList.toggle('active');
-    chatbotToggle.classList.toggle('active');
-    if (chatbotContainer.classList.contains('active')) {
-        chatbotInput.focus();
-    }
-});
-
-chatbotClose.addEventListener('click', function() {
-    chatbotContainer.classList.remove('active');
-    chatbotToggle.classList.remove('active');
-});
-
-// Quick action buttons
-document.querySelectorAll('.quick-action-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const message = this.getAttribute('data-message');
-        sendMessage(message);
-    });
-});
-
-// Send message on button click
-chatbotSend.addEventListener('click', function() {
-    const message = chatbotInput.value.trim();
-    if (message) {
-        sendMessage(message);
-    }
-});
-
-// Send message on Enter key
-chatbotInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        const message = chatbotInput.value.trim();
-        if (message) {
-            sendMessage(message);
-        }
-    }
-});
-
-// Function to send message
-function sendMessage(message) {
-    chatbotInput.value = '';
+    // ========================================
+    // NURSE-SPECIFIC CHATBOT FUNCTIONALITY
+    // ========================================
     
-    const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
-    if (welcomeMsg) {
-        welcomeMsg.remove();
-    }
-    
-    addMessage(message, 'user');
-    showTypingIndicator();
-    
-    chatbotInput.disabled = true;
-    chatbotSend.disabled = true;
-    
-    const csrftoken = getCookie('csrftoken');
-    
-    fetch('/chatbot/api/chatbot/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({
-            message: message,
-            session_id: sessionId
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        hideTypingIndicator();
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('✅ Nurse base template loaded with master base');
         
-        if (data.reply) {
-            addMessage(data.reply, 'bot');
-        } else if (data.error) {
-            addMessage(`Error: ${data.error}`, 'bot');
-            console.error('API Error:', data.error);
-        } else {
-            addMessage('Sorry, I received an unexpected response.', 'bot');
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const chatbotClose = document.getElementById('chatbotClose');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSend = document.getElementById('chatbotSend');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+
+        if (!chatbotToggle || !chatbotContainer) return;
+
+        // Generate session ID
+        let sessionId = sessionStorage.getItem('chatbot_session_id');
+        if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('chatbot_session_id', sessionId);
         }
-        
-        chatbotInput.disabled = false;
-        chatbotSend.disabled = false;
-        chatbotInput.focus();
-    })
-    .catch(error => {
-        console.error('Fetch Error:', error);
-        hideTypingIndicator();
-        
-        let errorMsg = 'Sorry, I\'m having trouble connecting. ';
-        if (error.message.includes('404')) {
-            errorMsg += 'API endpoint not found.';
-        } else if (error.message.includes('403')) {
-            errorMsg += 'Authentication error.';
-        } else if (error.message.includes('500')) {
-            errorMsg += 'Server error.';
-        } else {
-            errorMsg += 'Please try again.';
-        }
-        
-        addMessage(errorMsg, 'bot');
-        chatbotInput.disabled = false;
-        chatbotSend.disabled = false;
-    });
-}
 
-function addMessage(text, type) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}`;
-    
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    
-    const avatar = type === 'bot' 
-        ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
-        : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
-    
-    messageDiv.innerHTML = `
-        ${avatar}
-        <div class="message-content">
-            <div class="message-bubble">${formatMessage(text)}</div>
-            <div class="message-time">${timeString}</div>
-        </div>
-    `;
-    
-    chatbotMessages.appendChild(messageDiv);
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-}
-
-function formatMessage(text) {
-    return text.replace(/\n/g, '<br>');
-}
-
-function showTypingIndicator() {
-    const indicator = document.createElement('div');
-    indicator.className = 'message bot';
-    indicator.id = 'typingIndicator';
-    indicator.innerHTML = `
-        <div class="message-avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content">
-            <div class="typing-indicator active">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </div>
-    `;
-    chatbotMessages.appendChild(indicator);
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-}
-
-function hideTypingIndicator() {
-    const indicator = document.getElementById('typingIndicator');
-    if (indicator) {
-        indicator.remove();
-    }
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Mobile menu functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const mobileToggle = document.createElement('div');
-    mobileToggle.className = 'mobile-menu-toggle';
-    mobileToggle.innerHTML = '<i class="fas fa-bars"></i>';
-    document.body.appendChild(mobileToggle);
-    
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    document.body.appendChild(overlay);
-    
-    const sidebar = document.querySelector('.sidebar');
-    
-    mobileToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-        mobileToggle.classList.toggle('active');
-        
-        const icon = mobileToggle.querySelector('i');
-        if (sidebar.classList.contains('active')) {
-            icon.className = 'fas fa-times';
-            document.body.style.overflow = 'hidden';
-        } else {
-            icon.className = 'fas fa-bars';
-            document.body.style.overflow = '';
-        }
-    });
-    
-    overlay.addEventListener('click', function() {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-        mobileToggle.classList.remove('active');
-        mobileToggle.querySelector('i').className = 'fas fa-bars';
-        document.body.style.overflow = '';
-    });
-    
-    if (window.innerWidth <= 992) {
-        const sidebarLinks = sidebar.querySelectorAll('a');
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                mobileToggle.classList.remove('active');
-                mobileToggle.querySelector('i').className = 'fas fa-bars';
+        // Toggle chatbot
+        chatbotToggle.addEventListener('click', function() {
+            chatbotContainer.classList.toggle('active');
+            chatbotToggle.classList.toggle('active');
+            if (chatbotContainer.classList.contains('active')) {
+                chatbotInput.focus();
+                if (window.innerWidth <= 768) {
+                    document.body.style.overflow = 'hidden';
+                }
+            } else {
                 document.body.style.overflow = '';
-            });
-        });
-    }
-});
-
-// Auto-close mobile navbar
-document.addEventListener('DOMContentLoaded', function() {
-    const navbarToggler = document.querySelector('.navbar-toggler');
-    const navbarCollapse = document.querySelector('.navbar-collapse');
-    
-    if (navbarCollapse && navbarToggler) {
-        document.addEventListener('click', function(event) {
-            const isClickInsideNav = navbarCollapse.contains(event.target);
-            const isClickOnToggler = navbarToggler.contains(event.target);
-            
-            if (!isClickInsideNav && !isClickOnToggler && navbarCollapse.classList.contains('show')) {
-                navbarToggler.click();
             }
         });
-        
-        if (window.innerWidth <= 992) {
-            const navLinks = navbarCollapse.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (navbarCollapse.classList.contains('show')) {
-                        navbarToggler.click();
-                    }
-                });
+
+        chatbotClose.addEventListener('click', function() {
+            chatbotContainer.classList.remove('active');
+            chatbotToggle.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+
+        // Quick action buttons
+        document.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const message = this.getAttribute('data-message');
+                sendMessage(message);
+            });
+        });
+
+        // Send message on button click
+        chatbotSend.addEventListener('click', function() {
+            const message = chatbotInput.value.trim();
+            if (message) {
+                sendMessage(message);
+            }
+        });
+
+        // Send message on Enter key
+        chatbotInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const message = chatbotInput.value.trim();
+                if (message) {
+                    sendMessage(message);
+                }
+            }
+        });
+
+        // Function to send message
+        function sendMessage(message) {
+            // Clear input
+            chatbotInput.value = '';
+            
+            // Remove welcome message if it exists
+            const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Disable input while processing
+            chatbotInput.disabled = true;
+            chatbotSend.disabled = true;
+            
+            // Get CSRF token
+            const csrftoken = getCookie('csrftoken');
+            
+            // Send to backend
+            fetch('/chatbot/api/chatbot/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideTypingIndicator();
+                
+                if (data.reply) {
+                    addMessage(data.reply, 'bot');
+                } else {
+                    addMessage('Sorry, I received an unexpected response.', 'bot');
+                }
+                
+                chatbotInput.disabled = false;
+                chatbotSend.disabled = false;
+                chatbotInput.focus();
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                hideTypingIndicator();
+                
+                let errorMsg = 'Sorry, I\'m having trouble connecting. ';
+                if (error.message.includes('404')) {
+                    errorMsg += 'API endpoint not found.';
+                } else if (error.message.includes('403')) {
+                    errorMsg += 'Authentication error.';
+                } else if (error.message.includes('500')) {
+                    errorMsg += 'Server error.';
+                } else {
+                    errorMsg += 'Please try again.';
+                }
+                
+                addMessage(errorMsg, 'bot');
+                chatbotInput.disabled = false;
+                chatbotSend.disabled = false;
             });
         }
-    }
-});
+
+        // Function to add message to chat
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const avatar = type === 'bot' 
+                ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
+                : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
+            
+            messageDiv.innerHTML = `
+                ${avatar}
+                <div class="message-content">
+                    <div class="message-bubble">${formatMessage(text)}</div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+            
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Format message (preserve line breaks and emojis)
+        function formatMessage(text) {
+            return text.replace(/\n/g, '<br>');
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'message bot';
+            indicator.id = 'typingIndicator';
+            indicator.innerHTML = `
+                <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="typing-indicator active">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            chatbotMessages.appendChild(indicator);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+
+    // Nurse-specific notification count
+    {% if unread_count > 0 %}
+    console.log('You have {{ unread_count }} unread notifications');
+    {% endif %}
 </script>
+{% endblock %}
 
-{% block scripts %}{% endblock %}
-
-</body>
-</html>
+{% block scripts %}
+<!-- Additional nurse-specific scripts can go here -->
+{% endblock %}

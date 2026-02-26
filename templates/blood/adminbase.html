@@ -1,645 +1,245 @@
+{% extends 'shared/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Admin {% endblock %}</title>
+{% block title %}Admin Dashboard{% endblock %}
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet" />
+{% block nav_icon %}fas fa-user-cog{% endblock %}
+{% block app_name %}Admin Portal{% endblock %}
 
+{% block sidebar_icon %}fas fa-user-cog{% endblock %}
+{% block sidebar_title %}Admin Panel{% endblock %}
+
+{% block user_role_label %}Administrator{% endblock %}
+
+{% block auth_card_class %}admin{% endblock %}
+{% block auth_icon %}fas fa-user-cog{% endblock %}
+{% block auth_title %}Admin Login{% endblock %}
+
+{% block profile_menu %}
+    <a class="dropdown-item" href="#">
+        <i class="fas fa-user-circle"></i> View Profile
+    </a>
+    <a class="dropdown-item" href="#">
+        <i class="fas fa-edit"></i> Edit Profile
+    </a>
+{% endblock %}
+
+{% block profile_url %}#{% endblock %}
+{% block edit_profile_url %}#{% endblock %}
+{% block notifications_url %}#{% endblock %}
+
+{% block sidebar_menu %}
+    <a href="{% url 'admin-dashboard' %}" class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
+        <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{% url 'admin-patient' %}" class="{% if request.resolver_match.url_name == 'admin-patient' %}active{% endif %}">
+        <i class="fas fa-user-injured"></i> Patients
+    </a>
+    <a href="{% url 'admin-nurse' %}" class="{% if request.resolver_match.url_name == 'admin-nurse' %}active{% endif %}">
+        <i class="fas fa-user-md"></i> Nurses
+    </a>
+    <a href="{% url 'admin-donor' %}" class="{% if request.resolver_match.url_name == 'admin-donor' %}active{% endif %}">
+        <i class="fas fa-hand-holding-heart"></i> Donors
+    </a>
+    <a href="{% url 'admin-donation' %}" class="{% if request.resolver_match.url_name == 'admin-donation' %}active{% endif %}">
+        <i class="fas fa-hand-holding-medical"></i> Donations
+        {% if new_donations_count|default:0 > 0 %}
+            <span class="badge badge-danger ml-2">{{ new_donations_count }}</span>
+        {% endif %}
+    </a>
+    <a href="{% url 'admin-request' %}" class="{% if request.resolver_match.url_name == 'admin-request' %}active{% endif %}">
+        <i class="fas fa-spinner"></i> Blood Requests
+        {% if new_requests_count|default:0 > 0 %}
+            <span class="badge badge-danger ml-2">{{ new_requests_count }}</span>
+        {% endif %}
+    </a>
+    <a href="{% url 'admin-blood' %}" class="{% if request.resolver_match.url_name == 'admin-blood' %}active{% endif %}">
+        <i class="fas fa-tint"></i> Blood Stock
+    </a>
+    <a href="{% url 'admin_contacts' %}" class="{% if request.resolver_match.url_name == 'admin_contacts' %}active{% endif %}">
+        <i class="fas fa-address-book"></i> Contacts
+    </a>
+    <a href="{% url 'admin-post-notification' %}" class="{% if request.resolver_match.url_name == 'admin-post-notification' %}active{% endif %}">
+        <i class="fas fa-bell"></i> Post Notification
+    </a>
     
-    <link rel="icon" href="{% static 'app/img/favicon.ico' %}">
+    {% if current_blood_request %}
+        <div class="mt-3 px-3">
+            <a href="{% url 'blood_request_stock_transactions' blood_request_id=current_blood_request.id %}" class="btn btn-primary btn-sm btn-block">
+                <i class="fas fa-exchange-alt"></i> View Stock Units
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
 
-    
-    <!-- Bootstrap 4 CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
-        crossorigin="anonymous" />
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-            <!-- Your Custom CSS -->
-            <link rel="stylesheet" href="/static/css/admin.css">
+{% block extra_css %}
     <style>
-
-    </style>
-
-    {% block extra_head %}{% endblock %}
-</head>
-
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand navbar-light">
-
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'logout' %}">Logout <i class="fas fa-sign-out-alt"></i></a>
-            </li>
-        </ul>
-    </nav>
-
-    <div class="wrapper">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <h2>Admin Panel</h2>
-            <ul>
-                <li class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
-                    <a href="{% url 'admin-dashboard' %}"><i class="fas fa-home"></i> Dashboard</a>
-                </li>
-
-                <li class="{% if request.resolver_match.url_name == 'admin-patient' %}active{% endif %}">
-                    <a href="{% url 'admin-patient' %}"><i class="fas fa-user-injured"></i> Patients</a>
-                </li>
-                <li class="{% if request.resolver_match.url_name == 'admin-nurse' %}active{% endif %}">
-                    <a href="{% url 'admin-nurse' %}"><i class="fas fa-user-md"></i> Nurses</a>
-                </li>
-                <li class="{% if request.resolver_match.url_name == 'admin-donor' %}active{% endif %}">
-                    <a href="{% url 'admin-donor' %}"><i class="fas fa-hand-holding-heart"></i> Donors</a>
-                </li>
-                <li class="{% if request.resolver_match.url_name == 'admin-donation' %}active{% endif %}">
-                    <a href="{% url 'admin-donation' %}">
-                        <i class="fas fa-hand-holding-medical"></i> Donations
-                        {% if new_donations_count|default:0 > 0 %}
-                        <span class="badge badge-danger">{{ new_donations_count }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                <li class="{% if request.resolver_match.url_name == 'admin-request' %}active{% endif %}">
-                    <a href="{% url 'admin-request' %}">
-                        <i class="fas fa-spinner"></i> Blood Requests
-                        {% if new_requests_count|default:0 > 0 %}
-                        <span class="badge badge-danger">{{ new_requests_count }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                <li> <a href="{% url 'admin-nurse-blood-requests' %}">Nurses Blood Requests</a>
-                </li>
-
-                <li><a href="{% url 'admin-blood' %}"><i class="fas fa-tint"></i> Blood Stock</a></li>
-                <li><a href="{% url 'admin_contacts' %}"><i class="fas fa-address-book"></i> Contacts</a></li>
-                <li><a href="{% url 'admin-post-notification' %}"><i class="fas fa-bell"></i> Post Notification</a></li>
-
-                {% if current_blood_request %}
-                <a href="{% url 'blood_request_stock_transactions' blood_request_id=current_blood_request.id %}" class="btn btn-primary">
-                    View Stock Units Affected
-                </a>
-                {% endif %}
-            </ul>
-        </div>
-
-        <!-- Main content -->
-        <div class="main_content">
-            <!-- Django messages block -->
-            {% if messages %}
-            <div class="container mt-3">
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            {% block content %}
-            <!-- Page specific contents go here -->
-            {% endblock %}
-        </div>
-    </div>
-
-    <!-- Chatbot Toggle Button -->
-    <div class="chatbot-toggle" id="chatbotToggle">
-        <i class="fas fa-comments"></i>
-    </div>
-
-    <!-- Chatbot Container -->
-    <div class="chatbot-container" id="chatbotContainer">
-        <!-- Header -->
-        <div class="chatbot-header">
-            <div class="chatbot-header-content">
-                <div class="chatbot-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="chatbot-title">
-                    <h3>BloodBot Assistant</h3>
-                    <p>Online • Here to help</p>
-                </div>
-            </div>
-            <button class="chatbot-close" id="chatbotClose">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <button class="quick-action-btn" data-message="My profile">👤 My Profile</button>
-            <button class="quick-action-btn" data-message="Blood stock">🩸 Stock Info</button>
-            <button class="quick-action-btn" data-message="Donation centers">📍 Centers</button>
-            <button class="quick-action-btn" data-message="Eligibility">✅ Eligibility</button>
-        </div>
-
-        <!-- Messages Area -->
-        <div class="chatbot-messages" id="chatbotMessages">
-            <div class="welcome-message">
-                <i class="fas fa-comments"></i>
-                <h4>Welcome to BloodBot!</h4>
-                <p>I'm here to help you with information about blood donations, requests, and more.</p>
-                <p style="font-size: 13px;">Try asking: "What's my blood type?" or "Show donation centers"</p>
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="chatbot-input">
-            <input
-                type="text"
-                id="chatbotInput"
-                placeholder="Type your message..."
-                autocomplete="off"
-            />
-            <button id="chatbotSend">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Bootstrap JS dependencies -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
-        crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
-        crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
-        crossorigin="anonymous"></script>
-
-    <script>
-        // Chatbot functionality
-        const chatbotToggle = document.getElementById('chatbotToggle');
-        const chatbotContainer = document.getElementById('chatbotContainer');
-        const chatbotClose = document.getElementById('chatbotClose');
-        const chatbotInput = document.getElementById('chatbotInput');
-        const chatbotSend = document.getElementById('chatbotSend');
-        const chatbotMessages = document.getElementById('chatbotMessages');
-
-        // Generate session ID
-        let sessionId = sessionStorage.getItem('chatbot_session_id');
-        if (!sessionId) {
-            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            sessionStorage.setItem('chatbot_session_id', sessionId);
-        }
-
-        // Toggle chatbot
-        chatbotToggle.addEventListener('click', function () {
-            chatbotContainer.classList.toggle('active');
-            chatbotToggle.classList.toggle('active');
-            if (chatbotContainer.classList.contains('active')) {
-                chatbotInput.focus();
-            }
-        });
-
-        chatbotClose.addEventListener('click', function () {
-            chatbotContainer.classList.remove('active');
-            chatbotToggle.classList.remove('active');
-        });
-
-        // Quick action buttons
-        document.querySelectorAll('.quick-action-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const message = this.getAttribute('data-message');
-                sendMessage(message);
-            });
-        });
-
-        // Send message on button click
-        chatbotSend.addEventListener('click', function () {
-            const message = chatbotInput.value.trim();
-            if (message) {
-                sendMessage(message);
-            }
-        });
-
-        // Send message on Enter key
-        chatbotInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                const message = chatbotInput.value.trim();
-                if (message) {
-                    sendMessage(message);
-                }
-            }
-        });
-
-        // Function to send message
-        function sendMessage(message) {
-            // Clear input
-            chatbotInput.value = '';
-
-            // Remove welcome message if it exists
-            const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
-            if (welcomeMsg) {
-                welcomeMsg.remove();
-            }
-
-            // Add user message to chat
-            addMessage(message, 'user');
-
-            // Show typing indicator
-            showTypingIndicator();
-
-            // Disable input while processing
-            chatbotInput.disabled = true;
-            chatbotSend.disabled = true;
-
-            // Get CSRF token
-            const csrftoken = getCookie('csrftoken');
-
-            // Send to backend
-            fetch('/chatbot/api/chatbot/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    message: message,
-                    session_id: sessionId
-                })
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Hide typing indicator
-                    hideTypingIndicator();
-
-                    // Add bot response
-                    if (data.reply) {
-                        addMessage(data.reply, 'bot');
-                    } else if (data.error) {
-                        addMessage(`Error: ${data.error}`, 'bot');
-                        console.error('API Error:', data.error);
-                    } else {
-                        addMessage('Sorry, I received an unexpected response.', 'bot');
-                    }
-
-                    // Re-enable input
-                    chatbotInput.disabled = false;
-                    chatbotSend.disabled = false;
-                    chatbotInput.focus();
-                })
-                .catch(error => {
-                    console.error('Fetch Error:', error);
-                    hideTypingIndicator();
-
-                    // More specific error message
-                    let errorMsg = 'Sorry, I\'m having trouble connecting. ';
-                    if (error.message.includes('404')) {
-                        errorMsg += 'API endpoint not found. Please check the URL configuration.';
-                    } else if (error.message.includes('403')) {
-                        errorMsg += 'Authentication error. Please refresh the page.';
-                    } else if (error.message.includes('500')) {
-                        errorMsg += 'Server error. Please try again later.';
-                    } else {
-                        errorMsg += 'Please check your connection and try again.';
-                    }
-
-                    addMessage(errorMsg, 'bot');
-                    chatbotInput.disabled = false;
-                    chatbotSend.disabled = false;
-                });
-        }
-
-        // Function to add message to chat
-        function addMessage(text, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-            const avatar = type === 'bot'
-                ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
-                : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
-
-            messageDiv.innerHTML = `
-                ${avatar}
-                <div class="message-content">
-                    <div class="message-bubble">${formatMessage(text)}</div>
-                    <div class="message-time">${timeString}</div>
-                </div>
-            `;
-
-            chatbotMessages.appendChild(messageDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        // Format message (preserve line breaks and emojis)
-        function formatMessage(text) {
-            return text.replace(/\n/g, '<br>');
-        }
-
-        // Show typing indicator
-        function showTypingIndicator() {
-            const indicator = document.createElement('div');
-            indicator.className = 'message bot';
-            indicator.id = 'typingIndicator';
-            indicator.innerHTML = `
-                <div class="message-avatar"><i class="fas fa-robot"></i></div>
-                <div class="message-content">
-                    <div class="typing-indicator active">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-            `;
-            chatbotMessages.appendChild(indicator);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        // Hide typing indicator
-        function hideTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
-        }
-
-        // Get CSRF token from cookies
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        // ========================================
-// MOBILE MENU FUNCTIONALITY
-// Add this script before closing </body> tag
-// ========================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Create mobile menu toggle button
-    const mobileToggle = document.createElement('div');
-    mobileToggle.className = 'mobile-menu-toggle';
-    mobileToggle.innerHTML = '<i class="fas fa-bars"></i>';
-    document.body.appendChild(mobileToggle);
-    
-    // Create overlay for mobile sidebar
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    document.body.appendChild(overlay);
-    
-    const sidebar = document.querySelector('.sidebar');
-    
-    // Toggle sidebar on mobile
-    mobileToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-        mobileToggle.classList.toggle('active');
-        
-        // Change icon
-        const icon = mobileToggle.querySelector('i');
-        if (sidebar.classList.contains('active')) {
-            icon.className = 'fas fa-times';
-        } else {
-            icon.className = 'fas fa-bars';
+        /* Admin-specific color overrides */
+        .sidebar {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
         }
         
-        // Prevent body scroll when sidebar is open
-        if (sidebar.classList.contains('active')) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
+        .navbar-brand {
+            color: #2c3e50 !important;
         }
-    });
-    
-    // Close sidebar when clicking overlay
-    overlay.addEventListener('click', function() {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-        mobileToggle.classList.remove('active');
-        mobileToggle.querySelector('i').className = 'fas fa-bars';
-        document.body.style.overflow = '';
-    });
-    
-    // Close sidebar when clicking a link (mobile only)
-    if (window.innerWidth <= 992) {
-        const sidebarLinks = sidebar.querySelectorAll('a');
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                mobileToggle.classList.remove('active');
-                mobileToggle.querySelector('i').className = 'fas fa-bars';
-                document.body.style.overflow = '';
-            });
-        });
-    }
-    
-    // Handle window resize
-    let resizeTimer;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(function() {
-            // Close sidebar on desktop
-            if (window.innerWidth > 992) {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                mobileToggle.classList.remove('active');
-                mobileToggle.querySelector('i').className = 'fas fa-bars';
-                document.body.style.overflow = '';
+        
+        .profile-dropdown img {
+            border-color: #2c3e50;
+        }
+        
+        .avatar-placeholder {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border-color: #2c3e50;
+        }
+        
+        .notification-icon:hover {
+            color: #2c3e50;
+        }
+        
+        .notification-badge {
+            background: #2c3e50;
+        }
+        
+        .dropdown-item i {
+            color: #2c3e50;
+        }
+        
+        /* Sidebar active link color */
+        .sidebar a:hover, .sidebar a.active {
+            border-left-color: #2c3e50;
+        }
+        
+        /* Admin-specific badge styling */
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            float: right;
+        }
+        
+        /* Chatbot admin-specific colors */
+        .chatbot-toggle {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        .chatbot-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        .chatbot-avatar {
+            color: #2c3e50;
+        }
+        
+        .message.bot .message-avatar {
+            color: #2c3e50;
+        }
+        
+        .message.user .message-bubble {
+            background: #2c3e50;
+        }
+        
+        .message.user .message-avatar {
+            background: #2c3e50;
+        }
+        
+        .chatbot-input button {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        .welcome-message i {
+            color: #2c3e50;
+        }
+        
+        .quick-action-btn:hover {
+            border-color: #2c3e50;
+            color: #2c3e50;
+        }
+        
+        /* Auth container override for admin */
+        .auth-page .auth-container {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        /* Admin navbar specific */
+        .navbar-nav .nav-link {
+            color: #2c3e50 !important;
+        }
+        
+        .navbar-nav .nav-link:hover {
+            color: #34495e !important;
+        }
+        
+        /* Sidebar badge positioning */
+        .sidebar a {
+            position: relative;
+        }
+        
+        .sidebar .badge {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Mobile menu toggle for admin */
+        .mobile-menu-toggle {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .navbar {
+                left: 0 !important;
             }
-        }, 250);
-    });
-    
-    // Prevent zoom on double-tap (iOS)
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(event) {
-        const now = Date.now();
-        if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
-    
-    // Fix iOS 100vh issue
-    function setVH() {
-        let vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-    }
-    setVH();
-    window.addEventListener('resize', setVH);
-    window.addEventListener('orientationchange', setVH);
-});
-
-// ========================================
-// IMPROVED CHATBOT FOR MOBILE
-// ========================================
-
-// Modify existing chatbot toggle to work better on mobile
-const existingChatbotToggle = document.getElementById('chatbotToggle');
-const existingChatbotContainer = document.getElementById('chatbotContainer');
-
-if (existingChatbotToggle && existingChatbotContainer) {
-    existingChatbotToggle.addEventListener('click', function() {
-        if (window.innerWidth <= 768) {
-            // On mobile, prevent body scroll when chatbot is open
-            if (existingChatbotContainer.classList.contains('active')) {
-                document.body.style.overflow = '';
-            } else {
-                document.body.style.overflow = 'hidden';
-            }
-        }
-    });
-    
-    const existingChatbotClose = document.getElementById('chatbotClose');
-    if (existingChatbotClose) {
-        existingChatbotClose.addEventListener('click', function() {
-            document.body.style.overflow = '';
-        });
-    }
-}
-
-// ========================================
-// MOBILE NAVBAR IMPROVEMENTS
-// ========================================
-
-// Auto-close mobile navbar after clicking a link
-document.addEventListener('DOMContentLoaded', function() {
-    const navbarToggler = document.querySelector('.navbar-toggler');
-    const navbarCollapse = document.querySelector('.navbar-collapse');
-    
-    if (navbarCollapse && navbarToggler) {
-        // Close navbar when clicking outside
-        document.addEventListener('click', function(event) {
-            const isClickInsideNav = navbarCollapse.contains(event.target);
-            const isClickOnToggler = navbarToggler.contains(event.target);
             
-            if (!isClickInsideNav && !isClickOnToggler && navbarCollapse.classList.contains('show')) {
-                navbarToggler.click();
+            .main-content {
+                margin-left: 0 !important;
             }
-        });
-        
-        // Close navbar when clicking a nav link (mobile only)
-        if (window.innerWidth <= 992) {
-            const navLinks = navbarCollapse.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (navbarCollapse.classList.contains('show')) {
-                        navbarToggler.click();
-                    }
-                });
-            });
         }
-    }
-});
+    </style>
+{% endblock %}
 
-// ========================================
-// TOUCH IMPROVEMENTS
-// ========================================
-
-// Add active state to touch elements
-document.addEventListener('DOMContentLoaded', function() {
-    const touchElements = document.querySelectorAll('a, button, .btn, .card, .sidebar ul li a');
-    
-    touchElements.forEach(element => {
-        element.addEventListener('touchstart', function() {
-            this.style.opacity = '0.7';
-        }, {passive: true});
-        
-        element.addEventListener('touchend', function() {
-            this.style.opacity = '1';
-        }, {passive: true});
-        
-        element.addEventListener('touchcancel', function() {
-            this.style.opacity = '1';
-        }, {passive: true});
-    });
-});
-
-// ========================================
-// FORM INPUT ZOOM PREVENTION (iOS)
-// ========================================
-
-// Prevent iOS from zooming in on input focus
-if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+{% block extra_js %}
+<script>
+    // Admin-specific JavaScript
     document.addEventListener('DOMContentLoaded', function() {
-        const inputs = document.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            if (input.style.fontSize === '' || parseInt(input.style.fontSize) < 16) {
-                input.style.fontSize = '16px';
-            }
-        });
+        console.log('✅ Admin base template loaded');
+        
+        // Update notification counts if they exist
+        {% if new_donations_count > 0 or new_requests_count > 0 %}
+        console.log('📊 New items - Donations: {{ new_donations_count|default:0 }}, Requests: {{ new_requests_count|default:0 }}');
+        {% endif %}
     });
-}
 
-// ========================================
-// SMOOTH SCROLL FOR ANCHOR LINKS
-// ========================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            const href = this.getAttribute('href');
-            if (href !== '#' && href !== '#!') {
-                const target = document.querySelector(href);
-                if (target) {
-                    e.preventDefault();
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+    // Optional: Real-time updates for admin dashboard
+    function updateCounts() {
+        fetch('/admin/api/counts/')
+            .then(response => response.json())
+            .then(data => {
+                // Update donation badge
+                const donationBadge = document.querySelector('a[href*="admin-donation"] .badge');
+                if (donationBadge && data.new_donations > 0) {
+                    donationBadge.textContent = data.new_donations;
+                    donationBadge.style.display = 'inline';
                 }
-            }
-        });
-    });
-});
+                
+                // Update request badge
+                const requestBadge = document.querySelector('a[href*="admin-request"] .badge');
+                if (requestBadge && data.new_requests > 0) {
+                    requestBadge.textContent = data.new_requests;
+                    requestBadge.style.display = 'inline';
+                }
+            })
+            .catch(error => console.error('Error updating counts:', error));
+    }
 
-// ========================================
-// ONLINE/OFFLINE DETECTION
-// ========================================
+    // Uncomment to enable real-time updates every 30 seconds
+    // setInterval(updateCounts, 30000);
+</script>
+{% endblock %}
 
-window.addEventListener('online', function() {
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-success';
-    alert.innerHTML = '✅ You are back online!';
-    alert.style.position = 'fixed';
-    alert.style.top = '100px';
-    alert.style.right = '20px';
-    alert.style.zIndex = '9999';
-    document.body.appendChild(alert);
-    
-    setTimeout(() => alert.remove(), 3000);
-});
-
-window.addEventListener('offline', function() {
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-warning';
-    alert.innerHTML = '⚠️ You are offline. Some features may not work.';
-    alert.style.position = 'fixed';
-    alert.style.top = '100px';
-    alert.style.right = '20px';
-    alert.style.zIndex = '9999';
-    document.body.appendChild(alert);
-    
-    setTimeout(() => alert.remove(), 5000);
-});
-    </script>
-
-    {% block extra_scripts %}{% endblock %}
-</body>
-
-</html>
+{% block extra_scripts %}
+<!-- Additional admin-specific scripts can go here -->
+{% endblock %}
