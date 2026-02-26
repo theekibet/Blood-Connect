@@ -6,7 +6,6 @@ from datetime import date
 from django.core.exceptions import ValidationError
 from donor.models import KENYAN_COUNTIES
 
-
 class Patient(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     profile_pic = models.ImageField(upload_to='profile_pic/Patient/', null=True, blank=True)
@@ -19,7 +18,7 @@ class Patient(models.Model):
     bloodgroup = models.CharField(max_length=10, null=True, blank=True)
     
     # ==========================================
-    # BLOOD GROUP VERIFICATION FIELDS (NEW)
+    # BLOOD GROUP VERIFICATION FIELDS
     # ==========================================
     bloodgroup_verified = models.BooleanField(
         default=False, 
@@ -49,6 +48,29 @@ class Patient(models.Model):
         object_id_field='recipient_object_id',
         related_query_name='patient_notifications'
     )
+    
+    class Meta:
+        verbose_name = "Patient"
+        verbose_name_plural = "Patients"
+        ordering = ['-id']
+
+    def clean(self):
+        super().clean()
+        # Only check if user exists
+        if self.user:
+            user = self.user
+            if hasattr(user, 'donor') and user.donor:
+                raise ValidationError("This user already has a Donor profile")
+            if hasattr(user, 'nurse') and user.nurse:
+                raise ValidationError("This user already has a Nurse profile")
+            if hasattr(user, 'lab_tech_profile') and user.lab_tech_profile:
+                raise ValidationError("This user already has a Lab Technician profile")
+            if hasattr(user, 'blood_bank_tech_profile') and user.blood_bank_tech_profile:
+                raise ValidationError("This user already has a Blood Bank Technician profile")
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()  # This calls clean() method
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.get_name() if self.user else "Unnamed Patient"
@@ -71,9 +93,8 @@ class Patient(models.Model):
             return years
         return None
     
-    
 # ------------------------
-# Blood Request Model
+# Blood Request Model (UPDATED - No Nurse Involvement)
 # ------------------------
 class BloodRequest(models.Model):
     
@@ -83,114 +104,104 @@ class BloodRequest(models.Model):
         ('AB+', 'AB+'), ('AB-', 'AB-'),
         ('O+', 'O+'), ('O-', 'O-'),
     ]
-
     STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved - Ready for Pickup'),
         ('rejected', 'Rejected'),
+        ('dispatched', 'Dispatched'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     )
-
+    
     request_by_patient = models.ForeignKey(
         'patient.Patient',
-        null=False,
-        blank=False,
         on_delete=models.CASCADE,
         related_name='blood_requests'
     )
-
+    
+    # Patient Information
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     patient_age = models.PositiveIntegerField()
     contact_number = models.CharField(max_length=20)
     emergency_contact = models.CharField(max_length=20, blank=True, null=True)
     national_id = models.CharField(max_length=50, blank=True, null=True)
-
+    
+    # Request Details
     bloodgroup = models.CharField(
         max_length=10,
         choices=BLOOD_GROUP_CHOICES,
-        blank=True,
-        null=True,
-        help_text="Patient's blood group"
+        help_text="Blood group needed"
     )
     unit = models.PositiveIntegerField(
-        blank=True,
-        null=True,
         help_text="Required blood volume in ml (450-2700)"
     )
-
     donation_center = models.ForeignKey(
         'blood.DonationCenter',
         on_delete=models.CASCADE,
-        null=False,
-        blank=False
+        help_text="Blood bank center to fulfill this request"
     )
-
     consent_confirmed = models.BooleanField(default=False)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending'
     )
-    is_seen = models.BooleanField(default=False)
-    stock_deducted = models.BooleanField(default=False)
-
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    appointments = GenericRelation(
-        'nurse.Appointment',
-        content_type_field='request_content_type',
-        object_id_field='request_object_id',
-        related_query_name='blood_requests'
-    )
-
-    approved_by_nurse = models.ForeignKey(
-        'nurse.Nurse',
+    
+    # Blood Bank Tech Actions
+    reviewed_by = models.ForeignKey(
+        'blood_bank_technician.BloodBankTechProfile',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='approved_blood_requests_nurse'
+        related_name='reviewed_patient_requests'
     )
-    approved_at_nurse = models.DateTimeField(null=True, blank=True)
-
-    rejected_by = models.CharField(max_length=20, null=True, blank=True)
-    rejected_at = models.DateTimeField(null=True, blank=True)
-    rejection_reason = models.TextField(null=True, blank=True)
-
-    cancelled_by = models.CharField(max_length=20, null=True, blank=True)
-    cancelled_at = models.DateTimeField(null=True, blank=True)
-    cancellation_reason = models.TextField(null=True, blank=True)
-
-    completed_by_nurse = models.ForeignKey(
-        'nurse.Nurse',
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    approved_by = models.ForeignKey(
+        'blood_bank_technician.BloodBankTechProfile',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='completed_blood_requests_nurse'
+        related_name='approved_patient_requests'
     )
-    completed_at_nurse = models.DateTimeField(null=True, blank=True)
-
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    rejected_reason = models.TextField(blank=True, null=True)
+    
+    dispatched_by = models.ForeignKey(
+        'blood_bank_technician.BloodBankTechProfile',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='dispatched_patient_requests'
+    )
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    
+    # Tracking fields
+    is_seen = models.BooleanField(default=False)
+    stock_deducted = models.BooleanField(default=False)  # ADD THIS LINE
+    
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
-
+    
     def clean(self):
         super().clean()
-        if not self.request_by_patient:
-            raise ValidationError("A patient must be associated with this blood request.")
         if self.unit and (self.unit < 450 or self.unit > 2700):
             raise ValidationError("Blood unit must be between 450ml and 2700ml.")
         if self.unit and self.unit % 50 != 0:
             raise ValidationError("Blood unit must be in multiples of 50ml.")
-
+    
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-
+    
     def __str__(self):
-        return f"Blood Request by {self.get_full_name()} ({self.bloodgroup or 'Unknown'}) - {self.status}"
-
+        return f"Blood Request by {self.get_full_name()} ({self.bloodgroup}) - {self.status}"
+    
     class Meta:
         ordering = ['-created_at']
         verbose_name = "Blood Request"

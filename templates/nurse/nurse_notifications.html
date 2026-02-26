@@ -21,7 +21,7 @@
                         <p class="mb-1">{{ note.message }}</p>
                     </div>
                     {% if not note.read %}
-                        <a href="{% url 'mark-nurse-notification-read' note.id %}" 
+                        <a href="{% url 'nurse:mark-nurse-notification-read' note.id %}" 
                            class="btn btn-sm btn-outline-success">
                             Mark as read
                         </a>

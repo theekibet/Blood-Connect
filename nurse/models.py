@@ -236,6 +236,7 @@ class Appointment(models.Model):
         ('rejected', 'Rejected'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
+        ('collected', 'Collected - Awaiting Testing'),  # NEW STATUS
     ]
 
     CANCELLED_BY_CHOICES = [
@@ -243,6 +244,14 @@ class Appointment(models.Model):
         ('nurse', 'Nurse'),
         ('system', 'System'),
         ('unknown', 'Unknown'),
+    ]
+
+    # ===== ROLE CHOICES =====
+    ROLE_CHOICES = [
+        ('nurse', 'Nurse/Phlebotomist'),
+        ('lab_tech', 'Lab Technologist'),
+        ('blood_bank_tech', 'Blood Bank Technician'),
+        ('system', 'System'),
     ]
 
     nurse = models.ForeignKey(
@@ -283,7 +292,7 @@ class Appointment(models.Model):
     request = GenericForeignKey('request_content_type', 'request_object_id')
     date = models.DateTimeField()
     status = models.CharField(
-        max_length=10,
+        max_length=20,  # Increased from 10 to accommodate 'collected'
         choices=STATUS_CHOICES,
         default='pending'
     )
@@ -292,13 +301,20 @@ class Appointment(models.Model):
     barcode = models.CharField(max_length=100, unique=True, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
-    # Tracking status changes (always nurse-driven)
+    # Tracking status changes
     status_changed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='appointment_status_updates'
+    )
+    status_changed_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True,
+        help_text='Role of the person who last changed status'
     )
     status_changed_at = models.DateTimeField(null=True, blank=True)
 
@@ -316,31 +332,144 @@ class Appointment(models.Model):
         blank=True,
         related_name='appointments_cancelled'
     )
+    cancelled_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True
+    )
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
-    # Nurse actions only
-    approved_by_nurse = models.ForeignKey(
+    # Approval tracking (nurse/phlebotomist)
+    approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='nurse_approved_appointments'
+        related_name='approved_appointments'
     )
-    approved_at_nurse = models.DateTimeField(null=True, blank=True)
+    approved_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True,
+        default='nurse'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
 
-    completed_by_nurse = models.ForeignKey(
+    # Collection tracking (nurse/phlebotomist)
+    collected_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='nurse_completed_appointments'
+        related_name='collected_appointments'
     )
-    completed_at_nurse = models.DateTimeField(null=True, blank=True)
+    collected_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True,
+        default='nurse'
+    )
+    collected_at = models.DateTimeField(null=True, blank=True)
 
+    # Lab testing tracking
+    sent_to_lab_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When blood was sent to lab for testing'
+    )
+    lab_received_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When lab received the sample'
+    )
+    lab_tested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='tested_appointments'
+    )
+    lab_tested_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True
+    )
+    lab_tested_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When lab completed testing'
+    )
+
+    # Completion tracking (can be nurse or lab tech depending on workflow)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='completed_appointments'
+    )
+    completed_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Rejection tracking
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='rejected_appointments'
+    )
+    rejected_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True
+    )
     rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+
+    # ===== SAFETY VERIFICATION TRACKING =====
+    safety_verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='safety_verified_appointments'
+    )
+    safety_verified_by_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True
+    )
+    safety_verified_at = models.DateTimeField(null=True, blank=True)
+    safety_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending Verification'),
+            ('safe', 'Safe'),
+            ('unsafe', 'Unsafe'),
+        ],
+        default='pending'
+    )
 
     class Meta:
         ordering = ['-date']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['donor']),
+            models.Index(fields=['patient']),
+            models.Index(fields=['-date']),
+        ]
 
     @property
     def is_donation(self):
@@ -352,6 +481,25 @@ class Appointment(models.Model):
         """True if linked to a BloodRequest or DonorBloodRequest."""
         return self.request_content_type is not None
 
+    @property
+    def current_phase(self):
+        """Return current workflow phase"""
+        if self.status == 'pending':
+            return 'pending_approval'
+        elif self.status == 'approved':
+            return 'awaiting_collection'
+        elif self.status == 'collected':
+            return 'awaiting_testing'
+        elif self.status == 'completed':
+            if self.safety_status == 'safe':
+                return 'completed_safe'
+            elif self.safety_status == 'unsafe':
+                return 'completed_unsafe'
+            return 'completed'
+        elif self.status in ['rejected', 'cancelled']:
+            return 'terminated'
+        return self.status
+
     def __str__(self):
         participants = []
         if self.donor:
@@ -359,7 +507,7 @@ class Appointment(models.Model):
         if self.patient:
             participants.append(f"Patient {self.patient.user.username}")
         participant_str = " & ".join(participants) if participants else "No participant"
-        return f"Appointment {self.barcode or self.id} on {self.date.strftime('%Y-%m-%d %H:%M')} with Nurse {self.nurse.last_name} and {participant_str}"
+        return f"Appointment {self.barcode or self.id} - {self.get_status_display()} - {participant_str}"
 
     def generate_unique_barcode(self):
         """Generate a unique barcode for the appointment."""
@@ -370,38 +518,63 @@ class Appointment(models.Model):
                 return
         raise ValidationError("Failed to generate a unique barcode for Appointment after several attempts.")
 
-    def set_status(self, status, user):
+    def set_status(self, status, user, role='nurse', **kwargs):
         """
-        Nurse-only method for updating appointment status.
-        Admins cannot change status; they only view/report.
+        Update appointment status with role tracking
         """
-        if not hasattr(user, 'nurse'):
-            raise ValidationError("Only nurses can update appointment status.")
-
         self.status = status
         self.status_changed_at = timezone.now()
         self.status_changed_by = user
+        self.status_changed_by_role = role
 
         if status == 'approved':
-            self.approved_by_nurse = user
-            self.approved_at_nurse = timezone.now()
+            self.approved_by = user
+            self.approved_by_role = role
+            self.approved_at = timezone.now()
+            
+        elif status == 'collected':
+            self.collected_by = user
+            self.collected_by_role = role
+            self.collected_at = timezone.now()
+            self.sent_to_lab_at = timezone.now()
+            
         elif status == 'completed':
-            self.completed_by_nurse = user
-            self.completed_at_nurse = timezone.now()
+            self.completed_by = user
+            self.completed_by_role = role
+            self.completed_at = timezone.now()
+            
         elif status == 'rejected':
+            self.rejected_by = user
+            self.rejected_by_role = role
             self.rejected_at = timezone.now()
+            self.rejection_reason = kwargs.get('reason', '')
+            
         elif status == 'cancelled':
-            self.cancelled_by = 'nurse'
-            self.cancelled_at = timezone.now()
+            self.cancelled_by = kwargs.get('cancelled_by', 'nurse')
             self.cancelled_by_user = user
+            self.cancelled_by_role = role
+            self.cancelled_at = timezone.now()
 
         self.save()
+
+    def mark_safety_verified(self, user, role, safety_status, notes=None):
+        """Mark safety verification status"""
+        self.safety_verified_by = user
+        self.safety_verified_by_role = role
+        self.safety_verified_at = timezone.now()
+        self.safety_status = safety_status
+        if notes:
+            self.safety_notes = notes
+        self.save(update_fields=[
+            'safety_verified_by', 'safety_verified_by_role',
+            'safety_verified_at', 'safety_status'
+        ])
 
     def clean(self):
         """
         Validate donor vs patient rules and request consistency.
         """
-        from donor.models import  DonorBloodRequest
+        from donor.models import DonorBloodRequest
         from donor.models import BloodDonate
         from patient.models import BloodRequest
 
@@ -433,100 +606,3 @@ class Appointment(models.Model):
             self.generate_unique_barcode()
         super().save(*args, **kwargs)
         
-        
-class NurseBloodRequest(models.Model):
-    
-    STATUS_PENDING = 'pending'
-    STATUS_APPROVED = 'approved'
-    STATUS_REJECTED = 'rejected'
-    STATUS_FULFILLED = 'fulfilled'
-    STATUS_CANCELLED = 'cancelled'
-
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_APPROVED, 'Approved'),
-        (STATUS_REJECTED, 'Rejected'),
-        (STATUS_FULFILLED, 'Fulfilled'),
-        (STATUS_CANCELLED, 'Cancelled'),
-    ]
-
-    # Use local BLOOD_GROUP_CHOICES constant to avoid import problems
-    BLOOD_GROUP_CHOICES = BLOOD_GROUP_CHOICES
-
-    URGENCY_CHOICES = [
-        ('low', 'Low'),
-        ('medium', 'Medium'),
-        ('high', 'High'),
-        ('critical', 'Critical'),
-    ]
-
-    requester = models.ForeignKey(
-        'nurse.Nurse',
-        on_delete=models.CASCADE,
-        related_name='blood_requests_made',
-        help_text='Nurse who made the blood request.'
-    )
-    supplying_center = models.ForeignKey(
-        'blood.DonationCenter',
-        on_delete=models.CASCADE,
-        related_name='outgoing_requests',
-        help_text='Donation center supplying the requested blood.'
-    )
-    blood_group = models.CharField(
-        max_length=3,
-        choices=BLOOD_GROUP_CHOICES,
-        help_text='Blood group requested.'
-    )
-    units = models.PositiveIntegerField(
-        help_text='Quantity of blood requested in milliliters.'
-    )
-    urgency_level = models.CharField(
-        max_length=10,
-        choices=URGENCY_CHOICES,
-        default='medium',
-        help_text='Indicate the urgency of this blood request.'
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-        help_text='Current status of the blood request.'
-    )
-    reason = models.TextField(
-        blank=True,
-        null=True,
-        help_text='Reason or notes for this blood request.'
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    used_stock_units = models.ManyToManyField(
-        'blood.StockUnit',
-        through='NurseBloodRequestStockUnit',
-        related_name='blood_requests',
-        blank=True,
-    )
-
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Nurse Blood Request'
-        verbose_name_plural = 'Nurse Blood Requests'
-
-    def __str__(self):
-        nurse_name = getattr(self.requester, 'get_full_name', None)
-        nurse_display = nurse_name() if callable(nurse_name) else str(self.requester)
-        if not nurse_display:
-            nurse_display = self.requester.last_name
-        return f"{self.units}ml {self.blood_group} requested from {self.supplying_center.name} by Nurse {nurse_display}"
-
-class NurseBloodRequestStockUnit(models.Model):
-    
-    blood_request = models.ForeignKey('nurse.NurseBloodRequest', on_delete=models.CASCADE)
-    stock_unit = models.ForeignKey('blood.StockUnit', on_delete=models.CASCADE)
-    units_used = models.PositiveIntegerField(help_text='Amount of blood (ml) used from this stock unit.')
-
-    class Meta:
-        unique_together = ('blood_request', 'stock_unit')
-
-    def __str__(self):
-        return f"{self.units_used}ml from {self.stock_unit} for request #{self.blood_request.id}"

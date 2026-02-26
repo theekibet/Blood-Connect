@@ -1,0 +1,177 @@
+<!-- templates/lab_technologist/profile_detail.html -->
+{% extends 'lab_technologist/base.html' %}
+
+{% block title %}{{ profile_type }} Profile - {{ profile.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ profile_type }} Profile</h4>
+                    <a href="{% url 'lab_technologist:lab_tech_profile_edit' profile.pk %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Profile Picture Section -->
+                    <div class="text-center mb-4">
+                        {% if profile.profile_pic %}
+                            <img src="{{ profile.profile_pic.url }}" alt="Profile Picture" 
+                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        {% else %}
+                            <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: bold; margin: 0 auto; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                {{ profile.user.first_name|first|default:profile.user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Optional: Add a badge for active status on profile picture -->
+                        <div class="mt-2">
+                            {% if profile.is_active %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle"></i> Active Account</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> Inactive Account</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2">
+                                <i class="fas fa-user-circle text-primary mr-2"></i>Personal Information
+                            </h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Full Name:</th>
+                                    <td><strong>{{ profile.user.get_full_name|default:"Not provided" }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Username:</th>
+                                    <td>@{{ profile.user.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>
+                                        {% if profile.user.email %}
+                                            <a href="mailto:{{ profile.user.email }}">{{ profile.user.email }}</a>
+                                        {% else %}
+                                            <span class="text-muted">Not provided</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Phone:</th>
+                                    <td>
+                                        {% if profile.phone %}
+                                            <a href="tel:{{ profile.phone }}">{{ profile.phone }}</a>
+                                        {% else %}
+                                            <span class="text-muted">Not provided</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2">
+                                <i class="fas fa-briefcase text-primary mr-2"></i>Professional Information
+                            </h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Employee ID:</th>
+                                    <td><span class="badge bg-secondary">{{ profile.employee_id }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Center:</th>
+                                    <td>
+                                        {% if profile.center %}
+                                            <i class="fas fa-map-marker-alt text-danger mr-1"></i>{{ profile.center.name }}
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Qualification:</th>
+                                    <td>{{ profile.qualification|default:"<span class='text-muted'>Not provided</span>" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>License Number:</th>
+                                    <td>{{ profile.license_number|default:"<span class='text-muted'>Not provided</span>" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Member Since:</th>
+                                    <td><i class="fas fa-calendar-alt text-info mr-1"></i>{{ profile.created_at|date:"F d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated:</th>
+                                    <td><i class="fas fa-clock text-warning mr-1"></i>{{ profile.updated_at|date:"F d, Y" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Additional Stats Row (Optional) -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-md-4">
+                                            <h5 class="text-primary"><i class="fas fa-flask"></i> Tests Performed</h5>
+                                            <h3>{{ profile.tests_performed|default:"0" }}</h3>
+                                            <small class="text-muted">Total tests processed</small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h5 class="text-success"><i class="fas fa-check-circle"></i> This Month</h5>
+                                            <h3>{{ profile.monthly_tests|default:"0" }}</h3>
+                                            <small class="text-muted">Tests this month</small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h5 class="text-info"><i class="fas fa-star"></i> Accuracy Rate</h5>
+                                            <h3>{{ profile.accuracy_rate|default:"100" }}%</h3>
+                                            <small class="text-muted">Test accuracy</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'lab_technologist:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional: Add some custom CSS for better styling -->
+<style>
+    .table-borderless td, .table-borderless th {
+        padding: 0.5rem 0;
+        border: none;
+    }
+    
+    .badge {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .card-header {
+        border-bottom: none;
+    }
+    
+    .border-bottom {
+        border-bottom: 2px solid #3498db !important;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .border-bottom i {
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}

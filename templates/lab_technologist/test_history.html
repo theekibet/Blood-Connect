@@ -1,0 +1,287 @@
+{% extends 'lab_technologist/base.html' %}
+{% load static %}
+
+{% block title %}Test History - Lab Technologist{% endblock %}
+
+{% block page_title %}Test History{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="stats mb-4">
+    <div class="stat-box">
+        <div class="stat-icon total">
+            <i class="fas fa-vial"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ total_tests|default:0 }}</h3>
+            <p>Total Tests</p>
+            <small class="text-muted">All time</small>
+        </div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-icon safe">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ safe_count|default:0 }}</h3>
+            <p>Safe</p>
+            <small class="text-muted">{{ safe_percentage|floatformat:1 }}% of tests</small>
+        </div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-icon unsafe">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ unsafe_count|default:0 }}</h3>
+            <p>Unsafe</p>
+            <small class="text-muted">{{ unsafe_percentage|floatformat:1 }}% of tests</small>
+        </div>
+    </div>
+</div>
+
+<!-- Center Information -->
+{% if center %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-map-marker-alt me-2"></i>
+    <strong>Center:</strong> {{ center.name }}
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="result" class="form-label">Filter by Result</label>
+                <select name="result" id="result" class="form-select">
+                    <option value="">All Results</option>
+                    <option value="safe" {% if result_filter == 'safe' %}selected{% endif %}>Safe</option>
+                    <option value="unsafe" {% if result_filter == 'unsafe' %}selected{% endif %}>Unsafe</option>
+                    <option value="pending" {% if result_filter == 'pending' %}selected{% endif %}>Pending</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search by Barcode/Donor</label>
+                <input type="text" name="search" id="search" class="form-control" 
+                       placeholder="Enter barcode or donor name..." value="{{ search_query|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">Date From</label>
+                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">Date To</label>
+                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default:'' }}">
+            </div>
+            <div class="col-12 d-flex align-items-end justify-content-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="{% url 'lab_technologist:test_history' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Test History Table -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Test Records</h5>
+        
+        {% if tests %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Test ID</th>
+                            <th>Donor</th>
+                            <th>Blood Group</th>
+                            <th>Result</th>
+                            <th>Test Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in tests %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-barcode me-2 text-muted"></i>
+                                    <code class="fw-bold">{{ item.barcode }}</code>
+                                </div>
+                            </td>
+                            <td><code>#{{ item.test.id }}</code></td>
+                            <td>
+                                <strong>{{ item.donor_name }}</strong>
+                                <br>
+                                <small class="text-muted">ID: 
+                                    {% if item.test.blood_collection and item.test.blood_collection.donor %}
+                                        {{ item.test.blood_collection.donor.id }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                {% if item.test.blood_group %}
+                                    <span class="badge bg-info">{{ item.test.blood_group }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.test.result == 'safe' %}
+                                    <span class="badge bg-success">Safe</span>
+                                {% elif item.test.result == 'unsafe' %}
+                                    <span class="badge bg-danger">Unsafe</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.test.test_date|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'lab_technologist:test_result' item.id %}" 
+                                       class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if item.test.result == 'safe' %}
+                                    <a href="#" class="btn btn-outline-success" title="View in Inventory">
+                                        <i class="fas fa-box"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-history fa-4x text-muted mb-3"></i>
+                <h5>No Test History Found</h5>
+                <p class="text-muted">No tests match your current filters.</p>
+                <a href="{% url 'lab_technologist:pending_tests' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-flask"></i> Go to Pending Tests
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Export Options -->
+{% if tests %}
+<div class="text-end mt-3">
+    <div class="btn-group">
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="fas fa-print"></i> Print
+        </button>
+        <a href="?export=csv{% if result_filter %}&result={{ result_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-file-csv"></i> Export CSV
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.stat-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.3s;
+}
+
+.stat-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.stat-icon.total { background: #cce5ff; color: #004085; }
+.stat-icon.safe { background: #d4edda; color: #155724; }
+.stat-icon.unsafe { background: #f8d7da; color: #721c24; }
+
+.stat-info h3 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.2;
+}
+
+.stat-info p {
+    margin: 5px 0 0;
+    color: #666;
+    font-weight: 500;
+}
+
+.stat-info small {
+    display: block;
+    margin-top: 2px;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top: none;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+code {
+    background: #f8f9fa;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #2c3e50;
+    font-size: 0.85rem;
+}
+
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

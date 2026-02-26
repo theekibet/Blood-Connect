@@ -1,0 +1,294 @@
+{% extends 'lab_technologist/base.html' %}
+{% load static %}
+
+{% block title %}Perform Test - Lab Technologist{% endblock %}
+
+{% block page_title %}Perform Blood Test{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <!-- Sample Information Card -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="fas fa-flask"></i> Sample Information
+                </h5>
+                
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 200px;">Donor Name</th>
+                        <td>
+                            {% if blood.donor %}
+                                <strong>{{ blood.donor.user.get_full_name|default:blood.donor.user.username }}</strong>
+                                <br>
+                                <small class="text-muted">ID: {{ blood.donor.id }}</small>
+                            {% else %}
+                                <span class="text-muted">Unknown Donor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Collection Date</th>
+                        <td>{{ blood.date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Donation Center</th>
+                        <td>{{ blood.donation_center.name|default:"Not assigned" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Donor Blood Group</th>
+                        <td>
+                            {% if blood.donor and blood.donor.bloodgroup %}
+                                <span class="badge bg-info fs-6 p-2">{{ blood.donor.bloodgroup }}</span>
+                                {% if blood.donor.bloodgroup_verified %}
+                                    <span class="badge bg-success">Verified</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Unverified</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Not recorded</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <!-- BARCODE SECTION - UPDATED to show pre-generated barcode -->
+                    <tr>
+                        <th>Blood Bag Barcode</th>
+                        <td>
+                            {% if barcode %}
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-barcode fa-2x me-2 text-primary"></i>
+                                    <div>
+                                        <code class="h5">{{ barcode }}</code>
+                                        <br>
+                                        <small class="text-muted">Bag Type: {{ bag_type|default:"Standard" }}</small>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>No barcode assigned. Please contact nurse.</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <!-- Optional: Show if this barcode has been used before -->
+                    {% if blood.blood_bag_barcode %}
+                    <tr>
+                        <th>Barcode Status</th>
+                        <td>
+                            <span class="badge bg-info">{{ blood.blood_bag_barcode.status|title }}</span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        
+        <!-- Test Form Card -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="fas fa-vial"></i> Test Results
+                </h5>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.blood_group.id_for_label }}" class="form-label">Blood Group *</label>
+                        {{ form.blood_group }}
+                        {% if form.blood_group.errors %}
+                            <div class="text-danger small">{{ form.blood_group.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Select the confirmed blood group after testing</div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">Infectious Disease Markers</h6>
+                    <p class="text-muted small">Check any markers that test POSITIVE</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                {{ form.hiv }}
+                                <label class="form-check-label" for="{{ form.hiv.id_for_label }}">
+                                    HIV Positive
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                {{ form.hepatitis_b }}
+                                <label class="form-check-label" for="{{ form.hepatitis_b.id_for_label }}">
+                                    Hepatitis B Positive
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                {{ form.hepatitis_c }}
+                                <label class="form-check-label" for="{{ form.hepatitis_c.id_for_label }}">
+                                    Hepatitis C Positive
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                {{ form.syphilis }}
+                                <label class="form-check-label" for="{{ form.syphilis.id_for_label }}">
+                                    Syphilis Positive
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                {{ form.malaria }}
+                                <label class="form-check-label" for="{{ form.malaria.id_for_label }}">
+                                    Malaria Positive
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">Additional Notes</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="text-danger small">{{ form.notes.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Unsafe Reason Field (Hidden by default, shown via JavaScript) -->
+                    <div id="unsafe-reason-container" style="display: none;" class="mb-3">
+                        <label for="unsafe_reason" class="form-label text-danger fw-bold">
+                            <i class="fas fa-exclamation-triangle"></i> Reason for Unsafe Result *
+                        </label>
+                        <select name="unsafe_reason" id="unsafe_reason" class="form-control">
+                            <option value="">-- Select Reason --</option>
+                            <option value="contamination">Contamination Detected</option>
+                            <option value="hiv_positive">HIV Positive</option>
+                            <option value="hepatitis_b_positive">Hepatitis B Positive</option>
+                            <option value="hepatitis_c_positive">Hepatitis C Positive</option>
+                            <option value="syphilis_positive">Syphilis Positive</option>
+                            <option value="malaria_positive">Malaria Positive</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Auto-determination:</strong> Blood will be automatically marked as:
+                        <ul class="mb-0 mt-2">
+                            <li><span class="badge bg-success">SAFE</span> if ALL disease markers are negative</li>
+                            <li><span class="badge bg-danger">UNSAFE</span> if ANY disease marker is positive</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Barcode info for submission -->
+                    {% if barcode %}
+                    <input type="hidden" name="blood_bag_barcode" value="{{ barcode }}">
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-save"></i> Submit Test Results
+                        </button>
+                        <a href="{% url 'lab_technologist:pending_tests' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all the disease marker checkboxes
+    const hivCheck = document.getElementById('{{ form.hiv.id_for_label }}');
+    const hepBCheck = document.getElementById('{{ form.hepatitis_b.id_for_label }}');
+    const hepCCheck = document.getElementById('{{ form.hepatitis_c.id_for_label }}');
+    const syphilisCheck = document.getElementById('{{ form.syphilis.id_for_label }}');
+    const malariaCheck = document.getElementById('{{ form.malaria.id_for_label }}');
+    
+    const unsafeReasonContainer = document.getElementById('unsafe-reason-container');
+    const unsafeReasonSelect = document.getElementById('unsafe_reason');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Function to check if any marker is positive
+    function checkForUnsafe() {
+        const anyPositive = [
+            hivCheck?.checked,
+            hepBCheck?.checked,
+            hepCCheck?.checked,
+            syphilisCheck?.checked,
+            malariaCheck?.checked
+        ].some(checked => checked === true);
+        
+        if (anyPositive) {
+            unsafeReasonContainer.style.display = 'block';
+            unsafeReasonSelect.required = true;
+        } else {
+            unsafeReasonContainer.style.display = 'none';
+            unsafeReasonSelect.required = false;
+        }
+    }
+    
+    // Add event listeners to all checkboxes
+    [hivCheck, hepBCheck, hepCCheck, syphilisCheck, malariaCheck].forEach(checkbox => {
+        if (checkbox) {
+            checkbox.addEventListener('change', checkForUnsafe);
+        }
+    });
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const anyPositive = [
+            hivCheck?.checked,
+            hepBCheck?.checked,
+            hepCCheck?.checked,
+            syphilisCheck?.checked,
+            malariaCheck?.checked
+        ].some(checked => checked === true);
+        
+        if (anyPositive) {
+            const reason = unsafeReasonSelect.value;
+            if (!reason) {
+                e.preventDefault();
+                alert('Please select a reason for marking this blood as UNSAFE.');
+                unsafeReasonSelect.focus();
+                return;
+            }
+        }
+        
+        // Final confirmation
+        if (!confirm('Submit test results? This action cannot be undone.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+.form-check-input {
+    margin-right: 10px;
+}
+code {
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #8B1E3F;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}

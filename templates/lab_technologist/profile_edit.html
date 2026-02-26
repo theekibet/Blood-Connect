@@ -1,0 +1,223 @@
+<!-- templates/lab_technologist/profile_edit.html -->
+{% extends 'lab_technologist/base.html' %}
+{% load static %}
+
+{% block title %}Edit Lab Technologist Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Edit Lab Technologist Profile</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Profile Picture Section -->
+                        <h5 class="border-bottom pb-2">Profile Picture</h5>
+                        <div class="text-center mb-4">
+                            <!-- Current Picture Display -->
+                            <div class="mb-3 position-relative d-inline-block">
+                                {% if profile.profile_pic and profile.profile_pic.url %}
+                                    <img src="{{ profile.profile_pic.url }}" alt="Current Profile Picture" 
+                                         style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                                         id="current-profile-pic">
+                                    
+                                    <!-- Delete Picture Button -->
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                                            style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"
+                                            onclick="confirmDeletePicture()"
+                                            title="Delete current picture">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    
+                                    <p class="text-muted mt-2">Current Picture</p>
+                                {% else %}
+                                    <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" 
+                                         style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                    <p class="text-muted mt-2">Default Picture</p>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Hidden field to track picture deletion -->
+                            <input type="hidden" name="delete_picture" id="delete_picture" value="false">
+                            
+                            <!-- Upload New Picture -->
+                            <div class="mb-3">
+                                <label for="{{ form.profile_pic.id_for_label }}" class="form-label">Upload New Profile Picture</label>
+                                {{ form.profile_pic }}
+                                {% if form.profile_pic.errors %}
+                                    <div class="text-danger">{{ form.profile_pic.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Leave empty to keep current picture. Allowed: JPG, PNG, GIF (max 5MB)</small>
+                            </div>
+
+                            <!-- Picture Options -->
+                            {% if profile.profile_pic %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="remove_picture" id="remove_picture">
+                                <label class="form-check-label text-danger" for="remove_picture">
+                                    <i class="fas fa-trash-alt"></i> Remove current picture (will revert to default)
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2">Account Information</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger">{{ form.first_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger">{{ form.last_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mt-4">Professional Information</h5>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.employee_id.id_for_label }}" class="form-label">Employee ID</label>
+                            {{ form.employee_id }}
+                            {% if form.employee_id.errors %}
+                                <div class="text-danger">{{ form.employee_id.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.center.id_for_label }}" class="form-label">Center</label>
+                            {{ form.center }}
+                            {% if form.center.errors %}
+                                <div class="text-danger">{{ form.center.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger">{{ form.phone.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.qualification.id_for_label }}" class="form-label">Qualification</label>
+                            {{ form.qualification }}
+                            {% if form.qualification.errors %}
+                                <div class="text-danger">{{ form.qualification.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.license_number.id_for_label }}" class="form-label">License Number</label>
+                            {{ form.license_number }}
+                            {% if form.license_number.errors %}
+                                <div class="text-danger">{{ form.license_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                Active Status
+                            </label>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger">{{ form.is_active.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'lab_technologist:lab_tech_profile_detail' profile.pk %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for picture deletion -->
+<script>
+    function confirmDeletePicture() {
+        if (confirm('Are you sure you want to delete your profile picture? This will revert to the default image.')) {
+            document.getElementById('delete_picture').value = 'true';
+            // Optionally hide the current picture
+            document.getElementById('current-profile-pic').style.opacity = '0.5';
+            alert('Picture will be deleted when you save changes.');
+        }
+    }
+
+    // Handle checkbox for removing picture
+    document.addEventListener('DOMContentLoaded', function() {
+        const removeCheckbox = document.getElementById('remove_picture');
+        if (removeCheckbox) {
+            removeCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    if (confirm('Remove current picture? This will revert to default when you save.')) {
+                        document.getElementById('delete_picture').value = 'true';
+                    } else {
+                        this.checked = false;
+                    }
+                } else {
+                    document.getElementById('delete_picture').value = 'false';
+                }
+            });
+        }
+
+        // Preview new image before upload
+        const profilePicInput = document.getElementById('{{ form.profile_pic.id_for_label }}');
+        if (profilePicInput) {
+            profilePicInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // Show preview of new image
+                        const preview = document.getElementById('current-profile-pic') || 
+                                      document.querySelector('.profile-dropdown img');
+                        if (preview) {
+                            preview.src = e.target.result;
+                        }
+                    }
+                    reader.readAsDataURL(file);
+                    
+                    // If user selects new image, uncheck remove option
+                    if (removeCheckbox) {
+                        removeCheckbox.checked = false;
+                    }
+                    document.getElementById('delete_picture').value = 'false';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Blood Inventory - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Safe Blood Inventory{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="stats mb-4">
+    <div class="stat-box">
+        <h3>{{ total_safe_units }}</h3>
+        <p>Total Units</p>
+        <small class="text-muted">{{ total_safe_volume }} ml total</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ by_blood_type|length }}</h3>
+        <p>Blood Types</p>
+        <small class="text-muted">Available groups</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ expiring_soon }}</h3>
+        <p>Expiring Soon</p>
+        <small class="text-muted">Within 7 days</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ total_batches }}</h3>
+        <p>Total Batches</p>
+        <small class="text-muted">Individual units</small>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="blood_type" class="form-label">Blood Type</label>
+                <select name="blood_type" id="blood_type" class="form-select">
+                    <option value="">All Blood Types</option>
+                    <option value="A+" {% if blood_type == 'A+' %}selected{% endif %}>A+</option>
+                    <option value="A-" {% if blood_type == 'A-' %}selected{% endif %}>A-</option>
+                    <option value="B+" {% if blood_type == 'B+' %}selected{% endif %}>B+</option>
+                    <option value="B-" {% if blood_type == 'B-' %}selected{% endif %}>B-</option>
+                    <option value="AB+" {% if blood_type == 'AB+' %}selected{% endif %}>AB+</option>
+                    <option value="AB-" {% if blood_type == 'AB-' %}selected{% endif %}>AB-</option>
+                    <option value="O+" {% if blood_type == 'O+' %}selected{% endif %}>O+</option>
+                    <option value="O-" {% if blood_type == 'O-' %}selected{% endif %}>O-</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="sort" class="form-label">Sort By</label>
+                <select name="sort" id="sort" class="form-select">
+                    <option value="expiry_date" {% if sort_by == 'expiry_date' %}selected{% endif %}>Expiry Date (Earliest)</option>
+                    <option value="bloodgroup" {% if sort_by == 'bloodgroup' %}selected{% endif %}>Blood Group</option>
+                    <option value="added_on" {% if sort_by == 'added_on' %}selected{% endif %}>Recently Added</option>
+                    <option value="volume" {% if sort_by == 'volume' %}selected{% endif %}>Volume (Largest)</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2" style="background: #8B1E3F; border: none;">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="{% url 'blood_bank_technician:inventory' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Inventory by Blood Type -->
+{% if by_blood_type %}
+    {% for blood_type, data in by_blood_type.items %}
+    <div class="card mb-4">
+        <div class="card-header" style="background: #8B1E3F; color: white;">
+            <h5 class="mb-0">
+                <i class="fas fa-tint"></i> Blood Type {{ blood_type }}
+                <span class="badge bg-light text-dark float-end">
+                    {{ data.total_units }} units | {{ data.total_ml }} ml
+                </span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if data.batches %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Barcode</th>
+                                <th>Donor</th>
+                                <th>Volume</th>
+                                <th>Collection Date</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left</th>
+                                <th>Verified By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unit in data.batches %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-barcode me-2 text-muted"></i>
+                                        <code>{{ unit.barcode }}</code>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if unit.blood_donation and unit.blood_donation.donor %}
+                                        {{ unit.blood_donation.donor.user.get_full_name }}
+                                        <br>
+                                        <small class="text-muted">ID: {{ unit.blood_donation.donor.id }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ unit.unit }} ml</strong></td>
+                                <td>
+                                    {% if unit.blood_donation %}
+                                        {{ unit.blood_donation.date|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ unit.expiry_date|date:"M d, Y" }}</td>
+                                <td>
+                                    {% with days_left=unit.expiry_date|timeuntil:today %}
+                                        {% if unit.expiry_date < today %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% elif unit.expiry_date <= today|date:"Y-m-d"|add:"7 days" %}
+                                            <span class="badge bg-warning">{{ days_left }} left</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ days_left }} left</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% if unit.safety_verified_by %}
+                                        {{ unit.safety_verified_by.get_full_name }}
+                                        <br>
+                                        <small class="text-muted">{{ unit.safety_verified_at|date:"M d, Y" }}</small>
+                                    {% else %}
+                                        <span class="text-muted">System</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="#" class="btn btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-outline-success" title="Mark as Reserved">
+                                            <i class="fas fa-bookmark"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-3">No batches available for {{ blood_type }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+            <h5>No Safe Blood in Inventory</h5>
+            <p class="text-muted">No blood units have been tested and marked as safe at {{ center.name }}.</p>
+            <a href="{% url 'blood_bank_technician:pending_verification' %}" class="btn btn-primary mt-3" style="background: #8B1E3F; border: none;">
+                <i class="fas fa-flask"></i> Check Pending Verification
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Export Options -->
+{% if safe_stock %}
+<div class="text-end mt-3">
+    <div class="btn-group">
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="fas fa-print"></i> Print
+        </button>
+        <a href="?export=csv{% if blood_type %}&blood_type={{ blood_type }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-file-csv"></i> Export CSV
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #8B1E3F;
+}
+
+.stat-box h3 {
+    margin: 0;
+    font-size: 2rem;
+    color: #8B1E3F;
+}
+
+.stat-box p {
+    margin: 5px 0 0;
+    color: #666;
+    font-weight: 500;
+}
+
+.stat-box small {
+    display: block;
+    margin-top: 5px;
+    color: #999;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top: none;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+code {
+    background: #f8f9fa;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #8B1E3F;
+    font-size: 0.85rem;
+}
+
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+{% endblock %}

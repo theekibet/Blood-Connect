@@ -45,7 +45,6 @@ from datetime import date as dt_date
 from django.utils.timezone import now
 from collections import defaultdict
 from django.http import JsonResponse
-from nurse.models import NurseBloodRequest,NurseBloodRequestStockUnit
 from django.views.decorators.http import require_http_methods
 from .forms import DonationCenterForm
 from django.core.exceptions import PermissionDenied,ValidationError
@@ -289,66 +288,48 @@ def adminlogin_view(request):
 
 def afterlogin_view(request):
     """
-    Enhanced afterlogin view with proper error handling and fallback logic
+    Redirect users to their respective dashboards based on their SINGLE profile
     """
     user = request.user
     
     try:
-        # ========================================
-        # CHECK STAFF/ADMIN FIRST (HIGHEST PRIORITY)
-        # ========================================
+        # Admin/staff first
         if user.is_staff or user.is_superuser:
             logger.info(f"Admin user {user.username} redirected to admin-dashboard")
             return redirect('admin-dashboard')
         
-        # Check for patient profile
-        elif hasattr(user, 'patient') and user.patient:
+        # Check each profile type - ONLY ONE should exist per user
+        if hasattr(user, 'patient') and user.patient:
             logger.info(f"User {user.username} redirected to patient-dashboard")
             return redirect('patient-dashboard')
         
-        # Check for nurse profile
-        elif hasattr(user, 'nurse') and user.nurse:
-            logger.info(f"User {user.username} redirected to nurse-dashboard")
-            return redirect('nurse-dashboard')
-        
-        # Check for donor profile
-        elif hasattr(user, 'donor') and user.donor:
+        if hasattr(user, 'donor') and user.donor:
             logger.info(f"User {user.username} redirected to donor-dashboard")
             return redirect('donor-dashboard')
         
-        # User authenticated but no profile exists
-        else:
-            logger.warning(f"User {user.username} has no associated profile")
-            messages.error(
-                request, 
-                "Your account exists but no profile was found. Please contact support."
-            )
-            
-            # Try to determine which group they belong to and suggest action
-            if user.groups.filter(name='PATIENT').exists():
-                messages.info(request, "You are registered as a PATIENT but profile setup is incomplete.")
-                return redirect('patientsignup')
-            
-            elif user.groups.filter(name='NURSE').exists():
-                messages.info(request, "You are registered as a NURSE but profile setup is incomplete.")
-                return redirect('nursesignup')
-            
-            elif user.groups.filter(name='DONOR').exists():
-                messages.info(request, "You are registered as a DONOR but profile setup is incomplete.")
-                return redirect('donorsignup')
-            
-            # No group assigned either - serious issue
+        if hasattr(user, 'nurse') and user.nurse:
+            if user.nurse.is_approved:
+                logger.info(f"User {user.username} redirected to nurse-dashboard")
+                return redirect('nurse-dashboard')
             else:
-                messages.error(
-                    request,
-                    "Your account is not properly configured. Please contact the administrator."
-                )
-                logger.error(f"User {user.username} (ID: {user.id}) has no group or profile")
-                return redirect('home')
-    
+                return redirect('nurse-pending-approval')
+        
+        if hasattr(user, 'lab_tech_profile') and user.lab_tech_profile:
+            logger.info(f"User {user.username} redirected to lab_technologist:dashboard")
+            return redirect('lab_technologist:dashboard')
+        
+        if hasattr(user, 'blood_bank_tech_profile') and user.blood_bank_tech_profile:
+            logger.info(f"User {user.username} redirected to blood_bank_technician:dashboard")
+            return redirect('blood_bank_technician:dashboard')
+        
+        # No profile found
+        logger.warning(f"User {user.username} has no profile")
+        messages.error(request, "Your account has no profile. Please complete registration.")
+        return redirect('role_selection')
+        
     except Exception as e:
-        logger.error(f"Error in afterlogin_view for user {user.username}: {str(e)}", exc_info=True)
-        messages.error(request, "An error occurred during login. Please try again.")
+        logger.error(f"Error in afterlogin_view: {str(e)}", exc_info=True)
+        messages.error(request, "An error occurred during login.")
         return redirect('home')
 
 @login_required(login_url='adminlogin')
@@ -1154,133 +1135,6 @@ def sickle_cell_view(request):
 def is_admin(user):
     return user.is_staff and (not is_nurse(user))
 
-@login_required(login_url='adminlogin')
-@user_passes_test(is_admin, login_url='adminlogin')
-@require_http_methods(["GET", "POST"])
-def admin_nurse_blood_requests_view(request):
-    if request.method == "POST":
-        request_id = request.POST.get("request_id")
-        action = request.POST.get("action")  # approve, reject, cancel, complete
-
-        if not (request_id and action in ['approve', 'reject', 'cancel', 'complete']):
-            messages.error(request, "Invalid form submission.")
-            return redirect('admin-nurse-blood-requests')
-
-        blood_request = get_object_or_404(NurseBloodRequest, id=request_id)
-
-        # Allow cancel any time except if fulfilled
-        if blood_request.status != NurseBloodRequest.STATUS_PENDING and action != 'cancel':
-            messages.warning(request,
-                f"Request ID {request_id} is already '{blood_request.status}'. No changes made.")
-            return redirect('admin-nurse-blood-requests')
-
-        if action == 'approve':
-            blood_request.status = NurseBloodRequest.STATUS_APPROVED
-            blood_request.save()
-            messages.success(request, f"Request ID {request_id} approved.")
-
-        elif action == 'reject':
-            blood_request.status = NurseBloodRequest.STATUS_REJECTED
-            blood_request.save()
-            messages.success(request, f"Request ID {request_id} rejected.")
-
-        elif action == 'cancel':
-            if blood_request.status == NurseBloodRequest.STATUS_FULFILLED:
-                messages.error(request, "Cannot cancel a fulfilled request.")
-            else:
-                blood_request.status = NurseBloodRequest.STATUS_CANCELLED
-                blood_request.save()
-                messages.success(request, f"Request ID {request_id} cancelled.")
-
-        elif action == 'complete':
-            if blood_request.status != NurseBloodRequest.STATUS_APPROVED:
-                messages.error(request, "Only approved requests can be completed.")
-                return redirect('admin-nurse-blood-requests')
-
-            try:
-                with transaction.atomic():
-                    supplying_center = blood_request.supplying_center
-                    requesting_center = blood_request.requester.donation_center
-
-                    if not requesting_center:
-                        messages.error(request, "Requesting nurse is not assigned to a donation center.")
-                        return redirect('admin-nurse-blood-requests')
-
-                    required_units = blood_request.units
-                    bloodgroup = blood_request.blood_group
-
-                    # Get FIFO StockUnits with available units in supplying_center
-                    fifo_stock_units = StockUnit.objects.select_for_update().filter(
-                        center=supplying_center,
-                        bloodgroup=bloodgroup,
-                        unit__gt=0,
-                        expiry_date__gte=timezone.now().date()
-                    ).order_by('expiry_date', 'added_on')
-
-                    accumulated = 0
-                    used_units_allocation = []
-
-                    for stockunit in fifo_stock_units:
-                        if accumulated >= required_units:
-                            break
-
-                        available = stockunit.unit
-                        needed = required_units - accumulated
-                        use_amount = min(available, needed)
-
-                        # Deduct units from supplying StockUnit
-                        stockunit.unit = F('unit') - use_amount
-                        stockunit.save(update_fields=['unit'])
-
-                        # Add units to requesting center StockUnit (same blood group and expiry)
-                        requesting_stockunit, _ = StockUnit.objects.get_or_create(
-                            center=requesting_center,
-                            bloodgroup=bloodgroup,
-                            expiry_date=stockunit.expiry_date,
-                            defaults={'unit': 0}
-                        )
-                        requesting_stockunit.unit = F('unit') + use_amount
-                        requesting_stockunit.save(update_fields=['unit'])
-
-                        # Record usage for linking later
-                        used_units_allocation.append((stockunit, use_amount))
-                        accumulated += use_amount
-
-                    if accumulated < required_units:
-                        # Rollback transaction: will happen automatically due to exception
-                        raise ValueError("Insufficient blood stock units available to fulfill the request.")
-
-                    # Record which stockunits were used for this request
-                    for stockunit, units_used in used_units_allocation:
-                        NurseBloodRequestStockUnit.objects.create(
-                            blood_request=blood_request,
-                            stock_unit=stockunit,
-                            units_used=units_used
-                        )
-
-                    # Update request status
-                    blood_request.status = NurseBloodRequest.STATUS_FULFILLED
-                    blood_request.save()
-
-                messages.success(request, f"Request ID {request_id} marked as completed and stock updated.")
-
-            except Stock.DoesNotExist:
-                messages.error(request, "Stock data missing for the supplying center.")
-            except Exception as e:
-                messages.error(request, f"Error completing request: {str(e)}")
-
-        return redirect('admin-nurse-blood-requests')
-
-    # GET request: show all nurse blood requests
-    requests = NurseBloodRequest.objects.select_related('requester', 'supplying_center').order_by('-created_at')
-
-    new_nurse_requests_count = NurseBloodRequest.objects.filter(status=NurseBloodRequest.STATUS_PENDING).count()
-
-    context = {
-        "requests": requests,
-        "new_nurse_requests_count": new_nurse_requests_count,
-    }
-    return render(request, "blood/admin_nurse_blood_requests.html", context)
 
 
 
@@ -1871,143 +1725,8 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 
 
 
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.contrib.auth.views import LoginView
 
-logger = logging.getLogger(__name__)
 
-# -------------------------------
-# Central Login View for ALL users
-# -------------------------------
-class CentralLoginView(LoginView):
-    """Central login view that redirects to individual login pages"""
-    
-    def get(self, request, *args, **kwargs):
-        user_type = request.GET.get('user_type')
-        
-        # Redirect based on user_type to existing login pages
-        if user_type == 'donor':
-            return redirect('donorlogin')
-        elif user_type == 'patient':
-            return redirect('patientlogin')
-        elif user_type == 'nurse':
-            return redirect('nurselogin')
-        else:
-            # Show a simple role selection page
-            return render(request, 'blood/role_selection.html')
-# -------------------------------
-# Email Verification (Shared)
-# -------------------------------
-def send_verification_email(user, request):
-    """Send email verification link to new user"""
-    try:
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-        verification_url = request.build_absolute_uri(
-            f'/verify-email/{uid}/{token}/'
-        )
-        
-        # Determine user type for personalized message
-        user_type = 'User'
-        if hasattr(user, 'patient'):
-            user_type = 'Patient'
-        elif hasattr(user, 'donor'):
-            user_type = 'Donor'
-        elif hasattr(user, 'nurse'):
-            user_type = 'Nurse'
-        
-        context = {
-            'user': user,
-            'verification_url': verification_url,
-            'site_name': 'BloodConnect',
-            'support_email': settings.DEFAULT_FROM_EMAIL,
-            'user_type': user_type,
-        }
-        
-        html_message = render_to_string('shared/verification_email.html', context)
-        plain_message = strip_tags(html_message)
-        subject = f'Verify Your Email - BloodConnect {user_type} Account'
-        
-        send_mail(
-            subject,
-            plain_message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        
-        logger.info(f"Verification email sent to {user.email} ({user_type})")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Failed to send verification email to {user.email}: {str(e)}")
-        return False
-
-def verify_email_view(request, uidb64, token):
-    """Verify user's email address"""
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        user = None
-    
-    if user is not None and default_token_generator.check_token(user, token):
-        user.is_active = True
-        user.save()
-        
-        # Determine user type for message
-        if hasattr(user, 'patient'):
-            user_type = 'patient'
-            login_url = reverse('central_login') + '?user_type=patient'
-        elif hasattr(user, 'donor'):
-            user_type = 'donor'
-            login_url = reverse('central_login') + '?user_type=donor'
-        elif hasattr(user, 'nurse'):
-            user_type = 'nurse'
-            login_url = reverse('central_login') + '?user_type=nurse'
-        else:
-            user_type = 'user'
-            login_url = reverse('central_login')
-        
-        messages.success(request, 
-            f'✅ Email verified successfully! Your {user_type} account is now active. '
-            f'You can now <a href="{login_url}" class="alert-link">login here</a>.'
-        )
-        return redirect('home')
-    else:
-        messages.error(request, '❌ Verification link is invalid or has expired.')
-        return redirect('home')
-
-def resend_verification_view(request):
-    """Resend verification email"""
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        
-        try:
-            user = User.objects.get(email=email)
-            
-            if user.is_active:
-                messages.info(request, '✅ Account is already verified. You can log in.')
-                return redirect('central_login')
-            else:
-                if send_verification_email(user, request):
-                    messages.success(request, '📧 Verification email sent! Check your inbox.')
-                else:
-                    messages.error(request, '❌ Failed to send email. Try again later.')
-                return redirect('central_login')
-                
-        except User.DoesNotExist:
-            messages.error(request, '❌ No account found with this email.')
-            return redirect('central_login')
-    
-    # GET request - show form
-    return render(request, 'shared/resend_verification.html')
 def load_fact_from_database(fact_id=None, category=None):
     """Load fact from database or generate from FACT_DATABASE"""
     # Try database first

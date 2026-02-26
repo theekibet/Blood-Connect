@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import re
 from blood.models import DonationCenter
-from .models import Nurse, Appointment, NurseBloodRequest
+from .models import Nurse, Appointment
 
 
 # -------------------------
@@ -446,27 +446,3 @@ class AppointmentForm(forms.ModelForm):
         if commit:
             appointment.save()
         return appointment
-    
-# -------------------------
-# Blood Request Form
-# -------------------------
-class RequestForm(forms.ModelForm):
-    class Meta:
-        model = NurseBloodRequest
-        fields = ['supplying_center', 'blood_group', 'units', 'reason', 'urgency_level']
-
-        widgets = {
-            'supplying_center': forms.Select(attrs={'class': 'form-select'}),
-            'blood_group': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
-            'units': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'step': '10'}),
-            'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'urgency_level': forms.Select(attrs={'class': 'form-select'}),
-        }
-
-    def clean_units(self):
-        units = self.cleaned_data.get('units')
-        if units is None or units < 1:
-            raise forms.ValidationError("Units must be at least 1 ml.")
-        if units % 10 != 0:
-            raise forms.ValidationError("Please enter units in multiples of 10 ml.")
-        return units

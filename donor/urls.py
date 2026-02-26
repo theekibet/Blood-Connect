@@ -19,7 +19,7 @@ urlpatterns = [
 
     # Requests
     path("make-request/", views.donor_make_request_view, name="donor-make-request"),
-    path('cancel-request/<int:request_id>/', views.cancel_donor_request_view, name='cancel-donor-request'),
+    path('cancel-request/<int:request_id>/', views.donor_cancel_request_view, name='cancel-donor-request'),
     
     
     # Profile
@@ -32,9 +32,6 @@ urlpatterns = [
     # Notifications
     path('notifications/', views.donor_notifications_view, name='donor-notifications'),
     path('mark-notification-read/<int:pk>/', views.mark_notification_read, name='mark-notification-read'),
-
-    # Nearby Patients
-    path('nearby-compatible-patients/', views.nearby_compatible_patients_view, name='nearby-compatible-patients'),
 
     # Static / Info Pages
     path('health-tips/', views.health_tips, name='health-tips'),

@@ -4,7 +4,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, F, Q, Count
-from blood.models import DonationCenter, Stock, StockUnit
+from blood.models import DonationCenter, Stock, StockUnit, StockTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,9 @@ def get_blood_stock_context(selected_center_id=None):
     }
 
 
-def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', unsafe_reason=None, safety_notes=None):
+def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', 
+              unsafe_reason=None, safety_notes=None, blood_donation=None, 
+              added_by_user=None, added_by_role='nurse'):
     """
     Add blood units to StockUnit batch and update aggregate Stock.
     Creates a new StockUnit batch with a unique barcode.
@@ -76,6 +78,9 @@ def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', u
                             Defaults to 'pending' for verification workflow.
         unsafe_reason (str, optional): Reason if marking as unsafe.
         safety_notes (str, optional): Additional notes about safety verification.
+        blood_donation (BloodDonate, optional): Link to the original blood donation.
+        added_by_user (User, optional): User adding the stock.
+        added_by_role (str): Role of user adding stock ('nurse', 'lab_tech', 'system').
 
     Returns:
         StockUnit instance: The newly created stock batch.
@@ -84,8 +89,8 @@ def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', u
         ValueError: If units <= 0, expiry date is invalid, safety_status invalid, 
                    or barcode generation fails.
     """
-    if units <= 0:
-        raise ValueError("Units to add must be positive.")
+    if units <= 0 and safety_status != 'unsafe':
+        raise ValueError("Units to add must be positive for safe/pending blood.")
     
     if expiry_date < timezone.now().date():
         raise ValueError("Expiry date cannot be in the past.")
@@ -120,18 +125,28 @@ def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', u
                 logger.error("❌ BARCODE GENERATION FAILED after 10 attempts")
                 raise ValueError("Failed to generate unique barcode after 10 attempts.")
 
+            # Set actual units - zero out if unsafe
+            actual_units = 0 if safety_status == 'unsafe' else units
+
             # Create the new StockUnit batch with safety status
-            batch = StockUnit.objects.create(
+            stock_unit = StockUnit.objects.create(
                 center=center,
                 bloodgroup=bloodgroup,
-                unit=units if safety_status != 'unsafe' else 0,  # Zero out if unsafe
+                unit=actual_units,
                 expiry_date=expiry_date,
                 barcode=barcode,
                 added_on=timezone.now(),
+                blood_donation=blood_donation,
                 safety_status=safety_status,
-                unsafe_reason=unsafe_reason,  # NEW: Pass unsafe reason
-                safety_notes=safety_notes,     # NEW: Pass safety notes
-                is_quarantined=(safety_status == 'unsafe')  # Auto-quarantine if unsafe
+                unsafe_reason=unsafe_reason,
+                safety_notes=safety_notes,
+                is_quarantined=(safety_status == 'unsafe'),
+                safety_verified_by=added_by_user if safety_status != 'pending' else None,
+                safety_verified_at=timezone.now() if safety_status != 'pending' else None,
+                safety_verified_by_role=added_by_role if safety_status != 'pending' else None,
+                added_to_inventory_by=added_by_user,
+                added_to_inventory_by_role=added_by_role,
+                added_to_inventory_at=timezone.now()
             )
 
             safety_indicator = {
@@ -141,9 +156,18 @@ def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', u
             }.get(safety_status, '❓')
 
             logger.info(
-                f"📈 STOCK UNIT CREATED: {barcode} - {batch.unit}ml {bloodgroup} at {center.name} "
+                f"📈 STOCK UNIT CREATED: {barcode} - {actual_units}ml {bloodgroup} at {center.name} "
                 f"{safety_indicator} {safety_status.upper()}"
                 + (f" - Reason: {unsafe_reason}" if unsafe_reason else "")
+            )
+
+            # Create stock transaction record
+            StockTransaction.objects.create(
+                stockunit=stock_unit,
+                quantity_added=actual_units,
+                transaction_type='addition',
+                user=added_by_user,
+                notes=f"Stock added - Status: {safety_status}" + (f" - {unsafe_reason}" if unsafe_reason else "")
             )
 
             # The signal handler will automatically update the Stock aggregate
@@ -168,13 +192,15 @@ def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', u
                     f"now has {stock.unit}ml (safe stock only)"
                 )
 
-            return batch
+            return stock_unit
 
         except Exception as e:
             logger.error(f"❌ ADDITION ERROR: {e}", exc_info=True)
             raise
 
-def deduct_stock_fifo(center, bloodgroup, required_units):
+
+def deduct_stock_fifo(center, bloodgroup, required_units, deducted_by_user=None, 
+                      deducted_by_role='blood_bank_tech', blood_request=None, appointment=None):
     """
     Deduct required_units (ml) of blood from StockUnits for a given center & bloodgroup,
     using FIFO (earliest expiry first).
@@ -188,6 +214,10 @@ def deduct_stock_fifo(center, bloodgroup, required_units):
         center (DonationCenter): The donation center.
         bloodgroup (str): The blood group (e.g., 'A+', 'O-').
         required_units (int): Quantity in ml to deduct.
+        deducted_by_user (User, optional): User performing the deduction.
+        deducted_by_role (str): Role of user ('blood_bank_tech', 'nurse', 'admin').
+        blood_request (BloodRequest, optional): Related blood request.
+        appointment (Appointment, optional): Related appointment.
 
     Returns:
         (True, deductions) where deductions is a list of dicts with barcode, quantity, expiry_date
@@ -255,18 +285,31 @@ def deduct_stock_fifo(center, bloodgroup, required_units):
                     break
                     
                 take = min(stock.unit, to_deduct)
-                deductions.append({
+                deduction_record = {
                     'barcode': stock.barcode,
                     'quantity': take,
                     'expiry_date': stock.expiry_date,
                     'original_unit': stock.unit,
                     'remaining_unit': stock.unit - take,
-                    'safety_status': stock.safety_status  # Include for audit
-                })
+                    'safety_status': stock.safety_status,
+                    'stock_unit_id': stock.id
+                }
+                deductions.append(deduction_record)
                 
                 # Update stock unit
                 stock.unit -= take
                 stock.save(update_fields=['unit'])
+                
+                # Create stock transaction record
+                StockTransaction.objects.create(
+                    stockunit=stock,
+                    quantity_deducted=take,
+                    transaction_type='deduction',
+                    user=deducted_by_user,
+                    blood_request=blood_request,
+                    appointment=appointment,
+                    notes=f"Deducted {take}ml for blood request" + (f" #{blood_request.id}" if blood_request else "")
+                )
                 
                 logger.info(
                     f"📉 DEDUCTED: {take}ml from {stock.barcode} "
@@ -362,15 +405,27 @@ def check_stock_availability(center, bloodgroup, required_units, include_pending
         expiry_date__lte=(timezone.now().date() + timezone.timedelta(days=7))
     ).values('barcode', 'unit', 'expiry_date', 'safety_status')
     
+    # Get detailed breakdown by batch
+    available_batches = StockUnit.objects.filter(
+        center=center,
+        bloodgroup=bloodgroup,
+        safety_status='safe',
+        is_quarantined=False,
+        unit__gt=0,
+        expiry_date__gte=timezone.now().date()
+    ).values('barcode', 'unit', 'expiry_date').order_by('expiry_date')
+    
     return {
-        'available': safe_stock >= required_units,  # Based on safe stock only
+        'available': safe_stock >= required_units,
         'can_fulfill': safe_stock >= required_units,
         'current_stock': current_stock,
         'safe_stock': safe_stock,
         'pending_stock': pending_stock,
         'unsafe_stock': unsafe_stock,
         'shortage': max(0, required_units - safe_stock),
-        'expiring_soon': list(expiring_soon)
+        'expiring_soon': list(expiring_soon),
+        'available_batches': list(available_batches),
+        'total_batches': available_batches.count()
     }
 
 
@@ -397,7 +452,7 @@ def get_available_stock(center, bloodgroup=None):
         is_quarantined=False,
         unit__gt=0,
         expiry_date__gte=timezone.now().date()
-    )
+    ).select_related('blood_donation__donor__user')
     
     if bloodgroup:
         queryset = queryset.filter(bloodgroup=bloodgroup)
@@ -426,7 +481,7 @@ def get_pending_verification_stock(center, bloodgroup=None):
         safety_status='pending',
         unit__gt=0,
         expiry_date__gte=timezone.now().date()
-    )
+    ).select_related('blood_donation__donor__user')
     
     if bloodgroup:
         queryset = queryset.filter(bloodgroup=bloodgroup)
@@ -448,7 +503,7 @@ def get_unsafe_stock(center, bloodgroup=None):
     queryset = StockUnit.objects.filter(
         center=center,
         safety_status='unsafe'
-    )
+    ).select_related('blood_donation__donor__user', 'safety_verified_by')
     
     if bloodgroup:
         queryset = queryset.filter(bloodgroup=bloodgroup)
@@ -466,8 +521,6 @@ def get_stock_summary(center):
     Returns:
         dict: Stock summary with counts for safe, pending, and unsafe stock.
     """
-    from django.db.models import Count
-    
     summary = {
         'safe': StockUnit.objects.filter(
             center=center,
@@ -507,9 +560,34 @@ def get_stock_summary(center):
     
     # Add totals
     summary['total_safe_units'] = summary['safe']['total_units'] or 0
+    summary['total_safe_batches'] = summary['safe']['count'] or 0
     summary['total_pending_units'] = summary['pending']['total_units'] or 0
+    summary['total_pending_batches'] = summary['pending']['count'] or 0
     summary['total_unsafe_units'] = summary['unsafe']['total_units'] or 0
+    summary['total_unsafe_batches'] = summary['unsafe']['count'] or 0
     summary['total_expired_units'] = summary['expired']['total_units'] or 0
+    summary['total_expired_batches'] = summary['expired']['count'] or 0
+    
+    # Get breakdown by blood group
+    summary['by_blood_group'] = {}
+    for bg, _ in Stock.BLOOD_GROUP_CHOICES:
+        summary['by_blood_group'][bg] = {
+            'safe': StockUnit.objects.filter(
+                center=center,
+                bloodgroup=bg,
+                safety_status='safe',
+                is_quarantined=False,
+                unit__gt=0,
+                expiry_date__gte=timezone.now().date()
+            ).aggregate(units=Sum('unit'), batches=Count('id')),
+            'pending': StockUnit.objects.filter(
+                center=center,
+                bloodgroup=bg,
+                safety_status='pending',
+                unit__gt=0,
+                expiry_date__gte=timezone.now().date()
+            ).aggregate(units=Sum('unit'), batches=Count('id')),
+        }
     
     return summary
 
@@ -556,6 +634,15 @@ def get_stock_summary_by_center(center=None):
                 expiry_date__gte=timezone.now().date()
             ).aggregate(total=Sum('unit'))['total'] or 0
             
+            # Get pending batches count
+            pending_batches = StockUnit.objects.filter(
+                center=center_obj,
+                bloodgroup=stock.bloodgroup,
+                safety_status='pending',
+                unit__gt=0,
+                expiry_date__gte=timezone.now().date()
+            ).count()
+            
             # Get unsafe/quarantined stock
             unsafe_units = StockUnit.objects.filter(
                 center=center_obj,
@@ -575,10 +662,12 @@ def get_stock_summary_by_center(center=None):
                 'total_safe_units': stock.unit,  # Aggregate now only counts safe stock
                 'available_batches': len(safe_units_breakdown),
                 'pending_verification_units': pending_units,
+                'pending_verification_batches': pending_batches,
                 'unsafe_quarantined_units': unsafe_units,
                 'expired_units': expired_units,
                 'safe_batches': list(safe_units_breakdown),
-                'can_issue': stock.unit > 0  # Based on safe stock only
+                'can_issue': stock.unit > 0,  # Based on safe stock only
+                'needs_verification': pending_units > 0
             }
         
         summary[center_obj.name] = center_stock
@@ -644,6 +733,14 @@ def cleanup_expired_stock():
                 f"⚠️ EXPIRED STOCK: {unit.barcode} - {unit.unit}ml {unit.bloodgroup} "
                 f"at {unit.center.name} (expired {unit.expiry_date}, "
                 f"safety: {safety_indicator} {unit.safety_status})"
+            )
+            
+            # Create transaction record for expiration
+            StockTransaction.objects.create(
+                stockunit=unit,
+                quantity_deducted=unit.unit,
+                transaction_type='deduction',
+                notes=f"Auto-cleanup: Blood expired on {unit.expiry_date}"
             )
             
             # Mark as expired but keep the record for audit
@@ -809,14 +906,31 @@ def bulk_verify_safe_stock(center, bloodgroup=None, verified_by_user=None, notes
         
         verified_count = 0
         total_units = 0
+        verified_units = []
         
         for unit in queryset:
+            old_status = unit.safety_status
             unit.mark_safe(
                 verified_by_user=verified_by_user,
                 notes=notes or f"Bulk verified as safe at {center.name}"
             )
+            
+            # Create transaction record
+            StockTransaction.objects.create(
+                stockunit=unit,
+                quantity_added=unit.unit,
+                transaction_type='addition',
+                user=verified_by_user,
+                notes=f"Bulk verified - Status changed from {old_status} to safe"
+            )
+            
             verified_count += 1
             total_units += unit.unit
+            verified_units.append({
+                'barcode': unit.barcode,
+                'bloodgroup': unit.bloodgroup,
+                'units': unit.unit
+            })
             
             logger.info(
                 f"✅ BULK VERIFIED: {unit.barcode} - {unit.unit}ml {unit.bloodgroup} "
@@ -828,7 +942,8 @@ def bulk_verify_safe_stock(center, bloodgroup=None, verified_by_user=None, notes
             'total_units': total_units,
             'center': center.name,
             'bloodgroup': bloodgroup or 'all',
-            'verified_by': verified_by_user.get_full_name() if verified_by_user else 'System'
+            'verified_by': verified_by_user.get_full_name() if verified_by_user else 'System',
+            'verified_units': verified_units
         }
 
 
@@ -894,5 +1009,13 @@ def get_safety_verification_stats(center=None):
     stats['recently_verified'] = queryset.filter(
         safety_verified_at__gte=seven_days_ago
     ).count()
+    
+    # Verification by role
+    stats['verified_by_role'] = queryset.filter(
+        safety_status='safe'
+    ).values('safety_verified_by_role').annotate(
+        count=Count('id'),
+        total_ml=Sum('unit')
+    ).order_by('-count')
     
     return stats

@@ -65,14 +65,50 @@ class StockUnit(models.Model):
         ('unsafe', 'Unsafe - Do Not Use'),
     ]
 
+    # Who added this to stock
+    ADDED_BY_ROLE_CHOICES = [
+        ('nurse', 'Nurse'),
+        ('lab_tech', 'Lab Technologist'),
+        ('system', 'System'),
+    ]
+
     bloodgroup = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES)
     unit = models.PositiveIntegerField(default=0)
     center = models.ForeignKey('blood.DonationCenter', on_delete=models.CASCADE)
     expiry_date = models.DateField()
-    barcode = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    
+    # ===== BARCODE - MUST come from pre-generated blood bag =====
+    barcode = models.CharField(
+        max_length=100, 
+        unique=True, 
+        blank=False,  # Changed to False - barcode is required
+        null=False,   # Changed to False - barcode is required
+        help_text='Barcode from pre-generated blood bag'
+    )
+    
     added_on = models.DateTimeField(auto_now_add=True)
     
-    # ===== NEW SAFETY VERIFICATION FIELDS =====
+    # ===== NEW: Link to the pre-generated blood bag barcode =====
+    blood_bag_barcode = models.OneToOneField(
+        'blood.BloodBagBarcode',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_unit',
+        help_text='The pre-generated blood bag barcode used for this donation'
+    )
+    
+    # Link to blood donation
+    blood_donation = models.ForeignKey(
+        'donor.BloodDonate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_units',
+        help_text='Blood donation that produced this unit'
+    )
+    
+    # ===== SAFETY VERIFICATION FIELDS =====
     safety_status = models.CharField(
         max_length=20,
         choices=SAFETY_STATUS_CHOICES,
@@ -86,7 +122,15 @@ class StockUnit(models.Model):
         null=True,
         blank=True,
         related_name='verified_stock_units',
-        help_text='Nurse who verified the safety status'
+        help_text='User who verified the safety status'
+    )
+    
+    safety_verified_by_role = models.CharField(
+        max_length=20,
+        choices=ADDED_BY_ROLE_CHOICES,
+        null=True,
+        blank=True,
+        help_text='Role of the person who verified safety'
     )
     
     safety_verified_at = models.DateTimeField(
@@ -122,6 +166,32 @@ class StockUnit(models.Model):
         default=False,
         help_text='Whether this unit is quarantined and cannot be used'
     )
+    
+    # ===== TRACK WHO ADDED TO INVENTORY =====
+    added_to_inventory_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='added_stock_units',
+        help_text='User who added this to inventory'
+    )
+    
+    added_to_inventory_by_role = models.CharField(
+        max_length=20,
+        choices=ADDED_BY_ROLE_CHOICES,
+        default='nurse',
+        null=True,
+        blank=True,
+        help_text='Role of the person who added to inventory'
+    )
+    
+    added_to_inventory_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        auto_now_add=True,
+        help_text='When this was added to inventory'
+    )
 
     class Meta:
         unique_together = ('center', 'barcode')
@@ -135,6 +205,10 @@ class StockUnit(models.Model):
             raise ValidationError("Unit must be zero or a positive integer.")
         if self.expiry_date < timezone.now().date():
             raise ValidationError("Expiry date cannot be in the past.")
+        
+        # Validate that barcode is provided
+        if not self.barcode:
+            raise ValidationError("Barcode is required. Must come from pre-generated blood bag.")
         
         # Validate safety status
         if self.safety_status == 'unsafe' and not self.unsafe_reason:
@@ -164,28 +238,36 @@ class StockUnit(models.Model):
         }
         return f"{status_icons.get(self.safety_status, '')} {self.get_safety_status_display()}"
 
-    def mark_safe(self, verified_by_user, notes=None):
+    def mark_safe(self, verified_by_user, role='nurse', notes=None):
         """Mark this stock unit as safe for use"""
         self.safety_status = 'safe'
         self.safety_verified_by = verified_by_user
+        self.safety_verified_by_role = role
         self.safety_verified_at = timezone.now()
         if notes:
             self.safety_notes = notes
         self.is_quarantined = False
         self.save(update_fields=[
             'safety_status', 
-            'safety_verified_by', 
+            'safety_verified_by',
+            'safety_verified_by_role',
             'safety_verified_at',
             'safety_notes',
             'is_quarantined'
         ])
+        
+        # Also update the blood bag barcode status
+        if self.blood_bag_barcode:
+            self.blood_bag_barcode.mark_tested()
     
-    def mark_unsafe(self, verified_by_user, reason, notes=None):
+    def mark_unsafe(self, verified_by_user, role='nurse', reason=None, notes=None):
         """Mark this stock unit as unsafe and quarantine it"""
         self.safety_status = 'unsafe'
         self.safety_verified_by = verified_by_user
+        self.safety_verified_by_role = role
         self.safety_verified_at = timezone.now()
-        self.unsafe_reason = reason
+        if reason:
+            self.unsafe_reason = reason
         if notes:
             self.safety_notes = notes
         self.is_quarantined = True
@@ -193,31 +275,27 @@ class StockUnit(models.Model):
         self.save(update_fields=[
             'safety_status',
             'safety_verified_by',
+            'safety_verified_by_role',
             'safety_verified_at',
             'unsafe_reason',
             'safety_notes',
             'is_quarantined',
             'unit'
         ])
-
-    def generate_unique_barcode(self):
-        for _ in range(10):
-            candidate = f"STK-{uuid.uuid4().hex[:10].upper()}"
-            if not StockUnit.objects.filter(barcode=candidate).exists():
-                self.barcode = candidate
-                return
-        raise ValidationError("Failed to generate a unique barcode for StockUnit after several attempts.")
+        
+        # Also update the blood bag barcode status
+        if self.blood_bag_barcode:
+            self.blood_bag_barcode.discard()
 
     def save(self, *args, **kwargs):
         self.clean()
-        if not self.barcode:
-            self.generate_unique_barcode()
+        # Removed barcode generation - barcode must come from blood bag
         super().save(*args, **kwargs)
 
     def __str__(self):
         safety = f"[{self.get_safety_status_display()}]"
-        return f"{self.bloodgroup} - {self.unit}ml at {self.center.name} {safety} (Expires: {self.expiry_date})"
-
+        bag_info = f" (Bag: {self.blood_bag_barcode.barcode})" if self.blood_bag_barcode else ""
+        return f"{self.bloodgroup} - {self.unit}ml at {self.center.name} {safety}{bag_info} (Expires: {self.expiry_date})"
 # Signal to update Stock aggregate whenever StockUnit changes
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -603,3 +681,128 @@ class FactContribution(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+# blood/models.py - Add this new model
+
+class BloodBagBarcode(models.Model):
+    """Pre-generated barcodes for blood collection bags"""
+    
+    STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('assigned', 'Assigned to Donor'),
+        ('collected', 'Blood Collected'),
+        ('tested', 'Tested'),
+        ('discarded', 'Discarded'),
+    ]
+    
+    barcode = models.CharField(max_length=50, unique=True, db_index=True)
+    bag_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('single', 'Single Blood Bag'),
+            ('double', 'Double Blood Bag'),
+            ('triple', 'Triple Blood Bag'),
+            ('pediatric', 'Pediatric Blood Bag'),
+        ],
+        default='single'
+    )
+    volume_ml = models.IntegerField(default=450, help_text="Standard volume in ml")
+    anticoagulant = models.CharField(
+        max_length=50,
+        choices=[
+            ('cpd', 'CPD (Citrate Phosphate Dextrose)'),
+            ('cpda1', 'CPDA-1'),
+            ('sagm', 'SAG-Mannitol'),
+        ],
+        default='cpd'
+    )
+    
+    # Status tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    
+    # Assignment tracking
+    assigned_to_donor = models.ForeignKey(
+        'donor.Donor',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_barcodes'
+    )
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_barcodes'
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    
+    # Collection tracking
+    collected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collected_barcodes'
+    )
+    collected_at = models.DateTimeField(null=True, blank=True)
+    
+    # Link to blood donation once collected
+    blood_donation = models.OneToOneField(
+        'donor.BloodDonate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='blood_bag_barcode'
+    )
+    
+    # Manufacturing details
+    manufacturer = models.CharField(max_length=100, blank=True)
+    lot_number = models.CharField(max_length=50, blank=True)
+    manufacture_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_barcodes'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['barcode']),
+            models.Index(fields=['status']),
+            models.Index(fields=['assigned_to_donor']),
+        ]
+    
+    def __str__(self):
+        return f"{self.barcode} - {self.get_status_display()}"
+
+    def assign_to_donor(self, donor, user):
+        """Assign this barcode to a donor"""
+        self.status = 'assigned'
+        self.assigned_to_donor = donor
+        self.assigned_by = user
+        self.assigned_at = timezone.now()
+        self.save()
+    
+    def mark_collected(self, user, blood_donation):
+        """Mark this barcode as collected"""
+        self.status = 'collected'
+        self.collected_by = user
+        self.collected_at = timezone.now()
+        self.blood_donation = blood_donation
+        self.save()
+    
+    def mark_tested(self):
+        """Mark as tested (safe or unsafe)"""
+        self.status = 'tested'
+        self.save()
+    
+    def discard(self):
+        """Mark as discarded"""
+        self.status = 'discarded'
+        self.save()

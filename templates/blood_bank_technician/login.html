@@ -1,0 +1,39 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Blood Bank Technician Login{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'blood_bank_technician:login' %}">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" class="form-control" id="username" name="username" required autofocus>
+    </div>
+    
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+    
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary" style="background: #8B1E3F; border: none;">
+            <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+    </div>
+    
+    <div class="mt-3 text-center">
+        <a href="{% url 'password_reset' %}">Forgot Password?</a>
+    </div>
+    
+    <!-- Add this line -->
+    <div class="mt-2 text-center">
+        <p>Don't have an account? <a href="{% url 'blood_bank_technician:signup' %}">Register here</a></p>
+    </div>
+</form>
+
+<div class="text-center mt-3">
+    <small class="text-muted">Authorized blood bank personnel only</small>
+</div>
+{% endblock %}

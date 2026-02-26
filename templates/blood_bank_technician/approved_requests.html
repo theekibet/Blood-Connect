@@ -1,0 +1,337 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Approved Requests - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Approved & Dispatched Requests{% endblock %}
+
+{% block content %}
+<!-- Navigation Tabs -->
+<div class="card mb-4">
+    <div class="card-body">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'blood_bank_technician:pending_requests' %}">
+                    <i class="fas fa-clock"></i> Pending
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'blood_bank_technician:approved_requests' %}">
+                    <i class="fas fa-check-circle"></i> Approved & Dispatched
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="stats mb-4">
+    <div class="stat-box">
+        <h3>{{ combined_requests|length }}</h3>
+        <p>Total</p>
+    </div>
+    <div class="stat-box">
+        <h3>{{ approved_count }}</h3>
+        <p>Approved</p>
+    </div>
+    <div class="stat-box">
+        <h3>{{ dispatched_count }}</h3>
+        <p>Dispatched</p>
+    </div>
+</div>
+
+<!-- Quick Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active filter-btn" data-filter="all">All</button>
+                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="patient">Patients</button>
+                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="donor">Donors</button>
+                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="approved">Approved</button>
+                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="dispatched">Dispatched</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Approved & Dispatched Requests</h5>
+        
+        {% if combined_requests %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="requests-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Patient</th>
+                            <th>Requester</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Status</th>
+                            <th>Approved Date</th>
+                            <th>Center</th>
+                            <th>Approved By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in combined_requests %}
+                        <tr class="request-row" 
+                            data-request-type="{{ req.type }}"
+                            data-request-status="{{ req.status }}">
+                            <td>
+                                {% if req.type == 'patient' %}
+                                    <span class="badge bg-primary">Patient</span>
+                                {% else %}
+                                    <span class="badge bg-info">Donor</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ req.patient_name }}</strong>
+                                {% if req.type == 'donor' and req.object.patient_dob %}
+                                    <br>
+                                    <small class="text-muted">DOB: {{ req.object.patient_dob|date:"M d, Y" }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if req.type == 'patient' %}
+                                    {{ req.object.request_by_patient.user.get_full_name }}
+                                    <br>
+                                    <small class="text-muted">Patient ID: {{ req.object.request_by_patient.id }}</small>
+                                {% else %}
+                                    {{ req.object.request_by_donor.user.get_full_name }}
+                                    <br>
+                                    <small class="text-muted">Donor ID: {{ req.object.request_by_donor.id }}</small>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-info">{{ req.bloodgroup }}</span></td>
+                            <td>{{ req.unit }} ml</td>
+                            <td>
+                                {% if req.status == 'approved' %}
+                                    <span class="badge bg-warning">Approved</span>
+                                {% elif req.status == 'dispatched' %}
+                                    <span class="badge bg-success">Dispatched</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ req.approved_at|date:"M d, Y H:i" }}</td>
+                            <td>{{ req.donation_center.name }}</td>
+                            <td>
+                                {% if req.approved_by %}
+                                    {{ req.approved_by.user.get_full_name }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if req.status == 'approved' %}
+                                    <a href="{% url 'blood_bank_technician:dispatch_request' req.type req.id %}" 
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-truck"></i> Dispatch
+                                    </a>
+                                {% else %}
+                                    <span class="badge bg-success">✓ Dispatched</span>
+                                    {% if req.dispatches %}
+                                        <br>
+                                        <small class="text-muted">
+                                            To: {{ req.dispatches.0.collected_by_name }}
+                                        </small>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                        <!-- Dispatch Details Row (shown for dispatched requests) -->
+                        {% if req.status == 'dispatched' and req.dispatches %}
+                        <tr class="dispatch-details-row">
+                            <td colspan="10">
+                                <div class="p-3 bg-light">
+                                    <strong><i class="fas fa-history"></i> Dispatch Details:</strong>
+                                    <div class="row mt-2">
+                                        {% for dispatch in req.dispatches %}
+                                        <div class="col-md-4">
+                                            <small>
+                                                <i class="fas fa-barcode"></i> {{ dispatch.stockunit.barcode }}<br>
+                                                <i class="fas fa-user"></i> Collected by: {{ dispatch.collected_by_name }}<br>
+                                                <i class="fas fa-id-card"></i> ID: {{ dispatch.collected_by_id }}<br>
+                                                <i class="fas fa-calendar"></i> {{ dispatch.dispatch_date|date:"M d, Y H:i" }}
+                                            </small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5>No Approved Requests</h5>
+                <p class="text-muted">There are no approved or dispatched requests at the moment.</p>
+                <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-primary" style="background: #8B1E3F; border: none;">
+                    View Pending Requests
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- JavaScript for filtering -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const requestRows = document.querySelectorAll('.request-row');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const filterValue = this.getAttribute('data-filter');
+            
+            requestRows.forEach(row => {
+                // Hide corresponding dispatch details row
+                const nextRow = row.nextElementSibling;
+                if (nextRow && nextRow.classList.contains('dispatch-details-row')) {
+                    nextRow.style.display = 'none';
+                }
+                
+                if (filterValue === 'all') {
+                    row.style.display = '';
+                } else if (filterValue === 'approved' || filterValue === 'dispatched') {
+                    const rowStatus = row.getAttribute('data-request-status');
+                    if (rowStatus === filterValue) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                } else {
+                    const rowType = row.getAttribute('data-request-type');
+                    if (rowType === filterValue) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    });
+    
+    // Add click handler for expanding dispatch details
+    document.querySelectorAll('.btn-success.badge').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const row = this.closest('tr');
+            const nextRow = row.nextElementSibling;
+            if (nextRow && nextRow.classList.contains('dispatch-details-row')) {
+                if (nextRow.style.display === 'none' || nextRow.style.display === '') {
+                    nextRow.style.display = 'table-row';
+                } else {
+                    nextRow.style.display = 'none';
+                }
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #8B1E3F;
+}
+
+.stat-box h3 {
+    margin: 0;
+    font-size: 2rem;
+    color: #8B1E3F;
+}
+
+.stat-box p {
+    margin: 5px 0 0;
+    color: #666;
+    font-weight: 500;
+}
+
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.filter-btn {
+    margin-right: 5px;
+}
+
+.filter-btn.active {
+    background-color: #8B1E3F;
+    border-color: #8B1E3F;
+    color: white;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top: none;
+}
+
+.dispatch-details-row {
+    background-color: #f8f9fa;
+}
+
+.dispatch-details-row td {
+    padding: 1rem !important;
+}
+
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.2rem 0.3rem;
+        font-size: 0.75rem;
+    }
+}
+</style>
+{% endblock %}

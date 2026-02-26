@@ -1,0 +1,137 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Blood Bank Dashboard{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="stats mb-4">
+    <div class="stat-box">
+        <h3>{{ total_safe_units|default:0 }}</h3>
+        <p>Safe Units</p>
+        <small>{{ total_safe_volume|default:0 }} ml total</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ total_pending_units|default:0 }}</h3>
+        <p>Pending Verification</p>
+        <small>{{ total_pending_volume|default:0 }} ml</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ total_unsafe_units|default:0 }}</h3>
+        <p>Unsafe Units</p>
+        <small>{{ total_unsafe_volume|default:0 }} ml</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ total_expiring_units|default:0 }}</h3>
+        <p>Expiring Soon</p>
+        <small>{{ total_expiring_volume|default:0 }} ml</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ pending_requests|default:0 }}</h3>
+        <p>Pending Requests</p>
+    </div>
+</div>
+
+<!-- Inventory by Blood Type -->
+<div class="card mb-4">
+    <div class="card-header" style="background: #8B1E3F; color: white;">
+        <h5 class="mb-0">📊 Inventory by Blood Type</h5>
+    </div>
+    <div class="card-body">
+        {% if inventory_by_type %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Blood Type</th>
+                            <th>Safe Units</th>
+                            <th>Safe Volume</th>
+                            <th>Pending Units</th>
+                            <th>Pending Volume</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for blood_type, data in inventory_by_type.items %}
+                        <tr>
+                            <td><strong>{{ blood_type }}</strong></td>
+                            <td>
+                                <span class="badge bg-success">{{ data.safe_batches }} batches</span>
+                            </td>
+                            <td>{{ data.safe_units }} ml</td>
+                            <td>
+                                {% if data.pending_batches > 0 %}
+                                    <span class="badge bg-warning">{{ data.pending_batches }} batches</span>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ data.pending_units }} ml</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted text-center py-3">No blood units in inventory.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3">⚡ Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'blood_bank_technician:inventory' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-boxes"></i> View Safe Inventory
+                    </a>
+                    <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-outline-warning">
+                        <i class="fas fa-clock"></i> Pending Requests ({{ pending_requests }})
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3">📋 Recent Activity</h5>
+                {% if recent_transactions %}
+                    <div class="list-group">
+                        {% for tx in recent_transactions %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>
+                                        {% if tx.transaction_type == 'addition' %}
+                                            <span class="badge bg-success">+</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">-</span>
+                                        {% endif %}
+                                        {{ tx.stockunit.bloodgroup }}
+                                    </span>
+                                    <small class="text-muted">{{ tx.transaction_at|timesince }} ago</small>
+                                </div>
+                                <small class="text-muted">
+                                    {% if tx.transaction_type == 'addition' %}
+                                        Added {{ tx.quantity_added }}ml
+                                    {% else %}
+                                        Deducted {{ tx.quantity_deducted }}ml
+                                    {% endif %}
+                                    {% if tx.notes %} - {{ tx.notes|truncatechars:50 }}{% endif %}
+                                </small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent transactions</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,20 +3,18 @@
 {% block content %}
 <head>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
-  <style>
-
-  </style>
+  <style></style>
 </head>
 
 <div class="container">
   <div class="page-header">
     <h1><i class="fas fa-user-nurse"></i> My Donation Appointments</h1>
-    <p class="mb-2">Manage and process donor appointments with safety verification</p>
+    <p class="mb-2">Manage donor appointments - collect blood samples for lab testing</p>
     <div class="stats-row">
       <div class="stat-card"><div class="number">{{ total_count|default:0 }}</div><div class="label">Total</div></div>
       <div class="stat-card"><div class="number">{{ pending_count|default:0 }}</div><div class="label">Pending</div></div>
       <div class="stat-card"><div class="number">{{ approved_count|default:0 }}</div><div class="label">Approved</div></div>
-      <div class="stat-card"><div class="number">{{ completed_count|default:0 }}</div><div class="label">Completed</div></div>
+      <div class="stat-card"><div class="number">{{ collected_count|default:0 }}</div><div class="label">Collected</div></div>
     </div>
   </div>
 
@@ -50,12 +48,18 @@
                 <div class="profile-img bg-light"><i class="fas fa-user fa-2x"></i></div>
               {% endif %}
             </td>
-            <td><div class="blood-type">{{ bd_details.bloodgroup|default:"N/A" }}</div><div>{{ bd_details.unit|default:"N/A" }} ml</div></td>
+            <td>
+              <div class="blood-type">{{ bd_details.bloodgroup|default:"N/A" }}</div>
+              <div>{{ bd_details.unit|default:"N/A" }} ml</div>
+              {% if appointment.status == 'collected' %}
+                <span class="badge bg-info">Awaiting Lab Test</span>
+              {% endif %}
+            </td>
             <td>{{ bd_details.donation_center_name|default:"N/A" }}</td>
             <td>{{ appointment.date|date:"M d, Y" }}</td>
             <td><span class="status-badge status-{{ appointment.status }}">{{ appointment.status|title }}</span></td>
             
-            <!-- CORRECTED Actions Column -->
+            <!-- Actions Column - UPDATED with barcode selection and correct URL namespacing -->
             <td>
               {% if appointment.status == "completed" or appointment.status == "cancelled" or appointment.status == "rejected" %}
                 <div class="text-muted">
@@ -65,34 +69,39 @@
               {% else %}
                 <div class="action-buttons">
                   {% if appointment.status == "pending" %}
-                    <button class="btn btn-success update-status-btn"
+                    <button class="btn btn-success btn-sm update-status-btn"
                             data-id="{{ appointment.id }}" 
                             data-action="approve"
-                            data-original-text="<i class='fas fa-check'></i> Approve">
+                            data-original-text="Approve">
                       <i class="fas fa-check"></i> Approve
                     </button>
-                    <button class="btn btn-danger update-status-btn"
+                    <button class="btn btn-danger btn-sm update-status-btn"
                             data-id="{{ appointment.id }}" 
                             data-action="reject"
-                            data-original-text="<i class='fas fa-times'></i> Reject">
+                            data-original-text="Reject">
                       <i class="fas fa-times"></i> Reject
                     </button>
+                  
                   {% elif appointment.status == "approved" %}
-                    <button class="btn btn-info open-complete-modal"
-                            data-appointment-id="{{ appointment.id }}"
-                            data-donor-name="{{ donor_details.full_name }}"
-                            data-donor-verified="{{ item.donor.bloodgroup_verified|yesno:'true,false' }}"
-                            data-donor-bloodgroup="{{ item.donor.bloodgroup|default:'' }}"
-                            data-bloodgroup="{{ bd_details.bloodgroup }}"
-                            data-unit="{{ bd_details.unit|default:450 }}">
-                      <i class="fas fa-check-double"></i> Complete
-                    </button>
-                    <button class="btn btn-secondary update-status-btn"
+                    <!-- UPDATED: Using correct namespace for URL -->
+                    <a href="{% url 'nurse:select_barcode' appointment.id %}" 
+                       class="btn btn-info btn-sm">
+                      <i class="fas fa-barcode"></i> Select Bag & Collect
+                    </a>
+                    <button class="btn btn-secondary btn-sm update-status-btn"
                             data-id="{{ appointment.id }}" 
                             data-action="cancelled"
-                            data-original-text="<i class='fas fa-ban'></i> Cancel">
+                            data-original-text="Cancel">
                       <i class="fas fa-ban"></i> Cancel
                     </button>
+                  
+                  {% elif appointment.status == "collected" %}
+                    <span class="badge bg-info">
+                      <i class="fas fa-flask"></i> Sent to Lab
+                    </span>
+                    {% if item.blood_bag_barcode %}
+                      <br><small>Bag: <code>{{ item.blood_bag_barcode.barcode }}</code></small>
+                    {% endif %}
                   {% endif %}
                 </div>
               {% endif %}
@@ -105,114 +114,8 @@
     </div>
   </div>
 
-  <!-- Complete Modal with Safety Verification -->
-  <div class="modal fade" id="completeModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <form id="completeModalForm">
-          <div class="modal-header">
-            <h5><i class="fas fa-check-double"></i> Complete Donation - <span id="modal-donor-name"></span></h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-
-          <div class="modal-body">
-            <!-- Donor Info -->
-            <div class="alert alert-info" id="modal-donor-info"></div>
-
-            <!-- Blood Group Verification -->
-            <div id="verification-status-alert"></div>
-
-            <div class="row g-3">
-              <!-- Blood Group -->
-              <div class="col-md-6">
-                <label class="form-label fw-bold">
-                  <i class="fas fa-tint"></i> Blood Group * <span id="verification-badge"></span>
-                </label>
-                <div id="bloodgroup-field-container"></div>
-              </div>
-
-              <!-- Units -->
-              <div class="col-md-6">
-                <label class="form-label fw-bold"><i class="fas fa-flask"></i> Units (ml) *</label>
-                <input type="number" name="unit" id="modal-unit" min="450" max="2700" step="50" class="form-control" required>
-              </div>
-            </div>
-
-            <!-- ===== SAFETY VERIFICATION SECTION ===== -->
-            <div class="mt-4">
-              <h6 class="fw-bold mb-3">
-                <i class="fas fa-shield-alt"></i> Blood Safety Verification *
-                <span class="badge bg-warning">REQUIRED</span>
-              </h6>
-
-              <div class="safety-radio-group">
-                <div class="safety-option safety-safe">
-                  <input type="radio" name="safety_status" id="safety-safe" value="safe" required>
-                  <label for="safety-safe">
-                    <div class="safety-icon">✅</div>
-                    <strong>SAFE FOR USE</strong>
-                    <small class="text-muted">Blood passed all quality checks</small>
-                  </label>
-                </div>
-
-                <div class="safety-option safety-unsafe">
-                  <input type="radio" name="safety_status" id="safety-unsafe" value="unsafe">
-                  <label for="safety-unsafe">
-                    <div class="safety-icon">⚠️</div>
-                    <strong>UNSAFE - DO NOT USE</strong>
-                    <small class="text-muted">Quality issues detected</small>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Unsafe Reason (shown only when unsafe selected) -->
-              <div id="unsafe-reason-container" style="display:none;" class="mt-3">
-                <label class="form-label fw-bold text-danger">
-                  <i class="fas fa-exclamation-triangle"></i> Reason for Marking Unsafe *
-                </label>
-                <select name="unsafe_reason" id="unsafe-reason-select" class="form-select">
-                  <option value="">-- Select Reason --</option>
-                  <option value="contamination">Contamination Detected</option>
-                  <option value="disease_markers">Disease Markers Present</option>
-                  <option value="quality_issues">Quality Issues</option>
-                  <option value="improper_storage">Improper Storage</option>
-                  <option value="expired">Expired</option>
-                  <option value="other">Other Reason</option>
-                </select>
-              </div>
-
-              <!-- Safety Notes -->
-              <div class="mt-3">
-                <label class="form-label fw-bold">
-                  <i class="fas fa-notes-medical"></i> Safety Notes (Optional)
-                </label>
-                <textarea name="safety_notes" id="safety-notes" class="form-control" rows="2" 
-                          placeholder="Add any notes about test results, observations, etc."></textarea>
-              </div>
-            </div>
-
-            <input type="hidden" name="action" value="completed">
-            <input type="hidden" id="modal-appointment-id">
-
-            <!-- Dynamic Impact Alert (changes based on safety status) -->
-            <div class="alert mt-3 mb-0" id="completion-impact-alert">
-              <h6><i class="fas fa-info-circle"></i> Completing This Donation Will:</h6>
-              <ul class="mb-0" id="completion-impact-list">
-                <!-- Will be populated dynamically -->
-              </ul>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-info btn-lg" id="modal-submit-btn">
-              <i class="fas fa-check"></i> Verify Safety & Complete
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+  <!-- Collection Modal - REMOVED as we now use barcode selection flow -->
+  <!-- The modal has been replaced by the select_barcode view -->
 
 {% else %}
   <div class="table-container">
@@ -226,7 +129,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 Nurse donation page initialized');
+  console.log('🚀 Nurse donation page initialized - Barcode selection workflow with proper URL namespacing');
   
   // Utility functions
   function getCookie(name) {
@@ -285,56 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Safety status toggle handler
-  function setupSafetyToggle() {
-    const safeRadio = document.getElementById('safety-safe');
-    const unsafeRadio = document.getElementById('safety-unsafe');
-    const unsafeContainer = document.getElementById('unsafe-reason-container');
-    const unsafeSelect = document.getElementById('unsafe-reason-select');
-    const impactAlert = document.getElementById('completion-impact-alert');
-    const impactList = document.getElementById('completion-impact-list');
-    
-    if (!safeRadio || !unsafeRadio) return;
-    
-    function updateImpactList(isSafe) {
-      if (isSafe) {
-        impactAlert.className = 'alert alert-success safe-impact mt-3 mb-0';
-        impactList.innerHTML = `
-          <li><i class="fas fa-plus-circle text-success"></i> Add blood to <strong>SAFE STOCK</strong> (available for issuance)</li>
-          <li><i class="fas fa-barcode text-primary"></i> Generate unique tracking barcode</li>
-          <li><i class="fas fa-star text-warning"></i> Award donor points for successful donation</li>
-          <li><i class="fas fa-calendar-plus text-info"></i> Set expiry date (46 days from today)</li>
-          <li><i class="fas fa-check-circle text-success"></i> Update donor's last donation date</li>
-        `;
-      } else {
-        impactAlert.className = 'alert alert-danger unsafe-impact mt-3 mb-0';
-        impactList.innerHTML = `
-          <li><i class="fas fa-ban text-danger"></i> Mark blood as <strong>UNSAFE</strong> and quarantine</li>
-          <li><i class="fas fa-exclamation-triangle text-warning"></i> <strong>DO NOT</strong> add to usable stock</li>
-          <li><i class="fas fa-times-circle text-danger"></i> <strong>NO</strong> donor points awarded</li>
-          <li><i class="fas fa-shield-alt text-warning"></i> Unit removed from circulation</li>
-          <li><i class="fas fa-flag text-danger"></i> Log safety issue for review</li>
-        `;
-      }
-    }
-    
-    // Initial state
-    updateImpactList(true);
-    
-    // Event listeners
-    safeRadio.addEventListener('change', () => {
-      unsafeContainer.style.display = 'none';
-      unsafeSelect.required = false;
-      updateImpactList(true);
-    });
-    
-    unsafeRadio.addEventListener('change', () => {
-      unsafeContainer.style.display = 'block';
-      unsafeSelect.required = true;
-      updateImpactList(false);
-    });
-  }
-
   // Status update buttons (Approve, Reject, Cancel)
   document.querySelectorAll('.update-status-btn').forEach(button => {
     button.addEventListener('click', () => {
@@ -342,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const action = button.dataset.action;
       const donorRow = button.closest('tr');
       const donorName = donorRow.querySelector('.donor-name')?.textContent.trim() || 'this donor';
-      const originalText = button.dataset.originalText;
+      const originalText = button.innerHTML;
       
       const messages = {
         'approve': `Approve donation appointment for ${donorName}?`,
@@ -356,11 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
       let reason = '';
       if (action === 'reject' || action === 'cancelled') {
         reason = prompt(`Reason for ${action}:`);
-        if (reason === null) return; // User cancelled
+        if (reason === null) return;
       }
 
       button.disabled = true;
-      button.innerHTML = '<span class="loading-spinner"></span> Processing...';
+      button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
 
       const formData = new URLSearchParams();
       formData.append('action', action);
@@ -393,273 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Open complete modal with all data
-  document.querySelectorAll('.open-complete-modal').forEach(button => {
-    button.addEventListener('click', () => {
-      console.log('🔵 Opening complete modal');
-      
-      const appointmentId = button.dataset.appointmentId;
-      const donorName = button.dataset.donorName;
-      const isVerified = button.dataset.donorVerified === 'true';
-      const donorBloodgroup = button.dataset.donorBloodgroup;
-      const bloodgroup = button.dataset.bloodgroup;
-      const unit = button.dataset.unit;
-      
-      // Populate basic fields
-      document.getElementById('modal-donor-name').textContent = donorName;
-      document.getElementById('modal-appointment-id').value = appointmentId;
-      document.getElementById('modal-unit').value = unit;
-      
-      // Donor info alert
-      document.getElementById('modal-donor-info').innerHTML = `
-        <div class="row">
-          <div class="col-md-8">
-            <strong><i class="fas fa-user"></i> Donor:</strong> ${donorName}<br>
-            <strong><i class="fas fa-tint"></i> Blood Group:</strong> ${bloodgroup || 'Not specified'}<br>
-            <strong><i class="fas fa-flask"></i> Volume:</strong> ${unit} ml
-          </div>
-          <div class="col-md-4 text-end">
-            <span class="badge ${isVerified ? 'bg-success' : 'bg-warning text-dark'}">
-              <i class="fas fa-${isVerified ? 'shield-alt' : 'exclamation-triangle'}"></i>
-              ${isVerified ? 'Blood Group Verified' : 'First Donation - Verification Required'}
-            </span>
-          </div>
-        </div>
-      `;
-      
-      // Blood group field based on verification status
-      const bloodgroupContainer = document.getElementById('bloodgroup-field-container');
-      const verificationAlert = document.getElementById('verification-status-alert');
-      
-      if (isVerified) {
-        // Verified donor - locked field
-        bloodgroupContainer.innerHTML = `
-          <input type="text" 
-                 class="form-control" 
-                 value="${donorBloodgroup}" 
-                 readonly 
-                 style="background: #d4edda; border: 2px solid #28a745; cursor: not-allowed; font-weight: bold;">
-          <input type="hidden" name="bloodgroup" value="${donorBloodgroup}">
-          <div class="form-text text-success">
-            <i class="fas fa-lock"></i> Verified blood group (permanently locked)
-          </div>
-        `;
-        
-        verificationAlert.innerHTML = `
-          <div class="alert alert-success">
-            <i class="fas fa-check-circle"></i>
-            <strong>Blood Group Verified:</strong> ${donorBloodgroup} (cannot be changed)
-          </div>
-        `;
-      } else {
-        // First-time donor - dropdown
-        const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-        let options = '<option value="">⚠️ SELECT BLOOD GROUP</option>';
-        bloodGroups.forEach(bg => {
-          const selected = bg === bloodgroup ? 'selected' : '';
-          options += `<option value="${bg}" ${selected}>${bg}</option>`;
-        });
-        
-        bloodgroupContainer.innerHTML = `
-          <select name="bloodgroup" 
-                  id="modal-bloodgroup-select"
-                  class="form-select" 
-                  required 
-                  style="font-weight: bold; border: 2px solid #ffc107;">
-            ${options}
-          </select>
-          <div class="form-text text-danger">
-            <i class="fas fa-exclamation-circle"></i> 
-            This will permanently verify the donor's blood group
-          </div>
-        `;
-        
-        verificationAlert.innerHTML = `
-          <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle"></i>
-            <strong>First Donation - Verification Required</strong><br>
-            The blood group you select will be <strong>permanently saved</strong> to the donor's profile.
-          </div>
-        `;
-      }
-      
-      // Reset safety fields
-      document.getElementById('safety-safe').checked = true;
-      document.getElementById('unsafe-reason-container').style.display = 'none';
-      document.getElementById('safety-notes').value = '';
-      
-      // Setup safety toggle
-      setupSafetyToggle();
-      
-      // Show modal
-      const modal = new bootstrap.Modal(document.getElementById('completeModal'));
-      modal.show();
-    });
-  });
-
-  // Submit form handler
-  document.getElementById('completeModalForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    console.log('📝 Form submission started');
-    
-    const form = e.target;
-    const appointmentId = document.getElementById('modal-appointment-id').value;
-    const donorName = document.getElementById('modal-donor-name').textContent;
-    const safetyStatus = form.querySelector('input[name="safety_status"]:checked');
-    
-    // Validate safety status
-    if (!safetyStatus) {
-      showMessage('warning', '⚠️ Please select blood safety status (Safe or Unsafe)', false);
-      return;
-    }
-    
-    // Validate unsafe reason if applicable
-    if (safetyStatus.value === 'unsafe') {
-      const unsafeReason = document.getElementById('unsafe-reason-select').value;
-      if (!unsafeReason) {
-        showMessage('warning', '⚠️ Please select a reason for marking blood as unsafe', false);
-        return;
-      }
-      
-      // Extra confirmation for unsafe marking
-      const unsafeConfirm = confirm(
-        `⚠️ WARNING: UNSAFE BLOOD CONFIRMATION\n\n` +
-        `You are marking this blood as UNSAFE for:\n• ${donorName}\n• Reason: ${unsafeReason}\n\n` +
-        `This will:\n• Quarantine the blood unit\n• Make it unavailable for issuance\n• Zero out the stock count\n• NO points awarded to donor\n\n` +
-        `Are you ABSOLUTELY sure?`
-      );
-      
-      if (!unsafeConfirm) return;
-    }
-    
-    // Validate blood group for unverified donors
-    const openButton = document.querySelector(`.open-complete-modal[data-appointment-id="${appointmentId}"]`);
-    const isVerified = openButton?.dataset.donorVerified === 'true';
-    
-    if (!isVerified) {
-      const bloodgroupSelect = document.getElementById('modal-bloodgroup-select');
-      if (!bloodgroupSelect || !bloodgroupSelect.value) {
-        showMessage('warning', '⚠️ Please select blood group for first-time verification', false);
-        bloodgroupSelect.focus();
-        return;
-      }
-      
-      // Extra confirmation for blood group verification
-      const selectedBG = bloodgroupSelect.value;
-      const bgConfirm = confirm(
-        `🩸 FINAL BLOOD GROUP VERIFICATION\n\n` +
-        `You are about to PERMANENTLY verify donor's blood group as:\n\n` +
-        `        ${selectedBG}\n\n` +
-        `This action CANNOT be undone.\nAll future donations will use this blood group.\n\n` +
-        `Are you SURE this is correct?`
-      );
-      
-      if (!bgConfirm) {
-        console.log('❌ User cancelled blood group verification');
-        return;
-      }
-    }
-    
-    // Validate unit amount
-    const unit = parseInt(document.getElementById('modal-unit').value);
-    if (!unit || unit < 450 || unit > 2700 || unit % 50 !== 0) {
-      showMessage('warning', '⚠️ Units must be 450-2700 ml in multiples of 50', false);
-      return;
-    }
-    
-    // Final confirmation
-    const finalMsg = safetyStatus.value === 'safe' 
-      ? `Complete donation for ${donorName}?\n\n✅ Blood will be added to SAFE stock`
-      : `Complete donation for ${donorName}?\n\n⚠️ Blood will be marked as UNSAFE and quarantined`;
-    
-    if (!confirm(finalMsg)) {
-      console.log('❌ User cancelled final confirmation');
-      return;
-    }
-    
-    // Disable submit button
-    const submitBtn = document.getElementById('modal-submit-btn');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
-    
-    // Prepare form data
-    const formData = new FormData(form);
-    
-    console.log('📤 Sending request to server:', {
-      appointmentId,
-      bloodgroup: formData.get('bloodgroup'),
-      unit: formData.get('unit'),
-      safety_status: formData.get('safety_status'),
-      unsafe_reason: formData.get('unsafe_reason')
-    });
-    
-    // Submit to server
-    fetch(`/nurse/appointment/${appointmentId}/update_status/`, {
-      method: 'POST',
-      headers: { 
-        'X-CSRFToken': getCookie('csrftoken'),
-        'Accept': 'application/json'
-      },
-      body: formData
-    })
-    .then(response => {
-      console.log('📥 Response status:', response.status);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log('✅ Server response:', data);
-      
-      if (data.success) {
-        let message = `✅ ${data.message}`;
-        
-        if (data.barcode) {
-          message += `<br><strong>Barcode:</strong> ${data.barcode}`;
-        }
-        
-        if (data.safety_status === 'unsafe') {
-          message += `<br><span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Blood marked as UNSAFE and quarantined</span>`;
-          if (data.unsafe_reason) {
-            message += `<br><small>Reason: ${data.unsafe_reason}</small>`;
-          }
-        }
-        
-        if (data.bloodgroup_verified) {
-          message += `<br><span class="text-success"><i class="fas fa-shield-alt"></i> Blood group verified: ${data.verified_bloodgroup}</span>`;
-        }
-        
-        if (data.donor_stats) {
-          message += `<br><small>Donor points: ${data.donor_stats.points}</small>`;
-        }
-        
-        showMessage('success', message);
-        
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('completeModal'));
-        if (modal) modal.hide();
-        
-        // Reload page after delay
-        setTimeout(() => {
-          window.location.reload();
-        }, 2500);
-      } else {
-        showMessage('danger', `❌ Error: ${data.error || 'Unknown error'}`, false);
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-      }
-    })
-    .catch(error => {
-      console.error('❌ Fetch error:', error);
-      showMessage('danger', `❌ Network error: ${error.message}`, false);
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
-    });
-  });
-  
-  console.log('✅ Nurse donation template fully loaded');
+  // REMOVED: Collection modal JavaScript - Now using barcode selection flow
+  // The open-collection-modal buttons and related functions have been removed
 });
 </script>
 {% endblock %}

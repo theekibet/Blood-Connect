@@ -66,7 +66,7 @@ def get_patient_or_redirect(user, request, redirect_url="patientlogin"):
 
 def patient_signup_view(request):
     """
-    Handles patient registration WITHOUT email verification requirement.
+    Handles patient registration.
     Users can login immediately after registration.
     """
     if request.method == 'POST':
@@ -75,9 +75,9 @@ def patient_signup_view(request):
         
         if userForm.is_valid() and patientForm.is_valid():
             try:
-                # Save user and ACTIVATE IMMEDIATELY (no email verification required)
+                # Save user and activate immediately
                 user = userForm.save(commit=False)
-                user.is_active = True  # CHANGED: User can login immediately
+                user.is_active = True
                 user.set_password(userForm.cleaned_data['password'])
                 user.save()
                 
@@ -90,41 +90,15 @@ def patient_signup_view(request):
                 patient_group, created = Group.objects.get_or_create(name='PATIENT')
                 patient_group.user_set.add(user)
                 
-                # Optional: Send welcome email (not required for login)
-                try:
-                    from blood.tasks import send_welcome_email_task  # Rename this task
-                    
-                    # Send welcome email asynchronously (optional)
-                    send_welcome_email_task.delay(
-                        user.id,
-                        user.email,
-                        request.get_host()
-                    )
-                    
-                    messages.success(request, 
-                        f"🎉 Registration successful, {user.first_name}! "
-                        f"Your account has been created. You can now login."
-                    )
-                    
-                    email_sent = True
-                    
-                    # Log the registration
-                    logger.info(f"New patient registration: {user.username} ({user.email}) - Account active immediately")
-                    
-                except Exception as e:
-                    # Email is optional, so just log the error
-                    logger.error(f"Patient welcome email task error: {str(e)}", exc_info=True)
-                    
-                    # Still show success message
-                    messages.success(request,
-                        f"🎉 Registration successful, {user.first_name}! "
-                        f"Your account has been created. You can now login."
-                    )
-                    
-                    email_sent = False
-                    
-                    # Log the registration with email failure (non-critical)
-                    logger.info(f"New patient registration: {user.username} ({user.email}) - Account active, email optional")
+                # Log the registration
+                logger.info(f"New patient registration: {user.username} - Account active")
+                
+                # Success message
+                messages.success(
+                    request, 
+                    f"🎉 Registration successful, {user.first_name}! "
+                    f"Your account has been created. You can now login."
+                )
                 
                 # Redirect to login page
                 return redirect('patientlogin')
@@ -137,14 +111,22 @@ def patient_signup_view(request):
                 if 'user' in locals():
                     user.delete()
                 
-                messages.error(request,
+                messages.error(
+                    request,
                     "⚠️ Registration failed due to a system error. "
                     "Please try again or contact support if the issue persists."
                 )
+                
                 return render(request, 'patient/patientsignup.html', {
                     'userForm': userForm,
                     'patientForm': patientForm
                 })
+        else:
+            # Forms have validation errors
+            messages.error(
+                request,
+                "⚠️ Please correct the errors below."
+            )
     else:
         userForm = forms.PatientUserForm()
         patientForm = forms.PatientForm()
@@ -315,163 +297,92 @@ def patient_make_request_view(request):
 
     centers = DonationCenter.objects.all()
     form_errors = {}
-    appointment_datetime_str = ''
-
-    # Check existing active request
-    active_request = Appointment.objects.filter(
-        patient=patient,
-        status__in=['pending', 'approved']
-    ).first()
-
-    if active_request:
-        center_data = [
-            {"id": c.id, "name": c.name, "latitude": c.latitude, "longitude": c.longitude}
-            for c in centers
-        ]
-        return render(request, 'patient/makerequest.html', {
-            'pending_request': active_request,
-            'centers': centers,
-            'center_data_json': json.dumps(center_data, cls=DjangoJSONEncoder),
-        })
 
     if request.method == 'POST':
         request_form = RequestForm(request.POST, request.FILES, user=request.user)
 
-        # attach patient
+        # Attach patient to the request
         request_form.instance.request_by_patient = patient
 
+        # Get donation center
         donation_center_id = request.POST.get('donation_center')
-        nurse_id = request.POST.get('nurse')
-        appointment_datetime_str = request.POST.get('date')
-
         center_instance = DonationCenter.objects.filter(id=donation_center_id).first()
-        nurse_instance = Nurse.objects.filter(id=nurse_id).first() if nurse_id else None
 
-        request_form_is_valid = request_form.is_valid()
-
-        if request_form_is_valid and appointment_datetime_str and nurse_instance and center_instance:
+        if request_form.is_valid() and center_instance:
             try:
-                combined_datetime = timezone.make_aware(
-                    datetime.fromisoformat(appointment_datetime_str),
-                    timezone.get_current_timezone()
-                )
-
-                # Save blood request
+                # Save blood request directly
                 blood_request = request_form.save(commit=False)
                 blood_request.donation_center = center_instance
+                blood_request.status = 'pending'
+                blood_request.is_seen = False          # <-- ADD THIS
+                blood_request.stock_deducted = False   # <-- ADD THIS
                 blood_request.save()
 
-                # Prepare appointment
-                content_type = ContentType.objects.get_for_model(blood_request.__class__)
-                appointment = Appointment(
-                    patient=patient,
-                    donor=None,
-                    nurse=nurse_instance,
-                    date=combined_datetime,
-                    status='pending',
-                    request_content_type=content_type,
-                    request_object_id=blood_request.id,
+                messages.success(
+                    request, 
+                    "✅ Blood request submitted successfully! The blood bank will review it shortly."
                 )
+                return redirect('patient-requests-history')
 
-                appointment.full_clean()
-
-                appointment_duration = timedelta(minutes=30)
-                conflict_exists = Appointment.objects.filter(
-                    nurse=nurse_instance,
-                    date__lt=combined_datetime + appointment_duration,
-                    date__gte=combined_datetime,
-                    status__in=['pending', 'approved']
-                ).exists()
-
-                if conflict_exists:
-                    messages.error(
-                        request,
-                        f"❌ Nurse {nurse_instance.user.get_full_name()} is already booked during this slot."
-                    )
-                else:
-                    appointment.save()
-
-                    # 🔔 SEND NOTIFICATION TO NURSE
-                    create_notification(
-                        title="New Blood Request",
-                        message=f"Patient {patient.user.get_full_name()} has submitted a new blood request.",
-                        recipient_obj=nurse_instance,
-                        sender_obj=patient,
-                        action="new_request",
-                        appointment_date=combined_datetime,
-                        bloodgroup=blood_request.bloodgroup,
-                        unit=blood_request.unit
-                    )
-
-                    messages.success(request, "✅ Blood request and appointment created successfully.")
-                    return redirect('patient-requests-history')
-
-            except ValidationError as ve:
-                form_errors['appointment'] = ve.messages
             except Exception as e:
-                messages.error(request, f"❌ Invalid appointment date/time or other error: {str(e)}")
+                messages.error(request, f"❌ Error creating request: {str(e)}")
+                logger.error(f"Error in patient_make_request_view: {e}", exc_info=True)
         else:
-            messages.error(
-                request,
-                "❌ Please correct the errors in the form and make sure all required fields are selected."
-            )
-            form_errors = {**request_form.errors}
-
-            if not nurse_instance:
-                form_errors.setdefault('nurse', []).append("Please select a valid nurse.")
-            if not appointment_datetime_str:
-                form_errors.setdefault('date', []).append("Please select appointment date and time.")
+            messages.error(request, "❌ Please correct the errors in the form.")
+            form_errors = request_form.errors
 
     else:
         request_form = RequestForm(user=request.user)
+
+    # Check for any existing pending requests
+    pending_request = BloodRequest.objects.filter(
+        request_by_patient=patient,
+        status='pending'
+    ).first()
 
     center_data = [
         {"id": c.id, "name": c.name, "latitude": c.latitude, "longitude": c.longitude}
         for c in centers
     ]
 
-    return render(request, 'patient/makerequest.html', {
+    context = {
         'request_form': request_form,
         'centers': centers,
         'center_data_json': json.dumps(center_data, cls=DjangoJSONEncoder),
-        'pending_request': None,
+        'pending_request': pending_request,
         'form_errors': form_errors,
-        'appointment_date': appointment_datetime_str,
-        'appointment_time': '',
-    })
+        'no_appointment': True,
+    }
     
+    return render(request, 'patient/makerequest.html', context)
 # -------------------------------
 # Requests History
 # -------------------------------
 @login_required(login_url='patientlogin')
 def patient_requests_history_view(request):
-    
     patient = get_patient_or_redirect(request.user, request)
     if not patient:
         return redirect("patient-dashboard")
-
-    blood_requests = BloodRequest.objects.filter(request_by_patient=patient)\
-                                         .select_related('donation_center')\
-                                         .order_by('-created_at')
-
-    content_type = ContentType.objects.get_for_model(BloodRequest)
-    appointments = Appointment.objects.filter(
-        patient=patient,
-        request_content_type=content_type,
-        request_object_id__in=blood_requests.values_list('id', flat=True)
-    ).select_related('nurse__user')
-
-    appointment_map = {appt.request_object_id: appt for appt in appointments}
-    for req in blood_requests:
-        req.appointment = appointment_map.get(req.id)
-
+    
+    # Get all blood requests for this patient
+    blood_requests = BloodRequest.objects.filter(
+        request_by_patient=patient
+    ).select_related(
+        'donation_center',
+        'approved_by__user',
+        'reviewed_by__user',
+        'dispatched_by__user'
+    ).order_by('-created_at')
+    
     return render(request, 'patient/patient_request_history.html', {
         'blood_requests': blood_requests,
         'now': timezone.now(),
     })
-
 # -------------------------------
 # Cancel Requests
+# -------------------------------
+# -------------------------------
+# Cancel Requests (Updated for Blood Bank Tech Workflow)
 # -------------------------------
 @login_required(login_url='patientlogin')
 def cancel_request_view(request, request_id):
@@ -485,42 +396,74 @@ def cancel_request_view(request, request_id):
         request_by_patient=patient
     )
 
-    appointment = Appointment.objects.filter(
-        patient=patient,
-        request_content_type=ContentType.objects.get_for_model(BloodRequest),
-        request_object_id=blood_request.id
-    ).first()
-
     now = timezone.now()
 
-    if appointment and appointment.date > now and appointment.status.lower() in ['pending', 'approved']:
-        appointment.status = 'cancelled'
-        appointment.cancelled_by_user = request.user
-        appointment.cancelled_at = now
-        appointment.status_changed_by = request.user
-        appointment.status_changed_at = now
-        appointment.save()
-
+    # Only allow cancellation of pending requests
+    if blood_request.status == 'pending':
+        # Update request status
         blood_request.status = 'cancelled'
         blood_request.cancelled_by = 'patient'
         blood_request.cancelled_at = now
         blood_request.save(update_fields=['status', 'cancelled_by', 'cancelled_at'])
 
-        # 🔔 SEND NOTIFICATION TO NURSE
-        if appointment.nurse:
+        # Get cancellation reason from POST if provided
+        reason = request.POST.get('reason', '').strip()
+        if reason:
+            blood_request.cancellation_reason = reason
+            blood_request.save(update_fields=['cancellation_reason'])
+
+        # 🔔 SEND NOTIFICATION TO BLOOD BANK TECHNICIANS
+        from blood_bank_technician.models import BloodBankTechProfile
+        
+        # Notify all blood bank techs at this center
+        blood_bank_techs = BloodBankTechProfile.objects.filter(
+            center=blood_request.donation_center,
+            is_active=True
+        )
+        
+        for tech in blood_bank_techs:
             create_notification(
-                title="Request Cancelled",
-                message=f"Patient {patient.user.get_full_name()} has cancelled their blood request.",
-                recipient_obj=appointment.nurse,
+                title="🚫 Blood Request Cancelled",
+                message=(
+                    f"Patient {patient.user.get_full_name()} has cancelled their blood request.\n"
+                    f"Blood Group: {blood_request.bloodgroup}\n"
+                    f"Units: {blood_request.unit}ml\n"
+                    f"Reason: {reason if reason else 'No reason provided'}"
+                ),
+                recipient_obj=tech,
                 sender_obj=patient,
-                action="cancelled",
-                appointment_date=appointment.date,
-                reason="Cancelled by patient"
+                action="request_cancelled",
+                bloodgroup=blood_request.bloodgroup,
+                unit=blood_request.unit
             )
 
-        messages.success(request, "✅ Your appointment and request have been cancelled successfully.")
+        # Also send confirmation to patient
+        create_notification(
+            title="Request Cancelled",
+            message=(
+                f"Your blood request for {blood_request.unit}ml of {blood_request.bloodgroup} "
+                f"has been cancelled successfully."
+            ),
+            recipient_obj=patient,
+            sender_obj=None,
+            action="cancelled"
+        )
+
+        messages.success(request, "✅ Your blood request has been cancelled successfully.")
     else:
-        messages.warning(request, "⚠️ This appointment cannot be cancelled (it may have passed or already been completed).")
+        # Determine why it can't be cancelled
+        if blood_request.status == 'approved':
+            messages.warning(request, "⚠️ This request has already been approved and cannot be cancelled. Please contact the blood bank directly.")
+        elif blood_request.status == 'dispatched':
+            messages.warning(request, "⚠️ This request has already been dispatched and cannot be cancelled.")
+        elif blood_request.status == 'completed':
+            messages.warning(request, "⚠️ This request has already been completed.")
+        elif blood_request.status == 'rejected':
+            messages.warning(request, "⚠️ This request has already been rejected.")
+        elif blood_request.status == 'cancelled':
+            messages.warning(request, "⚠️ This request is already cancelled.")
+        else:
+            messages.warning(request, "⚠️ This request cannot be cancelled at this stage.")
 
     return redirect('patient-requests-history')
 
@@ -703,58 +646,8 @@ def center_stock_ajax(request, center_id):
     except DonationCenter.DoesNotExist:
         return JsonResponse({'error': 'Center not found'}, status=404)
     
-# -------------------------------
-# Nearby Eligible Donors
-# -------------------------------
-@login_required(login_url='login')
-def nearby_eligible_donors_view(request):
-    patient = get_patient_or_redirect(request.user, request)
-    if not patient:
-        return redirect("patient-dashboard")
-
-    if not patient.latitude or not patient.longitude or not patient.bloodgroup:
-        messages.error(request, "Your location and blood group must be set in your profile to find donors.")
-        return redirect('patient-edit-profile', patient_id=patient.id)
-
-    donors = find_nearby_eligible_donors(patient.latitude, patient.longitude, patient.bloodgroup)
-
-    return render(request, 'patient/nearby_eligible_donors.html', {
-        'nearby_donors': donors,
-        'user_blood_type': patient.bloodgroup,
-    })
     
-# -------------------------------
-# Blood Stock Tracker
-# -------------------------------
-@login_required
-def blood_stock_tracker_view(request):
-    centers = DonationCenter.objects.all().order_by('name')
-    selected_center_id = request.GET.get('center')
-    stock_data = None
-    selected_center = None
 
-    if selected_center_id:
-        try:
-            selected_center = DonationCenter.objects.get(id=selected_center_id)
-            stock_data = (
-                StockUnit.objects.filter(center=selected_center)
-                .values('bloodgroup')
-                .annotate(
-                    total_units=Sum('unit'),
-                    earliest_expiry=Min('expiry_date'),
-                )
-                .order_by('bloodgroup')
-            )
-        except DonationCenter.DoesNotExist:
-            selected_center = None
-            stock_data = None
-
-    context = {
-        'centers': centers,
-        'selected_center': selected_center,
-        'stock_data': stock_data,
-    }
-    return render(request, 'patient/blood_stock_tracker.html', context)
 
 # -------------------------------
 # Ajax Validate
@@ -766,87 +659,3 @@ def ajax_validate_username(request):
     }
     return JsonResponse(data)
 
-
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from django.contrib.auth import login
-from django.shortcuts import render, redirect
-from django.contrib import messages
-
-def verify_email_view(request, uidb64, token):
-    """
-    Handle email verification link
-    """
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-        
-        # Check if token is valid
-        if default_token_generator.check_token(user, token):
-            if user.is_active:
-                messages.info(request, "✅ Your email is already verified. You can log in.")
-            else:
-                user.is_active = True
-                user.save()
-                
-                # Log the verification
-                logger.info(f"Email verified for user: {user.username}")
-                
-                messages.success(request, 
-                    "✅ Email verified successfully! "
-                    "Your account is now active. You can log in."
-                )
-            
-            return redirect('patientlogin')
-        else:
-            messages.error(request, 
-                "❌ Invalid verification link. "
-                "The link may have expired or already been used."
-            )
-            return redirect('patientlogin')
-            
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        messages.error(request, "❌ Invalid verification link.")
-        return redirect('patientlogin')
-    
-def resend_verification_email_view(request):
-    """
-    Resend verification email (ASYNC via Celery)
-    """
-    if request.method == 'POST':
-        email = request.POST.get('email')
-
-        try:
-            user = User.objects.get(email=email)
-
-            if user.is_active:
-                messages.info(request, "✅ This email is already verified.")
-                return redirect('patientlogin')
-
-            # 🔥 ASYNC resend via Celery
-            from blood.tasks import send_verification_email_task
-
-            send_verification_email_task.delay(
-                user.id,
-                user.email,
-                request.get_host()
-            )
-
-            messages.success(
-                request,
-                "✅ Verification email resent! "
-                "Please check your inbox (and spam folder)."
-            )
-
-            logger.info(f"Verification email re-sent (queued) for {user.email}")
-
-        except User.DoesNotExist:
-            # Security: don't reveal whether email exists
-            messages.info(
-                request,
-                "If this email is registered, a verification link will be sent."
-            )
-
-        return redirect('patientlogin')
-
-    return render(request, 'shared/resend_verification.html')

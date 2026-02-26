@@ -1,0 +1,362 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Approve Request - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Approve Blood Request{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle"></i> 
+                    Approve Blood Request #{{ request.id }}
+                    {% if request_type == 'patient' %}
+                        <span class="badge bg-light text-dark ms-2">Patient Request</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark ms-2">Donor Request</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Request Summary -->
+                <div class="alert alert-info">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Patient:</strong> 
+                            {% if request_type == 'patient' %}
+                                {{ request.get_full_name }}
+                            {% else %}
+                                {{ request.patient_first_name }} {{ request.patient_last_name }}
+                            {% endif %}
+                            <br>
+                            <strong>Blood Group:</strong> <span class="badge bg-info">{{ request.bloodgroup }}</span><br>
+                            <strong>Volume Needed:</strong> {{ request.unit }} ml
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Center:</strong> {{ request.donation_center.name }}<br>
+                            <strong>Request Date:</strong> {{ request.created_at|date:"M d, Y H:i" }}<br>
+                            <strong>Contact:</strong> {{ request.contact_number }}
+                        </div>
+                    </div>
+                    {% if request_type == 'donor' %}
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Request made by donor: {{ request.request_by_donor.user.get_full_name }}
+                                (Donor ID: {{ request.request_by_donor.id }})
+                            </small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Stock Availability Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6>Available Stock</h6>
+                                <h3 class="text-success">{{ availability.safe_stock }} ml</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6>Required</h6>
+                                <h3 class="text-warning">{{ request.unit }} ml</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6>After Approval</h6>
+                                <h3 class="{% if availability.safe_stock >= request.unit %}text-success{% else %}text-danger{% endif %}">
+                                    {{ availability.safe_stock|add:"-request.unit" }} ml
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h5 class="card-title mt-4 mb-3">
+                    <i class="fas fa-boxes"></i> Available Stock Units
+                </h5>
+                
+                {% if available_units %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        Found {{ available_units.count }} available unit(s) of {{ request.bloodgroup }} totaling <strong>{{ total_available }}ml</strong>.
+                    </div>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Barcode</th>
+                                    <th>Volume</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Left</th>
+                                    <th>Donor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for unit in available_units %}
+                                <tr class="{% if forloop.counter <= request.unit|add:0 %}table-success{% endif %}">
+                                    <td><code>{{ unit.barcode }}</code></td>
+                                    <td>{{ unit.unit }}ml</td>
+                                    <td>{{ unit.expiry_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        {% with days_left=unit.expiry_date|timeuntil:today %}
+                                            {% if unit.expiry_date <= today|date:"Y-m-d"|add:"7 days" %}
+                                                <span class="badge bg-warning">{{ days_left }} left</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ days_left }} left</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        {% if unit.blood_donation and unit.blood_donation.donor %}
+                                            {{ unit.blood_donation.donor.user.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if forloop.counter <= request.unit|add:0 %}
+                                            <span class="badge bg-success">Will be used</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Remaining</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- FIFO Explanation -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>FIFO (First In, First Out):</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>The <span class="badge bg-success">highlighted</span> units will be used for this request</li>
+                            <li>Units are selected based on earliest expiry date</li>
+                            <li>{{ request.unit }}ml will be deducted from the {{ total_available }}ml available</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="request_type" value="{{ request_type }}">
+                        
+                        <!-- Optional: Allow selection of specific units -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Advanced Options</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="selectSpecific" name="select_specific">
+                                    <label class="form-check-label" for="selectSpecific">
+                                        Manually select specific units to use (instead of FIFO)
+                                    </label>
+                                </div>
+                                <div id="unitSelection" style="display: none;">
+                                    <label class="form-label">Select units to use (need {{ request.unit }}ml total):</label>
+                                    {% for unit in available_units %}
+                                    <div class="form-check">
+                                        <input class="form-check-input unit-checkbox" type="checkbox" 
+                                               name="selected_units" value="{{ unit.id }}" 
+                                               data-volume="{{ unit.unit }}"
+                                               id="unit_{{ unit.id }}">
+                                        <label class="form-check-label" for="unit_{{ unit.id }}">
+                                            <code>{{ unit.barcode }}</code> - {{ unit.unit }}ml (Expires: {{ unit.expiry_date|date:"M d, Y" }})
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                    <div class="mt-2">
+                                        <span id="selectedTotal">0</span>ml selected (need {{ request.unit }}ml)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">
+                                <i class="fas fa-check-circle"></i> Confirm Approval & Deduct Stock
+                            </button>
+                            <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <h5>Insufficient Stock</h5>
+                        <p>
+                            <strong>Available:</strong> {{ availability.safe_stock }}ml<br>
+                            <strong>Required:</strong> {{ request.unit }}ml
+                        </p>
+                        <hr>
+                        <p class="mb-0">
+                            {% if availability.pending_stock > 0 %}
+                                <small>Note: {{ availability.pending_stock }}ml is pending verification and cannot be used yet.</small>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'blood_bank_technician:reject_request' request_type request.id %}" 
+                           class="btn btn-danger btn-lg flex-grow-1">
+                            <i class="fas fa-times-circle"></i> Reject Request
+                        </a>
+                        <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectSpecificCheckbox = document.getElementById('selectSpecific');
+    const unitSelection = document.getElementById('unitSelection');
+    const unitCheckboxes = document.querySelectorAll('.unit-checkbox');
+    const selectedTotalSpan = document.getElementById('selectedTotal');
+    const requiredVolume = {{ request.unit }};
+    const form = document.querySelector('form');
+    
+    // Toggle unit selection
+    if (selectSpecificCheckbox) {
+        selectSpecificCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                unitSelection.style.display = 'block';
+            } else {
+                unitSelection.style.display = 'none';
+            }
+        });
+    }
+    
+    // Calculate total selected volume
+    function updateSelectedTotal() {
+        let total = 0;
+        unitCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                total += parseInt(cb.dataset.volume);
+            }
+        });
+        selectedTotalSpan.textContent = total;
+        
+        // Visual feedback
+        if (total > 0) {
+            if (total === requiredVolume) {
+                selectedTotalSpan.style.color = 'green';
+            } else if (total < requiredVolume) {
+                selectedTotalSpan.style.color = 'orange';
+            } else {
+                selectedTotalSpan.style.color = 'red';
+            }
+        } else {
+            selectedTotalSpan.style.color = 'inherit';
+        }
+    }
+    
+    unitCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedTotal);
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        if (selectSpecificCheckbox && selectSpecificCheckbox.checked) {
+            const selectedCheckboxes = document.querySelectorAll('.unit-checkbox:checked');
+            let totalVolume = 0;
+            
+            selectedCheckboxes.forEach(cb => {
+                totalVolume += parseInt(cb.dataset.volume);
+            });
+            
+            if (selectedCheckboxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one unit to use.');
+                return;
+            }
+            
+            if (totalVolume !== requiredVolume) {
+                e.preventDefault();
+                alert(`Selected volume (${totalVolume}ml) does not match required volume (${requiredVolume}ml). Please select units totaling exactly ${requiredVolume}ml.`);
+                return;
+            }
+        }
+        
+        // Final confirmation
+        if (!confirm('Are you sure you want to approve this request? Stock will be deducted from inventory.')) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+.table td {
+    vertical-align: middle;
+}
+.table-success {
+    background-color: #d4edda !important;
+}
+code {
+    background: #f8f9fa;
+    padding: 3px 6px;
+    border-radius: 4px;
+    color: #8B1E3F;
+    font-size: 0.9rem;
+}
+.btn-lg {
+    padding: 12px 20px;
+    font-size: 1rem;
+}
+.alert {
+    border-radius: 8px;
+}
+.unit-checkbox {
+    margin-right: 10px;
+}
+#unitSelection {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #8B1E3F;
+}
+</style>
+{% endblock %}

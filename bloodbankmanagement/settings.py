@@ -62,6 +62,8 @@ INSTALLED_APPS = [
     'patient',
     'nurse',
     'chatbot',
+    'lab_technologist', 
+    'blood_bank_technician',
 ]
 
 # =============================

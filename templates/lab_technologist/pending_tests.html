@@ -1,0 +1,160 @@
+{% extends 'lab_technologist/base.html' %}
+{% load static %}
+
+{% block title %}Pending Tests - Lab Technologist{% endblock %}
+
+{% block page_title %}Blood Samples Awaiting Testing{% endblock %}
+
+{% block content %}
+<!-- Summary Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Pending Samples: <span class="badge bg-warning">{{ count }}</span></h5>
+            </div>
+            <div class="col-md-6 text-end">
+                <a href="{% url 'lab_technologist:test_history' %}" class="btn btn-outline-secondary btn-sm">
+                    View Test History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Tests Table -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Samples Awaiting Testing</h5>
+        
+        {% if pending_blood %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Donor</th>
+                            <th>Blood Group</th>
+                            <th>Collection Date</th>
+                            <th>Center</th>
+                            <th>Bag Type</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in pending_blood %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-barcode me-2 text-primary"></i>
+                                    <code class="fw-bold">{{ item.barcode }}</code>
+                                </div>
+                            </td>
+                            <td>
+                                <strong>{{ item.donor_name }}</strong>
+                                <br>
+                                <small class="text-muted">ID: {{ item.donor_id }}</small>
+                            </td>
+                            <td>
+                                {% if item.bloodgroup and item.bloodgroup != 'Unknown' %}
+                                    <span class="badge bg-info">{{ item.bloodgroup }}</span>
+                                {% else %}
+                                    <span class="text-muted">Not recorded</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.date|date:"M d, Y" }}</td>
+                            <td>{{ item.donation_center }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.bag_type }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning">Pending</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'lab_technologist:perform_test' item.id %}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-flask"></i> Test Sample
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h5>No Pending Tests</h5>
+                <p class="text-muted">All blood samples have been tested. Great job!</p>
+                <a href="{% url 'lab_technologist:dashboard' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-tachometer-alt"></i> Back to Dashboard
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Optional: Quick Stats by Barcode Status -->
+{% if pending_blood %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Quick Stats</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center">
+                            <h4>{{ count }}</h4>
+                            <small class="text-muted">Total Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center">
+                            <h4>{{ pending_blood|length }}</h4>
+                            <small class="text-muted">With Barcodes</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center">
+                            <h4>{{ pending_blood|length }}</h4>
+                            <small class="text-muted">Ready to Test</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center">
+                            <h4>{{ count }}</h4>
+                            <small class="text-muted">Samples</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+.table td {
+    vertical-align: middle;
+}
+code {
+    background: #f8f9fa;
+    padding: 3px 6px;
+    border-radius: 4px;
+    color: #8B1E3F;
+    font-size: 0.9rem;
+}
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+.btn-sm {
+    padding: 5px 12px;
+}
+</style>
+{% endblock %}

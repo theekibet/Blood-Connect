@@ -251,8 +251,7 @@
             </div>
           {% endfor %}
         {% endif %}
-        
-        <form method="POST" autocomplete="on" aria-label="Nurse Login Form" action="{% url 'nurselogin' %}">
+        <form method="POST" autocomplete="on" aria-label="Nurse Login Form" action="{% url 'nurse:nurselogin' %}">
           {% csrf_token %}
           
           <div class="form-group">
@@ -317,13 +316,14 @@
             </div>
           </div>
         </form>
-        
+
+
         <!-- NURSE REGISTRATION -->
         <div class="card mt-4 border-primary">
           <div class="card-body text-center p-3">
             <h6 class="mb-2"><i class="fas fa-user-plus text-primary"></i> New to Our Nursing Team?</h6>
             <p class="small mb-3">Join our healthcare professionals to manage blood donations and patient requests.</p>
-            <a href="{% url 'nurse_signup' %}" class="btn btn-primary">
+            <p>Don't have an account? <a href="{% url 'nurse:nurse_signup' %}">Sign up here</a></p>
               <i class="fas fa-user-nurse me-2"></i> Register as Nurse
             </a>
           </div>

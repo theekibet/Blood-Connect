@@ -38,23 +38,14 @@ urlpatterns = [
     # ===================================
     path('logout/', LogoutView.as_view(template_name='blood/logout.html'), name='logout'),
     
-    # CENTRAL LOGIN (Replaces individual logins)
-    path('login/', blood_views.CentralLoginView.as_view(), name='central_login'),
+
+
     
     # Legacy admin login (keep for backward compatibility)
     path('adminlogin/', blood_views.adminlogin_view, name='adminlogin'),
     path('afterlogin/', blood_views.afterlogin_view, name='afterlogin'),
 
-    # ===================================
-    # EMAIL VERIFICATION (For ALL users)
-    # ===================================
-    path('verify-email/<uidb64>/<token>/', 
-         blood_views.verify_email_view, 
-         name='verify_email'),
-    
-    path('resend-verification/', 
-         blood_views.resend_verification_view, 
-         name='resend_verification'),
+
 
     # ===================================
     # PASSWORD RESET (For ALL users)
@@ -128,7 +119,7 @@ urlpatterns = [
     path('admin-donation/', blood_views.admin_donation_view, name='admin-donation'),
     path('admin-contacts/', blood_views.admin_contacts_view, name='admin_contacts'),
     path('admin-post-notification/', blood_views.admin_post_notification, name='admin-post-notification'),
-    path('admin-nurse-blood-requests/', blood_views.admin_nurse_blood_requests_view, name='admin-nurse-blood-requests'),
+
 
     # ===================================
     # AJAX ENDPOINTS
@@ -187,6 +178,9 @@ path('api/random-fact/', views.random_fact_api, name='random_fact_api'),
 path('api/check-quiz/', views.check_quiz_answer, name='check_quiz_answer'),
 path('api/like-fact/', views.like_fact, name='like_fact'),
 path('api/challenge-stats/', views.daily_challenge_progress, name='daily_challenge_progress'),
+
+    path('lab-tech/', include('lab_technologist.urls')),
+    path('blood-bank/', include('blood_bank_technician.urls')),
 ]
 
 # Media files serving in development

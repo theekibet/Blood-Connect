@@ -19,11 +19,11 @@ from django.urls import reverse
 from django.utils.timezone import now, localdate
 from django.views.decorators.http import require_POST
 from blood.utils.stock_utils import add_stock
-from .models import Nurse, Appointment, NurseBloodRequest
+from .models import Nurse, Appointment
 from .forms import (
-    NurseLoginForm, NurseSignupForm, NurseForm, AppointmentForm, RequestForm,
+    NurseLoginForm, NurseSignupForm, NurseForm, AppointmentForm
 )
-from blood.models import Notification, Stock, DonationCenter, StockUnit,StockTransaction
+from blood.models import Notification, Stock, DonationCenter, StockUnit,StockTransaction,BloodBagBarcode
 from blood.utils.stock_utils import deduct_stock_fifo
 from datetime import datetime
 from donor.models import BloodDonate,DonorBloodRequest
@@ -66,7 +66,7 @@ def nurse_approved_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('nurselogin')
+            return redirect('nurse:nurselogin')
         
         try:
             nurse = request.user.nurse
@@ -75,10 +75,10 @@ def nurse_approved_required(view_func):
                     request, 
                     "⏳ Your account is pending admin approval. You'll receive an email once approved."
                 )
-                return redirect('nurse-pending-approval')
+                return redirect('nurse:nurse-pending-approval')
         except Nurse.DoesNotExist:
             messages.error(request, "❌ Nurse profile not found.")
-            return redirect('nurselogin')
+            return redirect('nurse:nurselogin')
         
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -86,10 +86,11 @@ def nurse_approved_required(view_func):
 # ---------------------------
 # Nurse Signup View (UPDATED - NO EMAIL VERIFICATION)
 # ---------------------------
+
 def nurse_signup_view(request):
     """
-    Handle nurse registration WITHOUT email verification.
-    Only admin approval required.
+    Handle nurse registration.
+    Account is active immediately but requires admin approval for full access.
     """
     if request.method == "POST":
         form = NurseSignupForm(request.POST, request.FILES)
@@ -102,71 +103,38 @@ def nurse_signup_view(request):
                 first_name = request.POST.get('first_name') or form.cleaned_data.get('first_name', '')
                 last_name = request.POST.get('last_name') or form.cleaned_data.get('last_name', '')
                 
-                # Create user - ACTIVE IMMEDIATELY (no email verification)
+                # Create user - active immediately
                 user = User.objects.create_user(
                     username=username,
                     email=email,
                     password=password,
                     first_name=first_name,
                     last_name=last_name,
-                    is_active=True  # CHANGED: Active immediately
+                    is_active=True
                 )
                 
                 # Save nurse profile (pending admin approval)
                 nurse = form.save(commit=False)
                 nurse.user = user
-                nurse.is_approved = False  # Still needs admin approval
+                nurse.is_approved = False  # Needs admin approval
                 nurse.save()
                 
                 # Add to NURSE group
                 nurse_group, _ = Group.objects.get_or_create(name="NURSE")
                 nurse_group.user_set.add(user)
                 
-                # Send welcome email (optional, not required for login)
-                try:
-                    from blood.tasks import send_nurse_welcome_email_task  # Rename this task
-                    
-                    # Send welcome email asynchronously (optional)
-                    send_nurse_welcome_email_task.delay(
-                        user.id,
-                        user.email,
-                        request.get_host()
-                    )
-                    
-                    messages.success(
-                        request,
-                        f"🎉 Registration successful, {user.first_name}! "
-                        f"Your account has been created and is pending admin approval. "
-                        f"You can login but access will be limited until approved."
-                    )
-                    
-                    email_sent = True
-                    
-                except Exception as e:
-                    # Email is optional, so just log the error
-                    logger.error(f"Nurse welcome email task error: {str(e)}", exc_info=True)
-                    
-                    # Still show success message
-                    messages.success(
-                        request,
-                        f"🎉 Registration successful, {user.first_name}! "
-                        f"Your account has been created and is pending admin approval. "
-                        f"You can login but access will be limited until approved."
-                    )
-                    
-                    email_sent = False
-                
                 # Log the registration
-                logger.info(f"New nurse registration: {user.username} ({user.email}) - Pending admin approval")
+                logger.info(f"New nurse registration: {user.username} - Pending admin approval")
                 
-                # Notify admin about new nurse registration (optional)
-                try:
-                    from blood.tasks import notify_admin_new_nurse_task
-                    notify_admin_new_nurse_task.delay(nurse.id)
-                except Exception as e:
-                    logger.error(f"Admin notification task error: {str(e)}")
+                # Success message
+                messages.success(
+                    request,
+                    f"🎉 Registration successful, {user.first_name}! "
+                    f"Your account has been created and is pending admin approval. "
+                    f"You can login but access will be limited until approved."
+                )
                 
-                return redirect("nurselogin")
+                return redirect('nurse:nurselogin')
                 
             except Exception as e:
                 # Log the error for debugging
@@ -194,7 +162,7 @@ def nurselogin_view(request):
     """
     # If user is already authenticated and is a nurse, redirect to dashboard
     if request.user.is_authenticated and request.user.groups.filter(name='NURSE').exists():
-        return redirect('nurse-dashboard')
+        return redirect('nurse:nurse-dashboard')
     
     if request.method == 'POST':
         form = AuthenticationForm(data=request.POST)
@@ -236,14 +204,14 @@ def nurselogin_view(request):
                                 f"Your account is pending admin approval. "
                                 f"Access is limited until approved."
                             )
-                            return redirect('nurse-pending-approval')
+                            return redirect('nurse:nurse-pending-approval')
                     
                     # All checks passed - Login successful
                     login(request, user)
                     logger.info(f"Nurse login successful: {user.username} ({user.email}) - Approved: {nurse.is_approved}")
                     
                     messages.success(request, f"✅ Welcome back, {nurse.full_name or user.username}!")
-                    return redirect('nurse-dashboard')
+                    return redirect('nurse:nurse-dashboard')
                     
                 except Nurse.DoesNotExist:
                     messages.error(request, "❌ Nurse profile not found. Please contact support.")
@@ -277,14 +245,14 @@ def nurse_pending_approval_view(request):
     View for nurses waiting for admin approval.
     """
     if not request.user.is_authenticated:
-        return redirect('nurselogin')
+        return redirect('nurse:nurselogin')
     
     try:
         nurse = request.user.nurse
         
         # If nurse is already approved, redirect to dashboard
         if nurse.is_approved:
-            return redirect('nurse-dashboard')
+            return redirect('nurse:nurse-dashboard')
         
         # Use user's date_joined if nurse model doesn't have registration_date
         registration_date = getattr(nurse, 'registration_date', request.user.date_joined)
@@ -301,7 +269,7 @@ def nurse_pending_approval_view(request):
         
     except Nurse.DoesNotExist:
         messages.error(request, "❌ Nurse profile not found.")
-        return redirect('nurselogin')
+        return redirect('nurse:nurselogin')
 
 # ---------------------------
 # Nurse Dashboard View
@@ -428,683 +396,6 @@ def nurse_dashboard(request):
     }
     
     return render(request, 'nurse/dashboard.html', context)
-# ---------------------------
-# Blood Requests
-# ---------------------------
-logger = logging.getLogger(__name__)
-
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(is_nurse, login_url='/nurse/nurselogin/')
-def blood_request_bookings(request):
-    """
-    View for nurse to see BLOOD REQUEST appointments only.
-    These are requests FROM:
-    - Patients requesting blood for themselves (BloodRequest)
-    - Donors requesting blood on behalf of other patients (DonorBloodRequest)
-    
-    EXCLUDES: BloodDonate (donation appointments - those are in nurse_donation_bookings)
-    
-    NOW INCLUDES: Patient blood group verification status
-    """
-    nurse = get_object_or_404(Nurse, user=request.user)
-
-    # Import here to avoid circular import issues
-    from donor.models import DonorBloodRequest
-    from patient.models import BloodRequest
-
-    # ==========================================
-    # ONLY GET BLOOD REQUEST CONTENT TYPES
-    # (Exclude BloodDonate - those are donations, not requests)
-    # ==========================================
-    blood_request_ct = ContentType.objects.get_for_model(BloodRequest)
-    donor_blood_request_ct = ContentType.objects.get_for_model(DonorBloodRequest)
-
-    logger.info(f"Blood Request ContentTypes - BloodRequest: {blood_request_ct.id}, "
-                f"DonorBloodRequest: {donor_blood_request_ct.id}")
-
-    # Get appointments for BLOOD REQUESTS ONLY (patients + donors requesting blood)
-    appointments = Appointment.objects.filter(
-        nurse=nurse,
-        request_content_type__in=[blood_request_ct, donor_blood_request_ct]
-    ).select_related(
-        'donor__user',
-        'patient__user',
-        'nurse__user',
-        'donation_center',
-        'request_content_type',
-        'status_changed_by',
-        'cancelled_by_user',
-        'approved_by_nurse',
-        'completed_by_nurse'
-    ).order_by('-date')
-
-    logger.info(f"Found {appointments.count()} blood request appointments for nurse {nurse.id}")
-
-    enhanced_appointments = []
-    for appointment in appointments:
-        appointment_data = {
-            'appointment': appointment,
-            'request': None,
-            'requester': None,
-            'requester_type': None,
-            'blood_details': {},
-            'patient': None,  # NEW: Track actual patient object
-            'bloodgroup_verified': False,  # NEW: Verification status
-            'verified_bloodgroup': None,  # NEW: Verified blood group value
-        }
-
-        try:
-            # 🩸 Patient BloodRequest (Patient requesting blood for themselves)
-            if appointment.request_content_type == blood_request_ct:
-                req = BloodRequest.objects.select_related(
-                    'request_by_patient__user', 'donation_center'
-                ).get(id=appointment.request_object_id)
-                
-                # Get patient and check verification status
-                patient = req.request_by_patient
-                bloodgroup_verified = False
-                verified_bloodgroup = None
-                
-                if patient:
-                    bloodgroup_verified = getattr(patient, 'bloodgroup_verified', False)
-                    if bloodgroup_verified:
-                        verified_bloodgroup = getattr(patient, 'bloodgroup', None)
-                        logger.info(f"✅ Patient {patient.id} has VERIFIED blood group: {verified_bloodgroup}")
-                    else:
-                        logger.info(f"⚠️ Patient {patient.id} blood group NOT yet verified")
-                
-                appointment_data.update({
-                    'request': req,
-                    'requester': req.request_by_patient,
-                    'requester_type': 'patient',
-                    'patient': patient,  # Store patient object
-                    'bloodgroup_verified': bloodgroup_verified,
-                    'verified_bloodgroup': verified_bloodgroup,
-                    'blood_details': {
-                        'first_name': req.first_name,
-                        'last_name': req.last_name,
-                        'patient_age': req.patient_age,
-                        'contact_number': req.contact_number,
-                        'emergency_contact': getattr(req, 'emergency_contact', None),
-                        'bloodgroup': verified_bloodgroup if bloodgroup_verified else (req.bloodgroup or 'Not specified'),
-                        'unit': req.unit,
-                        'urgency_level': getattr(req, 'urgency_level', 'Medium'),
-                        'center': req.donation_center,
-                        'status': req.status,
-                        'created_at': req.created_at,
-                        'consent_confirmed': getattr(req, 'consent_confirmed', False),
-                    }
-                })
-                logger.info(f"✅ Loaded Patient BloodRequest {req.id} for appointment {appointment.id}")
-
-            # 🧍 DonorBloodRequest (Donor requesting blood on behalf of another patient)
-            elif appointment.request_content_type == donor_blood_request_ct:
-                req = DonorBloodRequest.objects.select_related(
-                    'request_by_donor__user', 'donation_center'
-                ).get(id=appointment.request_object_id)
-                
-                # For donor requests, check if there's a linked patient in the appointment
-                patient = appointment.patient if hasattr(appointment, 'patient') else None
-                bloodgroup_verified = False
-                verified_bloodgroup = None
-                
-                if patient:
-                    bloodgroup_verified = getattr(patient, 'bloodgroup_verified', False)
-                    if bloodgroup_verified:
-                        verified_bloodgroup = getattr(patient, 'bloodgroup', None)
-                        logger.info(f"✅ Patient {patient.id} (via donor) has VERIFIED blood group: {verified_bloodgroup}")
-                
-                appointment_data.update({
-                    'request': req,
-                    'requester': req.request_by_donor,
-                    'requester_type': 'donor',
-                    'patient': patient,  # Store patient object if exists
-                    'bloodgroup_verified': bloodgroup_verified,
-                    'verified_bloodgroup': verified_bloodgroup,
-                    'blood_details': {
-                        'patient_first_name': req.patient_first_name,
-                        'patient_last_name': req.patient_last_name,
-                        'patient_name': f"{req.patient_first_name} {req.patient_last_name}",
-                        'patient_age': getattr(req, 'patient_age', None),
-                        'patient_dob': getattr(req, 'patient_dob', None),
-                        'contact_number': req.contact_number,
-                        'bloodgroup': verified_bloodgroup if bloodgroup_verified else req.bloodgroup,
-                        'unit': req.unit,
-                        'urgency_level': req.urgency_level,
-                        'reason': getattr(req, 'reason', None),
-                        'center': req.donation_center,
-                        'status': req.status,
-                        'created_at': req.created_at,
-                        'consent_confirmed': req.consent_confirmed,
-                        'donor_name': req.request_by_donor.user.get_full_name() if req.request_by_donor.user else 'N/A',
-                    }
-                })
-                logger.info(f"✅ Loaded DonorBloodRequest {req.id} for appointment {appointment.id}")
-
-        except BloodRequest.DoesNotExist:
-            logger.error(f"❌ BloodRequest {appointment.request_object_id} not found for appointment {appointment.id}")
-        except DonorBloodRequest.DoesNotExist:
-            logger.error(f"❌ DonorBloodRequest {appointment.request_object_id} not found for appointment {appointment.id}")
-        except Exception as e:
-            logger.error(f"❌ Error loading request for appointment {appointment.id}: {str(e)}", exc_info=True)
-
-        enhanced_appointments.append(appointment_data)
-
-    # Calculate statistics
-    total_count = len(enhanced_appointments)
-    pending_count = sum(1 for item in enhanced_appointments if item['appointment'].status == 'pending')
-    approved_count = sum(1 for item in enhanced_appointments if item['appointment'].status == 'approved')
-    completed_count = sum(1 for item in enhanced_appointments if item['appointment'].status == 'completed')
-    
-    # NEW: Count verified vs unverified patients
-    verified_patients = sum(1 for item in enhanced_appointments if item['bloodgroup_verified'])
-    unverified_patients = sum(1 for item in enhanced_appointments if item['patient'] and not item['bloodgroup_verified'])
-
-    context = {
-        'enhanced_appointments': enhanced_appointments,
-        'total_count': total_count,
-        'pending_count': pending_count,
-        'approved_count': approved_count,
-        'completed_count': completed_count,
-        'verified_patients': verified_patients,
-        'unverified_patients': unverified_patients,
-        'now': timezone.now(),
-        'nurse': nurse,
-    }
-    
-    logger.info(f"Returning {total_count} blood request appointments: "
-                f"{pending_count} pending, {approved_count} approved, {completed_count} completed. "
-                f"Verified: {verified_patients}, Unverified: {unverified_patients}")
-    
-    return render(request, 'nurse/blood_request_bookings.html', context)
-
-
-
-
-logger = logging.getLogger(__name__)
-
-def get_patient_profile(user):
-    """
-    Return patient profile if user has one, else None.
-    Ignores donors entirely.
-    """
-    if not user:
-        return None
-    try:
-        if hasattr(user, "patient"):
-            return user.patient
-    except Exception:
-        pass
-    return None
-
-# ----------------------------------------------------------------------------------------------------
-# UPDATE BLOODREQUEST BOOKINGS STATUS(from either patients or donors requesting on behalf of patients)
-# -----------------------------------------------------------------------------------------------------
-logger = logging.getLogger(__name__)
-
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
-@require_POST
-def nurse_update_bloodrequest_appointment_status(request, appointment_id):
-    """
-    Nurse handler for BLOOD REQUEST appointments.
-    Uses centralized notification system.
-    Sends notifications to both patients and donors as appropriate.
-    """
-    logger.info(f"🚀 VIEW CALLED: nurse_update_bloodrequest_appointment_status for appointment_id={appointment_id}")
-    
-    try:
-        nurse = request.user.nurse
-        logger.info(f"🚀 Nurse: {nurse.user.get_full_name()} (ID: {nurse.id})")
-        now = timezone.now()
-
-        # Normalize action
-        raw_action = (request.POST.get('action') or '').strip().lower()
-        action_map = {
-            'approve': 'approved', 'approved': 'approved',
-            'reject': 'rejected', 'rejected': 'rejected',
-            'complete': 'completed', 'completed': 'completed',
-            'cancel': 'cancelled', 'cancelled': 'cancelled',
-        }
-        action = action_map.get(raw_action)
-
-        if not action:
-            logger.error(f"Invalid action received: '{raw_action}'")
-            return JsonResponse({
-                'success': False,
-                'error': f"Invalid or missing action '{raw_action}'."
-            }, status=400)
-
-        with transaction.atomic():
-            appointment = get_object_or_404(
-                Appointment.objects.select_for_update(),
-                id=appointment_id
-            )
-
-            # Assign nurse if not set
-            if not appointment.nurse:
-                appointment.nurse = nurse
-                appointment.save(update_fields=['nurse'])
-            elif appointment.nurse != nurse:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'This appointment is already assigned to another nurse.'
-                }, status=403)
-
-            # Resolve linked request
-            linked_request = None
-            if appointment.request_content_type and appointment.request_object_id:
-                model_class = appointment.request_content_type.model_class()
-                model_name = model_class.__name__
-                
-                if model_name == 'BloodDonate':
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'This is a blood donation appointment. Use the donation endpoint.'
-                    }, status=400)
-                
-                elif model_name in ['BloodRequest', 'DonorBloodRequest']:
-                    try:
-                        linked_request = model_class.objects.select_for_update().get(
-                            id=appointment.request_object_id
-                        )
-                    except model_class.DoesNotExist:
-                        return JsonResponse({
-                            'success': False,
-                            'error': f'{model_name} not found.'
-                        }, status=404)
-            
-            if not linked_request:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Could not find the associated blood request.'
-                }, status=400)
-
-            # Block finalized appointments
-            if appointment.status in ['completed', 'cancelled', 'rejected']:
-                return JsonResponse({
-                    'success': False,
-                    'error': f"This appointment is already {appointment.status}."
-                }, status=400)
-
-            # Determine if this is a donor or patient request
-            donor = None
-            if hasattr(linked_request, 'request_by_donor') and linked_request.request_by_donor:
-                donor = linked_request.request_by_donor
-            elif appointment.donor:
-                donor = appointment.donor
-
-            # Get patient for notifications
-            patient = None
-            if hasattr(linked_request, 'request_by_patient') and linked_request.request_by_patient:
-                patient = linked_request.request_by_patient
-            elif appointment.patient:
-                patient = appointment.patient
-
-            reason = (request.POST.get('reason') or '').strip()
-            
-            # Get appointment details for notification message
-            date_str = appointment.date.strftime("%b %d, %Y %I:%M %p")
-            center_name = getattr(linked_request.donation_center, "name", "Unknown center") if hasattr(linked_request, 'donation_center') else "Unknown center"
-            nurse_name = nurse.user.get_full_name() or nurse.user.username
-            
-            # === ACTION HANDLERS ===
-            if action == 'approved':
-                if appointment.approved_by_nurse:
-                    return JsonResponse({'success': False, 'error': 'Already approved.'}, status=400)
-
-                appointment.set_status('approved', nurse.user)
-                linked_request.status = 'approved'
-                if hasattr(linked_request, 'approved_by_nurse'):
-                    linked_request.approved_by_nurse = nurse
-                if hasattr(linked_request, 'approved_at_nurse'):
-                    linked_request.approved_at_nurse = now
-                linked_request.save()
-
-                # 🔔 Send notification to patient (if exists)
-                if patient:
-                    create_notification(
-                        title="Appointment Approved",
-                        message=f"Your blood request appointment on {date_str} at {center_name} was approved by Nurse {nurse_name}.",
-                        recipient_obj=patient,
-                        sender_obj=nurse,
-                        action='approved',
-                        appointment_date=appointment.date,
-                        bloodgroup=linked_request.bloodgroup,
-                        unit=linked_request.unit
-                    )
-                
-                # 🔔 Send notification to donor (if this is a donor request)
-                if donor:
-                    create_notification(
-                        title="Appointment Approved",
-                        message=f"Your blood request appointment on {date_str} at {center_name} was approved by Nurse {nurse_name}.",
-                        recipient_obj=donor,
-                        sender_obj=nurse,
-                        action='approved',
-                        appointment_date=appointment.date,
-                        bloodgroup=linked_request.bloodgroup,
-                        unit=linked_request.unit
-                    )
-                
-                logger.info(f"✅ Appointment {appointment.id} approved")
-                return JsonResponse({
-                    'success': True,
-                    'status': 'approved',
-                    'message': f"Request approved by {nurse_name}",
-                    'when': now.strftime("%b %d, %Y %I:%M %p"),
-                })
-
-            elif action == 'rejected':
-                appointment.set_status('rejected', nurse.user)
-                linked_request.status = 'rejected'
-                if hasattr(linked_request, 'rejected_by'):
-                    linked_request.rejected_by = 'nurse'
-                if hasattr(linked_request, 'rejected_at'):
-                    linked_request.rejected_at = now
-                if hasattr(linked_request, 'rejection_reason'):
-                    linked_request.rejection_reason = reason
-                linked_request.save()
-
-                # 🔔 Send notification to patient (if exists)
-                if patient:
-                    create_notification(
-                        title="Appointment Rejected",
-                        message=f"Your blood request appointment on {date_str} at {center_name} was rejected by Nurse {nurse_name}.",
-                        recipient_obj=patient,
-                        sender_obj=nurse,
-                        action='rejected',
-                        reason=reason,
-                        appointment_date=appointment.date,
-                        bloodgroup=linked_request.bloodgroup,
-                        unit=linked_request.unit
-                    )
-                
-                # 🔔 Send notification to donor (if this is a donor request)
-                if donor:
-                    create_notification(
-                        title="Appointment Rejected",
-                        message=f"Your blood request appointment on {date_str} at {center_name} was rejected by Nurse {nurse_name}.",
-                        recipient_obj=donor,
-                        sender_obj=nurse,
-                        action='rejected',
-                        reason=reason,
-                        appointment_date=appointment.date,
-                        bloodgroup=linked_request.bloodgroup,
-                        unit=linked_request.unit
-                    )
-                
-                logger.info(f"✅ Appointment {appointment.id} rejected")
-                return JsonResponse({
-                    'success': True,
-                    'status': 'rejected',
-                    'message': f"Request rejected by {nurse_name}",
-                    'reason': reason,
-                })
-
-            elif action == 'cancelled':
-                appointment.set_status('cancelled', nurse.user)
-                linked_request.status = 'cancelled'
-                if hasattr(linked_request, 'cancelled_by'):
-                    linked_request.cancelled_by = 'nurse'
-                if hasattr(linked_request, 'cancelled_at'):
-                    linked_request.cancelled_at = now
-                if hasattr(linked_request, 'cancellation_reason'):
-                    linked_request.cancellation_reason = reason
-                linked_request.save()
-
-                # 🔔 Send notification to patient (if exists)
-                if patient:
-                    create_notification(
-                        title="Appointment Cancelled",
-                        message=f"Your blood request appointment on {date_str} at {center_name} was cancelled by Nurse {nurse_name}.",
-                        recipient_obj=patient,
-                        sender_obj=nurse,
-                        action='cancelled',
-                        reason=reason,
-                        appointment_date=appointment.date,
-                        bloodgroup=linked_request.bloodgroup,
-                        unit=linked_request.unit
-                    )
-                
-                # 🔔 Send notification to donor (if this is a donor request)
-                if donor:
-                    create_notification(
-                        title="Appointment Cancelled",
-                        message=f"Your blood request appointment on {date_str} at {center_name} was cancelled by Nurse {nurse_name}.",
-                        recipient_obj=donor,
-                        sender_obj=nurse,
-                        action='cancelled',
-                        reason=reason,
-                        appointment_date=appointment.date,
-                        bloodgroup=linked_request.bloodgroup,
-                        unit=linked_request.unit
-                    )
-                
-                logger.info(f"✅ Appointment {appointment.id} cancelled")
-                return JsonResponse({
-                    'success': True,
-                    'status': 'cancelled',
-                    'message': f"Request cancelled by {nurse_name}",
-                    'reason': reason,
-                })
-
-            elif action == 'completed':
-                if appointment.status != 'approved':
-                    return JsonResponse({
-                        'success': False, 
-                        'error': 'Request must be approved before completion.'
-                    }, status=400)
-                    
-                if appointment.completed_by_nurse:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': 'Already completed.'
-                    }, status=400)
-
-                # Validate blood group and units
-                new_bg = (request.POST.get('bloodgroup') or '').strip()
-                new_unit = (request.POST.get('unit') or '').strip()
-
-                final_unit = getattr(linked_request, 'unit', None)
-                if new_unit:
-                    try:
-                        final_unit = int(new_unit)
-                        if final_unit < 450 or final_unit > 2700 or final_unit % 50 != 0:
-                            return JsonResponse({
-                                'success': False, 
-                                'error': 'Unit must be 450–2700 ml in multiples of 50.'
-                            }, status=400)
-                    except ValueError:
-                        return JsonResponse({
-                            'success': False, 
-                            'error': 'Invalid unit value.'
-                        }, status=400)
-
-                final_bg = new_bg or getattr(linked_request, 'bloodgroup', None)
-                
-                if not final_bg or not final_unit:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': 'Blood group and units are required for completion.'
-                    }, status=400)
-
-                valid_blood_groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
-                if final_bg not in valid_blood_groups:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': f'Invalid blood group: {final_bg}'
-                    }, status=400)
-
-                center = getattr(linked_request, 'donation_center', None)
-                if not center:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': 'Donation center is missing.'
-                    }, status=400)
-
-                # Verify patient blood group on first request
-                blood_group_was_verified = False
-                if patient:
-                    if not patient.bloodgroup_verified:
-                        patient.bloodgroup = final_bg
-                        patient.bloodgroup_verified = True
-                        patient.bloodgroup_verified_by = nurse.user
-                        patient.bloodgroup_verified_at = now
-                        patient.save(update_fields=[
-                            'bloodgroup', 
-                            'bloodgroup_verified', 
-                            'bloodgroup_verified_by', 
-                            'bloodgroup_verified_at'
-                        ])
-                        blood_group_was_verified = True
-                        logger.info(f"✅ Blood group verified: {final_bg} for patient {patient.id}")
-                    else:
-                        if patient.bloodgroup != final_bg:
-                            return JsonResponse({
-                                'success': False,
-                                'error': f'Patient has verified blood group {patient.bloodgroup}. Cannot use {final_bg}.'
-                            }, status=400)
-
-                # Check stock availability
-                available_units = StockUnit.objects.filter(
-                    center=center,
-                    bloodgroup=final_bg,
-                    unit__gt=0,
-                    expiry_date__gte=timezone.now().date()
-                )
-                total_available = sum([su.unit for su in available_units])
-                
-                if total_available < final_unit:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': f'Insufficient stock: Only {total_available}ml available. Required: {final_unit}ml.'
-                    }, status=400)
-
-                # Deduct stock
-                from blood.utils.stock_utils import deduct_stock_fifo
-                success, result = deduct_stock_fifo(center, final_bg, final_unit)
-                
-                if not success:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': f'Stock deduction failed: {result}'
-                    }, status=400)
-
-                deductions = result
-
-                # Log transactions
-                for d in deductions:
-                    try:
-                        stock_unit = StockUnit.objects.get(barcode=d['barcode'])
-                        
-                        # Determine recipient name for transaction notes
-                        recipient_name = "Unknown"
-                        if patient:
-                            recipient_name = patient.user.get_full_name()
-                        elif donor:
-                            recipient_name = f"via Donor {donor.user.get_full_name()}"
-                        
-                        tx_data = {
-                            'stockunit': stock_unit,
-                            'appointment': appointment,
-                            'quantity_deducted': d['quantity'],
-                            'transaction_type': 'deduction',
-                            'user': nurse.user,
-                            'notes': f"Blood request completion - {final_unit}ml {final_bg} for {recipient_name}"
-                        }
-                        
-                        model_name = linked_request.__class__.__name__
-                        if model_name == 'BloodRequest':
-                            tx_data['blood_request'] = linked_request
-                        elif model_name == 'DonorBloodRequest':
-                            tx_data['donor_blood_request'] = linked_request
-                        
-                        StockTransaction.objects.create(**tx_data)
-                    except Exception as e:
-                        logger.error(f"Transaction logging failed: {e}")
-
-                # Mark as completed
-                appointment.set_status('completed', nurse.user)
-                linked_request.status = 'completed'
-                
-                if hasattr(linked_request, 'completed_by_nurse'):
-                    linked_request.completed_by_nurse = nurse
-                if hasattr(linked_request, 'completed_at_nurse'):
-                    linked_request.completed_at_nurse = now
-                if hasattr(linked_request, 'stock_deducted'):
-                    linked_request.stock_deducted = True
-                if hasattr(linked_request, 'bloodgroup'):
-                    linked_request.bloodgroup = final_bg
-                    
-                linked_request.save()
-
-                # 🔔 Send notification to patient (if exists)
-                if patient:
-                    completion_message = f"Your blood request appointment on {date_str} at {center_name} was completed by Nurse {nurse_name}. {final_unit}ml of {final_bg} was provided."
-                    
-                    if blood_group_was_verified:
-                        completion_message += f" Your blood group has been verified as {final_bg}."
-                    
-                    create_notification(
-                        title="Appointment Completed",
-                        message=completion_message,
-                        recipient_obj=patient,
-                        sender_obj=nurse,
-                        action='completed',
-                        appointment_date=appointment.date,
-                        bloodgroup=final_bg,
-                        unit=final_unit
-                    )
-                
-                # 🔔 Send notification to donor (if this is a donor request)
-                if donor:
-                    completion_message = f"Your blood request appointment on {date_str} at {center_name} was completed by Nurse {nurse_name}. {final_unit}ml of {final_bg} was provided."
-                    
-                    create_notification(
-                        title="Appointment Completed",
-                        message=completion_message,
-                        recipient_obj=donor,
-                        sender_obj=nurse,
-                        action='completed',
-                        appointment_date=appointment.date,
-                        bloodgroup=final_bg,
-                        unit=final_unit
-                    )
-                
-                logger.info(f"✅ COMPLETED: Appointment {appointment.id}")
-
-                response_data = {
-                    'success': True,
-                    'status': 'completed',
-                    'message': f"Request completed. Deducted {final_unit}ml of {final_bg} from stock.",
-                    'action_by': nurse_name,
-                    'when': now.strftime("%b %d, %Y %I:%M %p"),
-                }
-                
-                if blood_group_was_verified:
-                    response_data['bloodgroup_verified'] = True
-                    response_data['verified_bloodgroup'] = final_bg
-                
-                return JsonResponse(response_data)
-
-    except Appointment.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Appointment not found.'}, status=404)
-    except Exception as e:
-        logger.error(f"❌ Unexpected error: {str(e)}", exc_info=True)
-        return JsonResponse({'success': False, 'error': f'Unexpected error: {str(e)}'}, status=500)
-
-def serialize_deductions(deduction_result):
-    """Helper function to serialize deduction results for session storage"""
-    return [
-        {
-            'barcode': d['barcode'],
-            'quantity': d['quantity'],
-            'expiry_date': d['expiry_date'].isoformat() if d['expiry_date'] else None
-        }
-        for d in deduction_result
-    ]
-
 
 # ----------------------------------
 #Donation Related Appointments
@@ -1115,8 +406,9 @@ logger = logging.getLogger(__name__)
 @user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
 def nurse_donation_bookings(request):
     """
-    Modern healthcare view for nurse to manage DONATION appointments.
-    Real-time safety tracking with visual status indicators.
+    Updated view for nurse to manage DONATION appointments.
+    Nurses now only: approve, reject, cancel, and collect blood samples.
+    Safety verification moved to lab techs.
     """
     nurse = request.user.nurse
     center = nurse.donation_center
@@ -1177,8 +469,9 @@ def nurse_donation_bookings(request):
             'donation_center',
             'status_changed_by',
             'cancelled_by_user',
-            'approved_by_nurse',
-            'completed_by_nurse'
+            'approved_by',        # Changed from approved_by_nurse
+            'collected_by',       # Changed from completed_by_nurse
+            'rejected_by'         # Added for rejection tracking
         ).order_by('-date', '-created_at')
         
         total_appointments = donation_appointments.count()
@@ -1348,8 +641,8 @@ def nurse_donation_bookings(request):
                 'expiry_date': expiry_date,
                 'days_until_expiry': (expiry_date - timezone.now().date()).days if expiry_date else None,
                 'stock_added': getattr(blood_donate, 'stock_added', False),
-                'approved_by_nurse': getattr(blood_donate, 'approved_by_nurse', None),
-                'completed_by_nurse': getattr(blood_donate, 'completed_by_nurse', None),
+                'approved_by': getattr(blood_donate, 'approved_by_nurse', None),  # Updated reference
+                'collected_by': getattr(blood_donate, 'collected_by_nurse', None),  # Updated reference
                 'safety_flags': safety_flags,
                 'is_quarantined': is_quarantined,
             }
@@ -1358,10 +651,10 @@ def nurse_donation_bookings(request):
         appointment_status = appointment.status
         status_analysis = {
             'can_approve': appointment_status == 'pending',
-            'can_complete': appointment_status == 'approved',
+            'can_collect': appointment_status == 'approved',  # Changed from can_complete
             'can_cancel': appointment_status in ['pending', 'approved'],
-            'is_final': appointment_status in ['completed', 'cancelled', 'rejected'],
-            'requires_safety_check': appointment_status == 'approved',
+            'is_final': appointment_status in ['completed', 'collected', 'cancelled', 'rejected'],  # Added 'collected'
+            'requires_safety_check': False,  # Removed from nurse
         }
         
         # Compile all data
@@ -1374,8 +667,8 @@ def nurse_donation_bookings(request):
             'blood_donate_details': blood_donate_details,
             'status_analysis': status_analysis,
             'has_activity': (
-                appointment.approved_by_nurse or 
-                appointment.completed_by_nurse or 
+                appointment.approved_by or 
+                appointment.collected_by or 
                 appointment.status in ['cancelled', 'rejected']
             ),
             'time_since_created': (timezone.now() - appointment.created_at).days if appointment.created_at else 0,
@@ -1400,6 +693,7 @@ def nurse_donation_bookings(request):
         total=Count('id'),
         pending=Count('id', filter=Q(status='pending')),
         approved=Count('id', filter=Q(status='approved')),
+        collected=Count('id', filter=Q(status='collected')),  # Added collected
         completed=Count('id', filter=Q(status='completed')),
         cancelled=Count('id', filter=Q(status='cancelled')),
         rejected=Count('id', filter=Q(status='rejected')),
@@ -1449,6 +743,7 @@ def nurse_donation_bookings(request):
         'total_count': status_counts.get('total', 0),
         'pending_count': status_counts.get('pending', 0),
         'approved_count': status_counts.get('approved', 0),
+        'collected_count': status_counts.get('collected', 0),  # Added collected count
         'completed_count': status_counts.get('completed', 0),
         'cancelled_count': status_counts.get('cancelled', 0),
         'rejected_count': status_counts.get('rejected', 0),
@@ -1467,6 +762,7 @@ def nurse_donation_bookings(request):
             ('', 'All Status'),
             ('pending', 'Pending'),
             ('approved', 'Approved'),
+            ('collected', 'Collected'),  # Added collected
             ('completed', 'Completed'),
             ('cancelled', 'Cancelled'),
             ('rejected', 'Rejected'),
@@ -1498,6 +794,7 @@ def nurse_donation_bookings(request):
     • Total: {status_counts.get('total', 0)}
     • Pending: {status_counts.get('pending', 0)}
     • Approved: {status_counts.get('approved', 0)}
+    • Collected: {status_counts.get('collected', 0)}
     • Completed: {status_counts.get('completed', 0)}
     • Safe Units: {safety_stats.get('safe_units', 0)}
     • Unsafe Units: {safety_stats.get('unsafe_units', 0)}
@@ -1505,7 +802,6 @@ def nurse_donation_bookings(request):
     """)
     
     return render(request, 'nurse/nurse_donation_bookings.html', context)
-
 # ----------------------------------
 # UPDATE DONATION APPOINTMENT STATUS
 # ------------------------------------
@@ -1534,18 +830,15 @@ def create_appointment_notification(appointment, nurse_user, action, reason=None
         sender_content_type=ContentType.objects.get_for_model(nurse_user),
         sender_object_id=nurse_user.id,
     )
-logger = logging.getLogger(__name__)
-
 @login_required(login_url='/nurse/nurselogin/')
 @user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
 @require_POST
 def nurse_update_donation_appointment_status(request, appointment_id):
     """
-    Handler for updating DONATION appointment status (BloodDonate).
-    Supports: approve, reject, cancel, complete actions.
-    NOW INCLUDES: Safety verification during completion
+    PHASE 1: Nurse collects blood but DOES NOT verify safety
+    Safety verification moved to Lab Technologist
     """
-    logger.info(f"=== Processing donation appointment {appointment_id} ===")
+    logger.info(f"=== PHASE 1: Processing donation appointment {appointment_id} ===")
     logger.info(f"POST data: {dict(request.POST)}")
     logger.info(f"User: {request.user}")
 
@@ -1579,7 +872,8 @@ def nurse_update_donation_appointment_status(request, appointment_id):
 
             # Validate action
             action = (request.POST.get('action') or '').strip().lower()
-            valid_actions = ['approve', 'reject', 'completed', 'cancelled']
+            valid_actions = ['approve', 'reject', 'collect', 'cancelled']  # Changed 'completed' to 'collect'
+            
             if action not in valid_actions:
                 return JsonResponse({
                     'success': False,
@@ -1587,8 +881,8 @@ def nurse_update_donation_appointment_status(request, appointment_id):
                 }, status=400)
 
             # Prevent double-finalizing
-            if appointment.status in ['completed', 'cancelled', 'rejected'] or \
-               donation.status in ['completed', 'cancelled', 'rejected']:
+            if appointment.status in ['completed', 'cancelled', 'rejected', 'collected'] or \
+               donation.status in ['completed', 'cancelled', 'rejected', 'collected']:
                 return JsonResponse({
                     'success': False,
                     'error': f'This donation already has a final status: {appointment.status}.'
@@ -1597,48 +891,39 @@ def nurse_update_donation_appointment_status(request, appointment_id):
             # Reason for reject/cancel
             reason = (request.POST.get('reason') or '').strip()
 
-            # Helper: update statuses
-            def update_status(app_status, don_status, **kwargs):
-                appointment.status = app_status
-                appointment.save()
-
-                old_status = donation.status
-                donation.status = don_status
-
-                for field, value in kwargs.items():
-                    setattr(donation, field, value)
-
-                donation.save()
-
-                logger.info(
-                    f"Nurse {nurse.user.username} changed donation {donation.id} "
-                    f"from '{old_status}' to '{don_status}'"
-                )
-
-                return f"Donation {don_status} successfully by nurse {nurse.user.get_full_name()}."
-
             # =======================
             # ACTION: APPROVE
             # =======================
             if action == 'approve':
-                if getattr(donation, 'approved_by_nurse', None):
+                if getattr(donation, 'approved_by', None):
                     return JsonResponse({
                         'success': False,
                         'error': 'This donation has already been approved.'
                     }, status=400)
 
-                message = update_status(
-                    'approved', 'approved',
-                    approved_by_nurse=nurse.user,
-                    approved_at_nurse=now
-                )
+                # Update appointment
+                appointment.status = 'approved'
+                appointment.approved_by = nurse.user
+                appointment.approved_by_role = 'nurse'
+                appointment.approved_at = now
+                appointment.status_changed_by = nurse.user
+                appointment.status_changed_by_role = 'nurse'
+                appointment.status_changed_at = now
+                appointment.save()
 
+                # Update donation
+                donation.status = 'approved'
+                donation.save()
+
+                # Create notification
                 create_appointment_notification(appointment, nurse.user, 'approved')
+
+                logger.info(f"✅ Nurse {nurse.user.username} approved donation {donation.id}")
 
                 return JsonResponse({
                     'success': True,
                     'status': 'approved',
-                    'message': message,
+                    'message': f"Donation approved successfully by {nurse.user.get_full_name()}.",
                     'action_by': nurse.user.get_full_name(),
                     'when': now.strftime("%b %d, %Y %I:%M %p"),
                     'operation_type': 'donation_approval'
@@ -1648,95 +933,61 @@ def nurse_update_donation_appointment_status(request, appointment_id):
             # ACTION: REJECT
             # =======================
             elif action == 'reject':
-                message = update_status(
-                    'rejected', 'rejected',
-                    rejected_by='nurse',
-                    rejected_at=now,
-                    rejection_reason=reason
-                )
+                if not reason:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Reason is required for rejection.'
+                    }, status=400)
 
+                # Update appointment
+                appointment.status = 'rejected'
+                appointment.rejected_by = nurse.user
+                appointment.rejected_by_role = 'nurse'
+                appointment.rejected_at = now
+                appointment.rejection_reason = reason
+                appointment.status_changed_by = nurse.user
+                appointment.status_changed_by_role = 'nurse'
+                appointment.status_changed_at = now
+                appointment.save()
+
+                # Update donation
+                donation.status = 'rejected'
+                donation.rejection_reason = reason
+                donation.save()
+
+                # Create notification
                 create_appointment_notification(appointment, nurse.user, 'rejected', reason)
+
+                logger.info(f"✅ Nurse {nurse.user.username} rejected donation {donation.id}")
 
                 return JsonResponse({
                     'success': True,
                     'status': 'rejected',
-                    'message': f'{message}' + (f' Reason: {reason}' if reason else ''),
+                    'message': f"Donation rejected. Reason: {reason}",
                     'action_by': nurse.user.get_full_name(),
                     'when': now.strftime("%b %d, %Y %I:%M %p"),
                     'operation_type': 'donation_rejection'
                 })
 
             # =======================
-            # ACTION: CANCEL
+            # ACTION: COLLECT (formerly completed)
             # =======================
-            elif action == 'cancelled':
-                message = update_status(
-                    'cancelled', 'cancelled',
-                    cancelled_by='nurse',
-                    cancelled_at=now,
-                    cancellation_reason=reason
-                )
-
-                create_appointment_notification(appointment, nurse.user, 'cancelled', reason)
-
-                return JsonResponse({
-                    'success': True,
-                    'status': 'cancelled',
-                    'message': f'{message}' + (f' Reason: {reason}' if reason else ''),
-                    'action_by': nurse.user.get_full_name(),
-                    'when': now.strftime("%b %d, %Y %I:%M %p"),
-                    'operation_type': 'donation_cancellation'
-                })
-
-            # =======================
-            # ACTION: COMPLETED (WITH SAFETY VERIFICATION)
-            # =======================
-            elif action == 'completed':
+            elif action == 'collect':
                 # ----- Validation -----
                 if appointment.status != 'approved':
                     return JsonResponse({
                         'success': False,
-                        'error': 'Donation must be approved before completion.'
-                    }, status=400)
-
-                if getattr(donation, 'stock_added_by_nurse', False):
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Stock has already been added for this donation.'
+                        'error': 'Donation must be approved before collection.'
                     }, status=400)
 
                 # ----- Get form values -----
                 new_bg = request.POST.get('bloodgroup', '').strip()
                 new_unit = request.POST.get('unit', '').strip()
+                collection_notes = request.POST.get('collection_notes', '').strip()
+
+                # Validate blood group for first-time donors
+                donor = donation.donor
                 
-                # ===== SAFETY VERIFICATION FIELDS =====
-                safety_status = request.POST.get('safety_status', '').strip().lower()
-                unsafe_reason = request.POST.get('unsafe_reason', '').strip()
-                safety_notes = request.POST.get('safety_notes', '').strip()
-
-                # Validate safety status
-                if safety_status not in ['safe', 'unsafe']:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Safety status must be specified as either "safe" or "unsafe".'
-                    }, status=400)
-
-                # If unsafe, require reason
-                if safety_status == 'unsafe' and not unsafe_reason:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Unsafe reason is required when marking blood as unsafe.'
-                    }, status=400)
-
-                # Validate blood group
-                if new_bg:
-                    valid_bgs = [choice[0] for choice in BLOODGROUP_CHOICES]
-                    if new_bg not in valid_bgs:
-                        return JsonResponse({
-                            'success': False,
-                            'error': f'Invalid blood group: {new_bg}. Valid: {", ".join(valid_bgs)}'
-                        }, status=400)
-
                 # Validate unit amount
                 units_value = None
                 if new_unit:
@@ -1752,233 +1003,154 @@ def nurse_update_donation_appointment_status(request, appointment_id):
                             'success': False,
                             'error': 'Units must be a valid number.'
                         }, status=400)
+                else:
+                    units_value = 450  # Default
 
                 # ----- Apply updates -----
                 if new_bg and new_bg != donation.bloodgroup:
                     donation.bloodgroup = new_bg
 
-                if units_value is not None and units_value != donation.unit:
-                    donation.unit = units_value
-
-                donor = donation.donor
+                donation.unit = units_value
 
                 # ==========================================
-                # FIRST DONATION — VERIFY BLOOD GROUP
+                # FIRST DONATION — RECORD BLOOD GROUP (but don't verify yet)
                 # ==========================================
-                if donor and not donor.bloodgroup_verified:
-                    verified_bg = donation.bloodgroup
-                    if not verified_bg:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'Blood group is required for first-time verification.'
-                        }, status=400)
-
-                    donor.bloodgroup = verified_bg
-                    donor.bloodgroup_verified = True
-                    donor.bloodgroup_verified_by = nurse.user
-                    donor.bloodgroup_verified_at = now
-                    donor.save(update_fields=[
-                        'bloodgroup',
-                        'bloodgroup_verified',
-                        'bloodgroup_verified_by',
-                        'bloodgroup_verified_at'
-                    ])
-
-                    logger.info(
-                        f"✅ Verified donor BG: {donor.id} -> {verified_bg} "
-                        f"by nurse {nurse.user.get_full_name()}"
-                    )
-
-                # ----- Donation center -----
-                center = donation.donation_center or nurse.donation_center
-                if not center:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'No donation center assigned.'
-                    }, status=400)
-
-                expiry_date = (donation.date or now.date()) + timedelta(days=46)
-
-                # ==========================================
-                # ADD STOCK WITH SAFETY STATUS (MODIFIED)
-                # ==========================================
-                try:
-                    # Pass all necessary parameters including unsafe_reason and safety_notes
-                    stock_unit = add_stock(
-                        center=center, 
-                        bloodgroup=donation.bloodgroup, 
-                        units=donation.unit, 
-                        expiry_date=expiry_date,
-                        safety_status=safety_status,
-                        unsafe_reason=unsafe_reason if safety_status == 'unsafe' else None,
-                        safety_notes=safety_notes if safety_notes else None
-                    )
-                    generated_barcode = stock_unit.barcode if stock_unit else None
-
-                    logger.info(
-                        f"✅ STOCK: Added {donation.unit}ml {donation.bloodgroup} "
-                        f"to {center.name} (Barcode {generated_barcode}, Status: {safety_status})"
-                    )
-
-                    # ===== VERIFY SAFETY IMMEDIATELY =====
-                    # Note: Stock unit was already created with the safety status,
-                    # but we call mark_safe/mark_unsafe to set the verified_by and timestamp
-                    if safety_status == 'safe':
-                        stock_unit.mark_safe(
-                            verified_by_user=nurse.user,
-                            notes=safety_notes if safety_notes else "Verified safe during donation completion"
-                        )
-                        logger.info(
-                            f"✅ SAFE STOCK: {donation.unit}ml {donation.bloodgroup} "
-                            f"verified safe by {nurse.user.get_full_name()} (Barcode {generated_barcode})"
-                        )
+                if donor and not donor.bloodgroup_verified and new_bg:
+                    # Store the blood group but don't mark as verified yet
+                    # Lab will verify during testing
+                    donor.bloodgroup = new_bg
+                    donor.save(update_fields=['bloodgroup'])
                     
-                    elif safety_status == 'unsafe':
-                        # Already created as unsafe, but update verification details
-                        stock_unit.safety_verified_by = nurse.user
-                        stock_unit.safety_verified_at = now
-                        stock_unit.save(update_fields=['safety_verified_by', 'safety_verified_at'])
-                        
-                        logger.warning(
-                            f"⚠️ UNSAFE STOCK: {donation.unit}ml {donation.bloodgroup} "
-                            f"marked unsafe ({unsafe_reason}) by {nurse.user.get_full_name()} "
-                            f"(Barcode {generated_barcode})"
-                        )
-
-                except ValueError as ve:
-                    logger.error(f"❌ Validation error: {ve}")
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(ve)
-                    }, status=400)
-                except Exception as e:
-                    logger.error(f"❌ Stock add error: {e}", exc_info=True)
-                    return JsonResponse({
-                        'success': False,
-                        'error': f"Stock addition failed: {str(e)}"
-                    }, status=500)
+                    logger.info(
+                        f"📝 Recorded blood group for donor {donor.id}: {new_bg} "
+                        f"(awaiting lab verification)"
+                    )
 
                 # ==========================================
-                # STOCK TRANSACTION LOG (UPDATED)
+                # UPDATE TO COLLECTED STATUS (not completed)
                 # ==========================================
-                if stock_unit:
-                    try:
-                        StockTransaction.objects.create(
-                            stockunit=stock_unit,
-                            appointment=appointment,
-                            blood_donation=donation,
-                            quantity_added=donation.unit,
-                            transaction_type='addition',
-                            user=nurse.user,
-                            notes=(
-                                f"Completed donation: {donation.unit}ml {donation.bloodgroup} "
-                                f"from donor {donation.donor.user.get_full_name()} - "
-                                f"Safety Status: {safety_status.upper()}"
-                                + (f" - Reason: {unsafe_reason}" if safety_status == 'unsafe' else "")
-                                + (f" - Notes: {safety_notes}" if safety_notes else "")
-                            )
-                        )
-
-                    except Exception as e:
-                        logger.error(f"Transaction log error: {e}")
-
-                # ==========================================
-                # UPDATE DONATION STATUS FIRST
-                # ==========================================
-                donation.status = 'completed'
-                donation.completed_by_nurse = nurse.user
-                donation.completed_at_nurse = now
-                donation.stock_added = True
+                
+                # Update donation status to 'collected'
+                donation.status = 'collected'
+                donation.collected_by = nurse.user
+                donation.collected_at = now
                 donation.save()
 
-                appointment.status = 'completed'
-                appointment.completed_by_nurse = nurse.user
-                appointment.completed_at_nurse = now
+                # Update appointment
+                appointment.status = 'collected'
+                appointment.collected_by = nurse.user
+                appointment.collected_by_role = 'nurse'
+                appointment.collected_at = now
+                appointment.sent_to_lab_at = now
+                appointment.status_changed_by = nurse.user
+                appointment.status_changed_by_role = 'nurse'
+                appointment.status_changed_at = now
                 appointment.save()
 
                 logger.info(
-                    f"Nurse {nurse.user.username} completed donation {donation.id}"
+                    f"✅ Nurse {nurse.user.username} collected donation {donation.id} - "
+                    f"awaiting lab testing"
                 )
 
                 # ==========================================
-                # UPDATE DONOR PROFILE (FIXED & MODIFIED FOR SAFETY)
+                # NOTIFY LAB TECH THAT BLOOD NEEDS TESTING
                 # ==========================================
                 try:
-                    if donor:
-                        # Only award points if blood is SAFE
-                        if safety_status == 'safe':
-                            donation_date = donation.date or timezone.now().date()
-                            donor.last_donation_date = donation_date
-                            
-                            # Count BOTH approved AND completed SAFE donations
-                            total_successful_donations = BloodDonate.objects.filter(
-                                donor=donor, 
-                                status__in=['approved', 'completed']
-                            ).count()
-                            
-                            donor.points = total_successful_donations * 10 
-                            donor.save(update_fields=['last_donation_date', 'points'])
-
-                            logger.info(
-                                f"✅ Donor {donor.user.username} updated: "
-                                f"points={donor.points}, "
-                                f"last_donation_date={donor.last_donation_date}, "
-                                f"total_successful_donations={total_successful_donations}"
-                            )
-                        else:
-                            logger.warning(
-                                f"⚠️ Donor {donor.user.username} donated UNSAFE blood - "
-                                f"points NOT awarded"
+                    from lab_technologist.models import LabTechnologistProfile
+                    center = donation.donation_center or nurse.donation_center
+                    
+                    if center:
+                        lab_techs = LabTechnologistProfile.objects.filter(
+                            center=center,
+                            is_active=True
+                        )
+                        
+                        for lab_tech in lab_techs:
+                            Notification.objects.create(
+                                title="New Blood Sample for Testing",
+                                message=(
+                                    f"Blood sample from donor {donor.user.get_full_name() if donor else 'Unknown'} "
+                                    f"({units_value}ml) needs testing. "
+                                    f"Collection barcode: {appointment.barcode}"
+                                ),
+                                recipient_content_type=ContentType.objects.get_for_model(lab_tech.user),
+                                recipient_object_id=lab_tech.user.id,
+                                sender_content_type=ContentType.objects.get_for_model(nurse.user),
+                                sender_object_id=nurse.user.id,
                             )
                 except Exception as e:
-                    logger.error(f"❌ ERROR updating donor profile: {e}", exc_info=True)
-
-                create_appointment_notification(appointment, nurse.user, 'completed')
+                    logger.error(f"Failed to notify lab techs: {e}")
 
                 # ==========================================
-                # BUILD RESPONSE WITH SAFETY INFO
+                # CREATE NOTIFICATION FOR DONOR
+                # ==========================================
+                create_appointment_notification(appointment, nurse.user, 'collected')
+
+                # ==========================================
+                # BUILD RESPONSE
                 # ==========================================
                 response = {
                     'success': True,
-                    'status': 'completed',
-                    'barcode': generated_barcode,
-                    'safety_status': safety_status,
+                    'status': 'collected',
+                    'barcode': appointment.barcode,
                     'action_by': nurse.user.get_full_name(),
-                    'operation_type': 'donation_addition',
+                    'operation_type': 'donation_collection',
                     'when': now.strftime("%b %d, %Y %I:%M %p"),
+                    'message': (
+                        f"Blood collected successfully. Sample sent to lab for testing. "
+                        f"Donor will be notified once test results are available."
+                    ),
                 }
 
-                if safety_status == 'safe':
-                    response['message'] = (
-                        f"Donation completed successfully. "
-                        f"Added {donation.unit}ml of {donation.bloodgroup} "
-                        f"to SAFE stock (available for issuance)."
-                    )
-                elif safety_status == 'unsafe':
-                    response['message'] = (
-                        f"Donation completed but blood marked as UNSAFE. "
-                        f"Unit quarantined and NOT available for issuance. "
-                        f"Reason: {unsafe_reason}"
-                    )
-                    response['unsafe_reason'] = unsafe_reason
-
-                # Include verification report if first donation
-                if donor and donor.bloodgroup_verified and donor.bloodgroup_verified_at == now:
-                    response['bloodgroup_verified'] = True
-                    response['verified_bloodgroup'] = donor.bloodgroup
-
-                # Include updated donor stats (only if safe)
-                if donor and safety_status == 'safe':
-                    response['donor_stats'] = {
-                        'points': donor.points,
-                        'total_donations': total_successful_donations,
-                        'last_donation_date': donor.last_donation_date.strftime("%b %d, %Y") if donor.last_donation_date else None,
-                    }
+                # Include blood group info if provided
+                if new_bg:
+                    response['bloodgroup_recorded'] = True
+                    response['recorded_bloodgroup'] = new_bg
 
                 return JsonResponse(response)
 
+            # =======================
+            # ACTION: CANCELLED
+            # =======================
+            elif action == 'cancelled':
+                if not reason:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Reason is required for cancellation.'
+                    }, status=400)
+
+                # Update appointment
+                appointment.status = 'cancelled'
+                appointment.cancelled_by = 'nurse'
+                appointment.cancelled_by_user = nurse.user
+                appointment.cancelled_by_role = 'nurse'
+                appointment.cancelled_at = now
+                appointment.status_changed_by = nurse.user
+                appointment.status_changed_by_role = 'nurse'
+                appointment.status_changed_at = now
+                appointment.save()
+
+                # Update donation
+                donation.status = 'cancelled'
+                donation.cancellation_reason = reason
+                donation.save()
+
+                # Create notification
+                create_appointment_notification(appointment, nurse.user, 'cancelled', reason)
+
+                logger.info(f"✅ Nurse {nurse.user.username} cancelled donation {donation.id}")
+
+                return JsonResponse({
+                    'success': True,
+                    'status': 'cancelled',
+                    'message': f"Donation cancelled. Reason: {reason}",
+                    'action_by': nurse.user.get_full_name(),
+                    'when': now.strftime("%b %d, %Y %I:%M %p"),
+                    'operation_type': 'donation_cancellation'
+                })
+
             # Should never reach here
-            return JsonResponse({'success': False, 'error': f'Unhandled action: {action}'})
+            return JsonResponse({'success': False, 'error': f'Unhandled action: {action}'}, status=400)
 
     except Appointment.DoesNotExist:
         return JsonResponse({
@@ -1995,7 +1167,6 @@ def nurse_update_donation_appointment_status(request, appointment_id):
             'success': False,
             'error': f"Unexpected error: {str(e)}"
         }, status=500)
-
 # ---------------------------
 # Nurse Profile View
 # ---------------------------
@@ -2127,370 +1298,6 @@ def mark_nurse_notification_read(request, pk):
 
     return redirect('nurse-notifications')
 
-# ---------------------------
-# Nurse Blood Stock View
-# ---------------------------
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(is_nurse)
-def nurse_blood_stock(request):
-    nurse = get_object_or_404(Nurse, user=request.user)
-
-    blood_stock_totals = []
-
-    if nurse.donation_center:
-        # --- SEARCH FILTER ---
-        query = request.GET.get("q", "").strip()
-
-        stockunits_qs = StockUnit.objects.filter(center=nurse.donation_center, unit__gt=0)
-
-        if query:
-            stockunits_qs = stockunits_qs.filter(
-                Q(bloodgroup__icontains=query) |  # Search by blood group
-                Q(unit__iexact=query) |           # Search by stock units
-                Q(barcode__icontains=query)       # Search by barcode
-            )
-
-        # Aggregate stock details
-        bloodgroup_qs = (
-            stockunits_qs.values('bloodgroup')
-            .annotate(
-                total_units=Sum('unit'),
-                earliest_expiry=Min('expiry_date'),
-                batches_count=Count('id')
-            )
-            .order_by('bloodgroup')
-        )
-
-        for group in bloodgroup_qs:
-            # List all batches for this blood group, sorted by expiry
-            group_batches = stockunits_qs.filter(
-                bloodgroup=group['bloodgroup']
-            ).order_by('expiry_date')
-            group['detailed_batches'] = group_batches
-            blood_stock_totals.append(group)
-
-    all_centres = DonationCenter.objects.all().order_by('name')
-
-    selected_centre_id = request.GET.get('centre')
-    other_centers_stock = None
-    selected_centre = None
-
-    if selected_centre_id:
-        try:
-            selected_centre = DonationCenter.objects.get(id=selected_centre_id)
-            other_centers_stock = Stock.objects.filter(center=selected_centre)
-        except DonationCenter.DoesNotExist:
-            selected_centre = None
-            other_centers_stock = None
-
-    context = {
-        'nurse': nurse,
-        'blood_stock_totals': blood_stock_totals,
-        'all_centres': all_centres,
-        'selected_centre': selected_centre,
-        'other_centers_stock': other_centers_stock,
-        'today_date': localdate(),
-        'query': query,  # keep search term in template
-    }
-    return render(request, 'nurse/blood_stock.html', context)
-
-# ----------------------------------
-#STOCKUNIT LIST(individual)
-# ------------------------------------
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
-def nurse_stockunit_list(request, highlight_id=None):
-    nurse = get_object_or_404(Nurse, user=request.user)
-    center = nurse.donation_center
-
-    if not center:
-        messages.warning(request, "You are not assigned to any donation center.")
-        return redirect('nurse-dashboard')
-
-    search_query = request.GET.get('q', '').strip()
-    blood_group_filter = request.GET.get('blood_group', '').strip()
-    safety_status_filter = request.GET.get('safety_status', '').strip()
-    stock_status_filter = request.GET.get('stock_status', '').strip()
-    
-    today = timezone.now().date()
-    expiring_threshold = today + timedelta(days=7)
-
-    # Base queryset - EXCLUDE UNSAFE STOCK FROM MAIN VIEW
-    stockunits = StockUnit.objects.filter(center=center).exclude(safety_status='unsafe')
-
-    # Apply search filter
-    if search_query:
-        stockunits = stockunits.filter(
-            Q(barcode__icontains=search_query) | 
-            Q(bloodgroup__icontains=search_query) |
-            Q(safety_notes__icontains=search_query)
-        )
-
-    # Apply blood group filter
-    if blood_group_filter:
-        stockunits = stockunits.filter(bloodgroup=blood_group_filter)
-
-    # Apply safety status filter
-    if safety_status_filter:
-        stockunits = stockunits.filter(safety_status=safety_status_filter)
-
-    # Apply stock status filter
-    if stock_status_filter:
-        if stock_status_filter == 'expiring_soon':
-            stockunits = stockunits.filter(
-                expiry_date__lte=expiring_threshold,
-                expiry_date__gte=today
-            )
-        elif stock_status_filter == 'expired':
-            stockunits = stockunits.filter(expiry_date__lt=today)
-        elif stock_status_filter == 'depleted':
-            # We'll handle this in the processing loop
-            pass
-        elif stock_status_filter == 'quarantined':
-            stockunits = stockunits.filter(is_quarantined=True)
-        elif stock_status_filter == 'safe':
-            stockunits = stockunits.filter(safety_status='safe')
-        elif stock_status_filter == 'pending':
-            stockunits = stockunits.filter(safety_status='pending')
-
-    stockunits = stockunits.order_by('-added_on')
-
-    # Aggregate deductions per stockunit from StockTransaction
-    deductions = StockTransaction.objects.filter(
-        transaction_type='deduction',
-        stockunit__center=center
-    ).values('stockunit').annotate(total_deducted=Sum('quantity_deducted'))
-
-    deducted_map = {item['stockunit']: item['total_deducted'] for item in deductions}
-
-    # Calculate statistics - FOR SAFE STOCK ONLY
-    safe_stockunits = StockUnit.objects.filter(
-        center=center,
-        safety_status='safe'
-    )
-    
-    total_stock_count = safe_stockunits.count()
-    total_units = safe_stockunits.aggregate(total=Sum('unit'))['total'] or 0
-    total_deducted = sum(deducted_map.values())
-    total_remaining = total_units - total_deducted
-    
-    # Safety statistics
-    safe_count = StockUnit.objects.filter(center=center, safety_status='safe').count()
-    unsafe_count = StockUnit.objects.filter(center=center, safety_status='unsafe').count()
-    pending_count = StockUnit.objects.filter(center=center, safety_status='pending').count()
-    quarantined_count = StockUnit.objects.filter(center=center, is_quarantined=True).count()
-    
-    expiring_soon = safe_stockunits.filter(
-        expiry_date__lte=expiring_threshold,
-        expiry_date__gte=today
-    ).count()
-    
-    expired = safe_stockunits.filter(expiry_date__lt=today).count()
-
-    # Prepare stockunit information with status
-    stockunits_info = []
-    depleted_ids = []
-    
-    for unit in stockunits:
-        deducted = deducted_map.get(unit.id, 0) or 0
-        remaining = unit.unit - deducted
-        percentage_remaining = (remaining / unit.unit * 100) if unit.unit > 0 else 0
-        
-        # Determine status based on multiple factors
-        if unit.is_quarantined:
-            status = 'quarantined'
-            status_class = 'status-quarantined'
-        elif unit.safety_status == 'unsafe':
-            status = 'unsafe'
-            status_class = 'status-unsafe'
-        elif unit.safety_status == 'pending':
-            status = 'pending_verification'
-            status_class = 'status-pending'
-        elif unit.expiry_date < today:
-            status = 'expired'
-            status_class = 'status-expired'
-        elif unit.expiry_date <= expiring_threshold:
-            status = 'expiring_soon'
-            status_class = 'status-expiring'
-        elif remaining == 0:
-            status = 'depleted'
-            status_class = 'status-depleted'
-            depleted_ids.append(unit.id)
-        elif percentage_remaining < 25:
-            status = 'low_stock'
-            status_class = 'status-low'
-        else:
-            status = 'available'
-            status_class = 'status-available'
-        
-        # Calculate days until expiry
-        days_until_expiry = (unit.expiry_date - today).days
-        
-        # Safety verification info
-        safety_info = {
-            'status': unit.safety_status,
-            'verified_by': unit.safety_verified_by.get_full_name() if unit.safety_verified_by else None,
-            'verified_at': unit.safety_verified_at,
-            'notes': unit.safety_notes,
-            'unsafe_reason': unit.unsafe_reason,
-        }
-        
-        stockunits_info.append({
-            'unit': unit,
-            'deducted': deducted,
-            'remaining': remaining,
-            'percentage_remaining': percentage_remaining,
-            'status': status,
-            'status_class': status_class,
-            'status_display': status.replace('_', ' ').title(),
-            'days_until_expiry': days_until_expiry,
-            'is_expiring_soon': 0 < days_until_expiry <= 7,
-            'safety_info': safety_info,
-        })
-
-    # Apply depleted filter if selected
-    if stock_status_filter == 'depleted':
-        stockunits_info = [info for info in stockunits_info if info['unit'].id in depleted_ids]
-
-    # Get distinct blood groups for dropdown
-    blood_groups = list(
-        StockUnit.objects.filter(center=center)
-        .values_list('bloodgroup', flat=True)
-        .distinct()
-        .order_by('bloodgroup')
-    )
-
-    # Get next distribution barcode (for safe, non-depleted, non-expired stock)
-    next_barcode = None
-    if blood_group_filter:
-        next_stock = StockUnit.objects.filter(
-            center=center,
-            bloodgroup=blood_group_filter,
-            safety_status='safe',
-            expiry_date__gte=today,
-            is_quarantined=False
-        ).exclude(
-            id__in=depleted_ids
-        ).order_by(
-            'expiry_date',
-            '-added_on'
-        ).first()
-        
-        if next_stock:
-            next_barcode = next_stock.barcode
-
-    context = {
-        'stockunits_info': stockunits_info,
-        'highlight_id': highlight_id,
-        'search_query': search_query,
-        'blood_group_filter': blood_group_filter,
-        'safety_status_filter': safety_status_filter,
-        'stock_status_filter': stock_status_filter,
-        'stats': {
-            'total_stock_count': total_stock_count,
-            'total_units': total_units,
-            'total_deducted': total_deducted,
-            'total_remaining': total_remaining,
-            'expiring_soon': expiring_soon,
-            'expired': expired,
-            'safe_count': safe_count,
-            'unsafe_count': unsafe_count,
-            'pending_count': pending_count,
-            'quarantined_count': quarantined_count,
-        },
-        'blood_groups': blood_groups,
-        'safety_statuses': ['safe', 'pending', 'unsafe'],
-        'stock_statuses': [
-            ('available', 'Available'),
-            ('expiring_soon', 'Expiring Soon'),
-            ('expired', 'Expired'),
-            ('depleted', 'Depleted'),
-            ('low_stock', 'Low Stock'),
-            ('quarantined', 'Quarantined'),
-            ('pending_verification', 'Pending Verification'),
-        ],
-        'next_barcode': next_barcode,
-        'today': today,
-        'expiring_threshold': expiring_threshold,
-    }
-    
-    # AJAX request for next barcode
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        blood_group = request.GET.get('blood_group', '')
-        if blood_group:
-            next_stock = StockUnit.objects.filter(
-                center=center,
-                bloodgroup=blood_group,
-                safety_status='safe',
-                expiry_date__gte=today,
-                is_quarantined=False
-            ).exclude(
-                id__in=depleted_ids
-            ).order_by(
-                'expiry_date',
-                '-added_on'
-            ).first()
-            
-            return JsonResponse({
-                'barcode': next_stock.barcode if next_stock else None,
-                'expiry_date': next_stock.expiry_date.strftime("%b %d, %Y") if next_stock else None,
-                'remaining_ml': next_stock.unit - deducted_map.get(next_stock.id, 0) if next_stock else None,
-            })
-    
-    return render(request, 'nurse/stockunit_list.html', context)
-# ---------------------------------------------------------------------------------
-# Create Blood Request View(nurse requesting from other centres with enough stock)
-# ---------------------------------------------------------------------------------
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(is_nurse, login_url='/nurse/nurselogin/')
-def create_blood_request(request):
-    nurse = get_object_or_404(Nurse, user=request.user)
-
-    blood_group_prefill = request.GET.get('blood_group', '').upper()
-
-    low_stock_threshold = 500
-    sufficient_centres = []
-    if blood_group_prefill:
-        stocks = Stock.objects.filter(
-            bloodgroup=blood_group_prefill,
-            unit__gt=low_stock_threshold
-        )
-        sufficient_centres = stocks.values_list('center__id', 'center__name').distinct().order_by('center__name')
-
-    if request.method == 'POST':
-        form = RequestForm(request.POST)
-        if form.is_valid():
-            blood_request = form.save(commit=False)
-            blood_request.requester = nurse
-            blood_request.status = 'pending'
-            blood_request.save()
-            return redirect('nurse-dashboard')  # Adjust redirect as appropriate
-    else:
-        initial = {}
-        if blood_group_prefill:
-            initial['blood_group'] = blood_group_prefill
-        form = RequestForm(initial=initial)
-
-    context = {
-        'form': form,
-        'blood_group_prefill': blood_group_prefill,
-        'nurse': nurse,
-        'sufficient_centres': sufficient_centres,
-    }
-    return render(request, 'nurse/create_blood_request.html', context)
-
-# -----------------------------------
-# List Nurse Related Blood Requests 
-# ----------------------------------
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(is_nurse, login_url='/nurse/nurselogin/')
-def list_blood_requests(request):
-    nurse = get_object_or_404(Nurse, user=request.user)
-    requests = NurseBloodRequest.objects.filter(requester=nurse).order_by('-created_at')
-    context = {
-        'requests': requests
-    }
-    return render(request, 'nurse/blood_requests_list.html', context)
 
 # ----------------------------------
 # Ajax Booked Time Slots
@@ -2526,491 +1333,180 @@ def ajax_booked_timeslots(request):
         print("Error in ajax_booked_timeslots:", e)
         return JsonResponse({'booked_times': []})
 
-
-class UnifiedAppointmentDetailView(LoginRequiredMixin, DetailView):
-    """
-    Unified detailed view for ALL appointments (pending, approved, completed, etc.)
-    Works for both Blood Requests and Donations
-    """
-    model = Appointment
-    template_name = 'nurse/appointment_detail.html'
-    context_object_name = 'appointment'
-    
-    def get_queryset(self):
-        """Optimize queries with select_related and prefetch_related"""
-        return Appointment.objects.filter(
-            nurse__user=self.request.user
-        ).select_related(
-            'nurse',
-            'nurse__user',
-            'nurse__donation_center',
-            'patient',
-            'patient__user',
-            'donor',
-            'donor__user',
-            'donation_center',
-            'completed_by_nurse',
-            'approved_by_nurse',
-            'status_changed_by',
-            'cancelled_by_user',
-            'request_content_type'
-        )
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        appointment = self.object
-        
-        # Determine appointment type
-        context['appointment_type'] = self._get_appointment_type(appointment)
-        context['is_blood_request'] = appointment.request_content_type is not None
-        context['is_pure_donation'] = appointment.is_donation
-        
-        # Add request details based on type
-        request_details = self._get_request_details(appointment)
-        context.update(request_details)
-        
-        # Add participant details
-        participant_details = self._get_participant_details(appointment)
-        context.update(participant_details)
-        
-        # Add stock-related information
-        stock_info = self._get_stock_information(appointment)
-        context.update(stock_info)
-        
-        # Add time metrics
-        time_metrics = self._calculate_time_metrics(appointment)
-        context.update(time_metrics)
-        
-        # Add appointment timeline
-        context['timeline'] = self._build_timeline(appointment)
-        
-        # Add action permissions
-        context['can_approve'] = appointment.status == 'pending'
-        context['can_complete'] = appointment.status == 'approved'
-        context['can_reject'] = appointment.status == 'pending'
-        context['can_cancel'] = appointment.status in ['pending', 'approved']
-        
-        # Add available blood groups for completion modal
-        context['blood_group_choices'] = BLOODGROUP_CHOICES
-        
-        return context
-    
-    def _get_appointment_type(self, appointment):
-        """Determine if this is a donation, patient request, or donor request"""
-        if appointment.request_content_type:
-            model_name = appointment.request_content_type.model
-            if model_name == 'bloodrequest':
-                return 'patient_request'
-            elif model_name == 'donorbloodrequest':
-                return 'donor_request'
-            elif model_name == 'blooddonate':
-                return 'pure_donation'
-        elif appointment.donor and not appointment.patient:
-            return 'pure_donation'
-        return 'unknown'
-    
-    def _get_request_details(self, appointment):
-        """Get details of the linked request object"""
-        context = {}
-        
-        if not appointment.request_content_type or not appointment.request_object_id:
-            context['request_object'] = None
-            context['request_type'] = None
-            return context
-        
-        model_class = appointment.request_content_type.model_class()
-        model_name = model_class.__name__
-        
-        try:
-            request_obj = model_class.objects.select_related(
-                'donation_center'
-            ).get(id=appointment.request_object_id)
-            
-            context['request_object'] = request_obj
-            context['request_type'] = model_name
-            
-            # Extract common fields
-            context['blood_details'] = {
-                'bloodgroup': getattr(request_obj, 'bloodgroup', 'N/A'),
-                'unit': getattr(request_obj, 'unit', None),
-                'reason': getattr(request_obj, 'reason', None),
-                'center': getattr(request_obj, 'donation_center', None),
-                'status': getattr(request_obj, 'status', 'pending'),
-                'created_at': getattr(request_obj, 'created_at', None),
-                'urgency_level': getattr(request_obj, 'urgency_level', None),
-            }
-            
-            # Add type-specific fields
-            if model_name == 'BloodRequest':
-                context['blood_details'].update({
-                    'patient_name': f"{request_obj.first_name} {request_obj.last_name}",
-                    'patient_age': getattr(request_obj, 'patient_age', None),
-                    'contact_number': getattr(request_obj, 'contact_number', None),
-                    'emergency_contact': getattr(request_obj, 'emergency_contact', None),
-                    'national_id': getattr(request_obj, 'national_id', None),
-                })
-            elif model_name == 'DonorBloodRequest':
-                context['blood_details'].update({
-                    'patient_name': getattr(request_obj, 'patient_name', None),
-                    'patient_age': getattr(request_obj, 'patient_age', None),
-                })
-            elif model_name == 'BloodDonate':
-                context['blood_details'].update({
-                    'donor_age': getattr(request_obj, 'donor_age', None),
-                })
-                
-        except model_class.DoesNotExist:
-            logger.warning(f"Request object {model_name} with ID {appointment.request_object_id} not found")
-            context['request_object'] = None
-            context['request_type'] = None
-            context['blood_details'] = {}
-        
-        return context
-    
-    def _get_participant_details(self, appointment):
-        """Get detailed information about donor/patient"""
-        context = {}
-        
-        # Donor details
-        if appointment.donor:
-            donor = appointment.donor
-            context['donor_details'] = {
-                'name': donor.user.get_full_name() or donor.user.username,
-                'username': donor.user.username,
-                'email': donor.user.email,
-                'blood_group': getattr(donor, 'bloodgroup', getattr(donor, 'blood_group', 'N/A')),
-                'age': getattr(donor, 'age', None),
-                'gender': getattr(donor, 'gender', 'N/A'),
-                'contact': getattr(donor, 'mobile', getattr(donor, 'contact_number', 'N/A')),
-                'address': getattr(donor, 'address', 'N/A'),
-                'national_id': getattr(donor, 'national_id', 'N/A'),
-                'profile_pic': getattr(donor, 'profile_pic', None),
-            }
-        
-        # Patient details
-        if appointment.patient:
-            patient = appointment.patient
-            context['patient_details'] = {
-                'name': patient.user.get_full_name() or patient.user.username,
-                'username': patient.user.username,
-                'email': patient.user.email,
-                'blood_group': getattr(patient, 'bloodgroup', 'N/A'),
-                'age': getattr(patient, 'age', None),
-                'gender': getattr(patient, 'gender', 'N/A'),
-                'contact': getattr(patient, 'mobile', 'N/A'),
-                'address': getattr(patient, 'location_name', 'N/A'),
-                'national_id': getattr(patient, 'national_id', 'N/A'),
-                'emergency_contact': getattr(patient, 'emergency_contact', 'N/A'),
-            }
-        
-        return context
-    
-    def _get_stock_information(self, appointment):
-        """Get stock units related to this appointment"""
-        context = {}
-        
-        # For completed donations - show stock added
-        if appointment.status == 'completed' and appointment.is_donation:
-            if appointment.completed_at_nurse:
-                context['related_stock_units'] = StockUnit.objects.filter(
-                    center=appointment.donation_center or appointment.nurse.donation_center,
-                    added_on__gte=appointment.completed_at_nurse - timedelta(minutes=5),
-                    added_on__lte=appointment.completed_at_nurse + timedelta(hours=2)
-                ).select_related('center').order_by('-added_on')
-        
-        # For completed blood requests - show stock deducted
-        elif appointment.status == 'completed' and appointment.request_content_type:
-            context['stock_transactions'] = StockTransaction.objects.filter(
-                appointment=appointment,
-                transaction_type='deduction'
-            ).select_related('stockunit', 'stockunit__center').order_by('-transaction_at')
-
-        
-        return context
-    
-    def _calculate_time_metrics(self, appointment):
-        """Calculate various time-based metrics"""
-        context = {}
-        
-        # Time from creation to completion
-        if appointment.created_at and appointment.completed_at_nurse:
-            delta = appointment.completed_at_nurse - appointment.created_at
-            context['time_to_complete'] = {
-                'delta': delta,
-                'days': delta.days,
-                'hours': delta.seconds // 3600,
-                'minutes': (delta.seconds % 3600) // 60,
-            }
-        
-        # Time from approval to completion
-        if appointment.approved_at_nurse and appointment.completed_at_nurse:
-            delta = appointment.completed_at_nurse - appointment.approved_at_nurse
-            context['time_from_approval'] = {
-                'delta': delta,
-                'days': delta.days,
-                'hours': delta.seconds // 3600,
-                'minutes': (delta.seconds % 3600) // 60,
-            }
-        
-        # Time until appointment (for pending/approved)
-        if appointment.date and appointment.status in ['pending', 'approved']:
-            now = timezone.now()
-            if appointment.date > now:
-                delta = appointment.date - now
-                context['time_until_appointment'] = {
-                    'delta': delta,
-                    'days': delta.days,
-                    'hours': delta.seconds // 3600,
-                    'minutes': (delta.seconds % 3600) // 60,
-                }
-            else:
-                context['appointment_overdue'] = True
-        
-        return context
-    
-    def _build_timeline(self, appointment):
-        """Build a chronological timeline of appointment events"""
-        timeline = []
-        
-        if appointment.created_at:
-            timeline.append({
-                'event': 'Appointment Created',
-                'timestamp': appointment.created_at,
-                'user': None,
-                'icon': 'fa-calendar-plus',
-                'color': 'primary'
-            })
-        
-        if appointment.approved_at_nurse:
-            timeline.append({
-                'event': 'Approved by Nurse',
-                'timestamp': appointment.approved_at_nurse,
-                'user': appointment.approved_by_nurse,
-                'icon': 'fa-check-circle',
-                'color': 'success'
-            })
-        
-        if appointment.rejected_at:
-            timeline.append({
-                'event': 'Rejected',
-                'timestamp': appointment.rejected_at,
-                'user': appointment.status_changed_by,
-                'icon': 'fa-times-circle',
-                'color': 'danger'
-            })
-        
-        if appointment.cancelled_at:
-            timeline.append({
-                'event': f'Cancelled by {appointment.get_cancelled_by_display()}',
-                'timestamp': appointment.cancelled_at,
-                'user': appointment.cancelled_by_user,
-                'icon': 'fa-ban',
-                'color': 'warning'
-            })
-        
-        if appointment.completed_at_nurse:
-            timeline.append({
-                'event': 'Completed by Nurse',
-                'timestamp': appointment.completed_at_nurse,
-                'user': appointment.completed_by_nurse,
-                'icon': 'fa-check-double',
-                'color': 'success'
-            })
-        
-        # Sort by timestamp
-        timeline.sort(key=lambda x: x['timestamp'])
-        
-        return timeline
-    
-#----------------------------------------
-# NEXT STOCK UNIT TO BE DEDUCTED
-#--------------------------------------
-@login_required(login_url='/nurse/nurselogin/')
+@login_required
 @user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
-def next_stock_unit(request):
-    nurse = get_object_or_404(Nurse, user=request.user)
-    center = nurse.donation_center
-
-    blood_group = request.GET.get('blood_group')
-    if not blood_group or not center:
-        return JsonResponse({'barcode': None})
-
-    # Query for the next stock unit (FIFO - earliest added or earliest expiry)
-    next_unit = (
-        StockUnit.objects.filter(center=center, bloodgroup=blood_group, expiry_date__gte=timezone.now().date())
-        .order_by('added_on')  # FIFO criteria
-        .first()
-    )
-
-    if next_unit:
-        return JsonResponse({'barcode': next_unit.barcode})
-    else:
-        return JsonResponse({'barcode': None})
-    
-    
-    
-    
-@login_required(login_url='/nurse/nurselogin/')
-@user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
-def stock_safety_management(request):
+def select_barcode_for_donation(request, appointment_id):
     """
-    View for nurses to manage stock unit safety verification.
-    Shows pending, safe, and unsafe stock units.
+    View for nurse to select a pre-generated barcode for a donation
     """
-    nurse = get_object_or_404(Nurse, user=request.user)
-    center = nurse.donation_center
+    nurse = request.user.nurse
+    appointment = get_object_or_404(Appointment, id=appointment_id, nurse=nurse, status='approved')
     
-    if not center:
-        messages.warning(request, "You are not assigned to any donation center.")
-        return redirect('nurse-dashboard')
+    # Get available barcodes
+    from blood.utils.barcode_utils import get_available_barcodes
+    available_barcodes = get_available_barcodes(limit=50)
     
-    # Get stock summary
-    from blood.utils.stock_utils import get_stock_summary, get_pending_verification_stock, get_unsafe_stock
-    
-    summary = get_stock_summary(center)
-    
-    # Get pending verification units
-    pending_units = get_pending_verification_stock(center).select_related('center')
-    
-    # Get unsafe/quarantined units
-    unsafe_units = get_unsafe_stock(center).select_related('center', 'safety_verified_by')
-    
-    # Get safe units
-    safe_units = StockUnit.objects.filter(
-        center=center,
-        safety_status='safe',
-        unit__gt=0,
-        expiry_date__gte=timezone.now().date()
-    ).select_related('center', 'safety_verified_by').order_by('expiry_date')
+    # Get recently used barcodes at this center
+    recent_barcodes = BloodBagBarcode.objects.filter(
+        collected_by=nurse.user
+    ).order_by('-collected_at')[:10]
     
     context = {
-        'nurse': nurse,
-        'center': center,
-        'summary': summary,
-        'pending_units': pending_units,
-        'safe_units': safe_units,
-        'unsafe_units': unsafe_units,
-        'pending_count': pending_units.count(),
-        'safe_count': safe_units.count(),
-        'unsafe_count': unsafe_units.count(),
+        'appointment': appointment,
+        'available_barcodes': available_barcodes,
+        'recent_barcodes': recent_barcodes,
+        'donor': appointment.donor,
     }
     
-    return render(request, 'nurse/stock_safety_management.html', context)
+    return render(request, 'nurse/select_barcode.html', context)
 
-
-@login_required(login_url='/nurse/nurselogin/')
+@login_required
 @user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
 @require_POST
-def verify_stock_safety(request, stock_unit_id):
+def assign_barcode_to_donor(request, appointment_id, barcode_id):
     """
-    AJAX endpoint for nurses to verify stock unit safety.
+    Assign a barcode to a donor before collection
     """
-    try:
-        nurse = request.user.nurse
-        
-        with transaction.atomic():
-            stock_unit = get_object_or_404(
-                StockUnit.objects.select_for_update(),
-                id=stock_unit_id,
-                center=nurse.donation_center
-            )
-            
-            # Check if already verified
-            if stock_unit.safety_status != 'pending':
-                return JsonResponse({
-                    'success': False,
-                    'error': f'This stock unit is already verified as {stock_unit.get_safety_status_display()}'
-                }, status=400)
-            
-            # Get verification data
-            safety_status = request.POST.get('safety_status', '').strip().lower()
-            unsafe_reason = request.POST.get('unsafe_reason', '').strip()
-            safety_notes = request.POST.get('safety_notes', '').strip()
-            
-            # Validate
-            if safety_status not in ['safe', 'unsafe']:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Safety status must be "safe" or "unsafe"'
-                }, status=400)
-            
-            if safety_status == 'unsafe' and not unsafe_reason:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Unsafe reason is required'
-                }, status=400)
-            
-            # Apply verification
-            if safety_status == 'safe':
-                stock_unit.mark_safe(
-                    verified_by_user=nurse.user,
-                    notes=safety_notes
-                )
-                message = f"✅ Stock unit {stock_unit.barcode} verified as SAFE and available for use"
-                logger.info(f"✅ SAFE: {stock_unit.barcode} verified by {nurse.user.get_full_name()}")
-                
-            else:  # unsafe
-                stock_unit.mark_unsafe(
-                    verified_by_user=nurse.user,
-                    reason=unsafe_reason,
-                    notes=safety_notes
-                )
-                message = f"⚠️ Stock unit {stock_unit.barcode} marked as UNSAFE and quarantined"
-                logger.warning(f"⚠️ UNSAFE: {stock_unit.barcode} ({unsafe_reason}) by {nurse.user.get_full_name()}")
-            
-            return JsonResponse({
-                'success': True,
-                'message': message,
-                'safety_status': safety_status,
-                'barcode': stock_unit.barcode,
-                'verified_by': nurse.user.get_full_name(),
-                'verified_at': timezone.now().strftime("%b %d, %Y %I:%M %p")
-            })
-            
-    except StockUnit.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Stock unit not found'
-        }, status=404)
-    except Exception as e:
-        logger.error(f"Error verifying stock safety: {e}", exc_info=True)
-        return JsonResponse({
-            'success': False,
-            'error': f'Unexpected error: {str(e)}'
-        }, status=500)
-
-
-@login_required(login_url='/nurse/nurselogin/')
+    nurse = request.user.nurse
+    appointment = get_object_or_404(Appointment, id=appointment_id, nurse=nurse)
+    barcode = get_object_or_404(BloodBagBarcode, id=barcode_id, status='available')
+    
+    # Assign barcode to donor
+    barcode.assign_to_donor(appointment.donor, nurse.user)
+    
+    messages.success(request, f"Barcode {barcode.barcode} assigned to {appointment.donor.user.get_full_name()}")
+    
+    # Redirect to collection form with pre-selected barcode
+    return redirect('nurse:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
+@login_required
 @user_passes_test(lambda u: hasattr(u, 'nurse'), login_url='/nurse/nurselogin/')
-def stock_unit_detail(request, stock_unit_id):
+def collect_with_barcode(request, appointment_id, barcode_id):
     """
-    Detailed view of a single stock unit including safety verification history.
+    Collection form with pre-selected barcode
     """
-    nurse = get_object_or_404(Nurse, user=request.user)
-    stock_unit = get_object_or_404(
-        StockUnit.objects.select_related(
-            'center',
-            'safety_verified_by'
-        ),
-        id=stock_unit_id,
-        center=nurse.donation_center
-    )
+    nurse = request.user.nurse
+    appointment = get_object_or_404(Appointment, id=appointment_id, nurse=nurse, status='approved')
+    barcode = get_object_or_404(BloodBagBarcode, id=barcode_id, assigned_to_donor=appointment.donor)
     
-    # Get related transactions
-    transactions = StockTransaction.objects.filter(
-        stockunit=stock_unit
-    ).select_related(
-        'user',
-        'appointment',
-        'appointment__donor__user',
-        'appointment__patient__user'
-    ).order_by('-transaction_at')
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Get form data
+                bloodgroup = request.POST.get('bloodgroup')
+                unit = request.POST.get('unit')
+                collection_notes = request.POST.get('collection_notes', '')
+                
+                # Validate data
+                if not bloodgroup and not appointment.donor.bloodgroup_verified:
+                    messages.error(request, "Blood group is required for first-time donors.")
+                    return redirect('nurse:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
+                
+                if not unit:
+                    messages.error(request, "Units are required.")
+                    return redirect('nurse:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
+                
+                try:
+                    unit = int(unit)
+                    if unit < 100 or unit > 500 or unit % 50 != 0:
+                        messages.error(request, "Units must be 100-500ml in multiples of 50.")
+                        return redirect('nurse:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
+                except ValueError:
+                    messages.error(request, "Invalid unit value.")
+                    return redirect('nurse:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
+                
+                # ===== CREATE BLOOD DONATION RECORD =====
+                blood_donation = BloodDonate.objects.create(
+                    donor=appointment.donor,
+                    donation_center=appointment.donation_center,
+                    nurse=nurse,
+                    status='collected',
+                    date=timezone.now().date(),
+                    bloodgroup=bloodgroup if bloodgroup else appointment.donor.bloodgroup,
+                    unit=unit
+                )
+                
+                # ===== UPDATE BARCODE STATUS =====
+                barcode.status = 'collected'
+                barcode.collected_by = nurse.user
+                barcode.collected_at = timezone.now()
+                barcode.blood_donation = blood_donation
+                if hasattr(barcode, 'notes'):
+                    barcode.notes = collection_notes
+                barcode.save()
+                
+                # ===== UPDATE APPOINTMENT STATUS =====
+                appointment.status = 'completed'
+                appointment.collected_by = nurse.user
+                appointment.collected_by_role = 'nurse'
+                appointment.collected_at = timezone.now()
+                appointment.sent_to_lab_at = timezone.now()
+                appointment.request_object_id = blood_donation.id
+                from django.contrib.contenttypes.models import ContentType
+                blood_donate_ct = ContentType.objects.get_for_model(BloodDonate)
+                appointment.request_content_type = blood_donate_ct
+                appointment.save()
+                
+                # ===== UPDATE DONOR'S DONATION HISTORY =====
+                donor = appointment.donor
+                
+                # Update donor's last donation date
+                donor.last_donation_date = timezone.now().date()
+                
+                # REMOVED: donor.total_donations += 1 (field doesn't exist)
+                # Your donor dashboard calculates total_donations dynamically
+                
+                # Save donor changes
+                donor.save()
+                
+                # ===== CREATE NOTIFICATION FOR DONOR =====
+                from blood.models import Notification
+                from django.contrib.contenttypes.models import ContentType
+                
+                # Create notification for donor
+                Notification.objects.create(
+                    title="Blood Donation Completed",
+                    message=(
+                        f"Thank you for your blood donation on {timezone.now().date()}! "
+                        f"Your sample (Barcode: {barcode.barcode}) has been collected and "
+                        f"sent to the lab for testing. You will be notified once test results "
+                        f"are available. Your selfless act helps save lives!"
+                    ),
+                    recipient_content_type=ContentType.objects.get_for_model(donor),
+                    recipient_object_id=donor.id,
+                    sender_content_type=ContentType.objects.get_for_model(nurse.user),
+                    sender_object_id=nurse.user.id,
+                    action='donation_completed',
+                    appointment_date=appointment.date,
+                    bloodgroup=bloodgroup if bloodgroup else donor.bloodgroup,
+                    unit=unit
+                )
+                
+                # ===== UPDATE DONOR'S BLOOD GROUP (TENTATIVE) =====
+                # This is temporary until lab verification
+                if bloodgroup and not donor.bloodgroup_verified:
+                    donor.bloodgroup = bloodgroup
+                    donor.save()
+                    logger.info(f"📝 Tentative blood group {bloodgroup} recorded for donor {donor.id}")
+                
+                # ===== SUCCESS MESSAGE =====
+                messages.success(
+                    request, 
+                    f"✅ Blood collected successfully! Thank you, {donor.user.get_full_name()}, for your donation. "
+                    f"Sample sent to lab for testing. A notification has been sent to the donor."
+                )
+                
+                # ===== REDIRECT TO DONATION BOOKINGS =====
+                return redirect('nurse:nurse-donation-bookings')
+                
+        except Exception as e:
+            logger.error(f"Error in collect_with_barcode: {str(e)}", exc_info=True)
+            messages.error(request, f"Error during collection: {str(e)}")
+            return redirect('nurse:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
     
+    # GET request - show the form
     context = {
-        'nurse': nurse,
-        'stock_unit': stock_unit,
-        'transactions': transactions,
-        'can_verify': stock_unit.safety_status == 'pending',
+        'appointment': appointment,
+        'barcode': barcode,
+        'donor': appointment.donor,
     }
-    
-    return render(request, 'nurse/stock_unit_detail.html', context)
+    return render(request, 'nurse/collect_with_barcode.html', context)

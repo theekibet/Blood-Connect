@@ -1,0 +1,248 @@
+{% extends 'nurse/nursebase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1><i class="fas fa-syringe"></i> Complete Blood Collection</h1>
+        <p class="mb-3">Appointment for: <strong>{{ donor.user.get_full_name }}</strong></p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <!-- Barcode Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-barcode"></i> Selected Blood Bag</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Barcode:</strong> <code class="h5">{{ barcode.barcode }}</code></p>
+                            <p><strong>Bag Type:</strong> {{ barcode.get_bag_type_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Volume:</strong> {{ barcode.volume_ml }} ml</p>
+                            <p><strong>Anticoagulant:</strong> {{ barcode.get_anticoagulant_display }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collection Form Card -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Collection Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'nurse:collect_with_barcode' appointment.id barcode.id %}">
+                        {% csrf_token %}
+                        
+                        <!-- Donor Information (Read-only) -->
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Donor:</strong> {{ donor.user.get_full_name }}<br>
+                                    <strong>Blood Group:</strong> 
+                                    {% if donor.bloodgroup %}
+                                        {{ donor.bloodgroup }}
+                                        {% if donor.bloodgroup_verified %}
+                                            <span class="badge bg-success">Verified</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not recorded</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Appointment Date:</strong> {{ appointment.date|date:"M d, Y H:i" }}<br>
+                                    <strong>Center:</strong> {{ appointment.donation_center.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden fields -->
+                        <input type="hidden" name="barcode_id" value="{{ barcode.id }}">
+                        <input type="hidden" name="action" value="collect">
+
+                        <!-- Blood Group Selection -->
+                        <div class="form-group mb-3">
+                            <label for="bloodgroup" class="form-label fw-bold">
+                                <i class="fas fa-tint"></i> Blood Group *
+                            </label>
+                            {% if donor.bloodgroup_verified %}
+                                <!-- Verified donor - read-only -->
+                                <input type="text" class="form-control" value="{{ donor.bloodgroup }}" readonly>
+                                <input type="hidden" name="bloodgroup" value="{{ donor.bloodgroup }}">
+                                <small class="text-muted">Blood group already verified</small>
+                            {% else %}
+                                <!-- First-time donor - selection -->
+                                <select name="bloodgroup" id="bloodgroup" class="form-control" required>
+                                    <option value="">-- Select Blood Group --</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                                <small class="text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    This will be recorded but lab will verify during testing.
+                                </small>
+                            {% endif %}
+                        </div>
+
+                        <!-- Units (Volume) -->
+                        <div class="form-group mb-3">
+                            <label for="unit" class="form-label fw-bold">
+                                <i class="fas fa-flask"></i> Units Collected (ml) *
+                            </label>
+                            <input type="number" name="unit" id="unit" 
+                                   class="form-control" 
+                                   value="{{ barcode.volume_ml }}" 
+                                   min="100" max="500" step="50" 
+                                   required>
+                            <small class="text-muted">Standard donation: 450ml</small>
+                        </div>
+
+                        <!-- Collection Notes -->
+                        <div class="form-group mb-3">
+                            <label for="collection_notes" class="form-label fw-bold">
+                                <i class="fas fa-notes-medical"></i> Collection Notes
+                            </label>
+                            <textarea name="collection_notes" id="collection_notes" 
+                                      class="form-control" rows="3"
+                                      placeholder="Any observations during collection..."></textarea>
+                        </div>
+
+                        <!-- Confirmation Checkbox -->
+                        <div class="form-group mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="confirm" required>
+                                <label class="form-check-label" for="confirm">
+                                    I confirm that I have collected the blood sample and attached the correct barcode.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'nurse:select_barcode' appointment.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Barcode Selection
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-check"></i> Complete Collection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Next Steps Info -->
+            <div class="alert alert-info mt-4">
+                <i class="fas fa-info-circle"></i>
+                <strong>Next Steps:</strong>
+                <ol class="mb-0 mt-2">
+                    <li>After collection, the blood sample will be sent to the lab for testing.</li>
+                    <li>Lab technician will test the sample and mark it as safe or unsafe.</li>
+                    <li>If safe, it will automatically appear in blood bank inventory.</li>
+                    <li>Donor will be notified once test results are available.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitBtn');
+    const confirmCheckbox = document.getElementById('confirm');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate blood group selection for first-time donors
+        {% if not donor.bloodgroup_verified %}
+            const bloodgroup = document.getElementById('bloodgroup').value;
+            if (!bloodgroup) {
+                alert('Please select the blood group.');
+                return;
+            }
+        {% endif %}
+        
+        // Validate unit
+        const unit = parseInt(document.getElementById('unit').value);
+        if (!unit || unit < 100 || unit > 500 || unit % 50 !== 0) {
+            alert('Please enter a valid volume (100-500ml, multiples of 50).');
+            return;
+        }
+        
+        // Final confirmation
+        if (!confirm('Confirm blood collection? This will mark the appointment as collected.')) {
+            return;
+        }
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+        
+        // Submit the form
+        form.submit();
+    });
+    
+    // Enable/disable submit based on checkbox
+    confirmCheckbox.addEventListener('change', function() {
+        submitBtn.disabled = !this.checked;
+    });
+});
+</script>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+.form-control, .form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px 15px;
+    transition: all 0.3s;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #8B1E3F;
+    box-shadow: none;
+}
+.btn {
+    padding: 10px 25px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.btn-success {
+    background: #28a745;
+    border: none;
+}
+.btn-success:hover {
+    background: #218838;
+}
+.btn-secondary {
+    background: #6c757d;
+    border: none;
+}
+code {
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #8B1E3F;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}

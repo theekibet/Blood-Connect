@@ -1,0 +1,348 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Pending Requests - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Pending Blood Requests{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="stats mb-4">
+    <div class="stat-box">
+        <h3>{{ total_pending }}</h3>
+        <p>Total Pending</p>
+    </div>
+    <div class="stat-box">
+        <h3>{{ patient_count }}</h3>
+        <p>Patient Requests</p>
+    </div>
+    <div class="stat-box">
+        <h3>{{ donor_count }}</h3>
+        <p>Donor Requests</p>
+    </div>
+</div>
+
+<!-- Quick Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active filter-btn" data-filter="all">All</button>
+                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="patient">Patients</button>
+                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="donor">Donors</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Pending Blood Requests</h5>
+        
+        {% if combined_requests %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="requests-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Patient</th>
+                            <th>Requester Details</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Request Date</th>
+                            <th>Center</th>
+                            <th>Contact</th>
+                            <th>Stock Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in combined_requests %}
+                        <tr class="request-row" data-request-type="{{ req.type }}">
+                            <td>
+                                {% if req.type == 'patient' %}
+                                    <span class="badge bg-primary">Patient</span>
+                                {% else %}
+                                    <span class="badge bg-info">Donor</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ req.patient_name }}</strong>
+                                {% if req.type == 'donor' %}
+                                    <br>
+                                    <small class="text-muted">
+                                        DOB: {{ req.object.patient_dob|date:"M d, Y" }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ req.requester }}
+                                <br>
+                                <small class="text-muted">
+                                    {% if req.type == 'patient' %}
+                                        Patient ID: {{ req.object.request_by_patient.id }}
+                                        {% if req.object.request_by_patient.bloodgroup_verified %}
+                                            <span class="badge bg-success">Verified</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Donor ID: {{ req.object.request_by_donor.id }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td><span class="badge bg-info">{{ req.bloodgroup }}</span></td>
+                            <td>{{ req.unit }} ml</td>
+                            <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
+                            <td>{{ req.donation_center.name }}</td>
+                            <td>
+                                <small>
+                                    <i class="fas fa-phone"></i> {{ req.contact }}
+                                    {% if req.type == 'donor' and req.object.contact_number %}
+                                        <br><small>Donor Contact</small>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                {% if req.has_inventory %}
+                                    <span class="badge bg-success">Available</span>
+                                    <br>
+                                    <small class="text-muted">{{ req.availability.safe_stock }} ml in stock</small>
+                                {% else %}
+                                    <span class="badge bg-danger">Insufficient</span>
+                                    <br>
+                                    <small class="text-muted">Need {{ req.unit }}ml, have {{ req.availability.safe_stock }}ml</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'blood_bank_technician:approve_request' req.type req.id %}" 
+                                       class="btn btn-success {% if not req.has_inventory %}disabled{% endif %}"
+                                       {% if not req.has_inventory %}aria-disabled="true" tabindex="-1"{% endif %}>
+                                        <i class="fas fa-check"></i> Approve
+                                    </a>
+                                    <a href="{% url 'blood_bank_technician:reject_request' req.type req.id %}" 
+                                       class="btn btn-danger">
+                                        <i class="fas fa-times"></i> Reject
+                                    </a>
+                                </div>
+                                
+                                <!-- Stock Info Tooltip -->
+                                {% if req.availability.expiring_soon %}
+                                <div class="mt-1">
+                                    <small class="text-warning">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        {{ req.availability.expiring_soon|length }} unit(s) expiring soon
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination (if needed) -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h5>No Pending Requests</h5>
+                <p class="text-muted">All blood requests have been processed.</p>
+                <a href="{% url 'blood_bank_technician:approved_requests' %}" class="btn btn-outline-success mt-3">
+                    <i class="fas fa-check-double"></i> View Approved Requests
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stock Availability Legend -->
+<div class="card mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Stock Status Legend:</h6>
+        <div class="d-flex flex-wrap gap-3">
+            <span><span class="badge bg-success">Available</span> - Sufficient stock available</span>
+            <span><span class="badge bg-danger">Insufficient</span> - Not enough stock</span>
+            <span><span class="badge bg-warning text-dark">Expiring Soon</span> - Some units expire in &lt;7 days</span>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for filtering -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const requestRows = document.querySelectorAll('.request-row');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const filterValue = this.getAttribute('data-filter');
+            
+            requestRows.forEach(row => {
+                if (filterValue === 'all') {
+                    row.style.display = '';
+                } else {
+                    const rowType = row.getAttribute('data-request-type');
+                    if (rowType === filterValue) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    });
+});
+</script>
+
+<style>
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #8B1E3F;
+}
+
+.stat-box h3 {
+    margin: 0;
+    font-size: 2rem;
+    color: #8B1E3F;
+}
+
+.stat-box p {
+    margin: 5px 0 0;
+    color: #666;
+    font-weight: 500;
+}
+
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.btn-group-sm .btn i {
+    margin-right: 3px;
+}
+
+.filter-btn {
+    margin-right: 5px;
+}
+
+.filter-btn.active {
+    background-color: #8B1E3F;
+    border-color: #8B1E3F;
+    color: white;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top: none;
+}
+
+/* Tooltip styles */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: #333;
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    display: none;
+    z-index: 1000;
+}
+
+[data-tooltip]:hover:before {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.2rem 0.3rem;
+        font-size: 0.75rem;
+    }
+}
+</style>
+{% endblock %}

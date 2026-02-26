@@ -927,7 +927,19 @@
                 <li><a href="{% url 'contact' %}">Contact</a></li>
                 <li><a href="{% url 'donorlogin' %}">Donor</a></li>
                 <li><a href="{% url 'patientlogin' %}">Patient</a></li>
-                <li><a href="{% url 'nurselogin' %}">Nurse</a></li>
+                
+                <!-- Staff Dropdown -->
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" id="staffDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Staff <span class="caret">▼</span>
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="staffDropdown">
+                        <li><a href="{% url 'nurse:nurselogin' %}">Nurse Login</a></li>
+                        <li><a href="{% url 'lab_technologist:login' %}">🔬 Lab Technologist</a></li>
+                        <li><a href="{% url 'blood_bank_technician:login' %}">🩸 Blood Bank Tech</a></li>
+                    </ul>
+                </li>
+                
                 <li><a href="{% url 'adminlogin' %}" class="btn-primary">Admin</a></li>
             </ul>
 
@@ -1213,7 +1225,7 @@
                 <ul>
                     <li><a href="{% url 'donorlogin' %}">Donor Login</a></li>
                     <li><a href="{% url 'patientlogin' %}">Patient Login</a></li>
-                    <li><a href="{% url 'nurselogin' %}">Nurse Login</a></li>
+                    <li><a href="{% url 'nurse:nurselogin' %}">Nurse Login</a></li>
                     <li><a href="{% url 'patientsignup' %}">Sign Up</a></li>
                 </ul>
             </div>

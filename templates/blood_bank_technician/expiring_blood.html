@@ -1,0 +1,123 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Expiring Blood - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Blood Expiring Soon{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<div class="stats mb-4">
+    <div class="stat-box">
+        <h3>{{ total_count }}</h3>
+        <p>Units Expiring in 7 Days</p>
+    </div>
+    <div class="stat-box">
+        <h3>{{ by_blood_type|length }}</h3>
+        <p>Blood Types Affected</p>
+    </div>
+</div>
+
+<!-- Alert Banner -->
+{% if total_count > 0 %}
+    <div class="alert alert-warning mb-4">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Action Required:</strong> {{ total_count }} blood unit(s) will expire within the next 7 days. 
+        Please prioritize these units for dispatch.
+    </div>
+{% endif %}
+
+<!-- Expiring Soon by Blood Type -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Expiring Blood Units</h5>
+        
+        {% if by_blood_type %}
+            {% for blood_type, units in by_blood_type.items %}
+                <div class="mb-4">
+                    <h6 class="border-bottom pb-2">
+                        <strong>Blood Type {{ blood_type }}</strong>
+                        <span class="badge bg-warning ms-2">{{ units|length }} units</span>
+                    </h6>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Unit ID</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Left</th>
+                                    <th>Storage Location</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for unit in units %}
+                                <tr>
+                                    <td>#{{ unit.id }}</td>
+                                    <td>
+                                        <strong>{{ unit.expiry_date|date:"M d, Y" }}</strong>
+                                    </td>
+                                    <td>
+                                        {% with days_left=unit.expiry_date|timeuntil:today %}
+                                            {% if unit.expiry_date == today %}
+                                                <span class="badge bg-danger">Expires Today</span>
+                                            {% else %}
+                                                {{ unit.expiry_date|timeuntil:today }}
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>{{ unit.storage_location|default:"Not specified" }}</td>
+                                    <td>
+                                        {% if unit.expiry_date <= today %}
+                                            <span class="badge bg-dark">Expired</span>
+                                        {% elif unit.expiry_date <= today|date:"Y-m-d"|add:"2 days" %}
+                                            <span class="badge bg-danger">Critical</span>
+                                        {% elif unit.expiry_date <= today|date:"Y-m-d"|add:"5 days" %}
+                                            <span class="badge bg-warning">Urgent</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Soon</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <!-- Quick Actions -->
+            <div class="mt-4">
+                <h6>Quick Actions:</h6>
+                <a href="{% url 'blood_bank_technician:inventory' %}?status=available" class="btn btn-sm btn-outline-primary me-2">
+                    <i class="fas fa-boxes"></i> View All Available
+                </a>
+                <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-clock"></i> Check Pending Requests
+                </a>
+            </div>
+            
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h5>No Expiring Blood</h5>
+                <p class="text-muted">There are no blood units expiring in the next 7 days.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Expiry Legend -->
+<div class="card mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Expiry Status Legend:</h6>
+        <div class="d-flex flex-wrap gap-3">
+            <span><span class="badge bg-danger">Critical</span> - Expires in 0-2 days</span>
+            <span><span class="badge bg-warning">Urgent</span> - Expires in 3-5 days</span>
+            <span><span class="badge bg-info">Soon</span> - Expires in 6-7 days</span>
+            <span><span class="badge bg-dark">Expired</span> - Already expired</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

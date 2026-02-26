@@ -1,0 +1,63 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Unsafe Blood{% endblock %}
+
+{% block page_title %}Quarantined / Unsafe Blood{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-exclamation-triangle"></i> 
+            Unsafe Blood Units ({{ count }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if unsafe_units %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Blood Group</th>
+                            <th>Donor</th>
+                            <th>Test Date</th>
+                            <th>Unsafe Reason</th>
+                            <th>Verified By</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in unsafe_units %}
+                        <tr>
+                            <td><code>{{ unit.barcode }}</code></td>
+                            <td><span class="badge bg-danger">{{ unit.bloodgroup }}</span></td>
+                            <td>
+                                {% if unit.blood_donation.donor %}
+                                    {{ unit.blood_donation.donor.user.get_full_name }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ unit.safety_verified_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <span class="badge bg-warning">{{ unit.get_unsafe_reason_display|default:unit.unsafe_reason }}</span>
+                            </td>
+                            <td>
+                                {% if unit.safety_verified_by %}
+                                    {{ unit.safety_verified_by.get_full_name }}
+                                {% endif %}
+                            </td>
+                            <td>{{ unit.safety_notes|truncatechars:50 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted text-center py-4">No unsafe blood units found.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

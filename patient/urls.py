@@ -32,11 +32,8 @@ urlpatterns = [
     # Location Services
     path('save-location/', save_user_location, name='save-user-location'),
     
-    # Nearby Services
-    path('nearby-eligible-donors/', views.nearby_eligible_donors_view, name='nearby-eligible-donors'),
-    
-    # Blood Stock & Tracking
-    path('blood-stock-tracker/', views.blood_stock_tracker_view, name='patient-blood-stock-tracker'),
+ 
+
     
     # Resources & Information
     path('resources/', views.resources_view, name='patient-resources'),
@@ -53,8 +50,6 @@ urlpatterns = [
     path('ajax/validate-username/', views.ajax_validate_username, name='ajax_validate_username'),
     
     
-    path('verify-email/<uidb64>/<token>/', views.verify_email_view, name='verify_email'),
-    path('resend-verification/', views.resend_verification_email_view, name='resend_verification'),
 
 ]
 

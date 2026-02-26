@@ -91,7 +91,7 @@ def generate_username_suggestions(base_username, count=5):
 
 def donor_signup_view(request):
     """
-    Handles donor registration with email verification as OPTIONAL.
+    Handles donor registration.
     Assigns new users to the DONOR group.
     """
     username_suggestions = None
@@ -110,9 +110,9 @@ def donor_signup_view(request):
             try:
                 # Use transaction to ensure both user and donor are created together
                 with transaction.atomic():
-                    # Save user with email verification as optional
+                    # Save user as active immediately
                     user = user_form.save(commit=False)
-                    user.is_active = True  # CHANGED: Users are active immediately
+                    user.is_active = True
                     user.save()
                     
                     # Save donor profile
@@ -124,37 +124,15 @@ def donor_signup_view(request):
                     donor_group, created = Group.objects.get_or_create(name='DONOR')
                     donor_group.user_set.add(user)
                 
-                # Send verification email (optional)
-                try:
-                    from blood.tasks import send_verification_email_task
-                    
-                    # Send email asynchronously using Celery
-                    send_verification_email_task.delay(
-                        user.id,
-                        user.email,
-                        request.get_host()
-                    )
-                    
-                    messages.success(
-                        request, 
-                        f"🎉 Registration successful, {user.first_name}! "
-                        f"Account created successfully. "
-                        f"We've sent a verification email to {user.email} for extra security."
-                    )
-                    
-                except Exception as e:
-                    # Log the task error
-                    logger.error(f"Email task submission error: {str(e)}", exc_info=True)
-                    
-                    # Email verification is optional, so just inform user
-                    messages.success(
-                        request,
-                        f"🎉 Account created successfully for {user.first_name}! "
-                        f"You can now login. Email verification is optional."
-                    )
+                # Log the registration
+                logger.info(f"New donor registration: {user.username} - Account active")
                 
-                # Log the registration attempt
-                logger.info(f"New donor registration: {user.username} ({user.email}) - Active: {user.is_active}")
+                # Success message
+                messages.success(
+                    request, 
+                    f"🎉 Registration successful, {user.first_name}! "
+                    f"Your account has been created. You can now login."
+                )
                 
                 # Redirect to donor login
                 return redirect('donorlogin')
@@ -1286,35 +1264,13 @@ def mark_notification_read(request, pk):
     return redirect('donor-notifications')
 
 # -------------------------------
-# Nearby Patients
-# -------------------------------
-@login_required(login_url='donorlogin')
-def nearby_compatible_patients_view(request):
-    user = request.user
-    if not hasattr(user, 'donor'):
-        messages.error(request, "Donor profile not found.")
-        return redirect('donor-dashboard')
-
-    donor = user.donor
-    if donor.latitude is None or donor.longitude is None or not donor.bloodgroup:
-        messages.error(request, "Please update your location and blood group in profile.")
-        return redirect('donor-edit-profile')
-
-    patients = find_nearby_compatible_patients(donor.latitude, donor.longitude, donor.bloodgroup)
-
-    return render(request, 'donor/nearby_compatible_patients.html', {
-        'nearby_patients': patients,
-        'user_blood_type': donor.bloodgroup,
-    })
-
-# -------------------------------
 # Make Request (on behalf of patients)
 # -------------------------------
 @login_required(login_url='login')
 def donor_make_request_view(request):
     """
     View for donors to make blood requests on behalf of patients
-    and schedule appointments
+    Direct submission to blood bank technicians (NO APPOINTMENTS)
     """
     user = request.user
     
@@ -1326,163 +1282,99 @@ def donor_make_request_view(request):
     centers = DonationCenter.objects.all()
     form_errors = {}
 
-    # Check for active donor blood requests (pending or approved)
+    # Check for active donor blood requests (pending only)
     active_request = donor.submitted_patient_requests.filter(
-        status__in=['pending', 'approved']
+        status='pending'  # Only pending, not approved
     ).first()
 
-    # If there's an active request, show locked page
+    # If there's an active request, show pending page
     if active_request:
-        nurse_instance = getattr(active_request, "nurse", None)
-        nurse_name = nurse_instance.user.get_full_name() if nurse_instance else "Not assigned"
-
-        appointment_summary = {
-            "status": active_request.status.title(),
-            "date": active_request.created_at,
-            "center": active_request.donation_center.name if active_request.donation_center else "N/A",
-            "nurse": nurse_name,
-        }
-
         return render(request, "donor/donormakerequest.html", {
             "pending_request": active_request,
             "centers": centers,
-            "appointment_summary": appointment_summary,
             "request_form": DonorBloodRequestForm(),
-            "appointment_form": AppointmentForm(),
         })
 
     # No active request → show the form
     if request.method == "POST":
         request_form = DonorBloodRequestForm(request.POST)
         donation_center_id = request.POST.get("donation_center")
-        nurse_id = request.POST.get("nurse")
-        appointment_date = request.POST.get("appointment_date")
-        appointment_time = request.POST.get("appointment_time")
 
-        # Validate center and nurse
+        # Validate center
         center_instance = DonationCenter.objects.filter(id=donation_center_id).first()
-        nurse_instance = Nurse.objects.filter(id=nurse_id).first() if nurse_id else None
 
         if not center_instance:
-            messages.error(request, "❌ Invalid donation center selected.")
-            form_errors['donation_center'] = ['Please select a valid donation center.']
-        
-        if nurse_id and not nurse_instance:
-            messages.error(request, "❌ Invalid nurse selected.")
-            form_errors['nurse'] = ['Please select a valid nurse.']
+            messages.error(request, "❌ Invalid blood bank center selected.")
+            form_errors['donation_center'] = ['Please select a valid blood bank center.']
 
-        # Validate required appointment fields
-        if not appointment_date:
-            form_errors['appointment_date'] = ['Appointment date is required.']
-        if not appointment_time:
-            form_errors['appointment_time'] = ['Appointment time is required.']
-        if not nurse_instance:
-            form_errors['nurse'] = ['Please select a nurse.']
+        # Validate consent
+        consent_confirmed = request.POST.get('consent_confirmed') == 'on'
 
-        # Create appointment form for additional validation
-        appointment_form = AppointmentForm(
-            request.POST,
-            center=center_instance,
-            donor_instance=donor
-        )
-        appointment_form.fields["date"].required = False
-
-        # Proceed if forms are valid and required fields are present
-        if (request_form.is_valid() and appointment_form.is_valid() and 
-            center_instance and nurse_instance and appointment_date and appointment_time):
-            
+        # Proceed if form is valid and center exists
+        if request_form.is_valid() and center_instance and consent_confirmed:
             try:
                 with transaction.atomic():
-                    # Parse and create combined datetime
-                    naive_datetime = datetime.strptime(
-                        f"{appointment_date} {appointment_time}", "%Y-%m-%d %I:%M %p"
-                    )
-                    combined_datetime = timezone.make_aware(
-                        naive_datetime, timezone.get_current_timezone()
-                    )
-
-                    # Validate appointment is in the future
-                    if combined_datetime <= timezone.now():
-                        messages.error(request, "❌ Appointment must be scheduled for a future date and time.")
-                        form_errors['appointment_date'] = ['Appointment must be in the future.']
-                        raise ValidationError("Appointment must be in the future")
-
-                    # Save donor blood request first
+                    # Save donor blood request directly (NO APPOINTMENT)
                     blood_request = request_form.save(commit=False)
                     blood_request.request_by_donor = donor
                     blood_request.donation_center = center_instance
+                    blood_request.status = 'pending'
+                    blood_request.consent_confirmed = True
                     blood_request.save()
 
-                    # Get content type for generic foreign key
-                    content_type = ContentType.objects.get_for_model(blood_request.__class__)
-
-                    # Create appointment instance
-                    appointment = Appointment(
-                        donor=donor,
-                        patient=None,
-                        nurse=nurse_instance,
-                        date=combined_datetime,
-                        status='pending',
-                        request_content_type=content_type,
-                        request_object_id=blood_request.id,
+                    # 🔔 SEND NOTIFICATION TO BLOOD BANK TECHNICIANS
+                    from blood_bank_technician.models import BloodBankTechProfile
+                    
+                    # Notify all blood bank techs at this center
+                    blood_bank_techs = BloodBankTechProfile.objects.filter(
+                        center=center_instance,
+                        is_active=True
                     )
-
-                    # Validate appointment model
-                    appointment.full_clean()
-
-                    # Check for nurse availability conflicts (30-minute buffer)
-                    appointment_duration = timedelta(minutes=30)
-                    conflict_exists = Appointment.objects.filter(
-                        nurse=nurse_instance,
-                        date__lt=combined_datetime + appointment_duration,
-                        date__gte=combined_datetime,
-                        status__in=["pending", "approved"],
-                    ).exists()
-
-                    if conflict_exists:
-                        messages.error(
-                            request,
-                            f"❌ Nurse {nurse_instance.user.get_full_name()} is already booked at this time. Please select a different time slot."
-                        )
-                        form_errors['appointment_time'] = ['This time slot is not available.']
-                        raise ValidationError("Time slot conflict")
                     
-                    # Save the appointment
-                    appointment.save()
-                    
-                    # 🔔 Send notification to assigned nurse
                     donor_name = donor.user.get_full_name() or donor.user.username
+                    
+                    for tech in blood_bank_techs:
+                        create_notification(
+                            title="🩸 New Donor Blood Request",
+                            message=(
+                                f"Donor {donor_name} has submitted a blood request on behalf of a patient.\n"
+                                f"Patient: {blood_request.patient_first_name} {blood_request.patient_last_name}\n"
+                                f"Blood Group: {blood_request.bloodgroup}\n"
+                                f"Units Needed: {blood_request.unit}ml\n"
+                                f"Center: {center_instance.name}"
+                            ),
+                            recipient_obj=tech,
+                            sender_obj=donor,
+                            action="new_donor_blood_request",
+                            bloodgroup=blood_request.bloodgroup,
+                            unit=blood_request.unit
+                        )
+
+                    # Also send confirmation to donor
                     create_notification(
-                        title="New Blood Request Appointment",
-                        message=f"Donor {donor_name} has scheduled a blood request appointment on {combined_datetime.strftime('%B %d, %Y at %I:%M %p')} at {center_instance.name}. Blood group: {blood_request.bloodgroup}, Units: {blood_request.unit}ml.",
-                        recipient_obj=nurse_instance,
-                        sender_obj=donor,
-                        action='pending',
-                        appointment_date=combined_datetime,
-                        bloodgroup=blood_request.bloodgroup,
-                        unit=blood_request.unit
+                        title="Blood Request Submitted",
+                        message=(
+                            f"Your blood request for {blood_request.patient_first_name} {blood_request.patient_last_name} "
+                            f"({blood_request.unit}ml of {blood_request.bloodgroup}) has been submitted to {center_instance.name}. "
+                            f"A blood bank technician will review it shortly."
+                        ),
+                        recipient_obj=donor,
+                        sender_obj=None,
+                        action="request_submitted"
                     )
                     
                     messages.success(
                         request, 
-                        f"✅ Donor blood request submitted successfully! Appointment scheduled with {nurse_instance.user.get_full_name()} on {combined_datetime.strftime('%B %d, %Y at %I:%M %p')}."
+                        f"✅ Blood request submitted successfully! The blood bank will review it shortly."
                     )
                     return redirect("donor-request-history")
 
             except ValidationError as ve:
-                # Rollback happens automatically
                 if hasattr(ve, 'message_dict'):
                     form_errors.update(ve.message_dict)
                 else:
-                    if hasattr(ve, 'messages'):
-                        form_errors['appointment'] = ve.messages
-                    else:
-                        form_errors['appointment'] = [str(ve)]
-                        
-            except ValueError as ve:
-                messages.error(request, "❌ Invalid appointment date/time format.")
-                form_errors['appointment_date'] = ['Invalid date/time format.']
-                
+                    form_errors['non_field_errors'] = [str(ve)]
+                    
             except Exception as e:
                 messages.error(request, f"❌ An error occurred while creating your request: {str(e)}")
                 form_errors['non_field_errors'] = [str(e)]
@@ -1491,134 +1383,150 @@ def donor_make_request_view(request):
             # Form validation failed
             if not request_form.is_valid():
                 messages.error(request, "❌ Please correct the errors in the blood request form.")
-                for field, errors in request_form.errors.items():
-                    form_errors[field] = errors
+                form_errors.update(request_form.errors)
             
-            if not appointment_form.is_valid():
-                messages.error(request, "❌ Please correct the errors in the appointment form.")
-                for field, errors in appointment_form.errors.items():
-                    form_errors[field] = errors
+            if not consent_confirmed:
+                messages.error(request, "❌ You must confirm your consent to submit the request.")
+                form_errors['consent_confirmed'] = ['Consent is required.']
 
-        # Return with forms that contain POST data and errors
+        # Return with form that contains POST data and errors
         return render(request, "donor/donormakerequest.html", {
             "request_form": request_form,
-            "appointment_form": appointment_form,
             "centers": centers,
             "pending_request": None,
             "form_errors": form_errors,
+            "no_appointment": True,
         })
 
     else:
-        # GET request - initialize empty forms
+        # GET request - initialize empty form
         request_form = DonorBloodRequestForm()
-        appointment_form = AppointmentForm()
-        appointment_form.fields["date"].required = False
 
         return render(request, "donor/donormakerequest.html", {
             "request_form": request_form,
-            "appointment_form": appointment_form,
             "centers": centers,
             "pending_request": None,
             "form_errors": form_errors,
+            "no_appointment": True,
         })
 
-# -------------------------------
-# Request History
-# -------------------------------
-@login_required(login_url='donorlogin')
+
+@login_required(login_url='login')
 def donor_request_history_view(request):
     """
-    Show all donor-side blood requests submitted by the logged-in donor.
-    """
-    try:
-        donor = request.user.donor
-    except AttributeError:
-        messages.error(request, "⚠️ Only donors can view this page.")
-        return redirect("home")
-
-    # Fetch all donor requests ordered by latest
-    donor_requests = donor.submitted_patient_requests.all().order_by("-created_at")
-
-    return render(request, "donor/donor_request_history.html", {
-        "donor_requests": donor_requests,
-    })
-
-# -------------------------------
-# Cancel Request
-# -------------------------------
-logger = logging.getLogger(__name__)
-
-@login_required(login_url='donorlogin')
-def cancel_donor_request_view(request, request_id):
-    """
-    Allow donors to cancel their own blood request and any linked appointment,
-    only if still in 'pending' or 'approved' status.
+    View for donors to see their blood request history
     """
     user = request.user
-
-    # Ensure user has donor profile
+    
+    # Check if user is a donor
     if not hasattr(user, "donor"):
-        raise PermissionDenied("Only donors can cancel donor-side requests.")
+        raise PermissionDenied("Only donors can access this page.")
 
     donor = user.donor
-    donor_request = get_object_or_404(donor.submitted_patient_requests, id=request_id)
+    
+    # Get all blood requests made by this donor
+    blood_requests = DonorBloodRequest.objects.filter(
+        request_by_donor=donor
+    ).select_related(
+        'donation_center',
+        'approved_by__user',
+        'reviewed_by__user',
+        'dispatched_by__user'
+    ).order_by('-created_at')
+    
+    return render(request, 'donor/donor_request_history.html', {
+        'blood_requests': blood_requests,
+        'now': timezone.now(),
+    })
 
-    # Restrict cancellation on finalized requests
-    if donor_request.status.lower() in ['cancelled', 'completed', 'rejected']:
-        messages.warning(request, "⚠️ This blood request has already been finalized and cannot be cancelled.")
-        return redirect("donor-request-history")
 
-    # Attempt to locate linked appointment via GenericForeignKey
-    content_type = ContentType.objects.get_for_model(donor_request.__class__)
-    appointment = Appointment.objects.filter(
-        donor=donor,
-        request_content_type=content_type,
-        request_object_id=donor_request.id
-    ).first()
+@login_required(login_url='login')
+def donor_cancel_request_view(request, request_id):
+    """
+    Cancel a pending blood request made by a donor
+    """
+    user = request.user
+    
+    # Check if user is a donor
+    if not hasattr(user, "donor"):
+        raise PermissionDenied("Only donors can cancel their requests.")
+
+    donor = user.donor
+
+    blood_request = get_object_or_404(
+        DonorBloodRequest,
+        id=request_id,
+        request_by_donor=donor
+    )
 
     now = timezone.now()
-    
-    # Get nurse and center info for notification
-    nurse_instance = appointment.nurse if appointment else None
-    center_name = donor_request.donation_center.name if donor_request.donation_center else "Unknown center"
-    date_str = appointment.date.strftime("%b %d, %Y %I:%M %p") if appointment else "scheduled date"
 
-    # Cancel request
-    donor_request.status = 'cancelled'
-    donor_request.cancelled_by = 'donor'
-    donor_request.cancelled_at = now
-    donor_request.save(update_fields=['status', 'cancelled_by', 'cancelled_at'])
-    logger.info(f"Donor request ID {donor_request.id} cancelled by donor {user.id}.")
+    # Only allow cancellation of pending requests
+    if blood_request.status == 'pending':
+        # Get cancellation reason from POST if provided
+        reason = request.POST.get('reason', '').strip()
+        
+        # Update request status
+        blood_request.status = 'cancelled'
+        blood_request.save(update_fields=['status'])
 
-    # Cancel appointment if it exists and is future/pending
-    if appointment and appointment.status.lower() in ['pending', 'approved'] and appointment.date > now:
-        appointment.status = 'cancelled'
-        appointment.cancelled_by = 'donor'
-        appointment.cancelled_by_user = user
-        appointment.cancelled_at = now
-        appointment.status_changed_by = user
-        appointment.status_changed_at = now
-        appointment.save()
-        logger.info(f"Linked appointment ID {appointment.id} cancelled by donor {user.id}.")
-
-    # 🔔 Send notification to nurse (if appointment was assigned)
-    if nurse_instance:
-        donor_name = donor.user.get_full_name() or donor.user.username
-        create_notification(
-            title="Appointment Cancelled by Donor",
-            message=f"Donor {donor_name} cancelled their blood request appointment on {date_str} at {center_name}.",
-            recipient_obj=nurse_instance,
-            sender_obj=donor,
-            action='cancelled',
-            reason="Cancelled by donor",
-            appointment_date=appointment.date if appointment else None,
-            bloodgroup=donor_request.bloodgroup,
-            unit=donor_request.unit
+        # 🔔 SEND NOTIFICATION TO BLOOD BANK TECHNICIANS
+        from blood_bank_technician.models import BloodBankTechProfile
+        
+        # Notify all blood bank techs at this center
+        blood_bank_techs = BloodBankTechProfile.objects.filter(
+            center=blood_request.donation_center,
+            is_active=True
         )
-        logger.info(f"✅ Cancellation notification sent to nurse {nurse_instance.id}")
+        
+        donor_name = donor.user.get_full_name() or donor.user.username
+        
+        for tech in blood_bank_techs:
+            create_notification(
+                title="🚫 Donor Blood Request Cancelled",
+                message=(
+                    f"Donor {donor_name} has cancelled their blood request for patient "
+                    f"{blood_request.patient_first_name} {blood_request.patient_last_name}.\n"
+                    f"Blood Group: {blood_request.bloodgroup}\n"
+                    f"Units: {blood_request.unit}ml\n"
+                    f"Reason: {reason if reason else 'No reason provided'}"
+                ),
+                recipient_obj=tech,
+                sender_obj=donor,
+                action="request_cancelled",
+                bloodgroup=blood_request.bloodgroup,
+                unit=blood_request.unit
+            )
 
-    messages.success(request, "✅ Your blood request (and linked appointment, if any) have been cancelled successfully.")
-    return redirect("donor-request-history")
+        # Also send confirmation to donor
+        create_notification(
+            title="Request Cancelled",
+            message=(
+                f"Your blood request for {blood_request.patient_first_name} {blood_request.patient_last_name} "
+                f"({blood_request.unit}ml of {blood_request.bloodgroup}) has been cancelled successfully."
+            ),
+            recipient_obj=donor,
+            sender_obj=None,
+            action="cancelled"
+        )
+
+        messages.success(request, "✅ Your blood request has been cancelled successfully.")
+    else:
+        # Determine why it can't be cancelled
+        if blood_request.status == 'approved':
+            messages.warning(request, "⚠️ This request has already been approved and cannot be cancelled. Please contact the blood bank directly.")
+        elif blood_request.status == 'dispatched':
+            messages.warning(request, "⚠️ This request has already been dispatched and cannot be cancelled.")
+        elif blood_request.status == 'completed':
+            messages.warning(request, "⚠️ This request has already been completed.")
+        elif blood_request.status == 'rejected':
+            messages.warning(request, "⚠️ This request has already been rejected.")
+        elif blood_request.status == 'cancelled':
+            messages.warning(request, "⚠️ This request is already cancelled.")
+        else:
+            messages.warning(request, "⚠️ This request cannot be cancelled at this stage.")
+
+    return redirect('donor-request-history')
 
 # -------------------------------
 # Health tips

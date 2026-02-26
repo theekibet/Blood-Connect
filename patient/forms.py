@@ -203,7 +203,7 @@ class PatientProfileForm(forms.ModelForm):
         
 class RequestForm(forms.ModelForm):
     BLOOD_GROUPS = [
-        ('', 'Select blood group (optional)'),
+        ('', 'Select blood group (required)'),
         ('A+', 'A+'), ('A-', 'A-'),
         ('B+', 'B+'), ('B-', 'B-'),
         ('AB+', 'AB+'), ('AB-', 'AB-'),
@@ -227,14 +227,15 @@ class RequestForm(forms.ModelForm):
     bloodgroup = forms.ChoiceField(
         choices=BLOOD_GROUPS,
         widget=forms.Select(attrs={'class': 'input--style-5'}),
-        required=False,
-        help_text="If unknown, you may leave this blank."
+        required=True,  # Changed to required for blood bank processing
+        help_text="Blood group required for processing your request"
     )
 
     donation_center = forms.ModelChoiceField(
         queryset=DonationCenter.objects.all(),
         widget=forms.Select(attrs={'class': 'input--style-5'}),
-        label="Donation Center"
+        label="Blood Bank Center",
+        help_text="Select the blood bank center that will fulfill this request"
     )
 
     contact_number = forms.CharField(
@@ -245,17 +246,17 @@ class RequestForm(forms.ModelForm):
     emergency_contact = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'input--style-5'}),
-        label="Emergency Contact"
+        label="Emergency Contact (Optional)"
     )
 
     national_id = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'input--style-5'}),
-        label="National ID"
+        label="National ID (Optional)"
     )
 
     unit = forms.IntegerField(
-        required=False,
+        required=True,  # Changed to required
         widget=forms.NumberInput(attrs={
             'class': 'input--style-5',
             'placeholder': '450–2700 ml',
@@ -263,7 +264,13 @@ class RequestForm(forms.ModelForm):
             'max': 2700,
             'step': 50,
         }),
-        help_text="Enter units if known, or leave blank if unsure."
+        help_text="Required blood volume in ml (450-2700ml, multiples of 50)"
+    )
+
+    consent_confirmed = forms.BooleanField(
+        required=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="I confirm that the information provided is accurate and I consent to this blood request"
     )
 
     class Meta:
@@ -278,6 +285,7 @@ class RequestForm(forms.ModelForm):
             'bloodgroup',
             'unit',
             'donation_center',
+            'consent_confirmed',
         ]
 
     def __init__(self, *args, **kwargs):
@@ -297,9 +305,10 @@ class RequestForm(forms.ModelForm):
             self.fields['emergency_contact'].initial = getattr(patient, "emergency_contact", "")
             self.fields['national_id'].initial = getattr(patient, "national_id", "")
 
+            # Handle blood group based on verification status
             if patient.bloodgroup_verified and patient.bloodgroup:
+                # Verified blood group - lock it
                 verified_bg = patient.bloodgroup
-
                 self.fields['bloodgroup'] = forms.CharField(
                     initial=verified_bg,
                     widget=forms.TextInput(attrs={
@@ -316,27 +325,39 @@ class RequestForm(forms.ModelForm):
                     f'<div class="alert alert-success mt-2 mb-0 p-2">'
                     f'<i class="fas fa-check-circle"></i> '
                     f'✓ Verified blood group: <strong>{verified_bg}</strong> '
-                    f'(Confirmed by nurse during your first blood request)'
+                    f'(Confirmed by laboratory testing)'
                     f'</div>'
                 )
             else:
+                # Unverified - show selection with appropriate message
                 self.fields['bloodgroup'].help_text = mark_safe(
                     '<div class="alert alert-info mt-2 mb-0 p-2">'
                     '<i class="fas fa-info-circle"></i> '
-                    '<strong>Optional</strong> - Your blood group will be verified by the nurse during this appointment. '
-                    'Once verified, it will be locked for all future requests.'
+                    '<strong>Important:</strong> Your blood group will be verified by the laboratory '
+                    'during your first blood donation. Until then, please select your known blood group '
+                    'or the group requested by your doctor.'
                     '</div>'
                 )
                 if patient.bloodgroup:
                     self.fields['bloodgroup'].initial = patient.bloodgroup
 
+            # Make patient info fields readonly
             readonly_fields = [
                 'first_name', 'last_name', 'patient_age',
                 'contact_number', 'emergency_contact', 'national_id'
             ]
-            for f in readonly_fields:
-                self.fields[f].widget.attrs['readonly'] = True
-                self.fields[f].required = False
+            for field_name in readonly_fields:
+                self.fields[field_name].widget.attrs['readonly'] = True
+                self.fields[field_name].required = False
+
+        # Add help text for new workflow
+        self.fields['donation_center'].help_text = mark_safe(
+            '<div class="alert alert-warning mt-2 mb-0 p-2">'
+            '<i class="fas fa-clock"></i> '
+            '<strong>Processing Time:</strong> Blood bank technicians review requests within 2-4 hours. '
+            'Emergency requests should be called in directly.'
+            '</div>'
+        )
 
     def clean_bloodgroup(self):
         bloodgroup = self.cleaned_data.get('bloodgroup')
@@ -344,37 +365,55 @@ class RequestForm(forms.ModelForm):
             patient = self.user.patient
             if patient.bloodgroup_verified and patient.bloodgroup:
                 return patient.bloodgroup
-        return bloodgroup if bloodgroup else None
+        if not bloodgroup:
+            raise forms.ValidationError("Blood group is required for processing your request.")
+        return bloodgroup
 
     def clean_unit(self):
         unit = self.cleaned_data.get("unit")
         if unit is None:
-            return unit
-        if unit < 450 or unit > 2700 or unit % 50 != 0:
+            raise forms.ValidationError("Please specify the required blood volume.")
+        if unit < 450 or unit > 2700:
             raise forms.ValidationError(
-                "Unit must be between 450 ml and 2700 ml in multiples of 50."
+                "Unit must be between 450 ml and 2700 ml."
+            )
+        if unit % 50 != 0:
+            raise forms.ValidationError(
+                "Unit must be in multiples of 50 ml (e.g., 450, 500, 550...)."
             )
         return unit
 
     def clean_first_name(self):
         if self.user and hasattr(self.user, "patient") and getattr(self.user.patient, 'user', None):
             return self.user.patient.user.first_name
-        return self.cleaned_data.get("first_name")
+        value = self.cleaned_data.get("first_name")
+        if not value:
+            raise forms.ValidationError("First name is required.")
+        return value
 
     def clean_last_name(self):
         if self.user and hasattr(self.user, "patient") and getattr(self.user.patient, 'user', None):
             return self.user.patient.user.last_name
-        return self.cleaned_data.get("last_name")
+        value = self.cleaned_data.get("last_name")
+        if not value:
+            raise forms.ValidationError("Last name is required.")
+        return value
 
     def clean_patient_age(self):
         if self.user and hasattr(self.user, "patient"):
             return self.user.patient.age
-        return self.cleaned_data.get("patient_age")
+        value = self.cleaned_data.get("patient_age")
+        if value is None:
+            raise forms.ValidationError("Patient age is required.")
+        return value
 
     def clean_contact_number(self):
         if self.user and hasattr(self.user, "patient"):
             return self.user.patient.mobile
-        return self.cleaned_data.get("contact_number")
+        value = self.cleaned_data.get("contact_number")
+        if not value:
+            raise forms.ValidationError("Contact number is required.")
+        return value
 
     def clean_emergency_contact(self):
         if self.user and hasattr(self.user, "patient"):

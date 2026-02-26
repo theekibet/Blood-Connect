@@ -1,0 +1,291 @@
+{% extends 'lab_technologist/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Lab Tech{% endblock %}
+
+{% block page_title %}Laboratory Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats">
+    <div class="stat-box">
+        <h3>{{ pending_tests|default:0 }}</h3>
+        <p>Pending Tests</p>
+        <small class="text-muted">Awaiting testing</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ total_tests|default:0 }}</h3>
+        <p>Total Tests</p>
+        <small class="text-muted">All time</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ safe_count|default:0 }}</h3>
+        <p>Safe Units</p>
+        <small class="text-muted">{{ completion_rate|floatformat:1 }}% of tests</small>
+    </div>
+    <div class="stat-box">
+        <h3>{{ unsafe_count|default:0 }}</h3>
+        <p>Unsafe Units</p>
+        <small class="text-muted">Discarded</small>
+    </div>
+</div>
+
+<!-- Pending Tests Preview -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>Pending Tests</h5>
+        <a href="{% url 'lab_technologist:pending_tests' %}" class="btn btn-sm btn-outline-primary">
+            View All <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="card-body">
+        {% if pending_tests_details %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Donor</th>
+                            <th>Blood Group</th>
+                            <th>Collection Date</th>
+                            <th>Bag Type</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in pending_tests_details %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-barcode me-2 text-primary"></i>
+                                    <code class="fw-bold">{{ item.barcode }}</code>
+                                </div>
+                            </td>
+                            <td>
+                                <strong>{{ item.donor_name }}</strong>
+                                <br>
+                                <small class="text-muted">ID: {{ item.donation.id }}</small>
+                            </td>
+                            <td>
+                                {% if item.bloodgroup and item.bloodgroup != 'Unknown' %}
+                                    <span class="badge bg-info">{{ item.bloodgroup }}</span>
+                                {% else %}
+                                    <span class="text-muted">Not recorded</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.bag_type }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'lab_technologist:perform_test' item.donation.id %}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-flask"></i> Test
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <p class="text-muted mb-0">No pending tests. Great job!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Tests -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Tests</h5>
+        <a href="{% url 'lab_technologist:test_history' %}" class="btn btn-sm btn-outline-secondary">
+            View History <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="card-body">
+        {% if my_tests %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Test ID</th>
+                            <th>Donor</th>
+                            <th>Blood Group</th>
+                            <th>Result</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in my_tests %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-barcode me-2 text-muted"></i>
+                                    <code>{{ item.barcode }}</code>
+                                </div>
+                            </td>
+                            <td>#{{ item.test.id }}</td>
+                            <td>{{ item.donor_name }}</td>
+                            <td>
+                                {% if item.test.blood_group %}
+                                    <span class="badge bg-info">{{ item.test.blood_group }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.test.result == 'safe' %}
+                                    <span class="badge bg-success">Safe</span>
+                                {% elif item.test.result == 'unsafe' %}
+                                    <span class="badge bg-danger">Unsafe</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.test.test_date|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'lab_technologist:test_result' item.test.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-vial fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">No tests performed yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions Row -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'lab_technologist:pending_tests' %}" class="btn btn-primary">
+                        <i class="fas fa-flask"></i> Start New Test
+                    </a>
+                    <a href="{% url 'lab_technologist:test_history' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-history"></i> View Test History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Center Information</h5>
+                <p class="mb-1"><strong>Center:</strong> {{ center.name|default:"Not assigned" }}</p>
+                <p class="mb-1"><strong>Tests Today:</strong> {{ today_tests|default:0 }}</p>
+                <p class="mb-0"><strong>Completion Rate:</strong> {{ completion_rate|floatformat:1 }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.stat-box h3 {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-box p {
+    margin: 5px 0 0;
+    color: #666;
+    font-weight: 500;
+}
+
+.stat-box small {
+    display: block;
+    margin-top: 5px;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 2px solid #f0f2f5;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 15px 20px;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #555;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+code {
+    background: #f8f9fa;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #2c3e50;
+    font-size: 0.85rem;
+}
+
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.btn-sm {
+    padding: 5px 12px;
+}
+
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

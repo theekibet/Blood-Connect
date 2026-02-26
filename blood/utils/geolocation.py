@@ -10,7 +10,6 @@ from django.utils import timezone
 from datetime import date, timedelta
 
 from blood.models import DonationCenter
-from blood.utils.blood_compatibility import get_compatible_blood_types, get_compatible_recipient_blood_types
 from donor.models import Donor
 from patient.models import Patient
 
