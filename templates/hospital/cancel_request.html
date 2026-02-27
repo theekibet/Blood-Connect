@@ -1,0 +1,49 @@
+{% extends 'hospital/base.html' %}
+{% load static %}
+
+{% block title %}Cancel Request - {{ request.request_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow fade-in">
+                <div class="card-header py-3 bg-warning">
+                    <h5 class="mb-0 text-dark">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Cancel Blood Request
+                    </h5>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Request #{{ request.request_number }}</strong><br>
+                        Patient: {{ request.patient_full_name }}<br>
+                        Blood Group: {{ request.blood_group }} | Units: {{ request.units_requested }}ml
+                    </div>
+                    
+                    <p>Are you sure you want to cancel this blood request? This action cannot be undone.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason for cancellation</label>
+                            <textarea name="reason" id="reason" class="form-control" rows="3" 
+                                      placeholder="Please provide a reason..."></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'hospital:request_detail' request.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Go Back
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-times me-2"></i>Yes, Cancel Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

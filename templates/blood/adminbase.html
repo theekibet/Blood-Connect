@@ -32,9 +32,6 @@
     <a href="{% url 'admin-dashboard' %}" class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
         <i class="fas fa-home"></i> Dashboard
     </a>
-    <a href="{% url 'admin-patient' %}" class="{% if request.resolver_match.url_name == 'admin-patient' %}active{% endif %}">
-        <i class="fas fa-user-injured"></i> Patients
-    </a>
     <a href="{% url 'admin-nurse' %}" class="{% if request.resolver_match.url_name == 'admin-nurse' %}active{% endif %}">
         <i class="fas fa-user-md"></i> Nurses
     </a>

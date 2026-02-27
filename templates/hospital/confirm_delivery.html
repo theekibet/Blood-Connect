@@ -1,0 +1,60 @@
+{% extends 'hospital/base.html' %}
+{% load static %}
+
+{% block title %}Confirm Delivery - {{ request.request_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow fade-in">
+                <div class="card-header py-3 bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-double me-2"></i>Confirm Blood Delivery
+                    </h5>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        <strong>Request #{{ request.request_number }}</strong><br>
+                        Patient: {{ request.patient_full_name }}<br>
+                        Blood Group: {{ request.blood_group }} | Units: {{ request.units_requested }}ml
+                    </div>
+                    
+                    <p>Please confirm that the blood has been received at your hospital.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="received_by" class="form-label">Received by (Name)</label>
+                            <input type="text" name="received_by" id="received_by" class="form-control" 
+                                   value="{{ user.get_full_name }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="received_date" class="form-label">Date/Time Received</label>
+                            <input type="datetime-local" name="received_date" id="received_date" 
+                                   class="form-control" value="{{ request.dispatched_at|date:'Y-m-d\TH:i' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes (Optional)</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'hospital:request_detail' request.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Go Back
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>Confirm Delivery
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

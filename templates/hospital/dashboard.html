@@ -1,0 +1,207 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Dashboard - {{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <h2 class="mb-0">
+                        <i class="fas fa-hospital"></i> {{ hospital.name }}
+                    </h2>
+                    <p class="mb-0">{{ hospital.county }} | {{ hospital.get_location_name }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Requests</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_requests }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pending</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_requests }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Approved/Dispatched</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ approved_requests|add:dispatched_requests }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Delivered</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ delivered_requests }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-double fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Requests -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Blood Requests</h6>
+                    <a href="{% url 'hospital:create_request' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> New Request
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Request #</th>
+                                    <th>Patient</th>
+                                    <th>Blood Group</th>
+                                    <th>Units</th>
+                                    <th>Urgency</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in recent_requests %}
+                                <tr>
+                                    <td>{{ req.request_number }}</td>
+                                    <td>{{ req.patient_full_name }}</td>
+                                    <td><span class="badge bg-danger">{{ req.blood_group }}</span></td>
+                                    <td>{{ req.units_requested }}</td>
+                                    <td>
+                                        {% if req.urgency == 'emergency' %}
+                                            <span class="badge bg-danger">Emergency</span>
+                                        {% elif req.urgency == 'urgent' %}
+                                            <span class="badge bg-warning text-dark">Urgent</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Routine</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if req.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif req.status == 'approved' %}
+                                            <span class="badge bg-primary">Approved</span>
+                                        {% elif req.status == 'dispatched' %}
+                                            <span class="badge bg-info">Dispatched</span>
+                                        {% elif req.status == 'delivered' %}
+                                            <span class="badge bg-success">Delivered</span>
+                                        {% elif req.status == 'rejected' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                        {% elif req.status == 'cancelled' %}
+                                            <span class="badge bg-secondary">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ req.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'hospital:request_detail' req.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'hospital:request_list' %}" class="btn btn-primary">View All Requests</a>
+                    </div>
+                    {% else %}
+                    <p class="text-center text-muted my-4">No blood requests found.</p>
+                    <div class="text-center">
+                        <a href="{% url 'hospital:create_request' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create First Request
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if centre_stock %}
+    <!-- Serving Centre Stock -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-building"></i> Stock at {{ hospital.serving_centre.name }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for stock in centre_stock %}
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h4 class="mb-2">{{ stock.bloodgroup }}</h4>
+                                    <h3 class="mb-0">{{ stock.total_units }} ml</h3>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <p class="text-center text-muted">No stock information available</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

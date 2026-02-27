@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 import uuid
 from django.contrib.auth.models import User
-from nurse.models import Appointment
+# from nurse.models import Appointment  # Commented out to break circular import
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -343,7 +343,7 @@ class Contact(models.Model):
 # ------------------------
 # Notification Model
 # ------------------------
-class Notification(models.Model):
+# class Notification(models.Model):
     title = models.CharField(max_length=100)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -379,9 +379,9 @@ class StockTransaction(models.Model):
     ]
     
     stockunit = models.ForeignKey('StockUnit', on_delete=models.CASCADE)
-    blood_request = models.ForeignKey('patient.BloodRequest', on_delete=models.CASCADE, null=True, blank=True)
+#     blood_request = models.ForeignKey('patient.BloodRequest', on_delete=models.CASCADE, null=True, blank=True)
     # ⭐ FIXED: Added 'donor.' prefix for cross-app reference
-    donor_blood_request = models.ForeignKey('donor.DonorBloodRequest', on_delete=models.CASCADE, null=True, blank=True)
+# #     donor_blood_request = models.ForeignKey('donor.DonorBloodRequest', on_delete=models.CASCADE, null=True, blank=True)
     appointment = models.ForeignKey('nurse.Appointment', on_delete=models.CASCADE, null=True, blank=True)
     
     # When blood is taken out for a request: record quantity_deducted
@@ -438,7 +438,7 @@ class StockTransaction(models.Model):
     @property
     def related_request(self):
         """Return the related request object (BloodRequest or DonorBloodRequest)"""
-        return self.blood_request or self.donor_blood_request
+        return None
     
 class BloodDriveEvent(models.Model):
     """Blood drive locations and events"""

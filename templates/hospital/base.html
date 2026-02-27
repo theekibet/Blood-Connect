@@ -1,0 +1,60 @@
+{% extends 'shared/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/hospital.css' %}">
+    {{ block.super }}
+{% endblock %}
+
+{% block nav_icon %}fas fa-hospital{% endblock %}
+{% block app_name %}Hospital Portal{% endblock %}
+{% block notifications_url %}{% url 'hospital:dashboard' %}{% endblock %}
+{% block user_role_label %}Hospital Staff{% endblock %}
+{% block profile_url %}{% url 'hospital:profile' %}{% endblock %}
+{% block edit_profile_url %}{% url 'hospital:profile' %}{% endblock %}
+{% block sidebar_icon %}fas fa-hospital{% endblock %}
+{% block sidebar_title %}Hospital Menu{% endblock %}
+
+{% block sidebar_menu %}
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'hospital:dashboard' %}">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}" href="{% url 'hospital:request_list' %}">
+            <i class="fas fa-list me-2"></i>Blood Requests
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'create_request' %}active{% endif %}" href="{% url 'hospital:create_request' %}">
+            <i class="fas fa-plus-circle me-2"></i>New Request
+        </a>
+    </li>
+    
+    {% if hospital_user.role == 'admin' %}
+    <li class="nav-item mt-3">
+        <hr class="sidebar-divider">
+        <span class="sidebar-heading">Administration</span>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'hospital:dashboard_admin' %}">
+            <i class="fas fa-user-shield me-2"></i>Admin Dashboard
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}" href="{% url 'hospital:user_management' %}">
+            <i class="fas fa-users-cog me-2"></i>User Management
+        </a>
+    </li>
+    {% endif %}
+</ul>
+{% endblock %}
+
+{% block profile_menu %}
+    <a class="dropdown-item" href="{% url 'hospital:profile' %}">
+        <i class="fas fa-id-card"></i> Hospital Profile
+    </a>
+    {{ block.super }}
+{% endblock %}

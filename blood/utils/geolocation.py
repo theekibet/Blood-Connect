@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from blood.models import DonationCenter
 from donor.models import Donor
-from patient.models import Patient
+# # from patient.models import Patient
 
 logger = logging.getLogger(__name__)
 
@@ -332,7 +332,6 @@ def get_user_location_from_ip(request) -> Optional[Tuple[float, float]]:
 def find_nearby_eligible_donors(
     lat: float,
     lng: float,
-    patient_bloodgroup: str,
     max_distance_km: int = DEFAULT_MAX_DISTANCE_KM,
     donation_interval_days: int = DONATION_INTERVAL_DAYS,
     limit: Optional[int] = None
@@ -345,14 +344,11 @@ def find_nearby_eligible_donors(
         logger.error(f"Invalid coordinates for donor search: {validation['error']}")
         return []
     
-    if not patient_bloodgroup:
         logger.error("Patient blood group not provided")
         return []
     
     try:
-        compatible_types = get_compatible_blood_types(patient_bloodgroup)
         if not compatible_types:
-            logger.warning(f"No compatible blood types for {patient_bloodgroup}")
             return []
         
         eligibility_cutoff_date = date.today() - timedelta(days=donation_interval_days)
@@ -394,7 +390,6 @@ def find_nearby_eligible_donors(
             nearby_donors = nearby_donors[:limit]
         
         logger.info(
-            f"Found {len(nearby_donors)} eligible donors for {patient_bloodgroup} "
             f"within {max_distance_km}km"
         )
         
@@ -404,78 +399,6 @@ def find_nearby_eligible_donors(
         logger.error(f"Error finding donors: {str(e)}", exc_info=True)
         return []
 
-
-def find_nearby_compatible_patients(
-    lat: float,
-    lng: float,
-    donor_bloodgroup: str,
-    max_distance_km: int = DEFAULT_MAX_DISTANCE_KM,
-    active_requests_only: bool = True,
-    limit: Optional[int] = None
-) -> List[Tuple[Patient, float]]:
-    """
-    Enhanced patient search with bounding box optimization.
-    """
-    validation = validate_coordinates(lat, lng, strict=False)
-    if not validation['valid']:
-        logger.error(f"Invalid coordinates for patient search: {validation['error']}")
-        return []
-    
-    if not donor_bloodgroup:
-        logger.error("Donor blood group not provided")
-        return []
-    
-    try:
-        compatible_recipient_types = get_compatible_recipient_blood_types(donor_bloodgroup)
-        if not compatible_recipient_types:
-            logger.warning(f"No compatible recipients for {donor_bloodgroup}")
-            return []
-        
-        # Get bounding box
-        bbox = get_bounding_box(lat, lng, max_distance_km)
-        
-        # Build query
-        patients_qs = Patient.objects.filter(
-            latitude__isnull=False,
-            longitude__isnull=False,
-            latitude__gte=bbox['lat_min'],
-            latitude__lte=bbox['lat_max'],
-            longitude__gte=bbox['lng_min'],
-            longitude__lte=bbox['lng_max'],
-            bloodgroup__in=compatible_recipient_types,
-        ).select_related('user')
-        
-        if active_requests_only:
-            patients_qs = patients_qs.filter(
-                blood_requests__status='pending',
-                blood_requests__urgency_level__in=['High', 'Emergency']
-            ).distinct()
-        
-        nearby_patients = []
-        for patient in patients_qs:
-            try:
-                distance = haversine(lat, lng, float(patient.latitude), float(patient.longitude))
-                if distance <= max_distance_km:
-                    nearby_patients.append((patient, distance))
-            except (GeoLocationError, TypeError, ValueError) as e:
-                logger.warning(f"Skipping patient {patient.id}: {str(e)}")
-                continue
-        
-        nearby_patients.sort(key=lambda x: x[1])
-        
-        if limit:
-            nearby_patients = nearby_patients[:limit]
-        
-        logger.info(
-            f"Found {len(nearby_patients)} compatible patients for {donor_bloodgroup} "
-            f"within {max_distance_km}km"
-        )
-        
-        return nearby_patients
-        
-    except Exception as e:
-        logger.error(f"Error finding patients: {str(e)}", exc_info=True)
-        return []
 
 
 def get_distance_between_users(user1_lat: float, user1_lng: float, 

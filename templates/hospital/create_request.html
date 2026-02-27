@@ -1,0 +1,221 @@
+{% extends 'hospital/base.html' %}
+{% load static %}
+
+{% block title %}Create Blood Request - {{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4 fade-in">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>New Blood Request
+                    </h5>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Please provide accurate patient information. All requests will be reviewed by the blood bank.
+                    </div>
+                    
+                    <form method="post" novalidate id="requestForm">
+                        {% csrf_token %}
+                        
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-user me-2"></i>Patient Information
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.patient_first_name.id_for_label }}" class="form-label">First Name *</label>
+                                {{ form.patient_first_name }}
+                                {% if form.patient_first_name.errors %}
+                                <div class="text-danger mt-1">{{ form.patient_first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.patient_last_name.id_for_label }}" class="form-label">Last Name *</label>
+                                {{ form.patient_last_name }}
+                                {% if form.patient_last_name.errors %}
+                                <div class="text-danger mt-1">{{ form.patient_last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.patient_age.id_for_label }}" class="form-label">Age</label>
+                                {{ form.patient_age }}
+                                {% if form.patient_age.errors %}
+                                <div class="text-danger mt-1">{{ form.patient_age.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.patient_gender.id_for_label }}" class="form-label">Gender</label>
+                                {{ form.patient_gender }}
+                                {% if form.patient_gender.errors %}
+                                <div class="text-danger mt-1">{{ form.patient_gender.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.patient_id.id_for_label }}" class="form-label">Patient ID</label>
+                                {{ form.patient_id }}
+                                {% if form.patient_id.errors %}
+                                <div class="text-danger mt-1">{{ form.patient_id.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Hospital's patient reference</small>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-tint me-2"></i>Blood Requirements
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.blood_group.id_for_label }}" class="form-label">Blood Group *</label>
+                                {{ form.blood_group }}
+                                {% if form.blood_group.errors %}
+                                <div class="text-danger mt-1">{{ form.blood_group.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.units_requested.id_for_label }}" class="form-label">Units Required (ml) *</label>
+                                {{ form.units_requested }}
+                                {% if form.units_requested.errors %}
+                                <div class="text-danger mt-1">{{ form.units_requested.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.urgency.id_for_label }}" class="form-label">Urgency Level *</label>
+                            {{ form.urgency }}
+                            {% if form.urgency.errors %}
+                            <div class="text-danger mt-1">{{ form.urgency.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-user-md me-2"></i>Doctor's Information
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="{{ form.doctor_name.id_for_label }}" class="form-label">Doctor's Name *</label>
+                                {{ form.doctor_name }}
+                                {% if form.doctor_name.errors %}
+                                <div class="text-danger mt-1">{{ form.doctor_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.doctor_license.id_for_label }}" class="form-label">License Number</label>
+                                {{ form.doctor_license }}
+                                {% if form.doctor_license.errors %}
+                                <div class="text-danger mt-1">{{ form.doctor_license.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning mt-4">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Emergency?</strong> If this is an emergency, please also call your serving blood bank directly.
+                            {% if hospital.serving_centre %}
+                            <br><strong>{{ hospital.serving_centre.name }}:</strong> {{ hospital.serving_centre.contact_number }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'hospital:request_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Info Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4 fade-in">
+                <div class="card-header py-3 bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Request Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Accurate Information:</strong> Ensure patient details are correct
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Blood Group:</strong> Double-check the required blood type
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Units:</strong> Request only what is medically necessary
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Urgency:</strong> Select appropriate urgency level
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            <strong>Processing Time:</strong> 
+                            <br>Routine: 24-48 hours
+                            <br>Urgent: 4-6 hours
+                            <br>Emergency: Immediate
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            {% if hospital.serving_centre %}
+            <div class="card shadow mb-4 fade-in">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-building me-2"></i>Your Serving Centre
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>{{ hospital.serving_centre.name }}</h6>
+                    <p class="mb-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ hospital.serving_centre.address }}
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-phone me-2"></i>{{ hospital.serving_centre.contact_number }}
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-clock me-2"></i>{{ hospital.serving_centre.open_hours }}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('requestForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+});
+</script>
+{% endblock %}

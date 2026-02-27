@@ -1,744 +1,697 @@
 {% extends 'donor/donorbase.html' %}
-{% load static %}
 {% load widget_tweaks %}
+{% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 
-<div class="container-main my-5">
-  <!-- Header -->
-  <div class="header-section">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <h1><i class="fas fa-hand-holding-heart me-2"></i>Blood Donation Appointment</h1>
-        <p>Schedule your life-saving donation appointment</p>
-      </div>
-      <div class="d-none d-md-block">
-        <div class="badge-status bg-white text-primary p-2">
-          <i class="fas fa-user me-1"></i> Donor ID: {{ request.user.id|stringformat:"06d" }}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {% if active_donation %}
-    <!-- Active Donation Warning -->
-    <div class="medical-card">
-      <div class="alert-medical warning">
-        <i class="fas fa-exclamation-triangle text-warning"></i>
-        <div>
-          <h5 class="mb-2">Active Donation Request Found</h5>
-          <p class="mb-2">You currently have a <strong class="text-uppercase">{{ active_donation.status }}</strong> donation request created on {{ active_donation.date|date:"F j, Y" }}.</p>
-          <p class="mb-0">Please wait until this request is completed or contact the donation center if you need to make changes.</p>
-        </div>
-      </div>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
       
-      <div class="summary-section">
-        <h6 class="summary-title">Request Details</h6>
-        <div class="summary-item">
-          <span class="summary-label">Status</span>
-          <span class="badge-status badge-{{ active_donation.status }}">{{ active_donation.status|title }}</span>
+      <!-- Display Django messages -->
+      {% if messages %}
+        <div class="mt-3">
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
         </div>
-        <div class="summary-item">
-          <span class="summary-label">Donation Center</span>
-          <span class="summary-value">{{ active_donation.donation_center.name }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Scheduled Date</span>
-          <span class="summary-value">{{ active_donation.date|date:"F j, Y" }}</span>
-        </div>
-        {% if active_donation.nurse %}
-        <div class="summary-item">
-          <span class="summary-label">Assigned Nurse</span>
-          <span class="summary-value">{{ active_donation.nurse }}</span>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  {% else %}
-    <!-- Progress Steps -->
-    <div class="medical-card">
-      <div class="progress-steps">
-        <div class="step active">
-          <div class="step-circle">1</div>
-          <div class="step-label">Select Center</div>
-        </div>
-        <div class="step">
-          <div class="step-circle">2</div>
-          <div class="step-label">Choose Date</div>
-        </div>
-        <div class="step">
-          <div class="step-circle">3</div>
-          <div class="step-label">Pick Time</div>
-        </div>
-        <div class="step">
-          <div class="step-circle">4</div>
-          <div class="step-label">Confirm</div>
-        </div>
-      </div>
-    </div>
+      {% endif %}
 
-    <div class="row g-4">
-      <!-- Left Column: Form -->
-      <div class="col-lg-8">
-        <div class="medical-card">
-          <h3 class="section-title"><i class="fas fa-calendar-check"></i> Schedule Appointment</h3>
-
-          {% if messages %}
-            {% for message in messages %}
-              {% if message.tags == 'error' %}
-                <div class="alert-medical warning">
-                  <i class="fas fa-exclamation-triangle text-warning"></i>
-                  <div>{{ message|safe }}</div>
-                </div>
-              {% else %}
-                <div class="alert-medical success">
-                  <i class="fas fa-check-circle text-success"></i>
-                  <div>{{ message|safe }}</div>
-                </div>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-
-          <!-- Form Validation Errors -->
-          {% if donation_form.errors %}
-            <div class="alert-medical warning mb-3">
-              <i class="fas fa-exclamation-triangle text-warning"></i>
-              <div>
-                <h5 class="mb-2">Please correct the following errors:</h5>
-                {% for field in donation_form %}
-                  {% if field.errors %}
-                    <p class="mb-1"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</p>
-                  {% endif %}
-                {% endfor %}
-                {% for error in donation_form.non_field_errors %}
-                  <p class="mb-1">{{ error }}</p>
-                {% endfor %}
+      <!-- ========================================== -->
+      <!-- UNSAFE DONOR RESTRICTION BANNER -->
+      <!-- ========================================== -->
+      {% if is_unsafe or has_unsafe_donation %}
+      <div class="alert alert-danger mb-4" role="alert">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-exclamation-triangle fa-3x me-3"></i>
+          <div>
+            <h4 class="alert-heading mb-2">⚠️ Permanent Donation Deferral</h4>
+            <p class="mb-2">
+              <strong>Our records indicate you are permanently unable to donate blood.</strong>
+            </p>
+            {% if unsafe_reason %}
+            <div class="alert alert-warning mb-3">
+              <i class="fas fa-info-circle"></i> 
+              <strong>Reason:</strong> {{ unsafe_reason }}
+            </div>
+            {% endif %}
+            <hr>
+            <div class="row">
+              <div class="col-md-6">
+                <p class="mb-2">
+                  <i class="fas fa-phone-alt fa-lg"></i>
+                  <strong>Call us:</strong> +254 700 000 000
+                </p>
+              </div>
+              <div class="col-md-6">
+                <p class="mb-2">
+                  <i class="fas fa-envelope fa-lg"></i>
+                  <strong>Email:</strong> bloodbank@example.com
+                </p>
               </div>
             </div>
-          {% endif %}
+            <p class="mb-0 mt-2">
+              <i class="fas fa-clinic-medical"></i>
+              <strong>Visit any donation center:</strong> Monday-Friday, 8:00 AM - 5:00 PM
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
-          <!-- User Information (Read-only) -->
-          <div class="user-info-display">
-            <h5><i class="fas fa-user-circle me-2"></i>Your Information</h5>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Full Name</span>
-                <span class="info-value">{{ request.user.first_name }} {{ request.user.last_name }}</span>
+      <!-- ========================================== -->
+      <!-- SAFE DONOR COUNTDOWN TIMER -->
+      <!-- ========================================== -->
+      {% if has_safe_donation and donor.last_donation_date %}
+        {% if days_until_next > 0 %}
+        <div class="alert alert-info mb-4" role="alert">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-hourglass-half fa-3x me-3"></i>
+            <div class="flex-grow-1">
+              <h5 class="alert-heading mb-2">
+                <i class="fas fa-clock"></i> Next Donation Eligibility Countdown
+              </h5>
+              <div class="countdown-timer mb-2">
+                <div class="row text-center">
+                  <div class="col-3">
+                    <div class="countdown-number" id="days">{{ days_until_next }}</div>
+                    <div class="countdown-label">Days</div>
+                  </div>
+                  <div class="col-3">
+                    <div class="countdown-number" id="hours">{{ hours_until_next }}</div>
+                    <div class="countdown-label">Hours</div>
+                  </div>
+                  <div class="col-3">
+                    <div class="countdown-number" id="minutes">{{ minutes_until_next }}</div>
+                    <div class="countdown-label">Minutes</div>
+                  </div>
+                  <div class="col-3">
+                    <div class="countdown-number" id="seconds">{{ seconds_until_next }}</div>
+                    <div class="countdown-label">Seconds</div>
+                  </div>
+                </div>
               </div>
-              {% if request.user.donor.mobile %}
-              <div class="info-item">
-                <span class="info-label">Mobile</span>
-                <span class="info-value">{{ request.user.donor.mobile }}</span>
-              </div>
-              {% endif %}
-              {% if request.user.donor.bloodgroup %}
-              <div class="info-item">
-                <span class="info-label">Blood Group</span>
-                <span class="info-value">
-                  <span class="badge-status" style="background:#ffebee;color:var(--primary-dark);">
-                    {{ request.user.donor.bloodgroup }}
-                    {% if donor.bloodgroup_verified %}
-                      <i class="fas fa-check-circle text-success ms-1" title="Verified"></i>
-                    {% endif %}
-                  </span>
-                </span>
-              </div>
-              {% endif %}
-              {% if request.user.donor.address %}
-              <div class="info-item">
-                <span class="info-label">Address</span>
-                <span class="info-value">{{ request.user.donor.address|truncatechars:30 }}</span>
-              </div>
-              {% endif %}
+              <p class="mb-0">
+                <i class="fas fa-calendar-check"></i> 
+                You can donate again on <strong>{{ next_donation_date|date:"F d, Y" }}</strong>
+              </p>
             </div>
           </div>
+        </div>
+        {% elif days_until_next == 0 %}
+        <div class="alert alert-success mb-4" role="alert">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-check-circle fa-3x me-3"></i>
+            <div>
+              <h5 class="alert-heading mb-2">✅ You Are Eligible to Donate!</h5>
+              <p class="mb-0">
+                <i class="fas fa-calendar-check"></i> 
+                Your last donation was on {{ donor.last_donation_date|date:"F d, Y" }}. 
+                You can schedule a new donation now.
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      {% endif %}
 
-          <!-- Blood Group Status Alert -->
-          {% if donor.bloodgroup_verified %}
-            <div class="alert-medical success mb-3">
-              <i class="fas fa-check-circle text-success"></i>
+      <!-- First Time Donor Welcome Message -->
+      {% if is_first_time_donor %}
+      <div class="alert alert-primary mb-4" role="alert">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-heart fa-3x me-3"></i>
+          <div>
+            <h5 class="alert-heading mb-2">🩸 Welcome, First-Time Donor!</h5>
+            <p class="mb-0">
+              Thank you for your interest in donating blood. Your blood group will be verified during donation,
+              and you'll receive updates on your donation status. Every donation saves lives!
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Blood Group Verification Status Card -->
+      <div class="card mb-4 {% if bloodgroup_verified %}border-success{% else %}border-warning{% endif %}">
+        <div class="card-header {% if bloodgroup_verified %}bg-success{% else %}bg-warning{% endif %} text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-{% if bloodgroup_verified %}check-circle{% else %}clock{% endif %}"></i>
+            Blood Group Verification Status
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if bloodgroup_verified %}
+            <div class="d-flex align-items-center">
+              <i class="fas fa-shield-alt fa-3x text-success me-3"></i>
               <div>
-                <h6 class="mb-1">✅ Blood Group Verified</h6>
-                <p class="mb-0">Your blood group ({{ donor.bloodgroup }}) has been verified and will be used for this donation.</p>
+                <h6 class="mb-1 text-success">
+                  <i class="fas fa-check-circle"></i> Verified Blood Group: <strong>{{ verified_bloodgroup }}</strong>
+                </h6>
+                <p class="mb-0 text-muted">
+                  <i class="fas fa-lock"></i> Your blood group has been permanently verified and locked.
+                  This verified blood group will be used for this donation.
+                </p>
+                {% if donor.bloodgroup_verified_by and donor.bloodgroup_verified_at %}
+                <small class="text-muted">
+                  Verified by <strong>{{ donor.bloodgroup_verified_by.get_full_name }}</strong> 
+                  on {{ donor.bloodgroup_verified_at|date:"F d, Y" }}
+                </small>
+                {% endif %}
               </div>
             </div>
           {% else %}
-            <div class="alert-medical warning mb-3">
-              <i class="fas fa-info-circle text-warning"></i>
+            <div class="d-flex align-items-center">
+              <i class="fas fa-info-circle fa-3x text-warning me-3"></i>
               <div>
-                <h6 class="mb-1">ℹ️ First Time Donor</h6>
-                <p class="mb-0">This is your first donation. Your blood group will be verified by the nurse during your appointment.</p>
+                <h6 class="mb-1 text-warning">
+                  <i class="fas fa-clock"></i> First Time Donation - Blood Group Not Verified
+                </h6>
+                <p class="mb-0">
+                  This is your first donation. Your blood group will be verified by the nurse during donation.
+                  You may optionally provide your blood group below (will be confirmed by lab testing).
+                </p>
               </div>
             </div>
           {% endif %}
+        </div>
+      </div>
 
-          <!-- Info Box -->
-          <div class="info-box">
-            <h6><i class="fas fa-info-circle me-2"></i>Important Notes</h6>
-            <p class="mb-0">Please ensure you meet all eligibility criteria before scheduling. Bring your ID and donor card on appointment day. Arrive 15 minutes early for registration.</p>
-          </div>
+      <!-- Active Donation Warning -->
+      {% if active_donation %}
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>⚠️ Active Donation Request</strong>
+        <p class="mb-0 mt-2">
+          You already have a donation request with status: 
+          <strong>{{ active_donation.get_status_display }}</strong>
+        </p>
+        <p class="mb-0">
+          Date: <strong>{{ active_donation.date|date:"M d, Y" }}</strong> at 
+          <strong>{{ active_donation.appointment_time|time:"g:i A" }}</strong>
+        </p>
+        <p class="mb-0">
+          Center: <strong>{{ active_donation.donation_center.name }}</strong>
+        </p>
+        <hr>
+        <p class="mb-0">
+          <i class="fas fa-info-circle"></i> 
+          You cannot submit another donation request until this one is completed.
+        </p>
+      </div>
+      {% endif %}
 
-          <!-- Appointment Form -->
-          <form method="POST" novalidate id="appointmentForm">
+      <!-- Donation Form Card (Hidden for unsafe donors) -->
+      {% if not is_unsafe and not has_unsafe_donation %}
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white text-center py-3">
+          <h4 class="mb-0">
+            <i class="fas fa-hand-holding-heart"></i> Schedule Blood Donation
+          </h4>
+        </div>
+        
+        <div class="card-body p-4">
+          {% if not active_donation %}
+          <form method="POST" id="donationForm">
             {% csrf_token %}
-
-            <!-- Step 1: Donation Center -->
-            <div class="form-group-medical" id="step1">
-              <label class="form-label-medical">
-                <i class="fas fa-hospital me-1"></i> Donation Center <span class="required">*</span>
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-map-marker-alt"></i>
-                {{ donation_form.donation_center|add_class:"form-control-medical"|attr:"required" }}
-              </div>
+            
+            <!-- Personal Information Section -->
+            <div class="section-header mb-3">
+              <h5 class="text-primary">
+                <i class="fas fa-user"></i> Personal Information
+              </h5>
             </div>
-
-            <!-- Step 2: Nurse Selection -->
-            <div class="form-group-medical" id="step2" style="display: none;">
-              <label class="form-label-medical">
-                <i class="fas fa-user-nurse me-1"></i> Select Nurse <span class="required">*</span>
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-user-md"></i>
-                {{ donation_form.nurse|add_class:"form-control-medical" }}
-              </div>
-            </div>
-
-            <!-- Step 3: Appointment Date -->
-            <div class="form-group-medical" id="step3" style="display: none;">
-              <label class="form-label-medical">
-                <i class="fas fa-calendar-alt me-1"></i> Appointment Date <span class="required">*</span>
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-calendar-day"></i>
-                {{ donation_form.appointment_date|add_class:"form-control-medical" }}
-              </div>
-              <small class="text-muted">Available dates for the selected nurse</small>
-            </div>
-
-            <!-- Step 4: Time Slots -->
-            <div class="form-group-medical" id="step4" style="display: none;">
-              <label class="form-label-medical">
-                <i class="fas fa-clock me-1"></i> Select Time Slot <span class="required">*</span>
-              </label>
-              <div class="time-slots-container">
-                <p class="mb-2" id="timeSlotMessage">Select a date to view available time slots</p>
-                <div class="time-slots-grid" id="timeSlotsGrid"></div>
-              </div>
-              {{ donation_form.appointment_time }}
-            </div>
-
-            <!-- Personal Information Fields (Visible, not hidden) -->
-            <div class="form-group-medical mt-4">
-              <label class="form-label-medical">
-                <i class="fas fa-user me-1"></i> First Name
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-signature"></i>
-                {{ donation_form.first_name|add_class:"form-control-medical" }}
-              </div>
-              {% if donation_form.first_name.errors %}
-                <div class="text-danger small mt-1">{{ donation_form.first_name.errors|striptags }}</div>
-              {% endif %}
-            </div>
-
-            <div class="form-group-medical">
-              <label class="form-label-medical">
-                <i class="fas fa-user me-1"></i> Last Name
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-signature"></i>
-                {{ donation_form.last_name|add_class:"form-control-medical" }}
-              </div>
-              {% if donation_form.last_name.errors %}
-                <div class="text-danger small mt-1">{{ donation_form.last_name.errors|striptags }}</div>
-              {% endif %}
-            </div>
-
-            <div class="form-group-medical">
-              <label class="form-label-medical">
-                <i class="fas fa-phone me-1"></i> Mobile Number
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-mobile-alt"></i>
-                {{ donation_form.mobile|add_class:"form-control-medical" }}
-              </div>
-              {% if donation_form.mobile.errors %}
-                <div class="text-danger small mt-1">{{ donation_form.mobile.errors|striptags }}</div>
-              {% endif %}
-            </div>
-
-            {% if not donor.bloodgroup_verified %}
-            <div class="form-group-medical">
-              <label class="form-label-medical">
-                <i class="fas fa-tint me-1"></i> Blood Group (Optional for first donation)
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-heartbeat"></i>
-                {{ donation_form.bloodgroup|add_class:"form-control-medical" }}
-              </div>
-              <small class="text-muted">Leave blank if unknown - will be verified by nurse</small>
-              {% if donation_form.bloodgroup.errors %}
-                <div class="text-danger small mt-1">{{ donation_form.bloodgroup.errors|striptags }}</div>
-              {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Donation Volume Field (Required) -->
-            <div class="form-group-medical">
-              <label class="form-label-medical">
-                <i class="fas fa-weight me-1"></i> Donation Volume (ml) <span class="required">*</span>
-              </label>
-              <div class="input-group-medical">
-                <i class="fas fa-syringe"></i>
-                {{ donation_form.unit|add_class:"form-control-medical" }}
-              </div>
-              <small class="text-muted">Standard donation is 450-500ml</small>
-              {% if donation_form.unit.errors %}
-                <div class="text-danger small mt-1">{{ donation_form.unit.errors|striptags }}</div>
-              {% endif %}
-            </div>
-
-            <button type="submit" class="btn-medical mt-4" id="submitBtn" disabled>
-              <i class="fas fa-paper-plane"></i> Confirm Appointment
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Right Column: Summary -->
-      <div class="col-lg-4">
-        <div class="medical-card">
-          <h3 class="section-title"><i class="fas fa-file-medical-alt"></i> Appointment Summary</h3>
-          
-          <div class="summary-section">
-            <div class="summary-item">
-              <span class="summary-label">Donor</span>
-              <span class="summary-value">{{ request.user.get_full_name }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">Blood Group</span>
-              <span class="summary-value">
-                {{ request.user.donor.bloodgroup|default:"Not specified" }}
-                {% if donor.bloodgroup_verified %}
-                  <i class="fas fa-check-circle text-success ms-1" title="Verified"></i>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.first_name.id_for_label }}" class="form-label">
+                  <i class="fas fa-user"></i> First Name
+                </label>
+                {{ donation_form.first_name|add_class:"form-control" }}
+                {% if donation_form.first_name.errors %}
+                  <div class="text-danger">{{ donation_form.first_name.errors }}</div>
                 {% endif %}
-              </span>
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.last_name.id_for_label }}" class="form-label">
+                  <i class="fas fa-user"></i> Last Name
+                </label>
+                {{ donation_form.last_name|add_class:"form-control" }}
+                {% if donation_form.last_name.errors %}
+                  <div class="text-danger">{{ donation_form.last_name.errors }}</div>
+                {% endif %}
+              </div>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Donation Center</span>
-              <span class="summary-value" id="summaryCenter">Not selected</span>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.mobile.id_for_label }}" class="form-label">
+                  <i class="fas fa-phone"></i> Mobile Number
+                </label>
+                {{ donation_form.mobile|add_class:"form-control" }}
+                {% if donation_form.mobile.errors %}
+                  <div class="text-danger">{{ donation_form.mobile.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.bloodgroup.id_for_label }}" class="form-label">
+                  <i class="fas fa-tint"></i> Blood Group
+                  {% if bloodgroup_verified %}
+                    <i class="fas fa-lock text-success ms-2" title="Verified and locked"></i>
+                  {% else %}
+                    <i class="fas fa-info-circle text-warning ms-2" title="Optional - will be verified by nurse"></i>
+                  {% endif %}
+                </label>
+                
+                {% if bloodgroup_verified %}
+                  <!-- Verified donors - show read-only field with verified blood group -->
+                  <input type="text" 
+                         class="form-control bg-light" 
+                         value="{{ verified_bloodgroup }}" 
+                         readonly 
+                         title="Your blood group has been verified and cannot be changed">
+                  <input type="hidden" name="bloodgroup" value="{{ verified_bloodgroup }}">
+                  <small class="form-text text-success">
+                    <i class="fas fa-check-circle"></i> Using your verified blood group
+                  </small>
+                {% else %}
+                  <!-- First-time donors - show dropdown (optional) -->
+                  {{ donation_form.bloodgroup|add_class:"form-select" }}
+                  <small class="form-text text-muted">
+                    <i class="fas fa-info-circle"></i> Optional - will be confirmed by lab testing
+                  </small>
+                {% endif %}
+                
+                {% if donation_form.bloodgroup.errors %}
+                  <div class="text-danger">{{ donation_form.bloodgroup.errors }}</div>
+                {% endif %}
+              </div>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Nurse</span>
-              <span class="summary-value" id="summaryNurse">Not selected</span>
+            
+            <!-- Donation Details Section -->
+            <div class="section-header mb-3 mt-4">
+              <h5 class="text-primary">
+                <i class="fas fa-calendar-alt"></i> Donation Details
+              </h5>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Date</span>
-              <span class="summary-value" id="summaryDate">Not selected</span>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.donation_center.id_for_label }}" class="form-label">
+                  <i class="fas fa-hospital"></i> Donation Center
+                </label>
+                {{ donation_form.donation_center|add_class:"form-select" }}
+                {% if donation_form.donation_center.errors %}
+                  <div class="text-danger">{{ donation_form.donation_center.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.nurse.id_for_label }}" class="form-label">
+                  <i class="fas fa-user-nurse"></i> Preferred Nurse
+                </label>
+                {{ donation_form.nurse|add_class:"form-select" }}
+                {% if donation_form.nurse.errors %}
+                  <div class="text-danger">{{ donation_form.nurse.errors }}</div>
+                {% endif %}
+              </div>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Time</span>
-              <span class="summary-value" id="summaryTime">Not selected</span>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.appointment_date.id_for_label }}" class="form-label">
+                  <i class="fas fa-calendar-day"></i> Appointment Date
+                </label>
+                {{ donation_form.appointment_date|add_class:"form-control"|attr:"type:date"|attr:"min:today" }}
+                {% if donation_form.appointment_date.errors %}
+                  <div class="text-danger">{{ donation_form.appointment_date.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="{{ donation_form.appointment_time.id_for_label }}" class="form-label">
+                  <i class="fas fa-clock"></i> Appointment Time
+                </label>
+                {{ donation_form.appointment_time|add_class:"form-select" }}
+                {% if donation_form.appointment_time.errors %}
+                  <div class="text-danger">{{ donation_form.appointment_time.errors }}</div>
+                {% endif %}
+              </div>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Donation Volume</span>
-              <span class="summary-value" id="summaryUnit">450 ml</span>
+            
+            <div class="row">
+              <div class="col-md-12 mb-3">
+                <label for="{{ donation_form.unit.id_for_label }}" class="form-label">
+                  <i class="fas fa-flask"></i> Donation Volume (ml)
+                </label>
+                {{ donation_form.unit|add_class:"form-select" }}
+                {% if donation_form.unit.errors %}
+                  <div class="text-danger">{{ donation_form.unit.errors }}</div>
+                {% endif %}
+                <small class="form-text text-muted">
+                  <i class="fas fa-info-circle"></i> Standard donation is 450ml
+                </small>
+              </div>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Estimated Duration</span>
-              <span class="summary-value">45-60 minutes</span>
+            
+            <!-- Summary Section -->
+            <div class="alert alert-info mt-4" id="summarySection" style="display: none;">
+              <h6 class="alert-heading"><i class="fas fa-clipboard-list"></i> Donation Summary</h6>
+              <hr>
+              <div id="summaryContent"></div>
             </div>
-          </div>
-
-          <div class="alert-medical success mt-3">
-            <i class="fas fa-lightbulb"></i>
-            <div>
-              <small><strong>Preparation Tips:</strong> Stay hydrated, eat iron-rich foods, and get good sleep before donation.</small>
+            
+            <!-- Submit Button -->
+            <div class="text-center mt-4">
+              <button type="submit" class="btn btn-primary btn-lg px-5" 
+                      {% if active_donation %}disabled{% endif %}>
+                <i class="fas fa-calendar-check"></i> 
+                {% if active_donation %}
+                  Active Donation Exists
+                {% else %}
+                  Schedule Donation
+                {% endif %}
+              </button>
+              <a href="{% url 'donor-dashboard' %}" class="btn btn-secondary btn-lg px-5 ms-2">
+                <i class="fas fa-times"></i> Cancel
+              </a>
             </div>
-          </div>
-        </div>
-
-        <!-- Quick Stats -->
-        <div class="medical-card mt-3">
-          <h6 class="section-title"><i class="fas fa-chart-line"></i> Your Donation History</h6>
-          <div class="summary-item">
-            <span class="summary-label">Total Donations</span>
-            <span class="summary-value">{{ total_donations|default:"0" }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Last Donation</span>
-            <span class="summary-value">{{ last_donation|default:"Never" }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Next Eligible</span>
-            <span class="summary-value">{{ next_eligible_date|default:"Now" }}</span>
-          </div>
+          </form>
+          {% endif %}
         </div>
       </div>
+      {% endif %}
+      
+      <!-- Additional Information Card (Conditional based on safety status) -->
+      <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="fas fa-info-circle"></i> Important Information</h5>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0">
+            {% if is_unsafe or has_unsafe_donation %}
+            <li class="mb-2 text-danger">
+              <i class="fas fa-exclamation-circle"></i> 
+              <strong>You are permanently deferred from donating blood.</strong> 
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-phone-alt"></i> 
+              <strong>Contact Blood Bank:</strong> +254 700 000 000
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-clock"></i> 
+              <strong>Counseling Hours:</strong> Mon-Fri, 9:00 AM - 4:00 PM
+            </li>
+            {% else %}
+            <li class="mb-2">
+              <i class="fas fa-check-circle text-success"></i> 
+              {% if bloodgroup_verified %}
+                <strong>Your blood group ({{ verified_bloodgroup }}) is verified</strong> and will be used for this donation.
+              {% else %}
+                <strong>First-time donors:</strong> Blood group is optional and will be verified by nurse during donation.
+              {% endif %}
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-clock text-warning"></i> 
+              Please arrive 15 minutes before your scheduled appointment time.
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-utensils text-info"></i> 
+              Eat a healthy meal and drink plenty of water before donating.
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-id-card text-primary"></i> 
+              Bring a valid ID with you to the donation center.
+            </li>
+            {% endif %}
+            <li class="mb-2">
+              <i class="fas fa-phone-alt text-success"></i> 
+              Emergency Contact: <strong>+254 700 000 000</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
     </div>
-  {% endif %}
+  </div>
 </div>
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+.section-header {
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+  margin-bottom: 15px;
+}
+
+.section-header h5 {
+  margin-bottom: 0;
+}
+
+.card-header.bg-success {
+  background-color: #28a745 !important;
+}
+
+.card-header.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+/* Countdown timer styles */
+.countdown-timer {
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 10px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.countdown-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #007bff;
+  line-height: 1.2;
+  animation: pulse 2s infinite;
+}
+
+.countdown-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Form field focus effects */
+.form-control:focus, .form-select:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Read-only field styling */
+input[readonly].bg-light {
+  background-color: #e9ecef !important;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+  }
+  
+  .countdown-number {
+    font-size: 1.8rem;
+  }
+  
+  .d-flex .fa-3x {
+    font-size: 2rem;
+  }
+}
+
+/* Unsafe donor banner styling */
+.alert-danger {
+  border-left: 5px solid #dc3545;
+  background-color: #fff3f3;
+}
+
+.alert-danger .fa-exclamation-triangle {
+  color: #dc3545;
+}
+
+/* First-time donor welcome message */
+.alert-primary {
+  border-left: 5px solid #007bff;
+  background-color: #e7f1ff;
+}
+</style>
+
 <script>
-  // Get form elements - CORRECTED IDs
-  const nurseDropdown = document.getElementById('{{ donation_form.nurse.id_for_label }}');
-  const donationCenterSelect = document.getElementById('{{ donation_form.donation_center.id_for_label }}');
-  const appointmentDateInput = document.getElementById('{{ donation_form.appointment_date.id_for_label }}');
-  const appointmentTimeInput = document.getElementById('{{ donation_form.appointment_time.id_for_label }}');
-  const unitInput = document.getElementById('{{ donation_form.unit.id_for_label }}');
-  const timeSlotsGrid = document.getElementById('timeSlotsGrid');
-  const timeSlotMessage = document.getElementById('timeSlotMessage');
-  const submitBtn = document.getElementById('submitBtn');
+document.addEventListener('DOMContentLoaded', function() {
+  // ==========================================
+  // COUNTDOWN TIMER FUNCTIONALITY
+  // ==========================================
+  {% if has_safe_donation and donor.last_donation_date and days_until_next > 0 %}
+  // Set the date we're counting down to
+  const nextDonationDate = new Date("{{ next_donation_date|date:'Y-m-d' }}T00:00:00").getTime();
   
-  // Summary elements
-  const summaryCenter = document.getElementById('summaryCenter');
-  const summaryNurse = document.getElementById('summaryNurse');
-  const summaryDate = document.getElementById('summaryDate');
-  const summaryTime = document.getElementById('summaryTime');
-  const summaryUnit = document.getElementById('summaryUnit');
-
-  // Steps
-  const steps = document.querySelectorAll('.step');
-  const stepElements = {
-    1: document.getElementById('step1'),
-    2: document.getElementById('step2'),
-    3: document.getElementById('step3'),
-    4: document.getElementById('step4')
-  };
-
-  // Time slots in 24-hour format
-  const timeSlots24h = ["09:00", "10:30", "12:00", "14:00", "16:00"];
+  // Update the count down every 1 second
+  const countdownTimer = setInterval(function() {
+    // Get today's date and time
+    const now = new Date().getTime();
+    
+    // Find the distance between now and the count down date
+    const distance = nextDonationDate - now;
+    
+    // Time calculations for days, hours, minutes and seconds
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    // Update the HTML elements
+    document.getElementById("days").innerHTML = days;
+    document.getElementById("hours").innerHTML = hours;
+    document.getElementById("minutes").innerHTML = minutes;
+    document.getElementById("seconds").innerHTML = seconds;
+    
+    // If the count down is finished, reload the page to show eligible message
+    if (distance < 0) {
+      clearInterval(countdownTimer);
+      location.reload();
+    }
+  }, 1000);
+  {% endif %}
   
-  // Time slot labels in 12-hour format
-  const timeLabels = {
-    "09:00": "9:00 AM",
-    "10:30": "10:30 AM", 
-    "12:00": "12:00 PM",
-    "14:00": "2:00 PM",
-    "16:00": "4:00 PM"
-  };
-
-  let currentStep = 1;
-  let flatpickrInstance = null;
-  let bookedSlots = [];
-
-  /**
-   * Update progress steps
-   */
-  function updateProgressSteps() {
-    steps.forEach((step, index) => {
-      if (index + 1 <= currentStep) {
-        step.classList.add('active');
-      } else {
-        step.classList.remove('active');
-      }
-    });
+  // ==========================================
+  // FORM HANDLING (Only for eligible donors)
+  // ==========================================
+  {% if not is_unsafe and not has_unsafe_donation %}
+  // Get form elements
+  const donationCenter = document.getElementById('{{ donation_form.donation_center.id_for_label }}');
+  const nurseSelect = document.getElementById('{{ donation_form.nurse.id_for_label }}');
+  const appointmentDate = document.getElementById('{{ donation_form.appointment_date.id_for_label }}');
+  const appointmentTime = document.getElementById('{{ donation_form.appointment_time.id_for_label }}');
+  const unitSelect = document.getElementById('{{ donation_form.unit.id_for_label }}');
+  const summarySection = document.getElementById('summarySection');
+  const summaryContent = document.getElementById('summaryContent');
+  
+  // Blood group verification status
+  const bloodgroupVerified = {{ bloodgroup_verified|yesno:"true,false" }};
+  const verifiedBloodgroup = '{{ verified_bloodgroup|default:"" }}';
+  
+  console.log('Donation form loaded');
+  console.log('Blood group verified:', bloodgroupVerified);
+  console.log('First time donor:', {{ is_first_time_donor|yesno:"true,false" }});
+  
+  if (bloodgroupVerified) {
+    console.log('Verified blood group:', verifiedBloodgroup);
   }
-
-  /**
-   * Show/hide steps
-   */
-  function showStep(stepNumber) {
-    Object.keys(stepElements).forEach(key => {
-      if (parseInt(key) === stepNumber) {
-        stepElements[key].style.display = 'block';
-      } else {
-        stepElements[key].style.display = 'none';
-      }
-    });
-    currentStep = stepNumber;
-    updateProgressSteps();
-  }
-
-  /**
-   * Render time slots with booking status
-   */
-  function renderTimeSlots() {
-    if (!timeSlotsGrid) return;
-    
-    timeSlotsGrid.innerHTML = '';
-    
-    if (bookedSlots.length === timeSlots24h.length) {
-      timeSlotMessage.textContent = 'No available time slots for this date. Please select another date.';
-      timeSlotMessage.className = 'mb-2 text-danger';
-      return;
+  
+  // Function to update nurse options based on selected center
+  function updateNurses() {
+    const centerId = donationCenter.value;
+    if (centerId) {
+      nurseSelect.disabled = false;
+    } else {
+      nurseSelect.disabled = true;
     }
-    
-    timeSlotMessage.textContent = 'Select your preferred time slot';
-    timeSlotMessage.className = 'mb-2 text-muted';
-    
-    timeSlots24h.forEach(slot => {
-      const isBooked = bookedSlots.includes(slot);
-      const timeSlotElement = document.createElement('div');
-      timeSlotElement.className = `time-slot ${isBooked ? 'booked' : ''} ${appointmentTimeInput.value === slot ? 'selected' : ''}`;
-      timeSlotElement.innerHTML = `
-        <div style="font-size: 1.1rem; font-weight: 700;">${timeLabels[slot]}</div>
-        <small style="font-size: 0.8rem;">${slot.split(':')[0] < 12 ? 'Morning' : 'Afternoon'}</small>
-      `;
-      
-      if (!isBooked) {
-        timeSlotElement.style.cursor = 'pointer';
-        timeSlotElement.addEventListener('click', () => {
-          // Remove selected class from all slots
-          document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
-          // Add selected class to clicked slot
-          timeSlotElement.classList.add('selected');
-          // Update time input
-          appointmentTimeInput.value = slot;
-          updateSummary();
-          enableSubmitButton();
-        });
-      } else {
-        timeSlotElement.style.cursor = 'not-allowed';
-      }
-      
-      timeSlotsGrid.appendChild(timeSlotElement);
-    });
   }
-
-  /**
-   * Fetch booked time slots
-   */
-  async function fetchBookedSlots() {
-    if (!nurseDropdown.value || !appointmentDateInput.value) {
-      bookedSlots = [];
-      renderTimeSlots();
-      return;
-    }
-
-    try {
-      const response = await fetch(`/nurse/ajax/booked-timeslots/?nurse_id=${nurseDropdown.value}&date=${appointmentDateInput.value}`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Booked slots:', data.booked_times);
-        bookedSlots = data.booked_times || [];
-      } else {
-        bookedSlots = [];
-      }
-    } catch (error) {
-      console.error('Error fetching booked slots:', error);
-      bookedSlots = [];
-    }
-    
-    renderTimeSlots();
-  }
-
-  /**
-   * Update summary
-   */
+  
+  // Function to update summary
   function updateSummary() {
-    if (summaryCenter) {
-      summaryCenter.textContent = donationCenterSelect.options[donationCenterSelect.selectedIndex]?.text || 'Not selected';
-    }
-    if (summaryNurse) {
-      summaryNurse.textContent = nurseDropdown.options[nurseDropdown.selectedIndex]?.text || 'Not selected';
-    }
-    if (summaryDate) {
-      if (appointmentDateInput.value) {
-        const dateObj = new Date(appointmentDateInput.value + 'T00:00:00');
-        summaryDate.textContent = dateObj.toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric' 
-        });
-      } else {
-        summaryDate.textContent = 'Not selected';
-      }
-    }
-    if (summaryTime) {
-      summaryTime.textContent = appointmentTimeInput.value ? timeLabels[appointmentTimeInput.value] : 'Not selected';
-    }
-    if (summaryUnit && unitInput) {
-      summaryUnit.textContent = unitInput.value ? unitInput.value + ' ml' : '450 ml';
+    const center = donationCenter.options[donationCenter.selectedIndex]?.text;
+    const nurse = nurseSelect.options[nurseSelect.selectedIndex]?.text;
+    const date = appointmentDate.value;
+    const time = appointmentTime.options[appointmentTime.selectedIndex]?.text;
+    const unit = unitSelect.options[unitSelect.selectedIndex]?.text;
+    
+    if (center && nurse && date && time && unit) {
+      let summaryHtml = `
+        <div class="row">
+          <div class="col-sm-6"><strong>Center:</strong> ${center}</div>
+          <div class="col-sm-6"><strong>Nurse:</strong> ${nurse}</div>
+          <div class="col-sm-6 mt-2"><strong>Date:</strong> ${new Date(date).toLocaleDateString()}</div>
+          <div class="col-sm-6 mt-2"><strong>Time:</strong> ${time}</div>
+          <div class="col-sm-6 mt-2"><strong>Volume:</strong> ${unit}</div>
+          <div class="col-sm-6 mt-2"><strong>Blood Group:</strong> ${bloodgroupVerified ? verifiedBloodgroup + ' (Verified)' : 'To be verified'}</div>
+        </div>
+      `;
+      summaryContent.innerHTML = summaryHtml;
+      summarySection.style.display = 'block';
+    } else {
+      summarySection.style.display = 'none';
     }
   }
-
-  /**
-   * Enable/disable submit button
-   */
-  function enableSubmitButton() {
-    if (submitBtn) {
-      const isComplete = donationCenterSelect?.value && 
-                        nurseDropdown?.value && 
-                        appointmentDateInput?.value && 
-                        appointmentTimeInput?.value &&
-                        unitInput?.value;
-      submitBtn.disabled = !isComplete;
-      console.log('Submit enabled:', isComplete);
-    }
-  }
-
-  function disableSubmitButton() {
-    if (submitBtn) submitBtn.disabled = true;
-  }
-
-  /**
-   * Step 1: Center selection
-   */
-  if (donationCenterSelect) {
-    donationCenterSelect.addEventListener('change', async function() {
-      console.log('Center changed:', this.value);
-      
-      if (!this.value) {
-        nurseDropdown.innerHTML = '<option value="">Select Donation Center first</option>';
-        nurseDropdown.disabled = false;
-        appointmentDateInput.disabled = true;
-        appointmentTimeInput.value = '';
-        showStep(1);
-        updateSummary();
-        disableSubmitButton();
-      } else {
-        try {
-          const response = await fetch(`/ajax/get-nurses/?center_id=${this.value}`);
-          const data = await response.json();
-          console.log('Nurses loaded:', data.nurses);
-          
-          let options = '<option value="">Select a Nurse</option>';
-          data.nurses.forEach(nurse => {
-            options += `<option value="${nurse.id}">${nurse.name}</option>`;
-          });
-          
-          nurseDropdown.innerHTML = options;
-          nurseDropdown.disabled = false;
-          appointmentDateInput.disabled = true;
-          appointmentTimeInput.value = '';
-          showStep(2);
-          updateSummary();
-          disableSubmitButton();
-        } catch (error) {
-          console.error('Error fetching nurses:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to load nurses. Please try again.'
-          });
-        }
-      }
-    });
-  }
-
-  /**
-   * Step 2: Nurse selection
-   */
-  if (nurseDropdown) {
-    nurseDropdown.addEventListener('change', function() {
-      console.log('Nurse changed:', this.value);
-      
-      if (this.value) {
-        appointmentDateInput.disabled = false;
-        showStep(3);
-        
-        // Initialize flatpickr
-        if (!flatpickrInstance) {
-          flatpickrInstance = flatpickr(appointmentDateInput, {
-            minDate: "today",
-            dateFormat: "Y-m-d",
-            disableMobile: true,
-            onChange: function(selectedDates, dateStr) {
-              console.log('Date changed:', dateStr);
-              if (dateStr) {
-                fetchBookedSlots();
-                showStep(4);
-              }
-            }
-          });
-        }
-        updateSummary();
-        disableSubmitButton();
-      } else {
-        appointmentDateInput.disabled = true;
-        appointmentTimeInput.value = '';
-        bookedSlots = [];
-        renderTimeSlots();
-        showStep(2);
-        updateSummary();
-        disableSubmitButton();
-      }
-    });
-  }
-
-  /**
-   * Update donation volume summary when changed
-   */
-  if (unitInput) {
-    unitInput.addEventListener('input', function() {
+  
+  // Add event listeners if elements exist
+  if (donationCenter) {
+    donationCenter.addEventListener('change', function() {
+      updateNurses();
       updateSummary();
-      enableSubmitButton();
     });
   }
-
-  /**
-   * Form submission
-   */
-  const form = document.getElementById('appointmentForm');
+  
+  if (nurseSelect) {
+    nurseSelect.addEventListener('change', updateSummary);
+  }
+  
+  if (appointmentDate) {
+    appointmentDate.addEventListener('change', updateSummary);
+  }
+  
+  if (appointmentTime) {
+    appointmentTime.addEventListener('change', updateSummary);
+  }
+  
+  if (unitSelect) {
+    unitSelect.addEventListener('change', updateSummary);
+  }
+  
+  // Form validation
+  const form = document.getElementById('donationForm');
   if (form) {
     form.addEventListener('submit', function(e) {
-      console.log('Form submission attempt');
-      console.log('Form data:', {
-        center: donationCenterSelect?.value,
-        nurse: nurseDropdown?.value,
-        date: appointmentDateInput?.value,
-        time: appointmentTimeInput?.value,
-        unit: unitInput?.value
-      });
-      
-      // Validate required fields
-      const missingFields = [];
-      if (!donationCenterSelect.value) missingFields.push('Donation Center');
-      if (!nurseDropdown.value) missingFields.push('Nurse');
-      if (!appointmentDateInput.value) missingFields.push('Date');
-      if (!appointmentTimeInput.value) missingFields.push('Time');
-      if (!unitInput?.value) missingFields.push('Donation Volume');
-      
-      if (missingFields.length > 0) {
+      if (!donationCenter.value || !nurseSelect.value || !appointmentDate.value || !appointmentTime.value) {
         e.preventDefault();
-        Swal.fire({
-          icon: 'warning',
-          title: 'Incomplete Form',
-          html: `Please complete the following fields:<br><strong>${missingFields.join(', ')}</strong>`,
-          confirmButtonColor: '#dc3545'
-        });
-        return false;
+        alert('Please fill in all required fields');
       }
-
-      // Show loading state
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scheduling...';
-      submitBtn.disabled = true;
-      
-      return true;
     });
   }
-
-  /**
-   * Initialize
-   */
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing donation form...');
-    showStep(1);
-    updateSummary();
-    disableSubmitButton();
-    
-    // Restore state if form has errors
-    if (donationCenterSelect?.value) {
-      donationCenterSelect.dispatchEvent(new Event('change'));
-      if (nurseDropdown?.value) {
-        setTimeout(() => {
-          nurseDropdown.dispatchEvent(new Event('change'));
-          if (appointmentDateInput?.value) {
-            setTimeout(() => {
-              fetchBookedSlots();
-            }, 100);
-          }
-        }, 100);
-      }
-    }
-  });
+  
+  // Set min date for appointment date input
+  if (appointmentDate) {
+    const today = new Date().toISOString().split('T')[0];
+    appointmentDate.setAttribute('min', today);
+  }
+  {% endif %}
+  
+  // Log any form errors from Django
+  {% if donation_form.errors %}
+  console.log('Form errors:', {{ donation_form.errors.as_json|safe }});
+  {% endif %}
+  
+  // Log donor status
+  console.log('Donor unsafe: {{ is_unsafe|default:"false" }}');
+  console.log('Has unsafe donation: {{ has_unsafe_donation|default:"false" }}');
+  console.log('Has safe donation: {{ has_safe_donation|default:"false" }}');
+  console.log('First time donor: {{ is_first_time_donor|default:"false" }}');
+});
 </script>
+
 {% endblock %}

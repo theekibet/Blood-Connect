@@ -22,6 +22,10 @@ class NurseLoginForm(AuthenticationForm):
 # -------------------------
 # Signup Form (User + Nurse)
 # -------------------------
+
+# -------------------------
+# Signup Form (User + Nurse)
+# -------------------------
 class NurseSignupForm(forms.ModelForm):
     # -------------------------
     # User-related fields
@@ -68,59 +72,59 @@ class NurseSignupForm(forms.ModelForm):
     )
 
     # -------------------------
-    # Dropdown for Donation Center
+    # Nurse-specific fields (match your model)
     # -------------------------
+    license_number = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g., RN123456',
+            'pattern': '[A-Z0-9]{5,30}',
+            'title': '5-30 uppercase letters and numbers only'
+        }),
+        help_text='Your official nurse registration/license number (5-30 alphanumeric characters)'
+    )
+    
     donation_center = forms.ModelChoiceField(
         queryset=DonationCenter.objects.all(),
         empty_label="-- Select Donation Center --",
         widget=forms.Select(attrs={'class': 'form-select'}),
-        help_text="Select the donation center you'll be assigned to"
+        help_text="Select the donation center you'll be assigned to",
+        required=False
+    )
+    
+    phone = forms.CharField(
+        max_length=15,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '+1234567890',
+            'pattern': r'^\+?1?\d{9,15}$',
+            'title': 'Enter phone number: +999999999 (9-15 digits)'
+        }),
+        help_text='Enter phone number in international format: +999999999'
+    )
+    
+    profile_pic = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*'
+        }),
+        help_text='Upload a professional photo (max 5MB, JPG/PNG)'
     )
 
     class Meta:
         model = Nurse
         fields = [
-            'registration_number',
-            'specialization',
-            'donation_center',
+            'license_number',  # Changed from registration_number
+            'donation_center',  # Changed from center to match form field name
             'phone',
             'profile_pic',
-            'bio',
+            # Removed: specialization, bio
         ]
-        widgets = {
-            'registration_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'e.g., RN123456',
-                'pattern': '[A-Z0-9]{5,30}',
-                'title': '5-30 uppercase letters and numbers only'
-            }),
-            'specialization': forms.Select(attrs={'class': 'form-select'}),
-            'phone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '+1234567890',
-                'pattern': r'^\+?1?\d{9,15}$',
-                'title': 'Enter phone number: +999999999 (9-15 digits)'
-            }),
-            'bio': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'maxlength': '500',
-                'placeholder': 'Tell us about your professional background (max 500 characters)'
-            }),
-            'profile_pic': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': 'image/*'
-            })
-        }
-        help_texts = {
-            'registration_number': 'Your official nurse registration/license number (5-30 alphanumeric characters)',
-            'phone': 'Enter phone number in international format: +999999999',
-            'bio': 'Brief professional bio (max 500 characters)',
-            'profile_pic': 'Upload a professional photo (max 5MB, JPG/PNG)'
-        }
 
     # -------------------------
-    # Validation
+    # Validation Methods
     # -------------------------
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
@@ -158,7 +162,7 @@ class NurseSignupForm(forms.ModelForm):
         if not re.match(r"^[a-zA-Z\s\-']+$", first_name):
             raise ValidationError("First name can only contain letters, spaces, hyphens, and apostrophes.")
         
-        return first_name.title()  # Capitalize properly
+        return first_name.title()
 
     def clean_last_name(self):
         last_name = self.cleaned_data['last_name'].strip()
@@ -170,7 +174,7 @@ class NurseSignupForm(forms.ModelForm):
         if not re.match(r"^[a-zA-Z\s\-']+$", last_name):
             raise ValidationError("Last name can only contain letters, spaces, hyphens, and apostrophes.")
         
-        return last_name.title()  # Capitalize properly
+        return last_name.title()
 
     def clean_password1(self):
         pwd1 = self.cleaned_data.get("password1")
@@ -201,22 +205,22 @@ class NurseSignupForm(forms.ModelForm):
         
         return pwd2
 
-    def clean_registration_number(self):
-        reg_num = self.cleaned_data['registration_number'].strip().upper()
+    def clean_license_number(self):
+        license_num = self.cleaned_data['license_number'].strip().upper()
         
         # Check format
-        if not re.match(r'^[A-Z0-9]{5,30}$', reg_num):
+        if not re.match(r'^[A-Z0-9]{5,30}$', license_num):
             raise ValidationError(
-                "Registration number must be 5-30 characters and contain only uppercase letters and numbers."
+                "License number must be 5-30 characters and contain only uppercase letters and numbers."
             )
         
         # Check uniqueness
-        if Nurse.objects.filter(registration_number=reg_num).exists():
+        if Nurse.objects.filter(license_number=license_num).exists():
             raise ValidationError(
-                "This registration number is already in use. If this is your number, please contact support."
+                "This license number is already in use. If this is your number, please contact support."
             )
         
-        return reg_num
+        return license_num
 
     def clean_phone(self):
         phone = self.cleaned_data['phone'].strip()
@@ -235,14 +239,6 @@ class NurseSignupForm(forms.ModelForm):
             raise ValidationError("This phone number is already registered.")
         
         return phone_clean
-
-    def clean_bio(self):
-        bio = self.cleaned_data.get('bio', '').strip()
-        
-        if bio and len(bio) > 500:
-            raise ValidationError("Bio cannot exceed 500 characters.")
-        
-        return bio
 
     def clean_profile_pic(self):
         profile_pic = self.cleaned_data.get('profile_pic')
@@ -277,14 +273,13 @@ class NurseSignupForm(forms.ModelForm):
 
         nurse = super().save(commit=False)
         nurse.user = user
-        nurse.first_name = self.cleaned_data['first_name']
-        nurse.last_name = self.cleaned_data['last_name']
-        nurse.is_approved = False  # Require admin approval
+        nurse.is_active = True  # Set default active status
         
         if commit:
             nurse.save()
         
         return nurse
+
 
 # -------------------------
 # Edit Forms
@@ -318,18 +313,18 @@ class NurseUserForm(forms.ModelForm):
 
 class NurseForm(forms.ModelForm):
     # READ-ONLY fields for display
-    registration_number = forms.CharField(
+    license_number = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'readonly': 'readonly',
             'style': 'background-color: #e9ecef; cursor: not-allowed;'
         }),
-        label="Registration Number (Cannot be changed)",
-        help_text="Your official nurse registration/license number is locked for verification purposes."
+        label="License Number (Cannot be changed)",
+        help_text="Your official nurse license number is locked for verification purposes."
     )
     
-    donation_center = forms.ModelChoiceField(
+    center = forms.ModelChoiceField(
         queryset=None,
         required=False,
         widget=forms.Select(attrs={
@@ -343,18 +338,11 @@ class NurseForm(forms.ModelForm):
 
     class Meta:
         model = Nurse
-        fields = ['phone', 'specialization', 'profile_pic', 'bio', 'registration_number', 'donation_center']
+        fields = ['phone', 'profile_pic', 'license_number', 'center']  # Removed specialization, bio
         widgets = {
             'phone': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter your phone number'
-            }),
-            'specialization': forms.Select(attrs={'class': 'form-control'}),
-            'bio': forms.Textarea(attrs={
-                'rows': 3,
-                'class': 'form-control',
-                'maxlength': '500',
-                'placeholder': 'Tell us about yourself...'
             }),
         }
 
@@ -364,13 +352,18 @@ class NurseForm(forms.ModelForm):
         # Import here to avoid circular imports
         from blood.models import DonationCenter
         
-        # Set the queryset for donation_center
-        self.fields['donation_center'].queryset = DonationCenter.objects.all()
+        # Set the queryset for center
+        self.fields['center'].queryset = DonationCenter.objects.all()
         
-        # Make registration_number and donation_center truly read-only
+        # Make license_number and center truly read-only
         if self.instance and self.instance.pk:
-            self.fields['registration_number'].disabled = True
-            self.fields['donation_center'].disabled = True
+            self.fields['license_number'].disabled = True
+            self.fields['center'].disabled = True
+        
+        # Pre-populate the read-only fields with instance data
+        if self.instance and self.instance.pk:
+            self.fields['license_number'].initial = self.instance.license_number
+            self.fields['center'].initial = self.instance.center
 # -------------------------
 # Appointment Form
 # -------------------------
@@ -403,15 +396,11 @@ class AppointmentForm(forms.ModelForm):
         fields = ['donation_center', 'nurse', 'date']
 
     def __init__(self, *args, **kwargs):
-        self.patient_instance = kwargs.pop('patient_instance', None)
         self.donor_instance = kwargs.pop('donor_instance', None)
         center = kwargs.pop('center', None)
 
-        # Assign patient or donor to the model instance before calling super
         if 'instance' not in kwargs or kwargs['instance'] is None:
             kwargs['instance'] = Appointment()
-        if self.patient_instance:
-            kwargs['instance'].patient = self.patient_instance
             kwargs['instance'].donor = None
         elif self.donor_instance:
             kwargs['instance'].donor = self.donor_instance

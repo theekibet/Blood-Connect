@@ -1,6 +1,5 @@
 from django.urls import path, include
 from . import views
-from patient import views as patient_views
 from blood.views import save_user_location
 from nurse import views as nurse_views
 
@@ -17,9 +16,6 @@ urlpatterns = [
     path('donation-history/', views.donation_history_view, name='donation-history'),
     path('cancel-donation/<int:donation_id>/', views.cancel_donation_request_view, name='cancel-donation'),
 
-    # Requests
-    path("make-request/", views.donor_make_request_view, name="donor-make-request"),
-    path('cancel-request/<int:request_id>/', views.donor_cancel_request_view, name='cancel-donor-request'),
     
     
     # Profile
@@ -40,12 +36,11 @@ urlpatterns = [
     path('resources/', views.donor_resources, name='donor-resources'),
 
     # AJAX
-    path('ajax/get-nurses/', patient_views.get_nurses_by_center, name='ajax_get_nurses'),
     path('ajax/booked-timeslots/', nurse_views.ajax_booked_timeslots, name='ajax_booked_timeslots'),
 
-    # Django auth (password reset, change, etc.)
+
     
-    path("request-history/", views.donor_request_history_view, name="donor-request-history"),
+    
     
 
 

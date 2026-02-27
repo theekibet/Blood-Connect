@@ -27,13 +27,34 @@
       {% endfor %}
     {% endif %}
 
+    <!-- Blood Group Verification Badge (if verified) -->
+    {% if donor.bloodgroup_verified %}
+    <div class="verification-badge text-center mb-3">
+      <span class="badge bg-success p-2">
+        <i class="fas fa-check-circle"></i> Blood Group Verified
+      </span>
+      <small class="d-block text-muted mt-1">
+        Verified by {{ donor.bloodgroup_verified_by.get_full_name|default:"Staff" }} 
+        on {{ donor.bloodgroup_verified_at|date:"M d, Y" }}
+      </small>
+    </div>
+    {% endif %}
+
     <!-- Profile details table -->
     <div class="profile-info">
       <table>
         <tbody>
           <tr>
             <th>Blood Group</th>
-            <td>{{ donor.bloodgroup|default:"Not Provided" }}</td>
+            <td>
+              {{ donor.bloodgroup|default:"Not Provided" }}
+              {% if donor.bloodgroup_verified %}
+                <i class="fas fa-check-circle text-success ms-1" 
+                   title="Verified by {{ donor.bloodgroup_verified_by.get_full_name }} on {{ donor.bloodgroup_verified_at|date:'M d, Y' }}"></i>
+              {% else %}
+                <i class="fas fa-clock text-warning ms-1" title="Pending verification (will be verified on first donation)"></i>
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th>County of Residence</th>
@@ -53,7 +74,12 @@
           </tr>
           <tr>
             <th>Points Earned</th>
-            <td>{{ donor.points }}</td>
+            <td>
+              {{ donor.points }}
+              {% if donor.points > 0 %}
+                <i class="fas fa-star text-warning ms-1" title="Reward points earned from donations"></i>
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th>Last Donation Date</th>
@@ -65,22 +91,79 @@
           </tr>
           <tr>
             <th>Days Until Next Donation</th>
-            <td>{{ days_until_next }}</td>
+            <td>
+              {% if days_until_next %}
+                {% if days_until_next == 0 %}
+                  <span class="text-success">Eligible now!</span>
+                {% elif days_until_next < 0 %}
+                  <span class="text-success">Eligible now!</span>
+                {% else %}
+                  {{ days_until_next }} days
+                {% endif %}
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <th>Current Location</th>
-            <td>{{ donor.location_name|default:"Not Set" }}</td>
+            <td>
+              {{ donor.location_name|default:"Not Set" }}
+              {% if donor.latitude and donor.longitude %}
+                <i class="fas fa-map-marker-alt text-info ms-1" 
+                   title="Coordinates: {{ donor.latitude|floatformat:4 }}, {{ donor.longitude|floatformat:4 }}"></i>
+              {% endif %}
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
+    <!-- Donation Statistics (Optional Enhancement) -->
+    {% if donor.donation_count > 0 %}
+    <div class="donation-stats mt-4 p-3 bg-light rounded">
+      <h6 class="text-center mb-3"><i class="fas fa-chart-bar"></i> Your Donation Impact</h6>
+      <div class="row text-center">
+        <div class="col-4">
+          <div class="stat-number h4">{{ donor.donation_count|default:"0" }}</div>
+          <div class="stat-label small">Total Donations</div>
+        </div>
+        <div class="col-4">
+          <div class="stat-number h4">{{ donor.total_units|default:"0" }}</div>
+          <div class="stat-label small">Units Donated</div>
+        </div>
+        <div class="col-4">
+          <div class="stat-number h4">{{ donor.lives_impacted|default:"0" }}</div>
+          <div class="stat-label small">Lives Impacted</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Edit Profile Button -->
     <div class="text-center mt-4">
-      <a href="{% url 'donor-edit-profile' %}" class="btn btn-edit">Edit Profile</a>
+      <a href="{% url 'donor-edit-profile' %}" class="btn btn-edit">
+        <i class="fas fa-edit"></i> Edit Profile
+      </a>
     </div>
 
   </div>
 </div>
+
+
+<script>
+// Add tooltip initialization if you're using Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Bootstrap tooltips if available
+  if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+  }
+  
+  console.log('Donor profile loaded - Blood group verified: {{ donor.bloodgroup_verified|yesno:"true,false" }}');
+});
+</script>
 
 {% endblock %}

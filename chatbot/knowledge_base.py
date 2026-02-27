@@ -1,6 +1,6 @@
 from blood.models import Stock, DonationCenter, StockUnit
 from donor.models import Donor, BloodDonate
-from patient.models import Patient, BloodRequest
+# # from patient.models import Patient, BloodRequest
 from nurse.models import Nurse, Appointment
 from django.contrib.auth.models import User
 from django.db.models import Count, Q, Sum
@@ -18,7 +18,7 @@ class BloodDonationKnowledgeBase:
         """Get current system statistics and context"""
         try:
             total_donors = Donor.objects.count()
-            total_patients = Patient.objects.count()
+            total_patients = 0
             total_nurses = Nurse.objects.count()
             total_centers = DonationCenter.objects.count()
             
@@ -44,7 +44,7 @@ class BloodDonationKnowledgeBase:
             
             context = {
                 'total_donors': total_donors,
-                'total_patients': total_patients,
+                'total_patients': 0,
                 'total_nurses': total_nurses,
                 'total_centers': total_centers,
                 'active_requests': active_requests,
@@ -295,48 +295,6 @@ class BloodDonationKnowledgeBase:
             return {'error': str(e)}
     
     @staticmethod
-    def get_patient_specific_info(patient):
-        """Get patient-specific information"""
-        try:
-            info = {
-                'username': patient.user.username,
-                'full_name': patient.user.get_full_name(),
-                'email': patient.user.email,
-                'bloodgroup': patient.bloodgroup,
-            }
-            
-            # Blood request history
-            requests = BloodRequest.objects.filter(
-                request_by_patient=patient
-            ).order_by('-date')[:5]
-            
-            info['total_requests'] = BloodRequest.objects.filter(
-                request_by_patient=patient
-            ).count()
-            
-            info['recent_requests'] = [
-                {
-                    'bloodgroup': req.bloodgroup,
-                    'status': req.status,
-                    'date': str(req.date),
-                    'units': req.unit,
-                    'center': req.donation_center.name if req.donation_center else 'N/A'
-                }
-                for req in requests
-            ]
-            
-            # Active requests
-            active_requests = BloodRequest.objects.filter(
-                request_by_patient=patient,
-                status__in=['pending', 'approved']
-            )
-            
-            info['active_requests_count'] = active_requests.count()
-            
-            return info
-        except Exception as e:
-            return {'error': str(e)}
-
 
 class IntentClassifier:
     """

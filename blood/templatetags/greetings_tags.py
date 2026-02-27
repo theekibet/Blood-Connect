@@ -1,6 +1,6 @@
 from django import template
 from blood.utils.greetings import (
-    get_nurse_greeting, get_patient_greeting, 
+    get_nurse_greeting,  
     get_donor_greeting, get_generic_greeting
 )
 

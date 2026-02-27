@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from blood.models import Notification   
+from utils.models import Notification 
 
 def create_notification(
     title,

@@ -63,7 +63,6 @@ class BloodTest(models.Model):
     
     def __str__(self):
         return f"Test for {self.blood_collection.barcode} - {self.result}"
-
 class LabTechnologistProfile(models.Model):
     """Lab Technologist profile"""
     
@@ -75,7 +74,7 @@ class LabTechnologistProfile(models.Model):
     employee_id = models.CharField(max_length=50, unique=True)
     profile_pic = models.ImageField(upload_to='labtech_profiles/', null=True, blank=True)
     center = models.ForeignKey(
-        DonationCenter,
+        'blood.DonationCenter',  # Use string reference
         on_delete=models.SET_NULL, 
         null=True,
         blank=True
@@ -99,6 +98,8 @@ class LabTechnologistProfile(models.Model):
 
     def clean(self):
         """Validate that user doesn't already have another profile"""
+        from django.core.exceptions import ValidationError  # Move import to top of method
+        
         super().clean()
         
         if not self.user:
@@ -107,27 +108,20 @@ class LabTechnologistProfile(models.Model):
         user = self.user
         
         # Check for existing profiles
-        if hasattr(user, 'patient') and user.patient and (not self.pk or user.patient != getattr(self, 'patient_ptr', None)):
-            from django.core.exceptions import ValidationError
-            raise ValidationError({
-                'user': f"User '{user.username}' already has a Patient profile. A user cannot have multiple profiles."
-            })
+        # Removed the patient check since patient app is gone
         
         if hasattr(user, 'donor') and user.donor and (not self.pk or user.donor != getattr(self, 'donor_ptr', None)):
-            from django.core.exceptions import ValidationError
             raise ValidationError({
                 'user': f"User '{user.username}' already has a Donor profile. A user cannot have multiple profiles."
             })
         
         if hasattr(user, 'nurse') and user.nurse and (not self.pk or user.nurse != getattr(self, 'nurse_ptr', None)):
-            from django.core.exceptions import ValidationError
             raise ValidationError({
                 'user': f"User '{user.username}' already has a Nurse profile. A user cannot have multiple profiles."
             })
         
         if hasattr(user, 'blood_bank_tech_profile') and user.blood_bank_tech_profile and \
            (not self.pk or user.blood_bank_tech_profile != getattr(self, 'bloodbanktechprofile_ptr', None)):
-            from django.core.exceptions import ValidationError
             raise ValidationError({
                 'user': f"User '{user.username}' already has a Blood Bank Technician profile. A user cannot have multiple profiles."
             })

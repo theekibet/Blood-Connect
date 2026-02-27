@@ -1,33 +1,25 @@
 from django.contrib import admin
-from .models import BloodBankTechProfile, BloodDispatch
+from .models import BloodBankTechProfile, BloodDispatch, InventoryAlert, HospitalCommunication
 
 @admin.register(BloodBankTechProfile)
 class BloodBankTechProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'employee_id', 'center', 'phone', 'is_active']
     list_filter = ['center', 'is_active']
-    search_fields = ['user__username', 'user__email', 'employee_id']
-    raw_id_fields = ['user']
+    search_fields = ['user__username', 'employee_id', 'phone']
 
 @admin.register(BloodDispatch)
 class BloodDispatchAdmin(admin.ModelAdmin):
-    list_display = ['id', 'stock_unit', 'blood_request', 'dispatch_date', 'collected_by_name']
-    list_filter = ['dispatch_date']
-    search_fields = [
-        'blood_request__request_by_patient__user__username',
-        'stock_unit__barcode',
-        'collected_by_name'
-    ]
-    raw_id_fields = ['stock_unit', 'blood_request']
+    list_display = ['id', 'stock_unit', 'hospital', 'dispatch_date', 'collected_by_name', 'status']
+    list_filter = ['status', 'hospital']
+    search_fields = ['hospital__name', 'collected_by_name']
     readonly_fields = ['dispatch_date']
-    
-    fieldsets = (
-        ('Dispatch Information', {
-            'fields': ('stock_unit', 'blood_request', 'dispatched_by')
-        }),
-        ('Collection Details', {
-            'fields': ('collected_by_name', 'collected_by_id', 'collection_time', 'notes')
-        }),
-        ('Metadata', {
-            'fields': ('dispatch_date',)
-        }),
-    )
+
+@admin.register(InventoryAlert)
+class InventoryAlertAdmin(admin.ModelAdmin):
+    list_display = ['center', 'alert_type', 'blood_group', 'is_resolved', 'created_at']
+    list_filter = ['alert_type', 'is_resolved', 'center']
+
+@admin.register(HospitalCommunication)
+class HospitalCommunicationAdmin(admin.ModelAdmin):
+    list_display = ['hospital', 'comm_type', 'subject', 'sent_at', 'read_at']
+    list_filter = ['comm_type', 'hospital']

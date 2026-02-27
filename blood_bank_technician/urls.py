@@ -8,6 +8,7 @@ urlpatterns = [
     path('signup/', views.signup_view, name='signup'),
     path('login/', views.login_view, name='login'),
 
+
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
@@ -23,10 +24,11 @@ urlpatterns = [
     path('unsafe-blood/', views.unsafe_blood, name='unsafe_blood'),
     path('pending-verification/', views.pending_verification, name='pending_verification'),
     
-    # Request management
+    # Hospital Request management - UPDATED: removed request_type, using uuid
     path('requests/pending/', views.pending_requests, name='pending_requests'),
     path('requests/approved/', views.approved_requests, name='approved_requests'),
-    path('requests/approve/<str:request_type>/<int:request_id>/', views.approve_request, name='approve_request'),
-    path('requests/reject/<str:request_type>/<int:request_id>/', views.reject_request, name='reject_request'),
-    path('requests/dispatch/<str:request_type>/<int:request_id>/', views.dispatch_request, name='dispatch_request'),
+    path('requests/approve/<uuid:request_id>/', views.approve_request, name='approve_request'),
+    path('requests/reject/<uuid:request_id>/', views.reject_request, name='reject_request'),
+    path('requests/dispatch/<uuid:request_id>/', views.dispatch_request, name='dispatch_request'),
+    path('requests/<uuid:request_id>/', views.request_detail, name='request_detail'),  # Added detail view
 ]

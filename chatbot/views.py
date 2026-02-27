@@ -31,8 +31,6 @@ def get_user_role(user):
         return 'donor'
     elif hasattr(user, 'nurse'):
         return 'nurse'
-    elif hasattr(user, 'patient'):
-        return 'patient'
     elif user.is_staff:
         return 'admin'
     return None
@@ -70,19 +68,6 @@ You can ask me about:
 • 📍 Other donation centers
 
 What would you like to know?""",
-        
-        'patient': f"""👋 Hello {name}! Welcome to the Blood Request System.
-
-**How can I assist you today?**
-
-You can ask me about:
-• 📋 Your blood request status
-• 🩸 Blood availability for your blood group
-• 📍 Nearest donation centers
-• 📅 Your appointment history
-• ⚕️ Blood transfusion information
-
-Feel free to ask!""",
         
         'admin': f"""👋 Hello Administrator {name}!
 
@@ -199,7 +184,6 @@ def generate_response(intent, context_data, user_message, user=None):
             response = f"""📊 **System Overview**
 
 • **Registered Donors:** {stats.get('total_donors', 0):,}
-• **Active Patients:** {stats.get('total_patients', 0):,}
 • **Nursing Staff:** {stats.get('total_nurses', 0)}
 • **Donation Centers:** {stats.get('total_centers', 0)}
 • **Active Blood Requests:** {stats.get('active_requests', 0)}
@@ -366,8 +350,7 @@ def generate_response(intent, context_data, user_message, user=None):
 
 **Personal Information:**
 • **Name:** {info.get('full_name', 'N/A')}
-• **Specialization:** {info.get('specialization', 'N/A')}
-• **Registration:** {info.get('registration_number', 'N/A')}
+• **License Number:** {info.get('license_number', 'N/A')}
 • **Center:** {info.get('donation_center', 'Not assigned')}
 
 **Today's Overview:**
@@ -394,33 +377,6 @@ def generate_response(intent, context_data, user_message, user=None):
                 response += "\n🚨 **Critical Stock Alerts:**\n"
                 for item in info['critical_stock']:
                     response += f"  • {item}\n"
-            
-            return response
-        
-        elif role == 'patient':
-            info = BloodDonationKnowledgeBase.get_patient_specific_info(user.patient)
-            
-            if 'error' in info:
-                return "❌ Unable to retrieve your profile information. Please try again."
-            
-            response = f"""👤 **Your Patient Profile**
-
-**Personal Information:**
-• **Name:** {info.get('full_name', 'N/A')}
-• **Blood Group:** {info.get('bloodgroup', 'Not set')} 🩸
-• **Email:** {info.get('email', 'N/A')}
-
-**Request Statistics:**
-• **Total Requests:** {info.get('total_requests', 0)}
-• **Active Requests:** {info.get('active_requests_count', 0)}
-
-"""
-            
-            if info.get('recent_requests'):
-                response += "**Recent Blood Requests:**\n"
-                for req in info['recent_requests'][:3]:
-                    status_emoji = {"pending": "⏳", "approved": "✅", "completed": "✔️", "rejected": "❌"}.get(req['status'], "📋")
-                    response += f"  {status_emoji} {req['bloodgroup']} - {req['status']} ({req['units']}ml) - {req['date']}\n"
             
             return response
         
@@ -470,13 +426,10 @@ You don't have any upcoming appointments.
                 response += "No appointments scheduled for today.\n\n"
             else:
                 for appt in today_appts:
-                    participant = (appt.donor.user.get_full_name() if appt.donor 
-                                 else appt.patient.user.get_full_name() if appt.patient 
-                                 else 'Unknown')
-                    appt_type = "Donation" if appt.donor and not appt.patient else "Blood Request"
+                    participant = appt.donor.user.get_full_name() if appt.donor else 'Unknown'
                     status_emoji = {"pending": "⏳", "approved": "✅", "completed": "✔️"}.get(appt.status, "📋")
                     
-                    response += f"{status_emoji} **{appt.date.strftime('%I:%M %p')}** - {appt_type}\n"
+                    response += f"{status_emoji} **{appt.date.strftime('%I:%M %p')}** - Donation Appointment\n"
                     response += f"   {participant} ({appt.status.title()})\n\n"
             
             # Pending approvals
@@ -537,85 +490,44 @@ You don't have any upcoming appointments.
         if not user or not user.is_authenticated:
             return """🩸 **Blood Request Information**
 
-To request blood, you need to:
-1. **Log in** to your account
+To request blood for a patient, hospital staff need to:
+1. **Log in** with hospital credentials
 2. Navigate to the **Blood Request** section
-3. Fill out the request form with required details
-4. Submit your request for review
-
-Our team will process your request as soon as possible.
+3. Fill out the request form with patient details
+4. Submit the request for review
 
 🚨 **For Emergency Requests:**
 Please call your nearest donation center directly.
 
-🔒 *Please log in to submit a blood request.*"""
+🔒 *Please log in with your hospital account to submit a blood request.*"""
         
-        if role == 'patient':
-            from patient.models import BloodRequest
-            active = BloodRequest.objects.filter(
-                request_by_patient=user.patient,
-                status__in=['pending', 'approved']
-            ).first()
-            
-            if active:
-                return f"""🩸 **Your Blood Request Status**
+        elif role == 'nurse':
+            return """🩸 **Hospital Blood Request**
 
-You have an active blood request:
+As a nurse, you can request blood for patients:
 
-• **Blood Group:** {active.bloodgroup}
-• **Units:** {active.unit}ml
-• **Status:** {active.status.title()}
-• **Submitted:** {active.date.strftime('%b %d, %Y')}
-• **Center:** {active.donation_center.name if active.donation_center else 'N/A'}
-
-{f"• **Urgency:** {active.urgency_level}" if hasattr(active, 'urgency_level') else ''}
-
-⏳ *Our team is working on your request. You'll be notified of any updates.*"""
-            
-            return """🩸 **Request Blood**
-
-To request blood:
-
-1. Go to your dashboard
-2. Click **"Request Blood"**
-3. Fill in the required information:
-   • Patient details
+1. Navigate to **"Blood Requests"** in your dashboard
+2. Click **"New Request"**
+3. Provide patient information:
+   • Patient name, age, gender
    • Blood group needed
-   • Number of units
+   • Number of units required
    • Urgency level
-4. Submit for approval
+   • Attending doctor's name
+4. Submit for blood bank approval
 
-📋 *You can track your request status in your dashboard.*
+📋 *You can track request status in your dashboard.*
 
-🚨 **Emergency?** Call your nearest center directly."""
-        
-        elif role == 'donor':
-            return """🩸 **Donor Blood Request**
-
-As a donor, you can request blood on behalf of a patient:
-
-1. Navigate to **"Make Request"** in your dashboard
-2. Provide patient information
-3. Specify blood group and units needed
-4. Select a donation center
-5. Submit the request
-
-💡 *This feature allows you to help friends or family members who need blood.*"""
+🚨 **Emergency?** Call your blood bank directly."""
         
         return """🩸 **Blood Request Process**
 
-**To request blood:**
-1. Log in to your account
-2. Go to the Blood Request section
-3. Fill out the request form
-4. Submit for review
+Blood requests are handled by authorized hospital staff.
 
-**Required Information:**
-• Patient details (name, age, contact)
-• Blood group needed
-• Number of units required
-• Medical reason
-• Urgency level
+If you need blood for a patient:
+1. Contact your hospital's laboratory
+2. They will submit a request through this system
+3. The blood bank will process and dispatch blood to your hospital
 
 🚨 **For emergencies, contact your nearest donation center directly.**"""
     
@@ -696,12 +608,6 @@ As a donor, you can request blood on behalf of a patient:
 • Request blood from other centers when needed
 • Ensure proper stock rotation (FIFO)
 
-**Patient Care:**
-• Ensure donor safety and comfort
-• Conduct pre-donation health checks
-• Provide post-donation care instructions
-• Handle adverse reactions professionally
-
 💡 *Check your dashboard regularly for pending tasks and notifications.*"""
     
     # === POINTS AND REWARDS (Donor-specific) ===
@@ -724,7 +630,7 @@ Our system rewards blood donors with points for each successful donation!
         
         donor = user.donor
         points = donor.points
-        total_donations = donor.total_donations
+        total_donations = donor.total_donations if hasattr(donor, 'total_donations') else 0
         
         # Calculate next milestone
         milestones = [10, 25, 50, 100, 200]
@@ -806,14 +712,6 @@ Our system rewards blood donors with points for each successful donation!
    • View notifications
 
 """
-        elif role == 'patient':
-            response += """**Quick Links for Patients:**
-   • Submit blood request
-   • Track request status
-   • View appointments
-   • Find nearest center
-
-"""
         
         response += "❓ **What specific information are you looking for?**"
         return response
@@ -869,7 +767,7 @@ def chatbot_api(request):
 
 I'm here to help! Here's what I can assist you with:
 
-{'**As a Donor:**' if role == 'donor' else '**As a Nurse:**' if role == 'nurse' else '**As a Patient:**' if role == 'patient' else '**General Information:**'}
+{'**As a Donor:**' if role == 'donor' else '**As a Nurse:**' if role == 'nurse' else '**General Information:**'}
 
 """
                 if role == 'donor':
@@ -884,11 +782,6 @@ I'm here to help! Here's what I can assist you with:
 • Manage pending approvals
 • Access critical stock alerts
 • Review your schedule"""
-                elif role == 'patient':
-                    reply += """• Submit blood requests
-• Track request status
-• Find donation centers
-• View appointment history"""
                 else:
                     reply += """• Blood donation eligibility
 • Donation center locations

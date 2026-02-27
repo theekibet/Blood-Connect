@@ -5,12 +5,8 @@
 
 {% block title %}Donor Login{% endblock %}
 
-{% block auth_card_class %}donor{% endblock %}
-{% block auth_icon %}fas fa-hand-holding-heart{% endblock %}
-{% block auth_title %}Donor Login{% endblock %}
-
 {% block auth_content %}
-<div class="auth-card donor">
+<div class="auth-card">
     <div class="card-header">
         <h4><i class="fas fa-hand-holding-heart"></i> Donor Login</h4>
     </div>
@@ -85,87 +81,64 @@
 
             <!-- Forgot Password Link -->
             <div class="text-center mt-3">
-                <a href="{% url 'password_reset' %}" class="text-secondary">
+                <a href="javascript:void(0)" class="text-secondary" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
                     <i class="fas fa-key mr-1"></i> Forgot password?
                 </a>
             </div>
+
+            <!-- Registration Link -->
+            <div class="text-center mt-4 pt-3 border-top">
+                <p class="mb-0">
+                    Don't have a donor account?
+                    <a href="{% url 'donorsignup' %}" class="font-weight-bold text-success">
+                        <i class="fas fa-user-plus"></i> Register as Donor
+                    </a>
+                </p>
+            </div>
+
+            <!-- Back Button -->
+            <div class="text-center mt-3">
+                <button onclick="history.back()" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
         </form>
-
-        <!-- Registration Link -->
-        <div class="text-center mt-4 pt-3 border-top">
-            <p class="mb-0">
-                Don't have a donor account?
-                <a href="{% url 'donorsignup' %}" class="font-weight-bold" style="color: #28a745;">
-                    <i class="fas fa-user-plus"></i> Register as Donor
-                </a>
-            </p>
-        </div>
-
-        <!-- Back Button -->
-        <div class="text-center mt-3">
-            <button onclick="history.back()" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-        </div>
     </div>
 </div>
 
-
-
 <script>
-    // Password show/hide toggle
-    function togglePassword() {
-        const passwordField = document.querySelector('input[name="password"]');
-        const icon = document.getElementById('togglePasswordIcon');
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            passwordField.type = "password";
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
+// Password visibility toggle
+function togglePassword() {
+    const passwordField = document.getElementById('{{ form.password.id_for_label }}');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
     }
+}
 
-    // Loading spinner on submit
-    document.querySelector('form').addEventListener('submit', function() {
-        document.getElementById('loginBtnText').classList.add('d-none');
-        document.getElementById('loginSpinner').classList.remove('d-none');
-        document.getElementById('loginBtn').disabled = true;
-    });
-
-    // CAPSLOCK detection
-    const passwordInput = document.querySelector('input[name="password"]');
+// Caps lock warning
+document.getElementById('{{ form.password.id_for_label }}').addEventListener('keyup', function(event) {
     const capsWarning = document.getElementById('capsWarning');
-
-    if (passwordInput) {
-        passwordInput.addEventListener('keyup', function(e) {
-            if (e.getModifierState('CapsLock')) {
-                capsWarning.style.display = 'block';
-            } else {
-                capsWarning.style.display = 'none';
-            }
-        });
-
-        passwordInput.addEventListener('blur', function() {
-            capsWarning.style.display = 'none';
-        });
+    if (event.getModifierState('CapsLock')) {
+        capsWarning.style.display = 'block';
+    } else {
+        capsWarning.style.display = 'none';
     }
+});
 
-    // Auto-focus on username field
-    document.addEventListener('DOMContentLoaded', function() {
-        const usernameField = document.querySelector('input[name="username"]');
-        if (usernameField) {
-            usernameField.focus();
-        }
-    });
-
-    // Auto-dismiss alerts after 5 seconds
-    setTimeout(function() {
-        document.querySelectorAll('.alert').forEach(function(alert) {
-            $(alert).alert('close');
-        });
-    }, 5000);
+// Form submission handling
+document.querySelector('form').addEventListener('submit', function() {
+    document.getElementById('loginBtnText').classList.add('d-none');
+    document.getElementById('loginSpinner').classList.remove('d-none');
+    document.getElementById('loginBtn').disabled = true;
+});
 </script>
+
 {% endblock %}

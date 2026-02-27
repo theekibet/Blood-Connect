@@ -12,12 +12,7 @@
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0">
                     <i class="fas fa-check-circle"></i> 
-                    Approve Blood Request #{{ request.id }}
-                    {% if request_type == 'patient' %}
-                        <span class="badge bg-light text-dark ms-2">Patient Request</span>
-                    {% else %}
-                        <span class="badge bg-light text-dark ms-2">Donor Request</span>
-                    {% endif %}
+                    Approve Blood Request #{{ request.request_number }}
                 </h5>
             </div>
             <div class="card-body">
@@ -25,33 +20,25 @@
                 <div class="alert alert-info">
                     <div class="row">
                         <div class="col-md-6">
-                            <strong>Patient:</strong> 
-                            {% if request_type == 'patient' %}
-                                {{ request.get_full_name }}
-                            {% else %}
-                                {{ request.patient_first_name }} {{ request.patient_last_name }}
-                            {% endif %}
-                            <br>
-                            <strong>Blood Group:</strong> <span class="badge bg-info">{{ request.bloodgroup }}</span><br>
-                            <strong>Volume Needed:</strong> {{ request.unit }} ml
+                            <strong>Hospital:</strong> {{ request.hospital.name }}<br>
+                            <strong>Patient:</strong> {{ patient_name }}<br>
+                            <strong>Blood Group:</strong> <span class="badge bg-info">{{ request.blood_group }}</span><br>
+                            <strong>Volume Needed:</strong> {{ request.units_requested }} ml
                         </div>
                         <div class="col-md-6">
-                            <strong>Center:</strong> {{ request.donation_center.name }}<br>
+                            <strong>Doctor:</strong> {{ request.doctor_name }}<br>
                             <strong>Request Date:</strong> {{ request.created_at|date:"M d, Y H:i" }}<br>
-                            <strong>Contact:</strong> {{ request.contact_number }}
+                            <strong>Contact:</strong> {{ request.hospital.contact_phone }}<br>
+                            <strong>Urgency:</strong> 
+                            {% if request.urgency == 'emergency' %}
+                                <span class="badge bg-danger">EMERGENCY</span>
+                            {% elif request.urgency == 'urgent' %}
+                                <span class="badge bg-warning text-dark">Urgent</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Routine</span>
+                            {% endif %}
                         </div>
                     </div>
-                    {% if request_type == 'donor' %}
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i> 
-                                Request made by donor: {{ request.request_by_donor.user.get_full_name }}
-                                (Donor ID: {{ request.request_by_donor.id }})
-                            </small>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
 
                 <!-- Stock Availability Summary -->
@@ -60,7 +47,8 @@
                         <div class="card bg-light">
                             <div class="card-body text-center">
                                 <h6>Available Stock</h6>
-                                <h3 class="text-success">{{ availability.safe_stock }} ml</h3>
+                                <h3 class="text-success">{{ total_available }} ml</h3>
+                                <small class="text-muted">{{ available_units.count }} batch(es)</small>
                             </div>
                         </div>
                     </div>
@@ -68,7 +56,7 @@
                         <div class="card bg-light">
                             <div class="card-body text-center">
                                 <h6>Required</h6>
-                                <h3 class="text-warning">{{ request.unit }} ml</h3>
+                                <h3 class="text-warning">{{ request.units_requested }} ml</h3>
                             </div>
                         </div>
                     </div>
@@ -76,9 +64,10 @@
                         <div class="card bg-light">
                             <div class="card-body text-center">
                                 <h6>After Approval</h6>
-                                <h3 class="{% if availability.safe_stock >= request.unit %}text-success{% else %}text-danger{% endif %}">
-                                    {{ availability.safe_stock|add:"-request.unit" }} ml
+                                <h3 class="{% if total_available >= request.units_requested %}text-success{% else %}text-danger{% endif %}">
+                                    {{ total_available|add:"-request.units_requested" }} ml
                                 </h3>
+                                <small class="text-muted">remaining in stock</small>
                             </div>
                         </div>
                     </div>
@@ -88,16 +77,22 @@
                     <i class="fas fa-boxes"></i> Available Stock Units
                 </h5>
                 
-                {% if available_units %}
+                {% if can_fulfill %}
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i>
-                        Found {{ available_units.count }} available unit(s) of {{ request.bloodgroup }} totaling <strong>{{ total_available }}ml</strong>.
+                        Found <strong>{{ available_units.count }}</strong> available unit(s) of <strong>{{ request.blood_group }}</strong> totaling <strong>{{ total_available }}ml</strong>.
+                        {% if available_units.count == 1 %}
+                            <br>This will use the single available unit.
+                        {% else %}
+                            <br>Multiple units will be combined to meet the required volume.
+                        {% endif %}
                     </div>
                     
                     <div class="table-responsive mb-3">
                         <table class="table table-sm table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th>#</th>
                                     <th>Barcode</th>
                                     <th>Volume</th>
                                     <th>Expiry Date</th>
@@ -108,16 +103,17 @@
                             </thead>
                             <tbody>
                                 {% for unit in available_units %}
-                                <tr class="{% if forloop.counter <= request.unit|add:0 %}table-success{% endif %}">
+                                <tr class="{% if forloop.counter <= request.units_requested|add:0 %}table-success{% endif %}">
+                                    <td>{{ forloop.counter }}</td>
                                     <td><code>{{ unit.barcode }}</code></td>
-                                    <td>{{ unit.unit }}ml</td>
+                                    <td><strong>{{ unit.unit }}ml</strong></td>
                                     <td>{{ unit.expiry_date|date:"M d, Y" }}</td>
                                     <td>
                                         {% with days_left=unit.expiry_date|timeuntil:today %}
                                             {% if unit.expiry_date <= today|date:"Y-m-d"|add:"7 days" %}
-                                                <span class="badge bg-warning">{{ days_left }} left</span>
+                                                <span class="badge bg-warning">{{ days_left }}</span>
                                             {% else %}
-                                                <span class="badge bg-success">{{ days_left }} left</span>
+                                                <span class="badge bg-success">{{ days_left }}</span>
                                             {% endif %}
                                         {% endwith %}
                                     </td>
@@ -129,10 +125,10 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if forloop.counter <= request.unit|add:0 %}
-                                            <span class="badge bg-success">Will be used</span>
+                                        {% if forloop.counter <= request.units_requested|add:0 %}
+                                            <span class="badge bg-success">✓ Will be used</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">Remaining</span>
+                                            <span class="badge bg-secondary">○ Remaining</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -144,49 +140,17 @@
                     <!-- FIFO Explanation -->
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
-                        <strong>FIFO (First In, First Out):</strong>
+                        <strong>FIFO (First In, First Out) Selection:</strong>
                         <ul class="mb-0 mt-2">
-                            <li>The <span class="badge bg-success">highlighted</span> units will be used for this request</li>
-                            <li>Units are selected based on earliest expiry date</li>
-                            <li>{{ request.unit }}ml will be deducted from the {{ total_available }}ml available</li>
+                            <li>Units are selected based on <strong>earliest expiry date</strong> (oldest first)</li>
+                            <li><strong>{{ request.units_requested }}ml</strong> will be deducted from the <strong>{{ total_available }}ml</strong> available</li>
+                            <li>The <span class="badge bg-success">highlighted</span> units above will be used for this request</li>
+                            <li>After approval, remaining units will stay in inventory</li>
                         </ul>
                     </div>
                     
                     <form method="post">
                         {% csrf_token %}
-                        <input type="hidden" name="request_type" value="{{ request_type }}">
-                        
-                        <!-- Optional: Allow selection of specific units -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">Advanced Options</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="selectSpecific" name="select_specific">
-                                    <label class="form-check-label" for="selectSpecific">
-                                        Manually select specific units to use (instead of FIFO)
-                                    </label>
-                                </div>
-                                <div id="unitSelection" style="display: none;">
-                                    <label class="form-label">Select units to use (need {{ request.unit }}ml total):</label>
-                                    {% for unit in available_units %}
-                                    <div class="form-check">
-                                        <input class="form-check-input unit-checkbox" type="checkbox" 
-                                               name="selected_units" value="{{ unit.id }}" 
-                                               data-volume="{{ unit.unit }}"
-                                               id="unit_{{ unit.id }}">
-                                        <label class="form-check-label" for="unit_{{ unit.id }}">
-                                            <code>{{ unit.barcode }}</code> - {{ unit.unit }}ml (Expires: {{ unit.expiry_date|date:"M d, Y" }})
-                                        </label>
-                                    </div>
-                                    {% endfor %}
-                                    <div class="mt-2">
-                                        <span id="selectedTotal">0</span>ml selected (need {{ request.unit }}ml)
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success btn-lg flex-grow-1">
@@ -202,19 +166,22 @@
                         <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
                         <h5>Insufficient Stock</h5>
                         <p>
-                            <strong>Available:</strong> {{ availability.safe_stock }}ml<br>
-                            <strong>Required:</strong> {{ request.unit }}ml
+                            <strong>Available:</strong> {{ total_available }}ml<br>
+                            <strong>Required:</strong> {{ request.units_requested }}ml
                         </p>
                         <hr>
                         <p class="mb-0">
-                            {% if availability.pending_stock > 0 %}
-                                <small>Note: {{ availability.pending_stock }}ml is pending verification and cannot be used yet.</small>
-                            {% endif %}
+                            <strong>Shortage:</strong> {{ request.units_requested|add:"-total_available" }}ml
                         </p>
+                        {% if available_units.count == 0 %}
+                            <p class="mt-2 mb-0 text-muted">
+                                <i class="fas fa-info-circle"></i> No safe stock available for this blood type.
+                            </p>
+                        {% endif %}
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <a href="{% url 'blood_bank_technician:reject_request' request_type request.id %}" 
+                        <a href="{% url 'blood_bank_technician:reject_request' request.id %}" 
                            class="btn btn-danger btn-lg flex-grow-1">
                             <i class="fas fa-times-circle"></i> Reject Request
                         </a>
@@ -230,85 +197,40 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const selectSpecificCheckbox = document.getElementById('selectSpecific');
-    const unitSelection = document.getElementById('unitSelection');
-    const unitCheckboxes = document.querySelectorAll('.unit-checkbox');
-    const selectedTotalSpan = document.getElementById('selectedTotal');
-    const requiredVolume = {{ request.unit }};
     const form = document.querySelector('form');
     
-    // Toggle unit selection
-    if (selectSpecificCheckbox) {
-        selectSpecificCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                unitSelection.style.display = 'block';
-            } else {
-                unitSelection.style.display = 'none';
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Final confirmation with details
+            const requiredVol = {{ request.units_requested }};
+            const availableVol = {{ total_available }};
+            
+            if (!confirm(`⚠️ Confirm Approval\n\n` +
+                        `Request: #{{ request.request_number }}\n` +
+                        `Patient: {{ patient_name }}\n` +
+                        `Blood Group: {{ request.blood_group }}\n` +
+                        `Volume: ${requiredVol}ml\n` +
+                        `Stock after approval: ${availableVol - requiredVol}ml remaining\n\n` +
+                        `Are you sure you want to approve this request? Stock will be deducted from inventory using FIFO method.`)) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Approval...';
+                submitBtn.disabled = true;
             }
         });
     }
     
-    // Calculate total selected volume
-    function updateSelectedTotal() {
-        let total = 0;
-        unitCheckboxes.forEach(cb => {
-            if (cb.checked) {
-                total += parseInt(cb.dataset.volume);
-            }
-        });
-        selectedTotalSpan.textContent = total;
-        
-        // Visual feedback
-        if (total > 0) {
-            if (total === requiredVolume) {
-                selectedTotalSpan.style.color = 'green';
-            } else if (total < requiredVolume) {
-                selectedTotalSpan.style.color = 'orange';
-            } else {
-                selectedTotalSpan.style.color = 'red';
-            }
-        } else {
-            selectedTotalSpan.style.color = 'inherit';
+    // Add tooltips for better UX
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        if (badge.classList.contains('bg-warning')) {
+            badge.setAttribute('title', 'This unit expires within 7 days');
         }
-    }
-    
-    unitCheckboxes.forEach(cb => {
-        cb.addEventListener('change', updateSelectedTotal);
-    });
-    
-    // Form validation
-    form.addEventListener('submit', function(e) {
-        if (selectSpecificCheckbox && selectSpecificCheckbox.checked) {
-            const selectedCheckboxes = document.querySelectorAll('.unit-checkbox:checked');
-            let totalVolume = 0;
-            
-            selectedCheckboxes.forEach(cb => {
-                totalVolume += parseInt(cb.dataset.volume);
-            });
-            
-            if (selectedCheckboxes.length === 0) {
-                e.preventDefault();
-                alert('Please select at least one unit to use.');
-                return;
-            }
-            
-            if (totalVolume !== requiredVolume) {
-                e.preventDefault();
-                alert(`Selected volume (${totalVolume}ml) does not match required volume (${requiredVolume}ml). Please select units totaling exactly ${requiredVolume}ml.`);
-                return;
-            }
-        }
-        
-        // Final confirmation
-        if (!confirm('Are you sure you want to approve this request? Stock will be deducted from inventory.')) {
-            e.preventDefault();
-            return;
-        }
-        
-        // Show loading state
-        const submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        submitBtn.disabled = true;
     });
 });
 </script>

@@ -1,0 +1,351 @@
+{% extends 'blood_bank_technician/base.html' %}
+{% load static %}
+
+{% block title %}Request Details - Blood Bank Tech{% endblock %}
+
+{% block page_title %}Blood Request Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- Request Header Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-medical me-2"></i> 
+                    Request #{{ request.request_number }}
+                </h5>
+                <div>
+                    <span class="badge bg-light text-dark me-2">
+                        <i class="fas fa-calendar me-1"></i> {{ request.created_at|date:"M d, Y H:i" }}
+                    </span>
+                    {% if request.status == 'pending' %}
+                        <span class="badge bg-warning">Pending</span>
+                    {% elif request.status == 'approved' %}
+                        <span class="badge bg-primary">Approved</span>
+                    {% elif request.status == 'dispatched' %}
+                        <span class="badge bg-success">Dispatched</span>
+                    {% elif request.status == 'delivered' %}
+                        <span class="badge bg-info">Delivered</span>
+                    {% elif request.status == 'rejected' %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% elif request.status == 'cancelled' %}
+                        <span class="badge bg-secondary">Cancelled</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left Column - Request Details -->
+            <div class="col-md-6">
+                <!-- Patient Information Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 40%;">Full Name:</th>
+                                <td><strong>{{ patient_name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Age:</th>
+                                <td>{{ request.patient_age|default:"Not provided" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Gender:</th>
+                                <td>{{ request.patient_gender|default:"Not provided" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Patient ID:</th>
+                                <td>{{ request.patient_id|default:"Not provided" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Hospital Information Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-hospital me-2"></i>Hospital Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 40%;">Hospital Name:</th>
+                                <td><strong>{{ request.hospital.name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Registration:</th>
+                                <td>{{ request.hospital.registration_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>County:</th>
+                                <td>{{ request.hospital.county }}</td>
+                            </tr>
+                            <tr>
+                                <th>Contact Person:</th>
+                                <td>{{ request.hospital.contact_person }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone:</th>
+                                <td>{{ request.hospital.contact_phone }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ request.hospital.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Has Storage:</th>
+                                <td>
+                                    {% if request.hospital.has_blood_storage %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Doctor Information Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-user-md me-2"></i>Doctor Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 40%;">Doctor Name:</th>
+                                <td><strong>{{ request.doctor_name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>License Number:</th>
+                                <td>{{ request.doctor_license|default:"Not provided" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Blood Request Details -->
+            <div class="col-md-6">
+                <!-- Blood Requirements Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0"><i class="fas fa-tint me-2"></i>Blood Requirements</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 40%;">Blood Group:</th>
+                                <td><span class="badge bg-danger fs-6">{{ request.blood_group }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Units Requested:</th>
+                                <td><strong>{{ request.units_requested }} ml</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Units Dispatched:</th>
+                                <td>{{ request.units_dispatched }} ml</td>
+                            </tr>
+                            <tr>
+                                <th>Urgency:</th>
+                                <td>
+                                    {% if request.urgency == 'emergency' %}
+                                        <span class="badge bg-danger">EMERGENCY</span>
+                                    {% elif request.urgency == 'urgent' %}
+                                        <span class="badge bg-warning text-dark">Urgent</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Routine</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Status Timeline Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0"><i class="fas fa-history me-2"></i>Request Timeline</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li class="mb-3">
+                                <i class="fas fa-circle text-success me-2"></i>
+                                <strong>Created:</strong> {{ request.created_at|date:"M d, Y H:i:s" }}
+                                <br><small class="text-muted ms-4">{{ request.created_at|timesince }} ago</small>
+                            </li>
+                            
+                            {% if request.approved_at %}
+                            <li class="mb-3">
+                                <i class="fas fa-circle text-primary me-2"></i>
+                                <strong>Approved:</strong> {{ request.approved_at|date:"M d, Y H:i:s" }}
+                                <br><small class="text-muted ms-4">by {{ request.approved_by.user.get_full_name|default:"Unknown" }}</small>
+                            </li>
+                            {% endif %}
+                            
+                            {% if request.dispatched_at %}
+                            <li class="mb-3">
+                                <i class="fas fa-circle text-info me-2"></i>
+                                <strong>Dispatched:</strong> {{ request.dispatched_at|date:"M d, Y H:i:s" }}
+                                <br><small class="text-muted ms-4">by {{ request.dispatched_by.user.get_full_name|default:"Unknown" }}</small>
+                            </li>
+                            {% endif %}
+                            
+                            {% if request.status == 'rejected' and request.rejection_reason %}
+                            <li class="mb-3">
+                                <i class="fas fa-circle text-danger me-2"></i>
+                                <strong>Rejected:</strong> 
+                                <br><small class="text-muted ms-4">Reason: {{ request.rejection_reason }}</small>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex gap-2">
+                            {% if request.status == 'pending' %}
+                                <a href="{% url 'blood_bank_technician:approve_request' request.id %}" 
+                                   class="btn btn-success flex-grow-1">
+                                    <i class="fas fa-check-circle me-2"></i>Approve Request
+                                </a>
+                                <a href="{% url 'blood_bank_technician:reject_request' request.id %}" 
+                                   class="btn btn-danger flex-grow-1">
+                                    <i class="fas fa-times-circle me-2"></i>Reject Request
+                                </a>
+                            {% elif request.status == 'approved' %}
+                                <a href="{% url 'blood_bank_technician:dispatch_request' request.id %}" 
+                                   class="btn btn-primary flex-grow-1">
+                                    <i class="fas fa-truck me-2"></i>Dispatch Blood
+                                </a>
+                                <a href="{% url 'blood_bank_technician:approved_requests' %}" 
+                                   class="btn btn-secondary flex-grow-1">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Approved
+                                </a>
+                            {% else %}
+                                <a href="{% url 'blood_bank_technician:approved_requests' %}" 
+                                   class="btn btn-secondary flex-grow-1">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Section (if any) -->
+        {% if transactions %}
+        <div class="card mt-2">
+            <div class="card-header bg-dark text-white">
+                <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Stock Transactions</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Barcode</th>
+                                <th>Blood Group</th>
+                                <th>Volume</th>
+                                <th>Type</th>
+                                <th>User</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in transactions %}
+                            <tr>
+                                <td>{{ tx.transaction_at|date:"M d, Y H:i" }}</td>
+                                <td><code>{{ tx.stockunit.barcode }}</code></td>
+                                <td>{{ tx.stockunit.bloodgroup }}</td>
+                                <td>
+                                    {% if tx.quantity_deducted %}
+                                        {{ tx.quantity_deducted }}ml
+                                    {% elif tx.quantity_added %}
+                                        {{ tx.quantity_added }}ml
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tx.transaction_type == 'addition' %}
+                                        <span class="badge bg-success">Addition</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Deduction</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ tx.user.get_full_name|default:tx.user.username }}</td>
+                                <td><small>{{ tx.notes|truncatechars:50 }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dispatches Section (if any) -->
+        {% if dispatches %}
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-truck me-2"></i>Dispatch Records</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Collected By</th>
+                                <th>ID Number</th>
+                                <th>Phone</th>
+                                <th>Barcode</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dispatch in dispatches %}
+                            <tr>
+                                <td>{{ dispatch.dispatch_date|date:"M d, Y H:i" }}</td>
+                                <td>{{ dispatch.collected_by_name }}</td>
+                                <td>{{ dispatch.collected_by_id }}</td>
+                                <td>{{ dispatch.collected_by_phone|default:"—" }}</td>
+                                <td><code>{{ dispatch.stock_unit.barcode }}</code></td>
+                                <td><small>{{ dispatch.notes|truncatechars:30 }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add tooltips for better UX
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        if (badge.classList.contains('bg-warning')) {
+            badge.setAttribute('title', 'Urgent request - process within 4-6 hours');
+        } else if (badge.classList.contains('bg-danger')) {
+            if (badge.textContent.includes('EMERGENCY')) {
+                badge.setAttribute('title', 'Emergency - process immediately');
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

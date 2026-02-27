@@ -926,7 +926,7 @@
                 <li><a href="{% url 'about-us' %}">About</a></li>
                 <li><a href="{% url 'contact' %}">Contact</a></li>
                 <li><a href="{% url 'donorlogin' %}">Donor</a></li>
-                <li><a href="{% url 'patientlogin' %}">Patient</a></li>
+                <li><a href="{% url 'hospital:login' %}">Hospital</a></li>
                 
                 <!-- Staff Dropdown -->
                 <li class="dropdown">
@@ -992,9 +992,7 @@
                 <h1>Every Drop Counts.<br>Save Lives Today.</h1>
                 <p>Join our community of life-savers. Connect with blood donors, request blood, and make a difference in someone's life.</p>
                 <div class="hero-buttons">
-                    <a href="{% url 'patientsignup' %}" class="btn-primary">
-                        Request Blood <i class="fas fa-arrow-right"></i>
-                    </a>
+                    <a href="{% url 'hospital:register' %}" class="btn-primary">Register Hospital</a>
                     <a href="{% url 'donorsignup' %}" class="btn-secondary">
                         Become a Donor <i class="fas fa-heart"></i>
                     </a>
@@ -1050,7 +1048,7 @@
                     </div>
                     <h3>Book Appointments</h3>
                     <p>Schedule appointments with certified nurses at nearby donation centers instantly.</p>
-                    <a href="{% url 'patientlogin' %}" class="btn-secondary">Book Now</a>
+                    <a href="{% url 'hospital:login' %}">Hospital Login</a>
                 </div>
 
                 <div class="feature-card fade-in">
@@ -1077,7 +1075,7 @@
                     </div>
                     <h3>Real-time Notifications</h3>
                     <p>Get instant alerts when blood is needed or when your donation helps someone.</p>
-                    <a href="{% url 'patientsignup' %}" class="btn-secondary">Enable Alerts</a>
+                    
                 </div>
 
                 <div class="feature-card fade-in">
@@ -1196,7 +1194,7 @@
             <h2>Ready to Make a Difference?</h2>
             <p>Join thousands of donors and patients who trust BloodConnect</p>
             <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="{% url 'patientsignup' %}" class="btn-primary">Get Started</a>
+                
                 <a href="{% url 'contact' %}" class="btn-secondary">Contact Us</a>
             </div>
         </div>
@@ -1224,9 +1222,9 @@
                 <h3>For Users</h3>
                 <ul>
                     <li><a href="{% url 'donorlogin' %}">Donor Login</a></li>
-                    <li><a href="{% url 'patientlogin' %}">Patient Login</a></li>
+                    <li><a href="{% url 'hospital:login' %}">Hospital Login</a></li>
                     <li><a href="{% url 'nurse:nurselogin' %}">Nurse Login</a></li>
-                    <li><a href="{% url 'patientsignup' %}">Sign Up</a></li>
+                    
                 </ul>
             </div>
 

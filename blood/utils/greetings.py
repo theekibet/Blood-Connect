@@ -55,7 +55,6 @@ def get_nurse_greeting(nurse, appointment_count, next_appointment=None):
     next_app_msg = ""
     if next_appointment:
         time_str = next_appointment.date.strftime("%I:%M %p")
-        participant = "a donor" if next_appointment.donor else "a patient"
         next_app_msg = f" Your next appointment is at {time_str} with {participant}."
     
     return {
@@ -66,40 +65,6 @@ def get_nurse_greeting(nurse, appointment_count, next_appointment=None):
         'icon': '👩‍⚕️'
     }
 
-
-def get_patient_greeting(patient, upcoming_appointments=None):
-    """Generate personalized greeting for patients"""
-    greeting = get_time_based_greeting(patient.user.first_name)
-    day_message = get_day_specific_message()
-    
-    if upcoming_appointments and upcoming_appointments.exists():
-        next_app = upcoming_appointments.first()
-        time_str = next_app.date.strftime("%I:%M %p")
-        context = f"{day_message} You have an upcoming appointment at {time_str}."
-        
-        # Health tip based on time of day
-        current_hour = datetime.now().hour
-        if 5 <= current_hour < 12:
-            health_tip = "Remember to have a healthy breakfast! 🍎"
-        elif 12 <= current_hour < 17:
-            health_tip = "Stay hydrated throughout the day! 💧"
-        else:
-            health_tip = "Get a good night's rest! 😴"
-            
-        return {
-            'greeting': greeting,
-            'context_message': context,
-            'health_tip': health_tip,
-            'user_type': 'patient',
-            'icon': '👤'
-        }
-    
-    return {
-        'greeting': greeting,
-        'context_message': f"{day_message} No upcoming appointments scheduled.",
-        'user_type': 'patient',
-        'icon': '👤'
-    }
 
 
 def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):

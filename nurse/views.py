@@ -23,11 +23,10 @@ from .models import Nurse, Appointment
 from .forms import (
     NurseLoginForm, NurseSignupForm, NurseForm, AppointmentForm
 )
-from blood.models import Notification, Stock, DonationCenter, StockUnit,StockTransaction,BloodBagBarcode
+from blood.models import  Stock, DonationCenter, StockUnit,StockTransaction,BloodBagBarcode
 from blood.utils.stock_utils import deduct_stock_fifo
 from datetime import datetime
-from donor.models import BloodDonate,DonorBloodRequest
-from patient.models import BloodRequest 
+from donor.models import BloodDonate
 from collections import OrderedDict
 from django.views.generic import DetailView
 from django.core.exceptions import ValidationError
@@ -37,7 +36,6 @@ from .forms import NurseUserForm
 from donor.models import Donor
 from django.db.models import Prefetch
 from django.contrib.auth.mixins import LoginRequiredMixin
-from patient.models import Patient
 from functools import wraps
 from django.views.generic import ListView
 from blood.utils.notifications import create_notification
@@ -45,6 +43,7 @@ from blood.utils.greetings import get_nurse_greeting
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils.html import strip_tags
+from utils.models import Notification
 from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
@@ -1459,7 +1458,7 @@ def collect_with_barcode(request, appointment_id, barcode_id):
                 donor.save()
                 
                 # ===== CREATE NOTIFICATION FOR DONOR =====
-                from blood.models import Notification
+                from utils.models import Notification
                 from django.contrib.contenttypes.models import ContentType
                 
                 # Create notification for donor
@@ -1510,3 +1509,40 @@ def collect_with_barcode(request, appointment_id, barcode_id):
         'donor': appointment.donor,
     }
     return render(request, 'nurse/collect_with_barcode.html', context)
+# -------------------------------
+# Get Nurses By Centre
+# -------------------------------
+def get_nurses_by_center(request):
+    center_id = request.GET.get('center_id')
+    if not center_id:
+        return JsonResponse({'nurses': []})
+
+    nurses = Nurse.objects.filter(
+        donation_center_id=center_id,
+        is_approved=True  # Only approved nurses
+    ).select_related('user')
+
+    nurse_data = []
+    for nurse in nurses:
+        # USE NURSE'S FIELDS, NOT USER'S
+        full_name = f"{nurse.first_name} {nurse.last_name}".strip()
+        
+        # Fallback to user if nurse fields are empty
+        if not full_name:
+            full_name = f"{nurse.user.first_name} {nurse.user.last_name}".strip()
+        
+        if not full_name:
+            full_name = nurse.user.username  # Last resort
+        
+        nurse_data.append({
+            'id': nurse.id,
+            'name': full_name,
+            'specialization': nurse.specialization or 'General Practitioner',
+            'email': nurse.user.email or '',
+            'phone': nurse.phone or '',
+            'bio': nurse.bio or '',
+            'profile_pic_url': nurse.profile_pic.url if nurse.profile_pic else None,
+        })
+
+    print(f"DEBUG: Center {center_id} - Found {len(nurse_data)} nurses")  # Debug line
+    return JsonResponse({'nurses': nurse_data})

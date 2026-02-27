@@ -1,0 +1,151 @@
+{% extends 'hospital/base.html' %}
+{% load static %}
+
+{% block title %}Hospital Profile - {{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4 fade-in">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-id-card me-2"></i>Hospital Profile
+                    </h5>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Hospital Information</h6>
+                            <table class="table">
+                                <tr>
+                                    <th>Name:</th>
+                                    <td>{{ hospital.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Registration:</th>
+                                    <td>{{ hospital.registration_number }}</td>
+                                </tr>
+                                <tr>
+                                    <th>County:</th>
+                                    <td>{{ hospital.county }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Verified:</th>
+                                    <td>
+                                        {% if hospital.verified %}
+                                            <span class="badge bg-success">Verified</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Pending Verification</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Location</h6>
+                            {% if hospital.latitude and hospital.longitude %}
+                            <div id="map" style="height: 200px; border-radius: 10px;"></div>
+                            <p class="mt-2 small">
+                                <i class="fas fa-map-pin me-1"></i>
+                                Lat: {{ hospital.latitude }}, Long: {{ hospital.longitude }}
+                            </p>
+                            {% else %}
+                            <p class="text-muted">No location coordinates set.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.contact_person.id_for_label }}" class="form-label">Contact Person</label>
+                                {{ form.contact_person }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.contact_phone.id_for_label }}" class="form-label">Contact Phone</label>
+                                {{ form.contact_phone }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.alternative_phone.id_for_label }}" class="form-label">Alternative Phone</label>
+                                {{ form.alternative_phone }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.latitude.id_for_label }}" class="form-label">Latitude</label>
+                                {{ form.latitude }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.longitude.id_for_label }}" class="form-label">Longitude</label>
+                                {{ form.longitude }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.serving_centre.id_for_label }}" class="form-label">Serving Donation Centre</label>
+                            {{ form.serving_centre }}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.has_blood_storage }}
+                                <label class="form-check-label" for="{{ form.has_blood_storage.id_for_label }}">
+                                    This hospital has blood storage facility
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'hospital:dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if hospital.latitude and hospital.longitude %}
+<script>
+    function initMap() {
+        const location = { lat: {{ hospital.latitude }}, lng: {{ hospital.longitude }} };
+        const map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 15,
+            center: location,
+        });
+        new google.maps.Marker({
+            position: location,
+            map: map,
+        });
+    }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+{% endif %}
+{% endblock %}

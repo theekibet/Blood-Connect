@@ -13,12 +13,16 @@
         <p>Total Pending</p>
     </div>
     <div class="stat-box">
-        <h3>{{ patient_count }}</h3>
-        <p>Patient Requests</p>
+        <h3>{{ emergency_count|default:0 }}</h3>
+        <p>Emergency</p>
     </div>
     <div class="stat-box">
-        <h3>{{ donor_count }}</h3>
-        <p>Donor Requests</p>
+        <h3>{{ urgent_count|default:0 }}</h3>
+        <p>Urgent</p>
+    </div>
+    <div class="stat-box">
+        <h3>{{ routine_count|default:0 }}</h3>
+        <p>Routine</p>
     </div>
 </div>
 
@@ -29,8 +33,9 @@
             <div class="col-md-12">
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-primary active filter-btn" data-filter="all">All</button>
-                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="patient">Patients</button>
-                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="donor">Donors</button>
+                    <button type="button" class="btn btn-outline-danger filter-btn" data-filter="emergency">Emergency</button>
+                    <button type="button" class="btn btn-outline-warning filter-btn" data-filter="urgent">Urgent</button>
+                    <button type="button" class="btn btn-outline-info filter-btn" data-filter="routine">Routine</button>
                 </div>
             </div>
         </div>
@@ -40,103 +45,104 @@
 <!-- Requests Table -->
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title mb-3">Pending Blood Requests</h5>
+        <h5 class="card-title mb-3">Pending Hospital Blood Requests</h5>
         
-        {% if combined_requests %}
+        {% if pending_requests %}
             <div class="table-responsive">
                 <table class="table table-hover" id="requests-table">
                     <thead>
                         <tr>
-                            <th>Type</th>
+                            <th>Request #</th>
+                            <th>Hospital</th>
                             <th>Patient</th>
-                            <th>Requester Details</th>
                             <th>Blood Group</th>
                             <th>Units</th>
-                            <th>Request Date</th>
-                            <th>Center</th>
-                            <th>Contact</th>
+                            <th>Urgency</th>
+                            <th>Doctor</th>
+                            <th>Requested</th>
                             <th>Stock Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for req in combined_requests %}
-                        <tr class="request-row" data-request-type="{{ req.type }}">
+                        {% for req in pending_requests %}
+                        <tr class="request-row" data-urgency="{{ req.urgency }}">
                             <td>
-                                {% if req.type == 'patient' %}
-                                    <span class="badge bg-primary">Patient</span>
-                                {% else %}
-                                    <span class="badge bg-info">Donor</span>
-                                {% endif %}
+                                <strong>{{ req.request_number }}</strong>
                             </td>
                             <td>
-                                <strong>{{ req.patient_name }}</strong>
-                                {% if req.type == 'donor' %}
-                                    <br>
-                                    <small class="text-muted">
-                                        DOB: {{ req.object.patient_dob|date:"M d, Y" }}
-                                    </small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {{ req.requester }}
+                                <strong>{{ req.hospital_name }}</strong>
                                 <br>
                                 <small class="text-muted">
-                                    {% if req.type == 'patient' %}
-                                        Patient ID: {{ req.object.request_by_patient.id }}
-                                        {% if req.object.request_by_patient.bloodgroup_verified %}
-                                            <span class="badge bg-success">Verified</span>
-                                        {% endif %}
-                                    {% else %}
-                                        Donor ID: {{ req.object.request_by_donor.id }}
+                                    <i class="fas fa-phone"></i> {{ req.contact_phone }}
+                                </small>
+                            </td>
+                            <td>
+                                {{ req.patient_name }}
+                                <br>
+                                <small class="text-muted">
+                                    {% if req.object.patient_age %}
+                                        Age: {{ req.object.patient_age }}
+                                    {% endif %}
+                                    {% if req.object.patient_gender %}
+                                        | {{ req.object.patient_gender }}
                                     {% endif %}
                                 </small>
                             </td>
-                            <td><span class="badge bg-info">{{ req.bloodgroup }}</span></td>
-                            <td>{{ req.unit }} ml</td>
-                            <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
-                            <td>{{ req.donation_center.name }}</td>
                             <td>
-                                <small>
-                                    <i class="fas fa-phone"></i> {{ req.contact }}
-                                    {% if req.type == 'donor' and req.object.contact_number %}
-                                        <br><small>Donor Contact</small>
-                                    {% endif %}
-                                </small>
+                                <span class="badge bg-info">{{ req.blood_group }}</span>
+                            </td>
+                            <td>{{ req.units_requested }} ml</td>
+                            <td>
+                                {% if req.urgency == 'emergency' %}
+                                    <span class="badge bg-danger">EMERGENCY</span>
+                                {% elif req.urgency == 'urgent' %}
+                                    <span class="badge bg-warning text-dark">Urgent</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Routine</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ req.doctor_name }}
+                                <br>
+                                <small class="text-muted">{{ req.object.doctor_license|default:"" }}</small>
+                            </td>
+                            <td>
+                                {{ req.created_at|date:"M d, Y" }}
+                                <br>
+                                <small class="text-muted">{{ req.created_at|timesince }} ago</small>
                             </td>
                             <td>
                                 {% if req.has_inventory %}
                                     <span class="badge bg-success">Available</span>
                                     <br>
-                                    <small class="text-muted">{{ req.availability.safe_stock }} ml in stock</small>
+                                    <small class="text-muted">{{ req.available_stock }} ml in stock</small>
+                                    <br>
+                                    <small>{{ req.available_batches }} batch(es)</small>
                                 {% else %}
                                     <span class="badge bg-danger">Insufficient</span>
                                     <br>
-                                    <small class="text-muted">Need {{ req.unit }}ml, have {{ req.availability.safe_stock }}ml</small>
+                                    <small class="text-muted">Need {{ req.units_requested }}ml, have {{ req.available_stock }}ml</small>
+                                    <br>
+                                    <small>Shortage: {{ req.availability.shortage }}ml</small>
                                 {% endif %}
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'blood_bank_technician:approve_request' req.type req.id %}" 
+                                    <a href="{% url 'blood_bank_technician:approve_request' req.id %}" 
                                        class="btn btn-success {% if not req.has_inventory %}disabled{% endif %}"
                                        {% if not req.has_inventory %}aria-disabled="true" tabindex="-1"{% endif %}>
                                         <i class="fas fa-check"></i> Approve
                                     </a>
-                                    <a href="{% url 'blood_bank_technician:reject_request' req.type req.id %}" 
+                                    <a href="{% url 'blood_bank_technician:reject_request' req.id %}" 
                                        class="btn btn-danger">
                                         <i class="fas fa-times"></i> Reject
                                     </a>
+                                    <a href="{% url 'blood_bank_technician:request_detail' req.id %}" 
+                                       class="btn btn-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
                                 </div>
-                                
-                                <!-- Stock Info Tooltip -->
-                                {% if req.availability.expiring_soon %}
-                                <div class="mt-1">
-                                    <small class="text-warning">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        {{ req.availability.expiring_soon|length }} unit(s) expiring soon
-                                    </small>
-                                </div>
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -144,44 +150,11 @@
                 </table>
             </div>
             
-            <!-- Pagination (if needed) -->
-            {% if is_paginated %}
-            <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-            
         {% else %}
             <div class="text-center py-5">
                 <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
                 <h5>No Pending Requests</h5>
-                <p class="text-muted">All blood requests have been processed.</p>
+                <p class="text-muted">All hospital blood requests have been processed.</p>
                 <a href="{% url 'blood_bank_technician:approved_requests' %}" class="btn btn-outline-success mt-3">
                     <i class="fas fa-check-double"></i> View Approved Requests
                 </a>
@@ -197,7 +170,18 @@
         <div class="d-flex flex-wrap gap-3">
             <span><span class="badge bg-success">Available</span> - Sufficient stock available</span>
             <span><span class="badge bg-danger">Insufficient</span> - Not enough stock</span>
-            <span><span class="badge bg-warning text-dark">Expiring Soon</span> - Some units expire in &lt;7 days</span>
+        </div>
+    </div>
+</div>
+
+<!-- Urgency Legend -->
+<div class="card mt-2">
+    <div class="card-body">
+        <h6 class="mb-2">Urgency Levels:</h6>
+        <div class="d-flex flex-wrap gap-3">
+            <span><span class="badge bg-danger">Emergency</span> - Immediate (call blood bank)</span>
+            <span><span class="badge bg-warning text-dark">Urgent</span> - 4-6 hours</span>
+            <span><span class="badge bg-secondary">Routine</span> - 24-48 hours</span>
         </div>
     </div>
 </div>
@@ -222,8 +206,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (filterValue === 'all') {
                     row.style.display = '';
                 } else {
-                    const rowType = row.getAttribute('data-request-type');
-                    if (rowType === filterValue) {
+                    const rowUrgency = row.getAttribute('data-urgency');
+                    if (rowUrgency === filterValue) {
                         row.style.display = '';
                     } else {
                         row.style.display = 'none';
@@ -231,6 +215,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+    });
+
+    // Auto-highlight emergency requests
+    requestRows.forEach(row => {
+        if (row.getAttribute('data-urgency') === 'emergency') {
+            row.style.backgroundColor = '#fff3f3';
+        }
     });
 });
 </script>

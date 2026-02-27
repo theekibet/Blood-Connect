@@ -16,7 +16,9 @@
             <th>Units (ml)</th>
             <th>Donation Center</th>
             <th>Appointment Date & Time</th>
-            <th>Status</th>
+            <th>Collection Status</th>
+            <th>Test Result</th>
+            <th>Overall Status</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -24,7 +26,12 @@
           {% for donation in donations %}
           <tr>
             <td>{{ donation.date|date:"M d, Y" }}</td>
-            <td>{{ donation.bloodgroup|default:"N/A" }}</td>
+            <td>
+              {{ donation.bloodgroup|default:"N/A" }}
+              {% if donation.donor.bloodgroup_verified and donation.bloodgroup == donation.donor.bloodgroup %}
+                <i class="fas fa-check-circle text-success" title="Verified Blood Group"></i>
+              {% endif %}
+            </td>
             <td>{{ donation.unit|default:"N/A" }}</td>
             <td>{{ donation.donation_center.name|default:"N/A" }}</td>
             <td>
@@ -39,15 +46,15 @@
             <td>
               {% if donation.display_status %}
                 {% if donation.display_status == 'pending' %}
-                  <span class="badge bg-warning text-dark">Appointment Pending Approval</span>
+                  <span class="badge bg-warning text-dark">⏳ Pending Approval</span>
                 {% elif donation.display_status == 'approved' %}
-                  <span class="badge bg-success">Appointment Approved</span>
+                  <span class="badge bg-success">✅ Approved</span>
                 {% elif donation.display_status == 'completed' %}
-                  <span class="badge bg-primary">Appointment Completed</span>
+                  <span class="badge bg-primary">🩸 Collected</span>
                 {% elif donation.display_status == 'cancelled' %}
-                  <span class="badge bg-secondary">Appointment Cancelled</span>
+                  <span class="badge bg-secondary">❌ Cancelled</span>
                 {% elif donation.display_status == 'rejected' %}
-                  <span class="badge bg-danger">Appointment Rejected</span>
+                  <span class="badge bg-danger">⛔ Rejected</span>
                 {% else %}
                   <span class="badge bg-info">{{ donation.display_status|title }}</span>
                 {% endif %}
@@ -56,25 +63,120 @@
               {% endif %}
             </td>
             <td>
+              {% if donation.status == 'collected' %}
+                <span class="badge bg-info">🔬 Pending Lab Test</span>
+              {% elif donation.status == 'tested_safe' %}
+                <span class="badge bg-success">✅ SAFE - In Inventory</span>
+                <small class="d-block text-muted">Points Earned: +10</small>
+              {% elif donation.status == 'tested_unsafe' %}
+                <span class="badge bg-danger">⚠️ UNSAFE - Discarded</span>
+                {% if donation.unsafe_reason %}
+                <small class="d-block text-muted">{{ donation.unsafe_reason }}</small>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if donation.status == 'collected' %}
+                <span class="badge bg-warning text-dark">⏳ Testing</span>
+              {% elif donation.status == 'tested_safe' %}
+                <span class="badge bg-success">✓ Complete</span>
+              {% elif donation.status == 'tested_unsafe' %}
+                <span class="badge bg-danger">⚠️ Complete</span>
+              {% elif donation.display_status in 'pending,approved' %}
+                <span class="badge bg-warning text-dark">⏳ Awaiting Collection</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
               {% if donation.display_status in 'pending,approved' %}
               <form method="POST" action="{% url 'cancel-donation' donation.id %}" class="d-inline-block" onsubmit="return confirmCancel(event);">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-danger">
-                  <i class="fas fa-times-circle"></i> Cancel Appointment
+                  <i class="fas fa-times-circle"></i> Cancel
                 </button>
               </form>
+              {% elif donation.status == 'tested_unsafe' %}
+                <button type="button" class="btn btn-sm btn-outline-info" data-toggle="modal" data-target="#infoModal{{ donation.id }}">
+                  <i class="fas fa-info-circle"></i> Info
+                </button>
+                
+                <!-- Info Modal for Unsafe Donations -->
+                <div class="modal fade" id="infoModal{{ donation.id }}" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel{{ donation.id }}" aria-hidden="true">
+                  <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="infoModalLabel{{ donation.id }}">
+                          <i class="fas fa-exclamation-triangle"></i> Donation Information
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Your blood donation from {{ donation.date|date:"M d, Y" }} was found to be unsuitable for transfusion.</p>
+                        {% if donation.unsafe_reason %}
+                        <div class="alert alert-warning">
+                          <strong>Reason:</strong> {{ donation.unsafe_reason }}
+                        </div>
+                        {% endif %}
+                        <p>Please contact the blood bank for more information and guidance.</p>
+                        <p><i class="fas fa-phone-alt"></i> <strong>Contact:</strong> +254 XXX XXX XXX</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               {% else %}
-                <span class="text-muted">N/A</span>
+                <span class="text-muted">—</span>
               {% endif %}
             </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center">No donation history found</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mt-4">
+      <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+          <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-check-circle"></i> Safe Donations</h5>
+            <h2>{{ safe_count|default:"0" }}</h2>
+            <p class="mb-0">Total points: {{ donor.points }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+          <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-exclamation-triangle"></i> Unsafe Donations</h5>
+            <h2>{{ unsafe_count|default:"0" }}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-white bg-info mb-3">
+          <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-flask"></i> Pending Tests</h5>
+            <h2>{{ pending_test_count|default:"0" }}</h2>
+          </div>
+        </div>
+      </div>
+    </div>
   {% else %}
     <div class="alert alert-info">
       <i class="fas fa-info-circle"></i> You have no blood donation history yet.
+      <a href="{% url 'donate-blood' %}" class="alert-link">Schedule your first donation</a>
     </div>
   {% endif %}
 </div>
@@ -88,5 +190,14 @@
     }
     return true;
   }
+
+  // Log donation statuses for debugging
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Donation History Loaded');
+    {% for donation in donations %}
+    console.log('Donation {{ donation.id }}: status={{ donation.status }}, display_status={{ donation.display_status }}');
+    {% endfor %}
+  });
 </script>
+
 {% endblock %}

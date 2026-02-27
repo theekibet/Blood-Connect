@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from .models import Nurse
-from blood.models import Notification 
+from utils.models import Notification 
 
 def nurse_unread_notifications(request):
     unread_count = 0

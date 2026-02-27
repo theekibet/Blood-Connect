@@ -356,56 +356,62 @@ def perform_test(request, collection_id):
             # Get unsafe reason from form if provided
             unsafe_reason = request.POST.get('unsafe_reason', '').strip()
             
-            # ===== HANDLE STOCK BASED ON TEST RESULT =====
+            # ===== PERMANENTLY VERIFY DONOR'S BLOOD GROUP (REGARDLESS OF SAFE/UNSAFE) =====
+            # This happens BEFORE stock handling so we know if this was first verification
+            donor = blood.donor
+            was_first_verification = False
+            
+            if donor:
+                if not donor.bloodgroup_verified:
+                    # First time verification - set and lock
+                    donor.bloodgroup = test.blood_group
+                    donor.bloodgroup_verified = True
+                    donor.bloodgroup_verified_by = request.user
+                    donor.bloodgroup_verified_at = timezone.now()
+                    donor.save()
+                    was_first_verification = True
+                    
+                    logger.info(f"✅ PERMANENTLY VERIFIED donor {donor.id} blood group: {test.blood_group}")
+                    
+                    # Create notification for donor
+                    from utils.models import Notification
+                    from django.contrib.contenttypes.models import ContentType
+                    
+                    Notification.objects.create(
+                        title="Blood Group Verified",
+                        message=(
+                            f"Your blood group has been permanently verified as {test.blood_group} "
+                            f"based on laboratory testing. This information is now locked and "
+                            f"will be used for all future donations."
+                        ),
+                        recipient_content_type=ContentType.objects.get_for_model(donor),
+                        recipient_object_id=donor.id,
+                        sender_content_type=ContentType.objects.get_for_model(request.user),
+                        sender_object_id=request.user.id,
+                    )
+                    
+                elif donor.bloodgroup != test.blood_group and donor.bloodgroup_verified:
+                    # This should never happen - blood group mismatch with verified donor
+                    # Log it as critical error
+                    logger.error(f"⚠️ CRITICAL: Donor {donor.id} has verified blood group {donor.bloodgroup} "
+                               f"but test shows {test.blood_group}. Manual review required!")
+                    
+                    # Create alert for admin
+                    from utils.models import Notification
+                    from django.contrib.contenttypes.models import ContentType
+                    
+                    Notification.objects.create(
+                        title="⚠️ BLOOD GROUP MISMATCH DETECTED",
+                        message=(
+                            f"Donor {donor.user.get_full_name()} has verified blood group {donor.bloodgroup} "
+                            f"but lab test shows {test.blood_group}. Immediate review required!"
+                        ),
+                        recipient_content_type=ContentType.objects.get_for_model(request.user),
+                        recipient_object_id=request.user.id,
+                    )
+            
+            # ===== NOW HANDLE STOCK BASED ON TEST RESULT =====
             if test.result == 'safe':
-                # ===== PERMANENTLY VERIFY DONOR'S BLOOD GROUP =====
-                donor = blood.donor
-                if donor:
-                    # Check if this is first-time verification or if blood group differs
-                    if not donor.bloodgroup_verified:
-                        # First time verification - set and lock
-                        donor.bloodgroup = test.blood_group
-                        donor.bloodgroup_verified = True
-                        donor.bloodgroup_verified_by = request.user
-                        donor.bloodgroup_verified_at = timezone.now()
-                        donor.save()
-                        
-                        logger.info(f"✅ PERMANENTLY VERIFIED donor {donor.id} blood group: {test.blood_group}")
-                        
-                        # Create notification for donor
-                        from blood.models import Notification
-                        from django.contrib.contenttypes.models import ContentType
-                        
-                        Notification.objects.create(
-                            title="Blood Group Verified",
-                            message=(
-                                f"Your blood group has been permanently verified as {test.blood_group} "
-                                f"based on laboratory testing. This information is now locked and "
-                                f"will be used for all future donations."
-                            ),
-                            recipient_content_type=ContentType.objects.get_for_model(donor),
-                            recipient_object_id=donor.id,
-                            sender_content_type=ContentType.objects.get_for_model(request.user),
-                            sender_object_id=request.user.id,
-                        )
-                        
-                    elif donor.bloodgroup != test.blood_group and donor.bloodgroup_verified:
-                        # This should never happen - blood group mismatch with verified donor
-                        # Log it as critical error
-                        logger.error(f"⚠️ CRITICAL: Donor {donor.id} has verified blood group {donor.bloodgroup} "
-                                   f"but test shows {test.blood_group}. Manual review required!")
-                        
-                        # Create alert for admin
-                        Notification.objects.create(
-                            title="⚠️ BLOOD GROUP MISMATCH DETECTED",
-                            message=(
-                                f"Donor {donor.user.get_full_name()} has verified blood group {donor.bloodgroup} "
-                                f"but lab test shows {test.blood_group}. Immediate review required!"
-                            ),
-                            recipient_content_type=ContentType.objects.get_for_model(request.user),
-                            recipient_object_id=request.user.id,
-                        )
-                
                 # Create stock unit for safe blood - using the pre-generated barcode
                 stock_unit = StockUnit.objects.create(
                     bloodgroup=test.blood_group,
@@ -473,7 +479,7 @@ def perform_test(request, collection_id):
                 messages.success(
                     request, 
                     f'✅ Test completed. Blood marked SAFE and added to inventory. '
-                    f'Donor blood group has been {"verified" if donor and not donor.bloodgroup_verified else "confirmed"}. '
+                    f'Donor blood group has been {"verified" if was_first_verification else "confirmed"}. '
                     f'Barcode: {stock_unit.barcode}'
                 )
                 
@@ -540,7 +546,7 @@ def perform_test(request, collection_id):
                 
                 # Notify donor about unsafe result (without revealing specific disease)
                 if blood.donor:
-                    from blood.models import Notification
+                    from utils.models import Notification
                     from django.contrib.contenttypes.models import ContentType
                     
                     Notification.objects.create(
@@ -558,6 +564,7 @@ def perform_test(request, collection_id):
                 messages.warning(
                     request, 
                     f'⚠️ Test completed. Blood marked UNSAFE and quarantined. '
+                    f'Donor blood group has been {"verified" if was_first_verification else "confirmed"}. '
                     f'Reason: {unsafe_reason}'
                 )
             
@@ -830,7 +837,7 @@ def mark_unsafe(request, test_id):
         
         # Notify donor
         if blood.donor:
-            from blood.models import Notification
+            from utils.models import Notification
             from django.contrib.contenttypes.models import ContentType
             
             Notification.objects.create(

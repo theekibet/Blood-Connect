@@ -9,30 +9,31 @@ from datetime import date, timedelta
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from donor import models as dmodels
-from patient import models as pmodels
 from donor import forms as dforms
-from patient import forms as pforms
 from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from .forms import ContactForm
 from .models import ContactMessage, Contact ,BloodDriveEvent, Banner,  Testimonial,HomePageStats
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from patient.models import Patient
 from donor.models import DonorEligibility
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Stock
-from patient.models import BloodRequest
+from hospital.models import HospitalBloodRequest
+from hospital.models import HospitalUser, Hospital
 from donor.models import DonorEligibility, BloodDonate
 from django.db.models import Max
 from donor.models import Donor 
-from .models import Notification,QuizAttempt
+from .models import QuizAttempt
+from utils.models import Notification
 from django.contrib.contenttypes.models import ContentType
+from blood import models as blood_models
+from donor import models as donor_models
+from nurse import models as nurse_models
+from hospital import models as hospital_models
 from django.http import Http404
-from patient.models import Patient
 from django.core.paginator import Paginator
-from patient import models 
 from blood import models
 from blood import models as bmodels
 from nurse.models import Nurse
@@ -63,7 +64,6 @@ import csv
 from django.http import HttpResponse
 from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
-from donor.models import DonorBloodRequest
 from django.db.models import Prefetch
 from .forms import AdminLoginForm
 import random
@@ -74,6 +74,7 @@ import requests
 from .models import DonationFunFact, UserFactInteraction, DailyFactChallenge
 from .fact_data import FACT_DATABASE, QUICK_FACTS, DONATION_TIPS, ELIGIBILITY_CRITERIA
 from django.db.models import Avg
+
 logger = logging.getLogger(__name__)
 
 def home_view(request):
@@ -81,6 +82,10 @@ def home_view(request):
         # ==========================================
         # Ensure default donation center exists
         # ==========================================
+        from blood.models import DonationCenter, Stock, StockUnit, BloodDriveEvent, Banner, Testimonial, HomePageStats
+        from donor.models import Donor
+        from hospital.models import HospitalBloodRequest
+        
         center = DonationCenter.objects.first()
         if not center:
             center = DonationCenter.objects.create(
@@ -128,14 +133,10 @@ def home_view(request):
                 Q(donoreligibility__approved=True) | Q(donoreligibility__isnull=True)
             ).distinct().count()
             
-            # 2. Lives saved = completed requests + completed donations
-            completed_requests_count = BloodRequest.objects.filter(
-                status='completed'
+            # 2. Lives saved = completed hospital blood requests (each request represents a patient helped)
+            completed_requests_count = HospitalBloodRequest.objects.filter(
+                status='delivered'
             ).count()
-            completed_donations_count = BloodDonate.objects.filter(
-                status='completed'
-            ).count()
-            lives_saved = completed_requests_count + completed_donations_count
             
             # 3. Total donation centers
             donation_centers_count = DonationCenter.objects.count()
@@ -148,6 +149,9 @@ def home_view(request):
                 total=Sum('unit')
             )['total'] or 0
             
+            # 5. Hospitals served
+            hospitals_served = HospitalBloodRequest.objects.values('hospital').distinct().count()
+            
             # Create default stats structure for template
             stats = [
                 {
@@ -156,19 +160,24 @@ def home_view(request):
                     'icon_class': 'fas fa-users'
                 },
                 {
-                    'stat_name': 'Lives Saved',
-                    'stat_value': lives_saved,
-                    'icon_class': 'fas fa-heart'
+                    'stat_name': 'Hospitals Served',
+                    'stat_value': hospitals_served,
+                    'icon_class': 'fas fa-hospital'
                 },
                 {
                     'stat_name': 'Donation Centers',
                     'stat_value': donation_centers_count,
-                    'icon_class': 'fas fa-hospital'
+                    'icon_class': 'fas fa-building'
                 },
                 {
                     'stat_name': 'Units Available',
                     'stat_value': total_units_available,
                     'icon_class': 'fas fa-tint'
+                },
+                {
+                    'stat_name': 'Lives Impacted',
+                    'stat_value': completed_requests_count,
+                    'icon_class': 'fas fa-heart'
                 },
             ]
         
@@ -208,9 +217,10 @@ def home_view(request):
             'testimonials': testimonials,
             # Legacy context for backward compatibility
             'active_donors_count': stats[0]['stat_value'] if isinstance(stats, list) else None,
-            'lives_saved': stats[1]['stat_value'] if isinstance(stats, list) else None,
+            'hospitals_served': stats[1]['stat_value'] if isinstance(stats, list) else None,
             'donation_centers_count': stats[2]['stat_value'] if isinstance(stats, list) else None,
             'total_units_available': stats[3]['stat_value'] if isinstance(stats, list) else None,
+            'lives_impacted': stats[4]['stat_value'] if isinstance(stats, list) else None,
         }
         
         return render(request, 'blood/index.html', context)
@@ -218,7 +228,6 @@ def home_view(request):
     except Exception as e:
         logger.error(f"Error in home_view: {e}", exc_info=True)
         return HttpResponseServerError("Something went wrong. Please try again later.")
-
 
 def blood_drive_detail(request, pk):
     """Detail view for individual blood drive events"""
@@ -332,13 +341,14 @@ def afterlogin_view(request):
         messages.error(request, "An error occurred during login.")
         return redirect('home')
 
+
 @login_required(login_url='adminlogin')
 @user_passes_test(lambda u: u.is_staff, login_url='adminlogin')
 def admin_dashboard_view(request):
     # Aggregate total units by blood group and center
-    all_stocks = models.Stock.objects.select_related('center').values(
+    all_stocks = blood_models.Stock.objects.select_related('center').values(
         'bloodgroup', 'center__name'
-    ).annotate(total_units=Sum('unit'))
+    ).annotate(total_units=models.Sum('unit'))
 
     # Organize stocks by center and blood group
     center_stock_map = defaultdict(lambda: defaultdict(int))
@@ -390,13 +400,50 @@ def admin_dashboard_view(request):
                     'percentage': round(percentage, 2),
                 })
 
-    # Stats for cards: Adjust icons and colors as you like
+    # Stats for cards
     stats = [
-        {"label": "Total Donors", "value": dmodels.Donor.objects.count(), "icon": "fas fa-user-plus", "color": "#007bff"},
-        {"label": "Total Patients", "value": pmodels.Patient.objects.count(), "icon": "fas fa-procedures", "color": "#28a745"},
-        {"label": "Total Requests", "value": BloodRequest.objects.count(), "icon": "fas fa-clipboard-list", "color": "#ffc107"},
-        {"label": "Approved Requests", "value": BloodRequest.objects.filter(status="Approved").count(), "icon": "fas fa-check-circle", "color": "#17a2b8"},
-
+        {
+            "label": "Total Donors", 
+            "value": donor_models.Donor.objects.count(), 
+            "icon": "fas fa-user-plus", 
+            "color": "#007bff"
+        },
+        {
+            "label": "Total Nurses", 
+            "value": nurse_models.Nurse.objects.count(), 
+            "icon": "fas fa-user-nurse", 
+            "color": "#28a745"
+        },
+        {
+            "label": "Total Hospitals", 
+            "value": hospital_models.Hospital.objects.count(), 
+            "icon": "fas fa-hospital", 
+            "color": "#dc3545"
+        },
+        {
+            "label": "Total Blood Requests", 
+            "value": hospital_models.HospitalBloodRequest.objects.count(), 
+            "icon": "fas fa-clipboard-list", 
+            "color": "#ffc107"
+        },
+        {
+            "label": "Pending Requests", 
+            "value": hospital_models.HospitalBloodRequest.objects.filter(status='pending').count(), 
+            "icon": "fas fa-clock", 
+            "color": "#fd7e14"
+        },
+        {
+            "label": "Approved Requests", 
+            "value": hospital_models.HospitalBloodRequest.objects.filter(status='approved').count(), 
+            "icon": "fas fa-check-circle", 
+            "color": "#17a2b8"
+        },
+        {
+            "label": "Dispatched Requests", 
+            "value": hospital_models.HospitalBloodRequest.objects.filter(status='dispatched').count(), 
+            "icon": "fas fa-truck", 
+            "color": "#6610f2"
+        },
     ]
 
     context = {
@@ -659,102 +706,35 @@ def delete_donor_view(request, pk):
     messages.success(request, "Donor and associated user (if any) deleted successfully.")
     return redirect('admin-donor')
 
-@login_required(login_url='adminlogin')
-def admin_patient_view(request):
-    # Annotate each patient with the datetime of their last blood request and last appointment
-    patients = pmodels.Patient.objects.all().annotate(
-        last_request=Max('blood_requests__created_at'),       
-        last_appointment=Max('appointments__date'),           
-    )
-
-    # Determine if patient is critical based on blood group or recent blood request (last 7 days)
-    for patient in patients:
-        is_rare_group = hasattr(patient, 'bloodgroup') and patient.bloodgroup in ['AB-', 'B-']
-        recently_requested = patient.last_request and (now().date() - patient.last_request.date()).days < 7
-        patient.is_critical = is_rare_group or recently_requested
-
-    context = {
-        'patients': patients,
-        'message': request.GET.get('message', None),  # Optional message from redirect/query params
-    }
-
-    return render(request, 'blood/admin_patient.html', context)
-@login_required(login_url='adminlogin')
-def update_patient_view(request, pk):
-    try:
-        patient = pmodels.Patient.objects.get(id=pk)
-    except pmodels.Patient.DoesNotExist:
-        raise Http404("Patient does not exist")
-
-    try:
-        user = pmodels.User.objects.get(id=patient.user_id)
-    except pmodels.User.DoesNotExist:
-        raise Http404("User associated with this patient does not exist")
-
-    userForm = pforms.PatientUserForm(instance=user)
-    patientForm = pforms.PatientForm(request.FILES, instance=patient)
-    mydict = {'userForm': userForm, 'patientForm': patientForm}
-
-    if request.method == 'POST':
-        userForm = pforms.PatientUserForm(request.POST, instance=user)
-        patientForm = pforms.PatientForm(request.POST, request.FILES, instance=patient)
-        if userForm.is_valid() and patientForm.is_valid():
-            user = userForm.save()
-            user.set_password(user.password)
-            user.save()
-            patient = patientForm.save(commit=False)
-            patient.user = user
-            patient.bloodgroup = patientForm.cleaned_data['bloodgroup']
-            patient.save()
-            return redirect('admin-patient')
-    return render(request, 'blood/update_patient.html', context=mydict)
 
 
-@login_required(login_url='adminlogin')
-def delete_patient_view(request, pk):
-    patient = get_object_or_404(pmodels.Patient, id=pk)
-
-   
-    try:
-        user = User.objects.get(id=patient.user_id)
-        user.delete()
-    except User.DoesNotExist:
-       
-        pass
-
-    
-    patient.delete()
-
-    return HttpResponseRedirect('/admin-patient')
 
 @login_required(login_url='adminlogin')
 def admin_request_view(request):
-    # Get content types for both request models
-    blood_request_ct = ContentType.objects.get_for_model(BloodRequest)
-    donor_blood_request_ct = ContentType.objects.get_for_model(DonorBloodRequest)
+    # Get content type for hospital blood request model
+    from django.contrib.contenttypes.models import ContentType
+    from hospital.models import HospitalBloodRequest
+    
+    hospital_request_ct = ContentType.objects.get_for_model(HospitalBloodRequest)
 
-    # Query appointments linked to either blood request type
+    # Query appointments linked to hospital blood requests
     appointments = Appointment.objects.filter(
-        request_content_type__in=[blood_request_ct, donor_blood_request_ct]
+        request_content_type=hospital_request_ct
     ).select_related(
         'donor__user',
-        'patient__user',
         'request_content_type'
     ).order_by('-date')
 
-    # Mark unseen pending requests (both types) as seen
-    BloodRequest.objects.filter(status='pending', is_seen=False).update(is_seen=True)
-    DonorBloodRequest.objects.filter(status='pending', is_seen=False).update(is_seen=True)
-
-    # Count unseen pending requests (both types)
-    new_requests_count = (
-        BloodRequest.objects.filter(status='pending', is_seen=False).count() +
-        DonorBloodRequest.objects.filter(status='pending', is_seen=False).count()
-    )
+    # Get all hospital blood requests
+    blood_requests = HospitalBloodRequest.objects.all().order_by('-created_at')
+    
+    # Count pending requests
+    pending_requests_count = HospitalBloodRequest.objects.filter(status='pending').count()
 
     context = {
         'appointments': appointments,
-        'new_requests_count': new_requests_count,
+        'blood_requests': blood_requests,
+        'pending_requests_count': pending_requests_count,
     }
     return render(request, 'blood/admin_request.html', context)
 logger = logging.getLogger(__name__)
@@ -794,15 +774,14 @@ def admin_donation_view(request):
     }
     return render(request, 'blood/admin_donation.html', context)
 from blood.models import (
-    Appointment,
+
     Stock,
     StockUnit,
     StockTransaction,
 )
 from blood.utils.stock_utils import deduct_stock_fifo
-from donor.models import DonorBloodRequest
-from patient.models import BloodRequest
-
+from hospital.models import HospitalBloodRequest
+from nurse.models import Appointment
 logger = logging.getLogger(__name__)
 def serialize_deductions(deductions):
     """
@@ -858,6 +837,9 @@ def admin_contacts_view(request):
     return render(request, 'blood/admin_contacts.html', {'contacts': contacts})
 
 
+
+
+@login_required(login_url='adminlogin')
 def admin_post_notification(request):
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -879,7 +861,8 @@ def admin_post_notification(request):
 
             # Map group names to models and content types
             group_model_map = {
-                'patient': Patient,
+                'hospital': Hospital,
+                'hospital_user': HospitalUser,
                 'donor': Donor,
                 'nurse': Nurse
             }
@@ -890,26 +873,53 @@ def admin_post_notification(request):
                     content_type = ContentType.objects.get_for_model(model)
                     recipients = model.objects.all()
                     for recipient in recipients:
+                        # For HospitalUser, we want to notify the user
+                        if group == 'hospital_user':
+                            recipient_obj = recipient.user
+                            recipient_content_type = ContentType.objects.get_for_model(recipient.user.__class__)
+                            recipient_object_id = recipient.user.id
+                        else:
+                            recipient_obj = recipient
+                            recipient_content_type = content_type
+                            recipient_object_id = recipient.id
+                            
                         notifications.append(Notification(
                             title=title,
                             message=message_text,
-                            recipient_content_type=content_type,
-                            recipient_object_id=recipient.id,
+                            recipient_content_type=recipient_content_type,
+                            recipient_object_id=recipient_object_id,
+                            sender_content_type=ContentType.objects.get_for_model(request.user.__class__),
+                            sender_object_id=request.user.id,
                         ))
 
             # Add notifications for individually selected users if any
             if recipient_ids:
-                # Need to identify content type of each user id since could be from any group
-                # Assume user IDs are unique across patient, donor, nurse user relations
-
-                # Gather users from all groups' users to map IDs to content types
+                # Gather users from all models
                 user_id_map = {}
 
-                for group, model in group_model_map.items():
-                    content_type = ContentType.objects.get_for_model(model)
-                    objs = model.objects.filter(user__id__in=recipient_ids).select_related('user')
-                    for obj in objs:
-                        user_id_map[obj.user.id] = (content_type, obj.id)
+                # Check HospitalUsers
+                hospital_users = HospitalUser.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for hu in hospital_users:
+                    user_id_map[hu.user.id] = (
+                        ContentType.objects.get_for_model(hu.user.__class__),
+                        hu.user.id
+                    )
+
+                # Check Donors
+                donors = Donor.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for donor in donors:
+                    user_id_map[donor.user.id] = (
+                        ContentType.objects.get_for_model(donor.user.__class__),
+                        donor.user.id
+                    )
+
+                # Check Nurses
+                nurses = Nurse.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for nurse in nurses:
+                    user_id_map[nurse.user.id] = (
+                        ContentType.objects.get_for_model(nurse.user.__class__),
+                        nurse.user.id
+                    )
 
                 for user_id in recipient_ids:
                     if user_id in user_id_map:
@@ -919,6 +929,8 @@ def admin_post_notification(request):
                             message=message_text,
                             recipient_content_type=content_type,
                             recipient_object_id=obj_id,
+                            sender_content_type=ContentType.objects.get_for_model(request.user.__class__),
+                            sender_object_id=request.user.id,
                         ))
 
             if not notifications:
@@ -926,18 +938,21 @@ def admin_post_notification(request):
                 return redirect('admin-post-notification')
 
             Notification.objects.bulk_create(notifications)
-            messages.success(request, "Notifications posted successfully!")
+            messages.success(request, f"{len(notifications)} notifications posted successfully!")
 
         except Exception as e:
             messages.error(request, f"Error posting notifications: {str(e)}")
         return redirect('admin-post-notification')
 
-    patients = Patient.objects.select_related('user').all()
+    # GET request - show the form with recipient lists
+    hospitals = Hospital.objects.all()
+    hospital_users = HospitalUser.objects.select_related('user', 'hospital').all()
     donors = Donor.objects.select_related('user').all()
     nurses = Nurse.objects.select_related('user').all()
 
     context = {
-        'patients': patients,
+        'hospitals': hospitals,
+        'hospital_users': hospital_users,
         'donors': donors,
         'nurses': nurses,
     }
@@ -1337,47 +1352,7 @@ def admin_donation_report(request):
 
     return response
 
-@staff_member_required  # ensures only admins/staff can access
-def export_bloodrequests_csv(request):
-    # Create the HttpResponse object with CSV header
-    response = HttpResponse(
-        content_type='text/csv',
-        headers={'Content-Disposition': 'attachment; filename="blood_requests.csv"'},
-    )
 
-    writer = csv.writer(response)
-    
-    # Write CSV header
-    writer.writerow([
-        'ID', 'Patient Name', 'Age', 'Contact Number', 'Blood Group',
-        'Unit (ml)', 'Urgency', 'Donation Center', 'Nurse Assigned',
-        'Status', 'Created At'
-    ])
-
-    # Write data rows
-    for req in BloodRequest.objects.select_related(
-        'donation_center'
-    ).prefetch_related('appointments'):
-        appt = req.appointments.first()
-        nurse_name = (
-            f"{appt.nurse.first_name} {appt.nurse.last_name}"
-            if appt and appt.nurse else "N/A"
-        )
-        writer.writerow([
-            req.id,
-            req.patient_name,
-            req.patient_age,
-            req.contact_number,
-            req.bloodgroup or "N/A",
-            req.unit or "N/A",
-            req.urgency_level,
-            req.donation_center.name if req.donation_center else "N/A",
-            nurse_name,
-            req.status,
-            req.created_at.strftime("%Y-%m-%d %H:%M"),
-        ])
-
-    return response
 def generate_username_suggestions(base_username, count=5):
     """Generate unique username suggestions based on the provided username."""
     suggestions = []
@@ -1546,9 +1521,9 @@ def check_national_id_ajax(request):
     
     # Check if national ID exists in donor or patient records
     donor_exists = Donor.objects.filter(national_id=national_id).exists()
-    patient_exists = Patient.objects.filter(national_id=national_id).exists()
+  
     
-    if donor_exists or patient_exists:
+    if donor_exists :
         return JsonResponse({
             'valid': False,
             'message': 'This National ID is already registered',
@@ -1610,10 +1585,9 @@ def check_mobile_ajax(request):
     
     # Check if mobile exists in any table
     donor_exists = Donor.objects.filter(mobile=normalized).exists()
-    patient_exists = Patient.objects.filter(mobile=normalized).exists()
     nurse_exists = Nurse.objects.filter(phone=normalized).exists()
     
-    if donor_exists or patient_exists or nurse_exists:
+    if donor_exists or nurse_exists:
         return JsonResponse({
             'valid': False,
             'message': 'This mobile number is already registered',

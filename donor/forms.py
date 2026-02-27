@@ -9,7 +9,7 @@ from .models import Donor, DonorEligibility, BloodDonate
 from nurse.models import Nurse
 from datetime import date
 from datetime import datetime
-from donor.models import DonorBloodRequest,BLOODGROUP_CHOICES
+from donor.models import BLOODGROUP_CHOICES
 from donor.models import KENYAN_COUNTIES
 
 # -------------------------------
@@ -699,39 +699,4 @@ class BloodDonateForm(forms.ModelForm):
         fields = [
             'bloodgroup', 'unit', 'donation_center', 'nurse'
         ]
-        
-# -------------------------------
-# DonorBloodRequest(on behalf of a patient)
-# -------------------------------        
-class DonorBloodRequestForm(forms.ModelForm):
-    patient_dob = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-        help_text="Patient's date of birth"
-    )
-    
-    consent_confirmed = forms.BooleanField(
-        required=True,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        label="I confirm that the information provided is accurate and I have the patient's consent to make this request"
-    )
-    
-    class Meta:
-        model = DonorBloodRequest
-        fields = [
-            'patient_first_name', 'patient_last_name', 'patient_dob',
-            'contact_number', 'bloodgroup', 'unit', 'donation_center'
-        ]
-        widgets = {
-            'patient_first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Patient first name'}),
-            'patient_last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Patient last name'}),
-            'contact_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact number'}),
-            'bloodgroup': forms.Select(attrs={'class': 'form-control'}),
-            'unit': forms.NumberInput(attrs={'class': 'form-control', 'min': 450, 'max': 2700, 'step': 50}),
-            'donation_center': forms.Select(attrs={'class': 'form-control'}),
-        }
-    
-    def clean_unit(self):
-        unit = self.cleaned_data.get('unit')
-        if unit and (unit < 450 or unit > 2700 or unit % 50 != 0):
-            raise forms.ValidationError("Unit must be between 450ml and 2700ml in multiples of 50.")
-        return unit
+ 

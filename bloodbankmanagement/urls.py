@@ -2,16 +2,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth.views import (
     LogoutView, 
-    PasswordResetView, 
-    PasswordResetDoneView,
-    PasswordResetConfirmView, 
-    PasswordResetCompleteView
+
 )
 from django.conf import settings
 from django.conf.urls.static import static
+from nurse.views import get_nurses_by_center
 
 from blood import views as blood_views  
-from patient.views import get_nurses_by_center
 from nurse import views as nurse_views
 from blood import views  
 from django.views.generic import TemplateView
@@ -47,40 +44,12 @@ urlpatterns = [
 
 
 
-    # ===================================
-    # PASSWORD RESET (For ALL users)
-    # ===================================
-    path('password-reset/', 
-         PasswordResetView.as_view(
-             template_name='shared/password_reset_form.html',
-             email_template_name='shared/password_reset_email.html',
-             subject_template_name='shared/emails/password_reset_subject.txt',
-             success_url='/password-reset/done/',
-             html_email_template_name='shared/password_reset_email.html'
-         ), 
-         name='password_reset'),
+
     
-    path('password-reset/done/', 
-         PasswordResetDoneView.as_view(
-             template_name='shared/password_reset_done.html'
-         ), 
-         name='password_reset_done'),
-    
-    path('password-reset-confirm/<uidb64>/<token>/', 
-         PasswordResetConfirmView.as_view(
-             template_name='shared/password_reset_confirm.html',
-             success_url='/password-reset-complete/'
-         ), 
-         name='password_reset_confirm'),
-    
-    path('password-reset-complete/', 
-         PasswordResetCompleteView.as_view(
-             template_name='shared/password_reset_complete.html'
-         ), 
-         name='password_reset_complete'),
+
     
     
-    #########RESET EXISTING PASS
+
         path('password-change/', 
          CustomPasswordChangeView.as_view(), 
          name='password_change'),
@@ -104,17 +73,16 @@ urlpatterns = [
     # APP-SPECIFIC URLS
     # ===================================
     path('donor/', include('donor.urls')),
-    path('patient/', include('patient.urls')),
     path('nurse/', include('nurse.urls')),
     path('chatbot/', include('chatbot.urls')),
-
+    path('hospital/', include('hospital.urls')),
     # ===================================
     # ADMIN PANEL ROUTES
     # ===================================
     path('admin-dashboard/', blood_views.admin_dashboard_view, name='admin-dashboard'),
     path('admin-blood/', blood_views.admin_blood_view, name='admin-blood'),
     path('admin-donor/', blood_views.admin_donor_view, name='admin-donor'),
-    path('admin-patient/', blood_views.admin_patient_view, name='admin-patient'),
+
     path('admin-request/', blood_views.admin_request_view, name='admin-request'),
     path('admin-donation/', blood_views.admin_donation_view, name='admin-donation'),
     path('admin-contacts/', blood_views.admin_contacts_view, name='admin_contacts'),
@@ -136,16 +104,15 @@ urlpatterns = [
     # ===================================
     path('update-donor/<int:pk>/', blood_views.update_donor_view, name='update-donor'),
     path('delete-donor/<int:pk>/', blood_views.delete_donor_view, name='delete-donor'),
-    path('update-patient/<int:pk>/', blood_views.update_patient_view, name='update-patient'),
-    path('delete-patient/<int:pk>/', blood_views.delete_patient_view, name='delete-patient'),
+ 
 
     # ===================================
     # OTHER FUNCTIONALITY
     # ===================================
     path("save-user-location/", blood_views.save_user_location, name="save-user-location"),
-    path('bloodrequest/<int:blood_request_id>/stock-transactions/', views.blood_request_stock_transactions, name='blood_request_stock_transactions'),
+
     path('admin-donations/report/', views.admin_donation_report, name='admin-donation-report'),
-    path("bloodrequests/export/", views.export_bloodrequests_csv, name="export-bloodrequests-csv"),
+
     
     # ===================================
     # GLOBAL AJAX VALIDATORS (System-wide)

@@ -208,7 +208,6 @@ def deduct_stock_fifo(center, bloodgroup, required_units, deducted_by_user=None,
     This function is used for BLOOD REQUESTS when completing appointments.
     
     CRITICAL UPDATE: Now ONLY deducts from SAFE, non-quarantined stock.
-    This ensures only verified safe blood is issued to patients.
 
     Args:
         center (DonationCenter): The donation center.

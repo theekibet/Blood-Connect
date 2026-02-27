@@ -27,7 +27,7 @@
 <!-- Summary Cards -->
 <div class="stats mb-4">
     <div class="stat-box">
-        <h3>{{ combined_requests|length }}</h3>
+        <h3>{{ approved_requests|length }}</h3>
         <p>Total</p>
     </div>
     <div class="stat-box">
@@ -47,8 +47,6 @@
             <div class="col-md-12">
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-primary active filter-btn" data-filter="all">All</button>
-                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="patient">Patients</button>
-                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="donor">Donors</button>
                     <button type="button" class="btn btn-outline-primary filter-btn" data-filter="approved">Approved</button>
                     <button type="button" class="btn btn-outline-primary filter-btn" data-filter="dispatched">Dispatched</button>
                 </div>
@@ -60,57 +58,54 @@
 <!-- Requests Table -->
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title mb-3">Approved & Dispatched Requests</h5>
+        <h5 class="card-title mb-3">Approved & Dispatched Hospital Requests</h5>
         
-        {% if combined_requests %}
+        {% if approved_requests %}
             <div class="table-responsive">
                 <table class="table table-hover" id="requests-table">
                     <thead>
                         <tr>
-                            <th>Type</th>
+                            <th>Request #</th>
+                            <th>Hospital</th>
                             <th>Patient</th>
-                            <th>Requester</th>
                             <th>Blood Group</th>
                             <th>Units</th>
+                            <th>Urgency</th>
                             <th>Status</th>
                             <th>Approved Date</th>
-                            <th>Center</th>
                             <th>Approved By</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for req in combined_requests %}
-                        <tr class="request-row" 
-                            data-request-type="{{ req.type }}"
-                            data-request-status="{{ req.status }}">
+                        {% for req in approved_requests %}
+                        <tr class="request-row" data-request-status="{{ req.status }}">
                             <td>
-                                {% if req.type == 'patient' %}
-                                    <span class="badge bg-primary">Patient</span>
+                                <strong>{{ req.request_number }}</strong>
+                            </td>
+                            <td>
+                                <strong>{{ req.hospital_name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-phone"></i> {{ req.hospital_phone }}
+                                </small>
+                            </td>
+                            <td>
+                                {{ req.patient_name }}
+                                <br>
+                                <small class="text-muted">{{ req.object.patient_age|default:"" }} {{ req.object.patient_gender|default:"" }}</small>
+                            </td>
+                            <td><span class="badge bg-info">{{ req.blood_group }}</span></td>
+                            <td>{{ req.units_requested }} ml</td>
+                            <td>
+                                {% if req.urgency == 'emergency' %}
+                                    <span class="badge bg-danger">Emergency</span>
+                                {% elif req.urgency == 'urgent' %}
+                                    <span class="badge bg-warning text-dark">Urgent</span>
                                 {% else %}
-                                    <span class="badge bg-info">Donor</span>
+                                    <span class="badge bg-secondary">Routine</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <strong>{{ req.patient_name }}</strong>
-                                {% if req.type == 'donor' and req.object.patient_dob %}
-                                    <br>
-                                    <small class="text-muted">DOB: {{ req.object.patient_dob|date:"M d, Y" }}</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if req.type == 'patient' %}
-                                    {{ req.object.request_by_patient.user.get_full_name }}
-                                    <br>
-                                    <small class="text-muted">Patient ID: {{ req.object.request_by_patient.id }}</small>
-                                {% else %}
-                                    {{ req.object.request_by_donor.user.get_full_name }}
-                                    <br>
-                                    <small class="text-muted">Donor ID: {{ req.object.request_by_donor.id }}</small>
-                                {% endif %}
-                            </td>
-                            <td><span class="badge bg-info">{{ req.bloodgroup }}</span></td>
-                            <td>{{ req.unit }} ml</td>
                             <td>
                                 {% if req.status == 'approved' %}
                                     <span class="badge bg-warning">Approved</span>
@@ -119,54 +114,28 @@
                                 {% endif %}
                             </td>
                             <td>{{ req.approved_at|date:"M d, Y H:i" }}</td>
-                            <td>{{ req.donation_center.name }}</td>
-                            <td>
-                                {% if req.approved_by %}
-                                    {{ req.approved_by.user.get_full_name }}
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
+                            <td>{{ req.approved_by_name|default:"—" }}</td>
                             <td>
                                 {% if req.status == 'approved' %}
-                                    <a href="{% url 'blood_bank_technician:dispatch_request' req.type req.id %}" 
+                                    <a href="{% url 'blood_bank_technician:dispatch_request' req.id %}" 
                                        class="btn btn-sm btn-success">
                                         <i class="fas fa-truck"></i> Dispatch
                                     </a>
                                 {% else %}
                                     <span class="badge bg-success">✓ Dispatched</span>
-                                    {% if req.dispatches %}
+                                    {% if req.dispatch_count > 0 %}
                                         <br>
                                         <small class="text-muted">
-                                            To: {{ req.dispatches.0.collected_by_name }}
+                                            {{ req.dispatch_count }} item(s)
                                         </small>
                                     {% endif %}
                                 {% endif %}
+                                <a href="{% url 'blood_bank_technician:request_detail' req.id %}" 
+                                   class="btn btn-sm btn-info mt-1">
+                                    <i class="fas fa-eye"></i> Details
+                                </a>
                             </td>
                         </tr>
-
-                        <!-- Dispatch Details Row (shown for dispatched requests) -->
-                        {% if req.status == 'dispatched' and req.dispatches %}
-                        <tr class="dispatch-details-row">
-                            <td colspan="10">
-                                <div class="p-3 bg-light">
-                                    <strong><i class="fas fa-history"></i> Dispatch Details:</strong>
-                                    <div class="row mt-2">
-                                        {% for dispatch in req.dispatches %}
-                                        <div class="col-md-4">
-                                            <small>
-                                                <i class="fas fa-barcode"></i> {{ dispatch.stockunit.barcode }}<br>
-                                                <i class="fas fa-user"></i> Collected by: {{ dispatch.collected_by_name }}<br>
-                                                <i class="fas fa-id-card"></i> ID: {{ dispatch.collected_by_id }}<br>
-                                                <i class="fas fa-calendar"></i> {{ dispatch.dispatch_date|date:"M d, Y H:i" }}
-                                            </small>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -176,7 +145,7 @@
                 <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
                 <h5>No Approved Requests</h5>
                 <p class="text-muted">There are no approved or dispatched requests at the moment.</p>
-                <a href="{% url 'blood_bank_technician:pending_requests' %}" >
+                <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-primary">
                     View Pending Requests
                 </a>
             </div>
@@ -201,46 +170,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const filterValue = this.getAttribute('data-filter');
             
             requestRows.forEach(row => {
-                // Hide corresponding dispatch details row
-                const nextRow = row.nextElementSibling;
-                if (nextRow && nextRow.classList.contains('dispatch-details-row')) {
-                    nextRow.style.display = 'none';
-                }
-                
                 if (filterValue === 'all') {
                     row.style.display = '';
-                } else if (filterValue === 'approved' || filterValue === 'dispatched') {
+                } else {
                     const rowStatus = row.getAttribute('data-request-status');
                     if (rowStatus === filterValue) {
                         row.style.display = '';
                     } else {
                         row.style.display = 'none';
                     }
-                } else {
-                    const rowType = row.getAttribute('data-request-type');
-                    if (rowType === filterValue) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
                 }
             });
-        });
-    });
-    
-    // Add click handler for expanding dispatch details
-    document.querySelectorAll('.btn-success.badge').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const row = this.closest('tr');
-            const nextRow = row.nextElementSibling;
-            if (nextRow && nextRow.classList.contains('dispatch-details-row')) {
-                if (nextRow.style.display === 'none' || nextRow.style.display === '') {
-                    nextRow.style.display = 'table-row';
-                } else {
-                    nextRow.style.display = 'none';
-                }
-            }
         });
     });
 });

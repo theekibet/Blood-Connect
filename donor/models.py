@@ -1,11 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericRelation
-from blood.models import Notification, DonationCenter
-from nurse.models import Nurse
+from utils.models import Notification
 from django.utils import timezone
 from datetime import date, timedelta
-from nurse.models import Appointment
+from utils.models import Notification
+# from nurse.models import Appointment  # Commented out to break circular import
 from django.core.exceptions import ValidationError
 import logging
 KENYAN_COUNTIES = [
@@ -152,8 +152,9 @@ class Donor(models.Model):
 logger = logging.getLogger(__name__)
 
 
+
 class BloodDonate(models.Model):
-    donor = models.ForeignKey('donor.Donor', on_delete=models.CASCADE)
+    donor = models.ForeignKey(Donor, on_delete=models.CASCADE)
 
     bloodgroup = models.CharField(
         max_length=10,
@@ -161,7 +162,7 @@ class BloodDonate(models.Model):
         blank=True,
         null=True
     )
-    unit = models.PositiveIntegerField(default=0, blank=True, null=True)  # optional unit
+    unit = models.PositiveIntegerField(default=0, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     date = models.DateField(default=timezone.now)
     is_seen = models.BooleanField(default=False)
@@ -180,7 +181,7 @@ class BloodDonate(models.Model):
         help_text="Nurse responsible for this donation"
     )
 
-    # --- Approval fields (only nurse) ---
+    # Approval fields
     approved_by_nurse = models.ForeignKey(
         User,
         null=True,
@@ -190,7 +191,7 @@ class BloodDonate(models.Model):
     )
     approved_at_nurse = models.DateTimeField(null=True, blank=True)
 
-    # --- Completion fields (only nurse) ---
+    # Completion fields
     completed_by_nurse = models.ForeignKey(
         User,
         null=True,
@@ -200,7 +201,7 @@ class BloodDonate(models.Model):
     )
     completed_at_nurse = models.DateTimeField(null=True, blank=True)
 
-    # --- Rejection / cancellation (nurse or donor only) ---
+    # Rejection / cancellation
     rejected_by = models.CharField(
         max_length=10,
         choices=[('nurse', 'Nurse')],
@@ -217,12 +218,12 @@ class BloodDonate(models.Model):
     )
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
-    # --- Stock update (nurse only) ---
+    # Stock update
     stock_added_by_nurse = models.BooleanField(default=False)
 
-    # --- Appointment relation ---
+    # Appointment relation - using string reference
     appointments = GenericRelation(
-        Appointment,
+        'nurse.Appointment',
         content_type_field='request_content_type',
         object_id_field='request_object_id',
         related_query_name='blood_donations'
@@ -285,6 +286,7 @@ class BloodDonate(models.Model):
                     "You already have a pending donation request. Please resolve it before creating a new one."
                 )
 
+
 class DonorEligibility(models.Model):
     donor = models.OneToOneField(Donor, on_delete=models.CASCADE)
     age = models.IntegerField(default=0)
@@ -302,90 +304,3 @@ class DonorEligibility(models.Model):
 
     def __str__(self):
         return f"Eligibility - {self.donor.user.username}"
-# ------------------------
-# Donor Blood Request Model (UPDATED - No Nurse Involvement)
-# ------------------------
-class DonorBloodRequest(models.Model):
-    BLOOD_GROUP_CHOICES = [
-        ('A+', 'A+'), ('A-', 'A-'),
-        ('B+', 'B+'), ('B-', 'B-'),
-        ('AB+', 'AB+'), ('AB-', 'AB-'),
-        ('O+', 'O+'), ('O-', 'O-'),
-    ]
-
-    STATUS_CHOICES = (
-        ('pending', 'Pending Review'),
-        ('approved', 'Approved - Ready for Pickup'),
-        ('rejected', 'Rejected'),
-        ('dispatched', 'Dispatched'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
-    )
-
-    request_by_donor = models.ForeignKey(
-        'donor.Donor',
-        on_delete=models.CASCADE,
-        related_name='submitted_patient_requests'
-    )
-
-    # Patient Information
-    patient_first_name = models.CharField(max_length=30)
-    patient_last_name = models.CharField(max_length=30)
-    patient_dob = models.DateField()
-    contact_number = models.CharField(max_length=20)
-
-    # Request Details
-    bloodgroup = models.CharField(max_length=10, choices=BLOOD_GROUP_CHOICES)
-    unit = models.PositiveIntegerField(default=450, help_text="Requested amount in ml")
-
-    donation_center = models.ForeignKey(
-        'blood.DonationCenter',
-        on_delete=models.CASCADE,
-        help_text="Blood bank center to fulfill this request"
-    )
-
-    consent_confirmed = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    # Blood Bank Tech Actions (REPLACES nurse fields)
-    reviewed_by = models.ForeignKey(
-        'blood_bank_technician.BloodBankTechProfile',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='reviewed_donor_requests'
-    )
-    reviewed_at = models.DateTimeField(null=True, blank=True)
-    
-    approved_by = models.ForeignKey(
-        'blood_bank_technician.BloodBankTechProfile',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='approved_donor_requests'
-    )
-    approved_at = models.DateTimeField(null=True, blank=True)
-    
-    rejected_reason = models.TextField(blank=True, null=True)
-    
-    dispatched_by = models.ForeignKey(
-        'blood_bank_technician.BloodBankTechProfile',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='dispatched_donor_requests'
-    )
-    dispatched_at = models.DateTimeField(null=True, blank=True)
-
-
-
-    def __str__(self):
-        return f"Request by {self.request_by_donor.user.username} for {self.patient_first_name} {self.patient_last_name} ({self.bloodgroup})"
-
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = "Donor Blood Request"
-        verbose_name_plural = "Donor Blood Requests"

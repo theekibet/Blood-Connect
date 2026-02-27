@@ -172,11 +172,9 @@ def log_stock_transaction(sender, instance, created, **kwargs):
         # Log request context if available
         if hasattr(instance, 'blood_request') and instance.blood_request:
             logger.info(
-                f"🩸 Transaction for blood request by {instance.blood_request.patient.get_full_name()}"
             )
         elif hasattr(instance, 'blood_donation') and instance.blood_donation:
             logger.info(
-                f"🩸 Transaction for blood donation by {instance.blood_donation.patient.get_full_name()}"
             )
             
     except Exception as e:

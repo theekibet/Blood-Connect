@@ -1,0 +1,143 @@
+{% extends 'hospital/base.html' %}
+{% load static %}
+
+{% block title %}Blood Requests - {{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow fade-in">
+                <div class="card-header py-3 d-flex flex-wrap justify-content-between align-items-center bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Blood Requests
+                    </h5>
+                    <a href="{% url 'hospital:create_request' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-2"></i>New Request
+                    </a>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Search and Filter -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <form method="get" class="d-flex">
+                                <input type="text" name="q" class="form-control me-2" 
+                                       placeholder="Search by request #, patient, doctor..." 
+                                       value="{{ search_query }}">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="btn-group w-100" role="group">
+                                <a href="?status=all" class="btn btn-outline-primary {% if current_status == 'all' %}active{% endif %}">
+                                    All <span class="badge bg-primary ms-1">{{ stats.all }}</span>
+                                </a>
+                                <a href="?status=pending" class="btn btn-outline-warning {% if current_status == 'pending' %}active{% endif %}">
+                                    Pending <span class="badge bg-warning ms-1">{{ stats.pending }}</span>
+                                </a>
+                                <a href="?status=approved" class="btn btn-outline-info {% if current_status == 'approved' %}active{% endif %}">
+                                    Approved <span class="badge bg-info ms-1">{{ stats.approved }}</span>
+                                </a>
+                                <a href="?status=dispatched" class="btn btn-outline-primary {% if current_status == 'dispatched' %}active{% endif %}">
+                                    Dispatched <span class="badge bg-primary ms-1">{{ stats.dispatched }}</span>
+                                </a>
+                                <a href="?status=delivered" class="btn btn-outline-success {% if current_status == 'delivered' %}active{% endif %}">
+                                    Delivered <span class="badge bg-success ms-1">{{ stats.delivered }}</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Requests Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Request #</th>
+                                    <th>Patient</th>
+                                    <th>Blood Group</th>
+                                    <th>Units</th>
+                                    <th>Doctor</th>
+                                    <th>Urgency</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in requests %}
+                                <tr>
+                                    <td><strong>{{ req.request_number }}</strong></td>
+                                    <td>{{ req.patient_full_name }}</td>
+                                    <td><span class="badge bg-danger">{{ req.blood_group }}</span></td>
+                                    <td>{{ req.units_requested }} ml</td>
+                                    <td>{{ req.doctor_name|truncatechars:20 }}</td>
+                                    <td>
+                                        {% if req.urgency == 'emergency' %}
+                                            <span class="badge bg-danger">Emergency</span>
+                                        {% elif req.urgency == 'urgent' %}
+                                            <span class="badge bg-warning text-dark">Urgent</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Routine</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if req.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif req.status == 'approved' %}
+                                            <span class="badge bg-primary">Approved</span>
+                                        {% elif req.status == 'dispatched' %}
+                                            <span class="badge bg-info">Dispatched</span>
+                                        {% elif req.status == 'delivered' %}
+                                            <span class="badge bg-success">Delivered</span>
+                                        {% elif req.status == 'rejected' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                        {% elif req.status == 'cancelled' %}
+                                            <span class="badge bg-secondary">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ req.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'hospital:request_detail' req.id %}" 
+                                               class="btn btn-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if req.status == 'pending' %}
+                                            <a href="{% url 'hospital:cancel_request' req.id %}" 
+                                               class="btn btn-warning" title="Cancel Request">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if req.status == 'dispatched' %}
+                                            <a href="{% url 'hospital:confirm_delivery' req.id %}" 
+                                               class="btn btn-success" title="Confirm Delivery">
+                                                <i class="fas fa-check-double"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        No blood requests found.
+                                        {% if current_status != 'all' %}
+                                        <br><a href="?status=all" class="btn btn-link">View all requests</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

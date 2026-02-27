@@ -6,13 +6,14 @@ from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from datetime import timedelta
 from .models import BloodBankTechProfile
-from patient.models import BloodRequest
 from lab_technologist.models import BloodTest
 from django.http import JsonResponse
 from blood.models import StockUnit, StockTransaction
 from django.core.exceptions import PermissionDenied
 from .models import BloodBankTechProfile
 from .forms import BloodBankTechProfileForm
+from django.db import transaction
+from hospital.models import HospitalBloodRequest, HospitalUser
 from django.conf import settings
 import os
 from blood.utils.stock_utils import (
@@ -171,7 +172,6 @@ def blood_bank_tech_profile_edit(request, pk):
         'profile': profile,
     }
     return render(request, 'blood_bank_technician/profile_edit.html', context)
-
 # ======================
 # DASHBOARD VIEW - UPDATED WITH REAL STOCK DATA
 # ======================
@@ -279,18 +279,19 @@ def dashboard(request):
             }
     
     # ===== PENDING BLOOD REQUESTS =====
-    pending_requests = BloodRequest.objects.filter(
+    pending_requests_count = HospitalBloodRequest.objects.filter(
         status='pending',
-        donation_center=center
+        assigned_centre=center
     ).count()
     
     # ===== RECENT TRANSACTIONS =====
+    # FIXED: Removed 'blood_request' from select_related
     recent_transactions = StockTransaction.objects.filter(
         stockunit__center=center
     ).select_related(
         'stockunit',
         'user',
-        'blood_request__request_by_patient__user'
+        # 'appointment'  # Uncomment if you have appointment field in StockTransaction
     ).order_by('-transaction_at')[:10]
     
     context = {
@@ -304,7 +305,7 @@ def dashboard(request):
         'total_unsafe_volume': total_unsafe_volume,
         'total_expiring_units': total_expiring_units,
         'total_expiring_volume': total_expiring_volume,
-        'pending_requests': pending_requests,
+        'pending_requests': pending_requests_count,
         'inventory_by_type': inventory_by_type,
         'recent_transactions': recent_transactions,
         'now': timezone.now(),
@@ -470,14 +471,13 @@ def unsafe_blood(request):
     
     return render(request, 'blood_bank_technician/unsafe_blood.html', context)
 
-from patient.models import BloodRequest as PatientBloodRequest
-from donor.models import DonorBloodRequest
+
 # ======================
-# PENDING REQUESTS VIEW (Combined)
+# PENDING REQUESTS VIEW
 # ======================
 @login_required
 def pending_requests(request):
-    """View pending blood requests from both patients and donors"""
+    """View pending blood requests from hospitals"""
     
     profile = request.user.blood_bank_tech_profile
     center = profile.center
@@ -486,72 +486,48 @@ def pending_requests(request):
         messages.error(request, "No donation center assigned.")
         return redirect('blood_bank_technician:dashboard')
     
-    # Get patient requests
-    patient_requests = PatientBloodRequest.objects.filter(
+    # Get hospital requests
+    hospital_requests = HospitalBloodRequest.objects.filter(
         status='pending',
-        donation_center=center
+        assigned_centre=center
     ).select_related(
-        'request_by_patient__user',
-        'donation_center'
+        'hospital',
+        'requested_by__user',
+        'assigned_centre'
     ).order_by('-created_at')
     
-    # Get donor requests
-    donor_requests = DonorBloodRequest.objects.filter(
-        status='pending',
-        donation_center=center
-    ).select_related(
-        'request_by_donor__user',
-        'donation_center'
-    ).order_by('-created_at')
+    # Process and annotate requests
+    pending_requests_list = []
     
-    # Combine and annotate requests
-    combined_requests = []
-    
-    # Process patient requests
-    for req in patient_requests:
-        availability = check_stock_availability(center, req.bloodgroup, req.unit)
-        combined_requests.append({
-            'id': req.id,
-            'type': 'patient',
-            'object': req,
-            'patient_name': req.get_full_name(),
-            'bloodgroup': req.bloodgroup,
-            'unit': req.unit,
-            'created_at': req.created_at,
-            'donation_center': req.donation_center,
-            'has_inventory': availability.get('can_fulfill', False),
-            'availability': availability,
-            'requester': req.request_by_patient.user.get_full_name() if req.request_by_patient else 'Unknown',
-            'contact': req.contact_number,
-        })
-    
-    # Process donor requests
-    for req in donor_requests:
-        availability = check_stock_availability(center, req.bloodgroup, req.unit)
+    for req in hospital_requests:
+        availability = check_stock_availability(center, req.blood_group, req.units_requested)
         patient_name = f"{req.patient_first_name} {req.patient_last_name}"
-        combined_requests.append({
+        pending_requests_list.append({
             'id': req.id,
-            'type': 'donor',
-            'object': req,
+            'request_number': req.request_number,
             'patient_name': patient_name,
-            'bloodgroup': req.bloodgroup,
-            'unit': req.unit,
+            'blood_group': req.blood_group,
+            'units_requested': req.units_requested,
             'created_at': req.created_at,
-            'donation_center': req.donation_center,
+            'hospital_name': req.hospital.name,
+            'contact_phone': req.hospital.contact_phone,
+            'urgency': req.urgency,
+            'urgency_display': req.get_urgency_display(),
+            'doctor_name': req.doctor_name,
             'has_inventory': availability.get('can_fulfill', False),
-            'availability': availability,
-            'requester': f"Donor: {req.request_by_donor.user.get_full_name()}",
-            'contact': req.contact_number,
+            'available_stock': availability.get('safe_stock', 0),
+            'available_batches': availability.get('available_batches', 0),
         })
     
-    # Sort by created_at (newest first)
-    combined_requests.sort(key=lambda x: x['created_at'], reverse=True)
+    # Sort by urgency and created_at
+    pending_requests_list.sort(key=lambda x: (
+        0 if x['urgency'] == 'emergency' else 1 if x['urgency'] == 'urgent' else 2,
+        -x['created_at'].timestamp()
+    ))
     
     context = {
-        'combined_requests': combined_requests,
-        'total_pending': len(combined_requests),
-        'patient_count': len(patient_requests),
-        'donor_count': len(donor_requests),
+        'pending_requests': pending_requests_list,
+        'total_pending': len(pending_requests_list),
         'center': center,
     }
     
@@ -559,11 +535,11 @@ def pending_requests(request):
 
 
 # ======================
-# APPROVE REQUEST VIEW (Handles both types)
+# APPROVE REQUEST VIEW
 # ======================
 @login_required
-def approve_request(request, request_type, request_id):
-    """Approve a blood request (patient or donor) and deduct stock using FIFO"""
+def approve_request(request, request_id):
+    """Approve a hospital blood request and deduct stock using FIFO"""
     
     profile = request.user.blood_bank_tech_profile
     center = profile.center
@@ -573,141 +549,126 @@ def approve_request(request, request_type, request_id):
         messages.error(request, "No donation center assigned.")
         return redirect('blood_bank_technician:dashboard')
     
-    # Get the appropriate request object
-    if request_type == 'patient':
-        blood_request = get_object_or_404(
-            PatientBloodRequest, 
-            id=request_id, 
-            status='pending',
-            donation_center=center
-        )
-        requester_name = blood_request.get_full_name()
-    elif request_type == 'donor':
-        blood_request = get_object_or_404(
-            DonorBloodRequest, 
-            id=request_id, 
-            status='pending',
-            donation_center=center
-        )
-        requester_name = f"{blood_request.patient_first_name} {blood_request.patient_last_name}"
-    else:
-        messages.error(request, "Invalid request type.")
-        return redirect('blood_bank_technician:pending_requests')
-    
-    # Check availability again
-    availability = check_stock_availability(
-        center, 
-        blood_request.bloodgroup, 
-        blood_request.unit
+    # Get the hospital request
+    blood_request = get_object_or_404(
+        HospitalBloodRequest, 
+        id=request_id, 
+        status='pending',
+        assigned_centre=center
     )
+    patient_name = f"{blood_request.patient_first_name} {blood_request.patient_last_name}"
     
-    if not availability['can_fulfill']:
-        messages.error(
-            request, 
-            f"Insufficient safe stock. Available: {availability['safe_stock']}ml, "
-            f"Required: {blood_request.unit}ml"
-        )
-        return redirect('blood_bank_technician:pending_requests')
-    
-    if request.method == 'POST':
-        try:
-            # Deduct stock using FIFO
-            success, result = deduct_stock_fifo(
-                center=center,
-                bloodgroup=blood_request.bloodgroup,
-                required_units=blood_request.unit,
-                deducted_by_user=request.user,
-                deducted_by_role='blood_bank_tech',
-                blood_request=blood_request  # Pass the blood request to link transactions
-            )
-            
-            if not success:
-                messages.error(request, f"Stock deduction failed: {result}")
-                return redirect('blood_bank_technician:pending_requests')
-            
-            # Update request status
-            blood_request.status = 'approved'
-            blood_request.approved_by = profile
-            blood_request.approved_at = timezone.now()
-            
-            # Mark stock as deducted if field exists
-            if hasattr(blood_request, 'stock_deducted'):
-                blood_request.stock_deducted = True
-            
-            blood_request.save()
-            
-            # Create notification based on request type
-            from blood.models import Notification
-            from django.contrib.contenttypes.models import ContentType
-            
-            if request_type == 'patient':
-                recipient = blood_request.request_by_patient
-                notification_title = "Blood Request Approved"
-                notification_message = (
-                    f"Your blood request for {blood_request.unit}ml of {blood_request.bloodgroup} "
-                    f"has been approved. Please contact {center.name} to arrange pickup."
-                )
-            else:  # donor
-                recipient = blood_request.request_by_donor
-                notification_title = "Blood Request Approved"
-                notification_message = (
-                    f"The blood request for {blood_request.patient_first_name} {blood_request.patient_last_name} "
-                    f"({blood_request.unit}ml of {blood_request.bloodgroup}) has been approved. "
-                    f"Please contact {center.name} to arrange pickup."
-                )
-            
-            if recipient:
-                Notification.objects.create(
-                    title=notification_title,
-                    message=notification_message,
-                    recipient_content_type=ContentType.objects.get_for_model(recipient),
-                    recipient_object_id=recipient.id,
-                    sender_content_type=ContentType.objects.get_for_model(profile.user),
-                    sender_object_id=profile.user.id,
-                )
-            
-            messages.success(
-                request, 
-                f"Request approved. {blood_request.unit}ml of {blood_request.bloodgroup} deducted from inventory."
-            )
-            
-            return redirect('blood_bank_technician:approved_requests')
-            
-        except Exception as e:
-            messages.error(request, f"Error approving request: {str(e)}")
-            logger.error(f"Error approving {request_type} request {request_id}: {e}", exc_info=True)
-            return redirect('blood_bank_technician:pending_requests')
-    
-    # GET request - show confirmation page with available batches
+    # Check availability
     available_units = StockUnit.objects.filter(
         center=center,
-        bloodgroup=blood_request.bloodgroup,
+        bloodgroup=blood_request.blood_group,
         safety_status='safe',
         is_quarantined=False,
         unit__gt=0,
         expiry_date__gte=today
-    ).order_by('expiry_date')
+    ).order_by('expiry_date', 'created_at')
     
     total_available = available_units.aggregate(total=Sum('unit'))['total'] or 0
+    can_fulfill = total_available >= blood_request.units_requested
     
+    if request.method == 'POST':
+        if not can_fulfill:
+            messages.error(
+                request, 
+                f"Insufficient safe stock. Available: {total_available}ml, "
+                f"Required: {blood_request.units_requested}ml"
+            )
+            return redirect('blood_bank_technician:pending_requests')
+        
+        try:
+            with transaction.atomic():
+                # Deduct stock using FIFO
+                units_to_deduct = blood_request.units_requested
+                deducted_units_list = []
+                
+                for unit in available_units:
+                    if units_to_deduct <= 0:
+                        break
+                    
+                    deduct_amount = min(unit.unit, units_to_deduct)
+                    
+                    # Create transaction record
+                    tx = StockTransaction.objects.create(
+                        stockunit=unit,
+                        quantity_deducted=deduct_amount,
+                        transaction_type='deduction',
+                        user=request.user,
+                        notes=f"Deducted for hospital request #{blood_request.request_number}"
+                    )
+                    deducted_units_list.append(tx)
+                    
+                    # Update stock unit
+                    if deduct_amount >= unit.unit:
+                        unit.unit = 0
+                        unit.is_available = False
+                    else:
+                        unit.unit -= deduct_amount
+                    unit.save()
+                    
+                    units_to_deduct -= deduct_amount
+                
+                # Update request status
+                blood_request.status = 'approved'
+                blood_request.approved_by = profile
+                blood_request.approved_at = timezone.now()
+                blood_request.save()
+                
+                # Create notification for hospital
+                from utils.models import Notification
+                from django.contrib.contenttypes.models import ContentType
+                
+                hospital_users = HospitalUser.objects.filter(hospital=blood_request.hospital, is_active=True)
+                for hospital_user in hospital_users:
+                    Notification.objects.create(
+                        title="Blood Request Approved",
+                        message=(
+                            f"Blood request {blood_request.request_number} for patient {patient_name} "
+                            f"({blood_request.units_requested}ml of {blood_request.blood_group}) has been approved. "
+                            f"Please arrange pickup from {center.name}. Contact: {center.contact_number}"
+                        ),
+                        recipient_content_type=ContentType.objects.get_for_model(hospital_user.user),
+                        recipient_object_id=hospital_user.user.id,
+                        sender_content_type=ContentType.objects.get_for_model(profile.user),
+                        sender_object_id=profile.user.id,
+                    )
+                
+                messages.success(
+                    request, 
+                    f"Request #{blood_request.request_number} approved. {blood_request.units_requested}ml of {blood_request.blood_group} deducted from inventory."
+                )
+                
+                return redirect('blood_bank_technician:approved_requests')
+            
+        except Exception as e:
+            messages.error(request, f"Error approving request: {str(e)}")
+            logger.error(f"Error approving request {request_id}: {e}", exc_info=True)
+            return redirect('blood_bank_technician:pending_requests')
+    
+    # GET request - show confirmation page
     context = {
         'request': blood_request,
-        'request_type': request_type,
-        'requester_name': requester_name,
-        'availability': availability,
+        'patient_name': patient_name,
         'available_units': available_units,
         'total_available': total_available,
+        'can_fulfill': can_fulfill,
         'center': center,
         'today': today,
     }
     
     return render(request, 'blood_bank_technician/approve_request.html', context)
+
+
 # ======================
-# REJECT REQUEST VIEW (Handles both types)
+# REJECT REQUEST VIEW
 # ======================
 @login_required
-def reject_request(request, request_type, request_id):
-    """Reject a blood request with reason"""
+def reject_request(request, request_id):
+    """Reject a hospital blood request with reason"""
     
     profile = request.user.blood_bank_tech_profile
     center = profile.center
@@ -716,24 +677,13 @@ def reject_request(request, request_type, request_id):
         messages.error(request, "No donation center assigned.")
         return redirect('blood_bank_technician:dashboard')
     
-    # Get the appropriate request object
-    if request_type == 'patient':
-        blood_request = get_object_or_404(
-            PatientBloodRequest, 
-            id=request_id, 
-            status='pending',
-            donation_center=center
-        )
-    elif request_type == 'donor':
-        blood_request = get_object_or_404(
-            DonorBloodRequest, 
-            id=request_id, 
-            status='pending',
-            donation_center=center
-        )
-    else:
-        messages.error(request, "Invalid request type.")
-        return redirect('blood_bank_technician:pending_requests')
+    # Get the hospital request
+    blood_request = get_object_or_404(
+        HospitalBloodRequest, 
+        id=request_id, 
+        status='pending',
+        assigned_centre=center
+    )
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '').strip()
@@ -742,56 +692,43 @@ def reject_request(request, request_type, request_id):
             messages.error(request, 'Please provide a reason for rejection.')
             return render(request, 'blood_bank_technician/reject_request.html', {
                 'request': blood_request,
-                'request_type': request_type,
             })
         
         blood_request.status = 'rejected'
         blood_request.rejection_reason = reason
-        blood_request.reviewed_by = profile
-        blood_request.reviewed_at = timezone.now()
         blood_request.save()
         
-        # Create notification based on request type
-        from blood.models import Notification
+        # Create notification for hospital
+        from utils.models import Notification
         from django.contrib.contenttypes.models import ContentType
         
-        if request_type == 'patient':
-            recipient = blood_request.request_by_patient
-            notification_title = "Blood Request Rejected"
-            notification_message = (
-                f"Your blood request for {blood_request.unit}ml of {blood_request.bloodgroup} "
-                f"has been rejected. Reason: {reason}"
-            )
-        else:  # donor
-            recipient = blood_request.request_by_donor
-            notification_title = "Blood Request Rejected"
-            notification_message = (
-                f"The blood request for {blood_request.patient_first_name} {blood_request.patient_last_name} "
-                f"({blood_request.unit}ml of {blood_request.bloodgroup}) has been rejected. "
-                f"Reason: {reason}"
-            )
+        hospital_users = HospitalUser.objects.filter(hospital=blood_request.hospital, is_active=True)
+        patient_name = f"{blood_request.patient_first_name} {blood_request.patient_last_name}"
         
-        if recipient:
+        for hospital_user in hospital_users:
             Notification.objects.create(
-                title=notification_title,
-                message=notification_message,
-                recipient_content_type=ContentType.objects.get_for_model(recipient),
-                recipient_object_id=recipient.id,
+                title="Blood Request Rejected",
+                message=(
+                    f"Blood request {blood_request.request_number} for patient {patient_name} "
+                    f"({blood_request.units_requested}ml of {blood_request.blood_group}) has been rejected. "
+                    f"Reason: {reason}"
+                ),
+                recipient_content_type=ContentType.objects.get_for_model(hospital_user.user),
+                recipient_object_id=hospital_user.user.id,
                 sender_content_type=ContentType.objects.get_for_model(profile.user),
                 sender_object_id=profile.user.id,
             )
         
-        messages.warning(request, f'Request rejected. Reason: {reason}')
+        messages.warning(request, f'Request #{blood_request.request_number} rejected. Reason: {reason}')
         return redirect('blood_bank_technician:pending_requests')
     
     return render(request, 'blood_bank_technician/reject_request.html', {
         'request': blood_request,
-        'request_type': request_type,
     })
 
 
 # ======================
-# APPROVED REQUESTS VIEW (Combined)
+# APPROVED REQUESTS VIEW
 # ======================
 @login_required
 def approved_requests(request):
@@ -804,67 +741,47 @@ def approved_requests(request):
         messages.error(request, "No donation center assigned.")
         return redirect('blood_bank_technician:dashboard')
     
-    # Get patient approved requests
-    patient_requests = PatientBloodRequest.objects.filter(
-        Q(status='approved') | Q(status='dispatched'),
-        donation_center=center
+    # Get hospital approved requests
+    approved_requests_list = HospitalBloodRequest.objects.filter(
+        status__in=['approved', 'dispatched'],
+        assigned_centre=center
     ).select_related(
-        'request_by_patient__user',
-        'donation_center',
+        'hospital',
         'approved_by__user',
+        'assigned_centre',
     ).order_by('-approved_at')
     
-    # Get donor approved requests
-    donor_requests = DonorBloodRequest.objects.filter(
-        Q(status='approved') | Q(status='dispatched'),
-        donation_center=center
-    ).select_related(
-        'request_by_donor__user',
-        'donation_center',
-        'approved_by__user',
-    ).order_by('-approved_at')
-    
-    # Combine and annotate requests
-    combined_requests = []
-    
-    for req in patient_requests:
-        combined_requests.append({
-            'id': req.id,
-            'type': 'patient',
-            'object': req,
-            'patient_name': req.get_full_name(),
-            'bloodgroup': req.bloodgroup,
-            'unit': req.unit,
-            'status': req.status,
-            'approved_at': req.approved_at,
-            'approved_by': req.approved_by,
-            'donation_center': req.donation_center,
-            'dispatches': getattr(req, 'dispatches_list', []),
-        })
-    
-    for req in donor_requests:
+    # Process requests
+    processed_requests = []
+    for req in approved_requests_list:
         patient_name = f"{req.patient_first_name} {req.patient_last_name}"
-        combined_requests.append({
+        
+        # Get dispatch count if any
+        dispatch_count = 0
+        if hasattr(req, 'dispatches'):
+            dispatch_count = req.dispatches.count()
+        
+        processed_requests.append({
             'id': req.id,
-            'type': 'donor',
-            'object': req,
+            'request_number': req.request_number,
             'patient_name': patient_name,
-            'bloodgroup': req.bloodgroup,
-            'unit': req.unit,
+            'blood_group': req.blood_group,
+            'units_requested': req.units_requested,
             'status': req.status,
+            'status_display': req.get_status_display(),
             'approved_at': req.approved_at,
-            'approved_by': req.approved_by,
-            'donation_center': req.donation_center,
-            'dispatches': getattr(req, 'dispatches_list', []),
+            'approved_by_name': req.approved_by.user.get_full_name() if req.approved_by else 'Unknown',
+            'hospital_name': req.hospital.name,
+            'hospital_phone': req.hospital.contact_phone,
+            'dispatch_count': dispatch_count,
+            'urgency': req.urgency,
+            'urgency_display': req.get_urgency_display(),
         })
-    
-    # Sort by approved_at (newest first)
-    combined_requests.sort(key=lambda x: x['approved_at'] or timezone.datetime.min, reverse=True)
     
     context = {
-        'combined_requests': combined_requests,
-        'approved_count': sum(1 for r in combined_requests if r['status'] == 'approved'),
-        'dispatched_count': sum(1 for r in combined_requests if r['status'] == 'dispatched'),
+        'approved_requests': processed_requests,
+        'approved_count': len(processed_requests),  # FIXED: Changed from .count() to len()
+        'dispatched_count': sum(1 for r in processed_requests if r['status'] == 'dispatched'),
         'center': center,
     }
     
@@ -872,11 +789,11 @@ def approved_requests(request):
 
 
 # ======================
-# DISPATCH REQUEST VIEW (Handles both types)
+# DISPATCH REQUEST VIEW
 # ======================
 @login_required
-def dispatch_request(request, request_type, request_id):
-    """Record dispatch of approved blood request"""
+def dispatch_request(request, request_id):
+    """Record dispatch of approved blood request to hospital"""
     
     profile = request.user.blood_bank_tech_profile
     center = profile.center
@@ -885,98 +802,168 @@ def dispatch_request(request, request_type, request_id):
         messages.error(request, "No donation center assigned.")
         return redirect('blood_bank_technician:dashboard')
     
-    # Get the appropriate request object and fetch its transactions
-    if request_type == 'patient':
-        blood_request = get_object_or_404(
-            PatientBloodRequest, 
-            id=request_id, 
-            status='approved',
-            donation_center=center
-        )
-        # For patient requests, filter by blood_request field
-        deducted_units = StockTransaction.objects.filter(
-            blood_request=blood_request,
-            transaction_type='deduction'
-        ).select_related('stockunit', 'stockunit__blood_donation__donor__user')
-        
-    elif request_type == 'donor':
-        blood_request = get_object_or_404(
-            DonorBloodRequest, 
-            id=request_id, 
-            status='approved',
-            donation_center=center
-        )
-        # For donor requests, filter by donor_blood_request field
-        deducted_units = StockTransaction.objects.filter(
-            donor_blood_request=blood_request,
-            transaction_type='deduction'
-        ).select_related('stockunit', 'stockunit__blood_donation__donor__user')
-        
-    else:
-        messages.error(request, "Invalid request type.")
-        return redirect('blood_bank_technician:approved_requests')
+    # Get the hospital request
+    blood_request = get_object_or_404(
+        HospitalBloodRequest, 
+        id=request_id, 
+        status='approved',
+        assigned_centre=center
+    )
+    
+    # Get deducted transactions for this request
+    deducted_transactions = StockTransaction.objects.filter(
+        notes__icontains=f"#{blood_request.request_number}",
+        transaction_type='deduction'
+    ).select_related('stockunit')
     
     if request.method == 'POST':
         collected_by = request.POST.get('collected_by_name')
         collected_id = request.POST.get('collected_by_id')
+        collected_phone = request.POST.get('collected_by_phone', '')
         collection_notes = request.POST.get('notes', '')
         
         if not collected_by or not collected_id:
             messages.error(request, 'Please provide collector name and ID.')
             return render(request, 'blood_bank_technician/dispatch_request.html', {
                 'request': blood_request,
-                'request_type': request_type,
-                'deducted_units': deducted_units,
+                'deducted_transactions': deducted_transactions,
             })
         
         try:
-            # Update request status
-            blood_request.status = 'dispatched'
-            blood_request.dispatched_by = profile
-            blood_request.dispatched_at = timezone.now()
-            blood_request.save()
-            
-            # Add dispatch note to transactions
-            notes_text = f"Dispatched to {collected_by} (ID: {collected_id}) - {collection_notes}"
-            
-            if request_type == 'patient':
-                deducted_units.update(notes=notes_text)
-            else:
-                deducted_units.update(notes=notes_text)
-            
-            # Create BloodDispatch records (if you have this model)
-            from .models import BloodDispatch
-            for tx in deducted_units:
-                BloodDispatch.objects.create(
-                    stock_unit=tx.stockunit,
-                    blood_request=blood_request if request_type == 'patient' else None,
-                    donor_blood_request=blood_request if request_type == 'donor' else None,
-                    dispatched_by=profile,
-                    collected_by_name=collected_by,
-                    collected_by_id=collected_id,
-                    collection_time=request.POST.get('collection_time') or timezone.now(),
-                    notes=collection_notes
+            with transaction.atomic():
+                # Create BloodDispatch records
+                from .models import BloodDispatch
+                
+                for tx in deducted_transactions:
+                    BloodDispatch.objects.create(
+                        stock_unit=tx.stockunit,
+                        hospital_request=blood_request,
+                        dispatched_by=profile,
+                        collected_by_name=collected_by,
+                        collected_by_id=collected_id,
+                        collected_by_phone=collected_phone,
+                        collection_time=timezone.now(),
+                        hospital=blood_request.hospital,
+                        notes=collection_notes,
+                        status='dispatched'
+                    )
+                
+                # Update request status
+                blood_request.status = 'dispatched'
+                blood_request.dispatched_by = profile
+                blood_request.dispatched_at = timezone.now()
+                blood_request.save()
+                
+                # Notify hospital
+                from utils.models import Notification
+                from django.contrib.contenttypes.models import ContentType
+                
+                hospital_users = HospitalUser.objects.filter(hospital=blood_request.hospital, is_active=True)
+                patient_name = f"{blood_request.patient_first_name} {blood_request.patient_last_name}"
+                
+                for hospital_user in hospital_users:
+                    Notification.objects.create(
+                        title="Blood Dispatched",
+                        message=(
+                            f"Blood for request {blood_request.request_number} (Patient: {patient_name}) "
+                            f"has been dispatched. Collected by: {collected_by} (ID: {collected_id}). "
+                            f"Expected arrival at {blood_request.hospital.name} shortly."
+                        ),
+                        recipient_content_type=ContentType.objects.get_for_model(hospital_user.user),
+                        recipient_object_id=hospital_user.user.id,
+                        sender_content_type=ContentType.objects.get_for_model(profile.user),
+                        sender_object_id=profile.user.id,
+                    )
+                
+                messages.success(
+                    request, 
+                    f'Blood dispatched successfully to {collected_by} from {blood_request.hospital.name}.'
                 )
-            
-            messages.success(
-                request, 
-                f'Blood dispatched successfully to {collected_by}.'
-            )
-            return redirect('blood_bank_technician:approved_requests')
+                return redirect('blood_bank_technician:approved_requests')
             
         except Exception as e:
             messages.error(request, f"Error dispatching blood: {str(e)}")
-            logger.error(f"Error dispatching {request_type} request {request_id}: {e}", exc_info=True)
+            logger.error(f"Error dispatching request {request_id}: {e}", exc_info=True)
             return redirect('blood_bank_technician:approved_requests')
     
     context = {
         'request': blood_request,
-        'request_type': request_type,
-        'deducted_units': deducted_units,
+        'deducted_transactions': deducted_transactions,
         'now': timezone.now(),
+        'patient_name': f"{blood_request.patient_first_name} {blood_request.patient_last_name}",
     }
     
     return render(request, 'blood_bank_technician/dispatch_request.html', context)
+
+
+# ======================
+# REQUEST DETAIL VIEW
+# ======================
+@login_required
+def request_detail(request, request_id):
+    """View details of a specific blood request"""
+    
+    profile = request.user.blood_bank_tech_profile
+    center = profile.center
+    
+    if not center:
+        messages.error(request, "No donation center assigned.")
+        return redirect('blood_bank_technician:dashboard')
+    
+    blood_request = get_object_or_404(
+        HospitalBloodRequest,
+        id=request_id,
+        assigned_centre=center
+    )
+    
+    # Get related dispatches
+    dispatches = []
+    if hasattr(blood_request, 'dispatches'):
+        dispatches = blood_request.dispatches.all().select_related('dispatched_by__user')
+    
+    # Get related transactions
+    transactions = StockTransaction.objects.filter(
+        notes__icontains=f"#{blood_request.request_number}"
+    ).select_related('stockunit', 'user')
+    
+    context = {
+        'request': blood_request,
+        'patient_name': f"{blood_request.patient_first_name} {blood_request.patient_last_name}",
+        'dispatches': dispatches,
+        'transactions': transactions,
+        'center': center,
+    }
+    
+    return render(request, 'blood_bank_technician/request_detail.html', context)
+
+
+# ======================
+# HELPER FUNCTIONS
+# ======================
+def check_stock_availability(center, blood_group, required_units):
+    """Check if there's enough stock available for a request"""
+    today = timezone.now().date()
+    
+    available_stock = StockUnit.objects.filter(
+        center=center,
+        bloodgroup=blood_group,
+        safety_status='safe',
+        is_quarantined=False,
+        unit__gt=0,
+        expiry_date__gte=today
+    )
+    
+    total_available = available_stock.aggregate(total=Sum('unit'))['total'] or 0
+    available_batches = available_stock.count()
+    
+    return {
+        'can_fulfill': total_available >= required_units,
+        'safe_stock': total_available,
+        'available_batches': available_batches,
+        'required': required_units,
+        'shortage': max(0, required_units - total_available)
+    }
+
 # ======================
 # EXPIRING BLOOD VIEW
 # ======================

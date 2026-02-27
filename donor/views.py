@@ -24,15 +24,11 @@ from .forms import (
     BloodDonateForm, DonorLoginForm
 )
 from django.core.exceptions import PermissionDenied
-from donor.models import DonorBloodRequest
-from blood.models import Notification,  DonationCenter
-from patient.models import  BloodRequest
+from utils.models import Notification
 from nurse.forms import AppointmentForm
-from blood.utils.geolocation import find_nearby_compatible_patients
 from datetime import date
 import logging
 from django.db import transaction
-from donor.forms import DonorBloodRequestForm
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.contrib.auth.tokens import default_token_generator
@@ -42,6 +38,7 @@ from django.utils.encoding import force_bytes
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.conf import settings
+from blood.models import DonationCenter
 import re
 import random
 from blood.utils.notifications import create_notification
@@ -260,8 +257,6 @@ def donorlogin_view(request):
                     if user.groups.filter(name='PATIENT').exists():
                         messages.info(
                             request,
-                            f'It looks like you have a patient account. '
-                            f'<a href="{reverse("central_login")}?user_type=patient" class="alert-link">'
                             f'Click here to login as a patient</a>'
                         )
                     elif user.groups.filter(name='NURSE').exists():
@@ -399,6 +394,7 @@ def donor_eligibility_status_view(request):
 def donor_dashboard_view(request):
     """
     Donor dashboard with updated stats, points, eligibility, milestones, and recent donations.
+    Includes donation status tracking (safe/unsafe) and countdown timers.
     """
     user = request.user
     logger.debug(f"Accessing donor dashboard for user '{user.username}'")
@@ -409,6 +405,38 @@ def donor_dashboard_view(request):
 
     donor = get_object_or_404(Donor, user=user)
 
+    # ==========================================
+    # DETERMINE DONOR SAFETY STATUS
+    # ==========================================
+    # Check for unsafe donations
+    unsafe_donation = BloodDonate.objects.filter(
+        donor=donor,
+        status='tested_unsafe'
+    ).first()
+    
+    # Check for safe donations
+    safe_donation = BloodDonate.objects.filter(
+        donor=donor,
+        status='tested_safe'
+    ).first()
+    
+    # Get pending tests (collected but not tested)
+    pending_tests = BloodDonate.objects.filter(
+        donor=donor,
+        status='collected'
+    ).count()
+    
+    # Count safe and unsafe donations
+    safe_count = BloodDonate.objects.filter(donor=donor, status='tested_safe').count()
+    unsafe_count = BloodDonate.objects.filter(donor=donor, status='tested_unsafe').count()
+    
+    # Determine donor status
+    is_unsafe_donor = unsafe_donation is not None
+    is_safe_donor = safe_donation is not None
+    is_first_time_donor = not BloodDonate.objects.filter(donor=donor).exists()
+    
+    logger.info(f"Donor {donor.id} dashboard: unsafe={is_unsafe_donor}, safe={is_safe_donor}, first_time={is_first_time_donor}")
+
     # ------------------------
     # Enhanced greeting system
     # ------------------------
@@ -417,7 +445,7 @@ def donor_dashboard_view(request):
         # Get last donation for greeting
         last_donation_for_greeting = BloodDonate.objects.filter(
             donor=donor, 
-            status__in=['approved', 'completed']
+            status__in=['approved', 'completed', 'tested_safe', 'tested_unsafe']
         ).order_by('-date').first()
         
         # Get upcoming appointments for greeting
@@ -434,13 +462,23 @@ def donor_dashboard_view(request):
             upcoming_appointments=upcoming_appointments
         )
     except ImportError:
-        # Fallback greeting if utils not available
+        # Fallback greeting with safety status
+        if is_unsafe_donor:
+            greeting_message = f"Hello {donor.user.first_name or 'donor'}, please contact the blood bank."
+            context_message = "We need to discuss your recent test results."
+        elif is_safe_donor:
+            greeting_message = f"Welcome back, hero! 🦸"
+            context_message = "Thank you for your life-saving donations!"
+        else:
+            greeting_message = f"Welcome, {donor.user.first_name or 'new donor'}! 🩸"
+            context_message = "Ready to start your donation journey?"
+            
         greeting_data = {
-            'greeting': f"Welcome back, {donor.user.first_name or 'hero'}! 🦸",
-            'context_message': "Your donations save lives every day!",
+            'greeting': greeting_message,
+            'context_message': context_message,
             'user_type': 'donor',
-            'icon': '🦸',
-            'is_hero': total_donations >= 1,
+            'icon': '🦸' if is_safe_donor else '🩸',
+            'is_hero': safe_count >= 1,
             'profile_pic': donor.profile_pic if hasattr(donor, 'profile_pic') else None
         }
 
@@ -449,7 +487,7 @@ def donor_dashboard_view(request):
     # ------------------------
     last_donation = BloodDonate.objects.filter(
         donor=donor, 
-        status__in=['approved', 'completed']
+        status__in=['approved', 'completed', 'tested_safe']
     ).order_by('-date').first()
 
     if last_donation:
@@ -468,14 +506,15 @@ def donor_dashboard_view(request):
         next_donation_date_iso = None
 
     # ------------------------
-    # Total points & donations
+    # Total points & donations (only safe donations count)
     # ------------------------
-    total_donations = BloodDonate.objects.filter(
+    total_safe_donations = BloodDonate.objects.filter(
         donor=donor,
-        status__in=['approved', 'completed']
+        status='tested_safe'
     ).count()
+    
     points_per_donation = 10
-    computed_points = total_donations * points_per_donation
+    computed_points = total_safe_donations * points_per_donation
 
     # Sync points with database
     if donor.points != computed_points:
@@ -487,7 +526,7 @@ def donor_dashboard_view(request):
     # Progress visualization
     # ------------------------
     goal = 10
-    progress = min(int((total_donations / goal) * 100), 100) if goal else 0
+    progress = min(int((total_safe_donations / goal) * 100), 100) if goal else 0
     circumference = 2 * 3.1416 * 65
     stroke_dashoffset = circumference * (1 - progress / 100)
 
@@ -495,10 +534,6 @@ def donor_dashboard_view(request):
     # Blood request stats
     # ------------------------
     dashboard_stats = [
-        {'icon': 'fa-paper-plane', 'label': 'Requests Made', 'count': DonorBloodRequest.objects.filter(request_by_donor=donor).count(), 'color': 'requests-made-icon', 'description': 'Blood requests submitted'},
-        {'icon': 'fa-clock', 'label': 'Pending Requests', 'count': DonorBloodRequest.objects.filter(request_by_donor=donor, status='pending').count(), 'color': 'pending-requests-icon', 'description': 'Awaiting approval'},
-        {'icon': 'fa-check-circle', 'label': 'Approved Requests', 'count': DonorBloodRequest.objects.filter(request_by_donor=donor, status='approved').count(), 'color': 'approved-requests-icon', 'description': 'Successfully approved'},
-        {'icon': 'fa-times-circle', 'label': 'Rejected Requests', 'count': DonorBloodRequest.objects.filter(request_by_donor=donor, status='rejected').count(), 'color': 'rejected-requests-icon', 'description': 'Not approved'},
     ]
 
     # ------------------------
@@ -512,9 +547,24 @@ def donor_dashboard_view(request):
     ]
 
     # ------------------------
-    # Recent donations
+    # Recent donations with status
     # ------------------------
     recent_donations = BloodDonate.objects.filter(donor=donor).select_related('donation_center').order_by('-date')[:5]
+    
+    # Annotate each donation with display status
+    for donation in recent_donations:
+        if donation.status == 'tested_safe':
+            donation.display_result = 'safe'
+            donation.result_badge = 'success'
+        elif donation.status == 'tested_unsafe':
+            donation.display_result = 'unsafe'
+            donation.result_badge = 'danger'
+        elif donation.status == 'collected':
+            donation.display_result = 'pending_test'
+            donation.result_badge = 'info'
+        else:
+            donation.display_result = 'pending'
+            donation.result_badge = 'warning'
 
     # ------------------------
     # Eligibility
@@ -525,14 +575,14 @@ def donor_dashboard_view(request):
     except DonorEligibility.DoesNotExist:
         is_eligible = False
 
-    can_donate_now = is_eligible and (days_until_next == 0)
+    can_donate_now = is_eligible and not is_unsafe_donor and (days_until_next == 0 or is_first_time_donor)
 
     # ------------------------
-    # Milestones
+    # Milestones (only count safe donations)
     # ------------------------
     milestones = [5, 10, 25, 50, 100]
-    next_milestone = next((m for m in milestones if total_donations < m), None)
-    donations_to_milestone = next_milestone - total_donations if next_milestone else 0
+    next_milestone = next((m for m in milestones if total_safe_donations < m), None)
+    donations_to_milestone = next_milestone - total_safe_donations if next_milestone else 0
 
     # ------------------------
     # Upcoming appointments
@@ -548,23 +598,23 @@ def donor_dashboard_view(request):
         upcoming_appointments = []
 
     # ------------------------
-    # Hero status & badges
+    # Hero status & badges (based on safe donations only)
     # ------------------------
     hero_level = "Bronze"
     hero_badge = None
     
-    if total_donations >= 10:
+    if total_safe_donations >= 10:
         hero_level = "Gold"
         hero_badge = "🏆"
-    elif total_donations >= 5:
+    elif total_safe_donations >= 5:
         hero_level = "Silver"
         hero_badge = "🥈"
-    elif total_donations >= 1:
+    elif total_safe_donations >= 1:
         hero_level = "Bronze"
         hero_badge = "🥉"
     
     # Add hero info to greeting data
-    if total_donations >= 1 and 'is_hero' not in greeting_data:
+    if total_safe_donations >= 1 and 'is_hero' not in greeting_data:
         greeting_data['is_hero'] = True
     if hero_badge and 'hero_badge' not in greeting_data:
         greeting_data['hero_badge'] = hero_badge
@@ -580,13 +630,20 @@ def donor_dashboard_view(request):
     
     meta_items.append({
         'icon': 'fas fa-heart',
-        'text': f"{total_donations} donations"
+        'text': f"{total_safe_donations} safe donations"
     })
     
-    meta_items.append({
-        'icon': 'fas fa-trophy',
-        'text': f"{hero_level} Hero"
-    })
+    if is_unsafe_donor:
+        meta_items.append({
+            'icon': 'fas fa-exclamation-triangle',
+            'text': "Contact Required",
+            'color': 'text-danger'
+        })
+    else:
+        meta_items.append({
+            'icon': 'fas fa-trophy',
+            'text': f"{hero_level} Hero"
+        })
     
     # Add metadata to greeting data if not already present
     if 'meta_items' not in greeting_data and meta_items:
@@ -596,7 +653,9 @@ def donor_dashboard_view(request):
         'user': user,
         'donor': donor,
         'points': donor.points,
-        'total_donations': total_donations,
+        'total_safe_donations': total_safe_donations,
+        'total_unsafe_donations': unsafe_count,
+        'pending_tests': pending_tests,
         'goal': goal,
         'progress': progress,
         'stroke_dashoffset': stroke_dashoffset,
@@ -605,6 +664,9 @@ def donor_dashboard_view(request):
         'next_donation_date_iso': next_donation_date_iso,
         'can_donate_now': can_donate_now,
         'is_eligible': is_eligible,
+        'is_unsafe_donor': is_unsafe_donor,
+        'is_safe_donor': is_safe_donor,
+        'is_first_time_donor': is_first_time_donor,
         'dashboard_stats': dashboard_stats,
         'info_cards': info_cards,
         'recent_donations': recent_donations,
@@ -614,11 +676,12 @@ def donor_dashboard_view(request):
         'last_donation_date': donor.last_donation_date,
         'hero_level': hero_level,
         'hero_badge': hero_badge,
-        'greeting_data': greeting_data,  # Add greeting data
-        'current_date': timezone.now().date(),  # For the shared greeting template
+        'greeting_data': greeting_data,
+        'current_date': timezone.now().date(),
+        'unsafe_reason': unsafe_donation.unsafe_reason if unsafe_donation else None,
     }
 
-    logger.debug(f"Rendering donor dashboard for user '{user.username}' with {total_donations} approved/completed donations and {donor.points} points")
+    logger.debug(f"Rendering donor dashboard for user '{user.username}' with {total_safe_donations} safe donations and {donor.points} points")
     return render(request, 'donor/donor_dashboard.html', context)
 
 # -------------------------------
@@ -633,12 +696,98 @@ def donate_blood_view(request):
     Handles blood group verification:
     - First-time donors: Blood group is optional, will be verified by nurse
     - Verified donors: Blood group is pre-filled and read-only
+    
+    Also handles:
+    - SAFE donors: Shows countdown timer until next eligible donation
+    - UNSAFE donors: Shows contact blood bank message and hides form
     """
     try:
         donor = Donor.objects.get(user=request.user)
     except Donor.DoesNotExist:
         messages.error(request, "⚠️ You must complete your donor profile before donating blood.")
         return redirect('donor-profile')
+
+    # ==========================================
+    # DETERMINE DONOR SAFETY STATUS FROM THEIR DONATIONS
+    # ==========================================
+    # Check if donor has any UNSAFE donations
+    unsafe_donation = BloodDonate.objects.filter(
+        donor=donor,
+        status='tested_unsafe'
+    ).first()
+    
+    # Check if donor has any SAFE donations
+    safe_donation = BloodDonate.objects.filter(
+        donor=donor,
+        status='tested_safe'
+    ).first()
+    
+    # Determine donor status
+    is_unsafe_donor = unsafe_donation is not None
+    is_safe_donor = safe_donation is not None
+    is_first_time_donor = not BloodDonate.objects.filter(donor=donor).exists()
+    
+    logger.info(f"Donor {donor.id} status: unsafe={is_unsafe_donor}, safe={is_safe_donor}, first_time={is_first_time_donor}")
+    
+    # ==========================================
+    # HANDLE UNSAFE DONOR (has unsafe donation)
+    # ==========================================
+    if is_unsafe_donor:
+        logger.info(f"Donor {donor.id} is UNSAFE - showing contact message")
+        
+        # Get the most recent unsafe donation for reason
+        latest_unsafe = BloodDonate.objects.filter(
+            donor=donor,
+            status='tested_unsafe'
+        ).order_by('-date').first()
+        
+        # Initialize form but mark as hidden
+        donate_form = BloodDonateForm(donor=donor)
+        
+        context = {
+            'donation_form': donate_form,
+            'donor': donor,
+            'active_donation': None,
+            'bloodgroup_verified': donor.bloodgroup_verified,
+            'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+            'unsafe_reason': latest_unsafe.unsafe_reason if latest_unsafe else 'Medical reasons',
+            'is_unsafe': True,  # Flag for template
+            'show_contact_banner': True,
+            'form_hidden': True,
+            'has_unsafe_donation': True,
+            'has_safe_donation': is_safe_donor
+        }
+        return render(request, 'donor/donate_blood.html', context)
+
+    # ==========================================
+    # CALCULATE NEXT ELIGIBLE DONATION DATE FOR SAFE DONORS
+    # ==========================================
+    days_until_next = None
+    next_donation_date = None
+    hours_until_next = None
+    minutes_until_next = None
+    seconds_until_next = None
+    
+    # Only check waiting period if donor has safe donations
+    if is_safe_donor and donor.last_donation_date:
+        # Standard waiting period is 56 days (8 weeks)
+        next_donation_date = donor.last_donation_date + timedelta(days=56)
+        today = timezone.now().date()
+        
+        if next_donation_date > today:
+            # Still in waiting period - calculate countdown
+            days_until_next = (next_donation_date - today).days
+            hours_until_next = days_until_next * 24
+            minutes_until_next = hours_until_next * 60
+            seconds_until_next = minutes_until_next * 60
+            
+            logger.info(f"Donor {donor.id} in waiting period. Next eligible: {next_donation_date} ({days_until_next} days left)")
+        else:
+            # Eligible now
+            days_until_next = 0
+            logger.info(f"Donor {donor.id} is eligible to donate now")
+    else:
+        logger.info(f"Donor {donor.id} has no previous safe donations or no last donation date")
 
     blocking_statuses = ['pending', 'approved']
 
@@ -660,7 +809,17 @@ def donate_blood_view(request):
         return render(request, 'donor/donate_blood.html', {
             'donation_form': donate_form,
             'donor': donor,
-            'active_donation': active_donation
+            'active_donation': active_donation,
+            'days_until_next': days_until_next,
+            'next_donation_date': next_donation_date,
+            'hours_until_next': hours_until_next,
+            'minutes_until_next': minutes_until_next,
+            'seconds_until_next': seconds_until_next,
+            'bloodgroup_verified': donor.bloodgroup_verified,
+            'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+            'is_unsafe': False,
+            'has_safe_donation': is_safe_donor,
+            'is_first_time_donor': is_first_time_donor
         })
         
     # Check eligibility
@@ -755,12 +914,12 @@ def donate_blood_view(request):
                     logger.info(f"✅ Created BloodDonate ID: {donation.id}")
                     logger.info(f"   ├─ Donation Center: {donation.donation_center}")
                     logger.info(f"   ├─ Nurse: {donation.nurse}")
-                    logger.info(f"   ├─ Date: {donation.date}")  # Changed from appointment_date to date
+                    logger.info(f"   ├─ Date: {donation.date}")
                     logger.info(f"   ├─ Unit: {donation.unit} ml")
                     logger.info(f"   └─ Status: {donation.status}")
 
                     # ==========================================
-                    # CRITICAL FIX: Get ContentType for BloodDonate MODEL CLASS
+                    # Get ContentType for BloodDonate MODEL CLASS
                     # ==========================================
                     donation_ct = ContentType.objects.get_for_model(BloodDonate)
                     
@@ -783,6 +942,11 @@ def donate_blood_view(request):
                             'donor': donor,
                             'bloodgroup_verified': donor.bloodgroup_verified,
                             'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                            'days_until_next': days_until_next,
+                            'next_donation_date': next_donation_date,
+                            'is_unsafe': False,
+                            'has_safe_donation': is_safe_donor,
+                            'is_first_time_donor': is_first_time_donor
                         })
 
                     try:
@@ -852,7 +1016,7 @@ def donate_blood_view(request):
                         })
 
                     # ==========================================
-                    # CRITICAL: Create appointment with CORRECT ContentType
+                    # Create appointment with CORRECT ContentType
                     # ==========================================
                     appointment = Appointment.objects.create(
                         donor=donor,
@@ -861,14 +1025,13 @@ def donate_blood_view(request):
                         date=appointment_datetime,
                         status='pending',
                         donation_center=donation.donation_center,  # Link to donation center
-                        request_content_type=donation_ct,  # ← Use BloodDonate ContentType
-                        request_object_id=donation.id,     # ← Link to BloodDonate instance
+                        request_content_type=donation_ct,  # Use BloodDonate ContentType
+                        request_object_id=donation.id,     # Link to BloodDonate instance
                     )
                     
                     # Comprehensive verification logging
                     logger.info(f"✅ Created Appointment ID: {appointment.id}")
                     logger.info(f"   ├─ Donor: {appointment.donor_id} ({appointment.donor})")
-                    logger.info(f"   ├─ Patient: {appointment.patient_id} (should be None)")
                     logger.info(f"   ├─ Nurse: {appointment.nurse_id} ({appointment.nurse})")
                     logger.info(f"   ├─ Donation Center: {appointment.donation_center_id}")
                     logger.info(f"   ├─ ContentType: {appointment.request_content_type}")
@@ -963,10 +1126,20 @@ def donate_blood_view(request):
         'active_donation': None,
         'bloodgroup_verified': donor.bloodgroup_verified,
         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+        'days_until_next': days_until_next,
+        'next_donation_date': next_donation_date,
+        'hours_until_next': hours_until_next,
+        'minutes_until_next': minutes_until_next,
+        'seconds_until_next': seconds_until_next,
+        'is_unsafe': False,
+        'show_contact_banner': False,
+        'form_hidden': False,
+        'has_safe_donation': is_safe_donor,
+        'has_unsafe_donation': is_unsafe_donor,
+        'is_first_time_donor': is_first_time_donor
     }
 
     return render(request, 'donor/donate_blood.html', context)
-
 # -------------------------------
 # Donation History
 # -------------------------------
@@ -1263,270 +1436,6 @@ def mark_notification_read(request, pk):
     notification.save()
     return redirect('donor-notifications')
 
-# -------------------------------
-# Make Request (on behalf of patients)
-# -------------------------------
-@login_required(login_url='login')
-def donor_make_request_view(request):
-    """
-    View for donors to make blood requests on behalf of patients
-    Direct submission to blood bank technicians (NO APPOINTMENTS)
-    """
-    user = request.user
-    
-    # Check if user is a donor
-    if not hasattr(user, "donor"):
-        raise PermissionDenied("Only donors can make donor-side requests.")
-
-    donor = user.donor
-    centers = DonationCenter.objects.all()
-    form_errors = {}
-
-    # Check for active donor blood requests (pending only)
-    active_request = donor.submitted_patient_requests.filter(
-        status='pending'  # Only pending, not approved
-    ).first()
-
-    # If there's an active request, show pending page
-    if active_request:
-        return render(request, "donor/donormakerequest.html", {
-            "pending_request": active_request,
-            "centers": centers,
-            "request_form": DonorBloodRequestForm(),
-        })
-
-    # No active request → show the form
-    if request.method == "POST":
-        request_form = DonorBloodRequestForm(request.POST)
-        donation_center_id = request.POST.get("donation_center")
-
-        # Validate center
-        center_instance = DonationCenter.objects.filter(id=donation_center_id).first()
-
-        if not center_instance:
-            messages.error(request, "❌ Invalid blood bank center selected.")
-            form_errors['donation_center'] = ['Please select a valid blood bank center.']
-
-        # Validate consent
-        consent_confirmed = request.POST.get('consent_confirmed') == 'on'
-
-        # Proceed if form is valid and center exists
-        if request_form.is_valid() and center_instance and consent_confirmed:
-            try:
-                with transaction.atomic():
-                    # Save donor blood request directly (NO APPOINTMENT)
-                    blood_request = request_form.save(commit=False)
-                    blood_request.request_by_donor = donor
-                    blood_request.donation_center = center_instance
-                    blood_request.status = 'pending'
-                    blood_request.consent_confirmed = True
-                    blood_request.save()
-
-                    # 🔔 SEND NOTIFICATION TO BLOOD BANK TECHNICIANS
-                    from blood_bank_technician.models import BloodBankTechProfile
-                    
-                    # Notify all blood bank techs at this center
-                    blood_bank_techs = BloodBankTechProfile.objects.filter(
-                        center=center_instance,
-                        is_active=True
-                    )
-                    
-                    donor_name = donor.user.get_full_name() or donor.user.username
-                    
-                    for tech in blood_bank_techs:
-                        create_notification(
-                            title="🩸 New Donor Blood Request",
-                            message=(
-                                f"Donor {donor_name} has submitted a blood request on behalf of a patient.\n"
-                                f"Patient: {blood_request.patient_first_name} {blood_request.patient_last_name}\n"
-                                f"Blood Group: {blood_request.bloodgroup}\n"
-                                f"Units Needed: {blood_request.unit}ml\n"
-                                f"Center: {center_instance.name}"
-                            ),
-                            recipient_obj=tech,
-                            sender_obj=donor,
-                            action="new_donor_blood_request",
-                            bloodgroup=blood_request.bloodgroup,
-                            unit=blood_request.unit
-                        )
-
-                    # Also send confirmation to donor
-                    create_notification(
-                        title="Blood Request Submitted",
-                        message=(
-                            f"Your blood request for {blood_request.patient_first_name} {blood_request.patient_last_name} "
-                            f"({blood_request.unit}ml of {blood_request.bloodgroup}) has been submitted to {center_instance.name}. "
-                            f"A blood bank technician will review it shortly."
-                        ),
-                        recipient_obj=donor,
-                        sender_obj=None,
-                        action="request_submitted"
-                    )
-                    
-                    messages.success(
-                        request, 
-                        f"✅ Blood request submitted successfully! The blood bank will review it shortly."
-                    )
-                    return redirect("donor-request-history")
-
-            except ValidationError as ve:
-                if hasattr(ve, 'message_dict'):
-                    form_errors.update(ve.message_dict)
-                else:
-                    form_errors['non_field_errors'] = [str(ve)]
-                    
-            except Exception as e:
-                messages.error(request, f"❌ An error occurred while creating your request: {str(e)}")
-                form_errors['non_field_errors'] = [str(e)]
-                
-        else:
-            # Form validation failed
-            if not request_form.is_valid():
-                messages.error(request, "❌ Please correct the errors in the blood request form.")
-                form_errors.update(request_form.errors)
-            
-            if not consent_confirmed:
-                messages.error(request, "❌ You must confirm your consent to submit the request.")
-                form_errors['consent_confirmed'] = ['Consent is required.']
-
-        # Return with form that contains POST data and errors
-        return render(request, "donor/donormakerequest.html", {
-            "request_form": request_form,
-            "centers": centers,
-            "pending_request": None,
-            "form_errors": form_errors,
-            "no_appointment": True,
-        })
-
-    else:
-        # GET request - initialize empty form
-        request_form = DonorBloodRequestForm()
-
-        return render(request, "donor/donormakerequest.html", {
-            "request_form": request_form,
-            "centers": centers,
-            "pending_request": None,
-            "form_errors": form_errors,
-            "no_appointment": True,
-        })
-
-
-@login_required(login_url='login')
-def donor_request_history_view(request):
-    """
-    View for donors to see their blood request history
-    """
-    user = request.user
-    
-    # Check if user is a donor
-    if not hasattr(user, "donor"):
-        raise PermissionDenied("Only donors can access this page.")
-
-    donor = user.donor
-    
-    # Get all blood requests made by this donor
-    blood_requests = DonorBloodRequest.objects.filter(
-        request_by_donor=donor
-    ).select_related(
-        'donation_center',
-        'approved_by__user',
-        'reviewed_by__user',
-        'dispatched_by__user'
-    ).order_by('-created_at')
-    
-    return render(request, 'donor/donor_request_history.html', {
-        'blood_requests': blood_requests,
-        'now': timezone.now(),
-    })
-
-
-@login_required(login_url='login')
-def donor_cancel_request_view(request, request_id):
-    """
-    Cancel a pending blood request made by a donor
-    """
-    user = request.user
-    
-    # Check if user is a donor
-    if not hasattr(user, "donor"):
-        raise PermissionDenied("Only donors can cancel their requests.")
-
-    donor = user.donor
-
-    blood_request = get_object_or_404(
-        DonorBloodRequest,
-        id=request_id,
-        request_by_donor=donor
-    )
-
-    now = timezone.now()
-
-    # Only allow cancellation of pending requests
-    if blood_request.status == 'pending':
-        # Get cancellation reason from POST if provided
-        reason = request.POST.get('reason', '').strip()
-        
-        # Update request status
-        blood_request.status = 'cancelled'
-        blood_request.save(update_fields=['status'])
-
-        # 🔔 SEND NOTIFICATION TO BLOOD BANK TECHNICIANS
-        from blood_bank_technician.models import BloodBankTechProfile
-        
-        # Notify all blood bank techs at this center
-        blood_bank_techs = BloodBankTechProfile.objects.filter(
-            center=blood_request.donation_center,
-            is_active=True
-        )
-        
-        donor_name = donor.user.get_full_name() or donor.user.username
-        
-        for tech in blood_bank_techs:
-            create_notification(
-                title="🚫 Donor Blood Request Cancelled",
-                message=(
-                    f"Donor {donor_name} has cancelled their blood request for patient "
-                    f"{blood_request.patient_first_name} {blood_request.patient_last_name}.\n"
-                    f"Blood Group: {blood_request.bloodgroup}\n"
-                    f"Units: {blood_request.unit}ml\n"
-                    f"Reason: {reason if reason else 'No reason provided'}"
-                ),
-                recipient_obj=tech,
-                sender_obj=donor,
-                action="request_cancelled",
-                bloodgroup=blood_request.bloodgroup,
-                unit=blood_request.unit
-            )
-
-        # Also send confirmation to donor
-        create_notification(
-            title="Request Cancelled",
-            message=(
-                f"Your blood request for {blood_request.patient_first_name} {blood_request.patient_last_name} "
-                f"({blood_request.unit}ml of {blood_request.bloodgroup}) has been cancelled successfully."
-            ),
-            recipient_obj=donor,
-            sender_obj=None,
-            action="cancelled"
-        )
-
-        messages.success(request, "✅ Your blood request has been cancelled successfully.")
-    else:
-        # Determine why it can't be cancelled
-        if blood_request.status == 'approved':
-            messages.warning(request, "⚠️ This request has already been approved and cannot be cancelled. Please contact the blood bank directly.")
-        elif blood_request.status == 'dispatched':
-            messages.warning(request, "⚠️ This request has already been dispatched and cannot be cancelled.")
-        elif blood_request.status == 'completed':
-            messages.warning(request, "⚠️ This request has already been completed.")
-        elif blood_request.status == 'rejected':
-            messages.warning(request, "⚠️ This request has already been rejected.")
-        elif blood_request.status == 'cancelled':
-            messages.warning(request, "⚠️ This request is already cancelled.")
-        else:
-            messages.warning(request, "⚠️ This request cannot be cancelled at this stage.")
-
-    return redirect('donor-request-history')
 
 # -------------------------------
 # Health tips

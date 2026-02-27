@@ -59,9 +59,10 @@ INSTALLED_APPS = [
     # Local apps
     'blood',
     'donor',
-    'patient',
+    'utils', 
     'nurse',
     'chatbot',
+    'hospital',
     'lab_technologist', 
     'blood_bank_technician',
 ]
@@ -124,10 +125,9 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
 
                 # Custom
-                'patient.context_processors.patient_notification_count',
                 'donor.context_processors.donor_notification_count',
-                'blood.context_processors.admin_notification_counts',
                 'nurse.context_processors.nurse_unread_notifications',
+                'hospital.context_processors.hospital_user_context',
             ],
         },
     },
@@ -228,7 +228,7 @@ if all([os.getenv('CLOUDINARY_CLOUD_NAME'),
 # =============================
 # AUTHENTICATION & LOGIN CONFIGURATION
 # =============================
-LOGIN_URL = '/patient/patientlogin'
+LOGIN_URL = "/donor/donorlogin"
 LOGIN_REDIRECT_URL = '/afterlogin/'
 LOGOUT_REDIRECT_URL = '/'
 

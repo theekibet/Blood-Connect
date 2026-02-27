@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from blood.models import Notification
+from utils.models import Notification
 from donor.models import Donor
 
 def donor_notification_count(request):
