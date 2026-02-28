@@ -1,0 +1,110 @@
+{% extends 'shared/base.html' %}
+{% load static %}
+
+{% block title %}Contact Us - BloodConnect{% endblock %}
+
+{% block auth_icon %}fas fa-envelope{% endblock %}
+{% block auth_title %}Contact Us{% endblock %}
+
+{% block auth_content %}
+<div class="contact-wrapper">
+    <!-- CONTACT FORM CARD -->
+    <div class="contact-card">
+        <h2 class="contact-title"><i class="fas fa-envelope-open-text"></i> Contact Us</h2>
+        
+        <p class="contact-subtitle">We'd love to hear from you. Send us a message 👇</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="fas 
+                        {% if message.tags == 'success' %}fa-check-circle
+                        {% elif message.tags == 'error' %}fa-exclamation-circle
+                        {% elif message.tags == 'warning' %}fa-exclamation-triangle
+                        {% else %}fa-info-circle{% endif %}">
+                    </i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form action="" method="post" class="contact-form">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="id_name" class="form-label">
+                    <i class="fas fa-user"></i> Name
+                </label>
+                {% if user.is_authenticated %}
+                    <input type="text" 
+                           name="name" 
+                           id="id_name"
+                           class="form-control" 
+                           value="{{ user.get_full_name }}" 
+                           placeholder="Enter your name" 
+                           required>
+                {% else %}
+                    <input type="text" 
+                           name="name" 
+                           id="id_name"
+                           class="form-control" 
+                           placeholder="Enter your name" 
+                           required>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_email" class="form-label">
+                    <i class="fas fa-envelope"></i> Email
+                </label>
+                {% if user.is_authenticated %}
+                    <input type="email" 
+                           name="email" 
+                           id="id_email"
+                           class="form-control" 
+                           value="{{ user.email }}" 
+                           placeholder="Enter your email" 
+                           required>
+                {% else %}
+                    <input type="email" 
+                           name="email" 
+                           id="id_email"
+                           class="form-control" 
+                           placeholder="Enter your email" 
+                           required>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_message" class="form-label">
+                    <i class="fas fa-comment"></i> Message
+                </label>
+                <textarea name="message" 
+                          id="id_message"
+                          class="form-control" 
+                          rows="5" 
+                          placeholder="Write your message..." 
+                          required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-paper-plane"></i> Send Message
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form submission animation
+    $('.contact-form').on('submit', function(e) {
+        const btn = $(this).find('.btn-primary');
+        btn.html('<i class="fas fa-spinner fa-spin"></i> Sending...');
+        btn.prop('disabled', true);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,286 @@
+/* ========================================
+   CSS Variables - BloodConnect
+   Blood Donation System Theme Variables
+   ======================================== */
+
+   :root {
+    /* ----------------------------------------
+       Blood Donation Theme Colors
+       ---------------------------------------- */
+    
+    /* Primary Colors - Blood Red Theme */
+    --primary: #DC2626;              /* Main blood red */
+    --primary-dark: #991B1B;          /* Dark blood red */
+    --primary-light: #FCA5A5;         /* Light blood red */
+    --primary-rgb: 220, 38, 38;       /* RGB values for primary */
+    
+    /* Secondary Colors */
+    --secondary: #7C3AED;              /* Royal purple */
+    --secondary-dark: #5B21B6;         /* Dark purple */
+    --secondary-light: #C4B5FD;        /* Light purple */
+    
+    /* Accent Colors */
+    --accent: #EC4899;                  /* Pink accent */
+    --accent-dark: #BE185D;              /* Dark pink */
+    --accent-light: #F9A8D4;             /* Light pink */
+    
+    /* Status Colors */
+    --success: #10B981;                  /* Emerald green */
+    --success-dark: #059669;              /* Dark green */
+    --success-light: #D1FAE5;             /* Light green */
+    
+    --warning: #F59E0B;                   /* Amber */
+    --warning-dark: #D97706;               /* Dark amber */
+    --warning-light: #FDE68A;              /* Light amber */
+    
+    --danger: #DC2626;                     /* Red (same as primary) */
+    --danger-dark: #B91C1C;                 /* Dark red */
+    --danger-light: #FECACA;                /* Light red */
+    
+    --info: #3B82F6;                       /* Blue */
+    --info-dark: #2563EB;                   /* Dark blue */
+    --info-light: #BFDBFE;                  /* Light blue */
+    
+    /* Neutral Colors */
+    --white: #FFFFFF;
+    --black: #000000;
+    
+    --dark: #1F2937;                       /* Dark gray */
+    --dark-800: #374151;                     /* Dark gray 800 */
+    --dark-700: #4B5563;                     /* Dark gray 700 */
+    --dark-600: #6B7280;                     /* Dark gray 600 */
+    
+    --gray: #6B7280;                        /* Medium gray */
+    --gray-500: #9CA3AF;                      /* Gray 500 */
+    --gray-400: #D1D5DB;                      /* Gray 400 */
+    --gray-300: #E5E7EB;                      /* Gray 300 */
+    
+    --light-gray: #F3F4F6;                   /* Light gray */
+    --light: #F9FAFB;                        /* Very light gray */
+    --lighter: #FCFCFD;                      /* Almost white */
+    
+    /* Background Colors */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F9FAFB;
+    --bg-tertiary: #F3F4F6;
+    
+    /* ----------------------------------------
+       Typography Variables
+       ---------------------------------------- */
+    
+    /* Font Family */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-family-mono: 'SF Mono', Monaco, Inconsolata, 'Fira Mono', 'Droid Sans Mono', monospace;
+    
+    /* Font Sizes */
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;    /* 14px */
+    --font-size-base: 1rem;       /* 16px */
+    --font-size-lg: 1.125rem;     /* 18px */
+    --font-size-xl: 1.25rem;      /* 20px */
+    --font-size-2xl: 1.5rem;      /* 24px */
+    --font-size-3xl: 1.875rem;    /* 30px */
+    --font-size-4xl: 2.25rem;     /* 36px */
+    --font-size-5xl: 3rem;        /* 48px */
+    --font-size-6xl: 3.75rem;     /* 60px */
+    
+    /* Font Weights */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+    
+    /* Line Heights */
+    --line-height-none: 1;
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+    
+    /* Letter Spacing */
+    --letter-spacing-tighter: -0.05em;
+    --letter-spacing-tight: -0.025em;
+    --letter-spacing-normal: 0;
+    --letter-spacing-wide: 0.025em;
+    --letter-spacing-wider: 0.05em;
+    --letter-spacing-widest: 0.1em;
+    
+    /* ----------------------------------------
+       Spacing Variables
+       ---------------------------------------- */
+    
+    --spacing-0: 0;
+    --spacing-1: 0.25rem;    /* 4px */
+    --spacing-2: 0.5rem;      /* 8px */
+    --spacing-3: 0.75rem;     /* 12px */
+    --spacing-4: 1rem;        /* 16px */
+    --spacing-5: 1.25rem;     /* 20px */
+    --spacing-6: 1.5rem;      /* 24px */
+    --spacing-8: 2rem;        /* 32px */
+    --spacing-10: 2.5rem;     /* 40px */
+    --spacing-12: 3rem;       /* 48px */
+    --spacing-16: 4rem;       /* 64px */
+    --spacing-20: 5rem;       /* 80px */
+    --spacing-24: 6rem;       /* 96px */
+    --spacing-32: 8rem;       /* 128px */
+    
+    /* ----------------------------------------
+       Border Radius
+       ---------------------------------------- */
+    
+    --border-radius-none: 0;
+    --border-radius-sm: 0.125rem;   /* 2px */
+    --border-radius: 0.25rem;        /* 4px */
+    --border-radius-md: 0.375rem;    /* 6px */
+    --border-radius-lg: 0.5rem;      /* 8px */
+    --border-radius-xl: 0.75rem;     /* 12px */
+    --border-radius-2xl: 1rem;       /* 16px */
+    --border-radius-3xl: 1.5rem;     /* 24px */
+    --border-radius-full: 9999px;
+    --border-radius-circle: 50%;
+    
+    /* ----------------------------------------
+       Shadows
+       ---------------------------------------- */
+    
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+    --shadow-none: 0 0 #0000;
+    
+    /* Colored Shadows */
+    --shadow-primary: 0 4px 14px 0 rgba(220, 38, 38, 0.25);
+    --shadow-success: 0 4px 14px 0 rgba(16, 185, 129, 0.25);
+    --shadow-warning: 0 4px 14px 0 rgba(245, 158, 11, 0.25);
+    --shadow-danger: 0 4px 14px 0 rgba(220, 38, 38, 0.25);
+    
+    /* ----------------------------------------
+       Layout Variables
+       ---------------------------------------- */
+    
+    /* Sidebar */
+    --sidebar-width: 280px;
+    --sidebar-width-collapsed: 80px;
+    --sidebar-bg: #FFFFFF;
+    --sidebar-hover: #F9FAFB;
+    
+    /* Navbar */
+    --navbar-height: 70px;
+    --navbar-bg: #FFFFFF;
+    --navbar-shadow: var(--shadow-sm);
+    
+    /* Header */
+    --header-height: 80px;
+    
+    /* Footer */
+    --footer-height: 400px;
+    --footer-bg: #1F2937;
+    
+    /* Container */
+    --container-max-width: 1280px;
+    --container-padding: 2rem;
+    
+    /* ----------------------------------------
+       Z-Index Scale
+       ---------------------------------------- */
+    
+    --z-index-0: 0;
+    --z-index-10: 10;
+    --z-index-20: 20;
+    --z-index-30: 30;
+    --z-index-40: 40;
+    --z-index-50: 50;
+    --z-index-auto: auto;
+    
+    /* Component Specific Z-Indices */
+    --z-index-dropdown: 100;
+    --z-index-sticky: 200;
+    --z-index-fixed: 300;
+    --z-index-modal-backdrop: 400;
+    --z-index-modal: 500;
+    --z-index-popover: 600;
+    --z-index-tooltip: 700;
+    --z-index-toast: 800;
+    --z-index-chatbot: 900;
+    
+    /* ----------------------------------------
+       Transitions & Animations
+       ---------------------------------------- */
+    
+    --transition-duration: 0.3s;
+    --transition-duration-fast: 0.15s;
+    --transition-duration-slow: 0.5s;
+    
+    --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-timing-in: cubic-bezier(0.4, 0, 1, 1);
+    --transition-timing-out: cubic-bezier(0, 0, 0.2, 1);
+    
+    --transition-all: all var(--transition-duration) var(--transition-timing);
+    --transition-transform: transform var(--transition-duration) var(--transition-timing);
+    --transition-opacity: opacity var(--transition-duration) var(--transition-timing);
+    --transition-colors: background-color var(--transition-duration) var(--transition-timing), border-color var(--transition-duration) var(--transition-timing), color var(--transition-duration) var(--transition-timing);
+    
+    /* ----------------------------------------
+       Blood Donation Specific Variables
+       ---------------------------------------- */
+    
+    /* Blood Types Colors */
+    --blood-a: #DC2626;
+    --blood-b: #2563EB;
+    --blood-ab: #7C3AED;
+    --blood-o: #059669;
+    --blood-rh-positive: #DC2626;
+    --blood-rh-negative: #6B7280;
+    
+    /* Urgency Levels */
+    --urgency-critical: #DC2626;
+    --urgency-high: #F59E0B;
+    --urgency-medium: #3B82F6;
+    --urgency-low: #10B981;
+    
+    /* Donation Status */
+    --status-available: #10B981;
+    --status-pending: #F59E0B;
+    --status-expiring: #EF4444;
+    --status-expired: #6B7280;
+    --status-verified: #10B981;
+    --status-unverified: #F59E0B;
+    
+    /* ----------------------------------------
+       Dark Mode Colors (Future Use)
+       ---------------------------------------- */
+    
+    --dark-mode-bg: #111827;
+    --dark-mode-surface: #1F2937;
+    --dark-mode-border: #374151;
+    --dark-mode-text: #F9FAFB;
+    --dark-mode-text-muted: #9CA3AF;
+}
+
+/* ----------------------------------------
+   Dark Mode Media Query (Future Use)
+   ---------------------------------------- */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* This will be implemented when dark mode is added */
+    }
+}
+
+/* ----------------------------------------
+   Print Styles
+   ---------------------------------------- */
+@media print {
+    :root {
+        --shadow-none: none;
+        --bg-primary: #FFFFFF;
+        --text-primary: #000000;
+    }
+}

@@ -15,6 +15,12 @@
         <!-- Navbar Links -->
         <div class="collapse navbar-collapse" id="publicNavbar">
             <ul class="navbar-nav ml-auto">
+                                <!-- Report Bug (Coming Soon) -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="alert('Bug reporting feature coming soon,Allan Kibe is aware of the numerous bugs for now!Stay put,Na uvae sweater'); return false;">
+                         <i class="fas fa-bug"></i> 
+                    </a>
+                </li>
                 <!-- Home -->
                 <li class="nav-item">
                     <a class="nav-link" href="/">
@@ -28,6 +34,7 @@
                         <i class="fas fa-info-circle"></i> About
                     </a>
                 </li>
+
                 
                 <!-- Contact -->
                 <li class="nav-item">
@@ -46,7 +53,7 @@
                         <h6 class="dropdown-header">Select Your Role</h6>
                         
                         <!-- Donor Login -->
-                        <a class="dropdown-item" href="{% url 'donorlogin' %}">
+                        <a class="dropdown-item" href="{% url 'donor:donorlogin' %}">
                             <i class="fas fa-hand-holding-heart text-success"></i> Donor Login
                         </a>
                         

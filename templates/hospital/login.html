@@ -3,20 +3,20 @@
 
 {% block title %}Hospital Login - BloodConnect{% endblock %}
 
+{% block auth_icon %}fas fa-hospital{% endblock %}
+{% block auth_title %}Hospital Portal{% endblock %}
+{% block auth_card_class %}hospital{% endblock %}
+
 {% block auth_content %}
 <div class="container">
-    <div class="auth-card fade-in">
-        <div class="auth-header">
-            <h3><i class="fas fa-hospital me-2"></i>Hospital Portal</h3>
-            <p>Sign in to access your hospital dashboard</p>
-        </div>
-        
-        <div class="auth-body">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
             <form method="post" novalidate>
                 {% csrf_token %}
                 
                 {% if form.non_field_errors %}
                 <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
                     {% for error in form.non_field_errors %}
                         {{ error }}
                     {% endfor %}
@@ -29,9 +29,9 @@
                     </label>
                     {{ form.username }}
                     {% if form.username.errors %}
-                    <div class="text-danger mt-1">
+                    <div class="text-danger small mt-1">
                         {% for error in form.username.errors %}
-                            <small>{{ error }}</small>
+                            {{ error }}
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -43,9 +43,9 @@
                     </label>
                     {{ form.password }}
                     {% if form.password.errors %}
-                    <div class="text-danger mt-1">
+                    <div class="text-danger small mt-1">
                         {% for error in form.password.errors %}
-                            <small>{{ error }}</small>
+                            {{ error }}
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -57,17 +57,25 @@
                     </button>
                 </div>
                 
+                <div class="text-center mt-3">
+                    <a href="javascript:void(0)" 
+                       class="text-secondary small" 
+                       onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                        <i class="fas fa-key me-1"></i> Forgot password?
+                    </a>
+                </div>
+                
                 <hr class="my-4">
                 
                 <div class="text-center">
                     <p class="mb-2">
-                        <a href="{% url 'hospital:register' %}" class="text-decoration-none">
-                            <i class="fas fa-building me-1"></i>Register a New Hospital
+                        <a href="{% url 'hospital:register' %}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                            <i class="fas fa-building me-2"></i>Register a New Hospital
                         </a>
                     </p>
                     <p class="mb-0">
-                        <a href="{% url 'hospital:signup' %}" class="text-decoration-none">
-                            <i class="fas fa-user-plus me-1"></i>Create Staff Account
+                        <a href="{% url 'hospital:signup' %}" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="fas fa-user-plus me-2"></i>Create Staff Account
                         </a>
                     </p>
                 </div>

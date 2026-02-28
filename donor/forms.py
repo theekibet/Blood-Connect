@@ -366,45 +366,123 @@ class DonorEligibilityForm(forms.ModelForm):
 
     weight = forms.FloatField(
         validators=[validate_weight],
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter your weight in kg'}),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Enter your weight in kg',
+            'min': '30',
+            'max': '200',
+            'step': '0.1'
+        }),
         help_text='Enter your weight in kilograms (minimum 50kg).'
     )
+    
     gender = forms.ChoiceField(
         choices=GENDER_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'}),
         help_text='Select your gender.'
     )
+    
     good_health = forms.TypedChoiceField(
         choices=BOOLEAN_CHOICES,
-        coerce=lambda x: x in [True, 'True', 'true'],
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
-        label="Are you in good health?",
-        help_text='You must be in good health to donate.'
+        label="Are you currently in good general health?",
+        help_text='You must be feeling well and healthy on the day of donation.'
     )
+    
     travel_history = forms.TypedChoiceField(
         choices=BOOLEAN_CHOICES,
-        coerce=lambda x: x in [True, 'True', 'true'],
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
-        label="Have you traveled outside your country recently?",
-        help_text='Travel outside may affect eligibility.'
+        label="Have you traveled outside your country in the past 3 months?",
+        help_text='Travel to certain areas may require a waiting period.'
     )
+    
+    # Additional travel details (conditional)
+    travel_destination = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Where did you travel?'
+        }),
+        label="Travel destination"
+    )
+    
+    travel_duration = forms.IntegerField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Duration in days'
+        }),
+        label="Duration of stay (days)"
+    )
+    
     pregnant = forms.TypedChoiceField(
         choices=BOOLEAN_CHOICES,
-        coerce=lambda x: x in [True, 'True', 'true'],
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
         label="Are you currently pregnant?",
         required=False,
         help_text='Applicable only if you are female.'
     )
+    
+    recent_childbirth = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Have you given birth in the last 6 months?",
+        required=False
+    )
+    
+    breastfeeding = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Are you currently breastfeeding?",
+        required=False
+    )
+    
     medical_conditions = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'List any medical conditions or allergies'}),
-        help_text='List chronic conditions or allergies if any.'
+        widget=forms.Textarea(attrs={
+            'class': 'form-control', 
+            'rows': 3, 
+            'placeholder': 'List any medical conditions, medications, or allergies'
+        }),
+        help_text='List chronic conditions, current medications, or allergies if any.'
     )
+    
+    # New fields for better assessment
+    recent_surgery = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Have you had any surgery in the past 6 months?",
+        required=False
+    )
+    
+    recent_tattoo = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        coerce=lambda x: x in [True, 'True', 'true', '1', 1],
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Have you gotten a tattoo or piercing in the past 6 months?",
+        required=False,
+        help_text='Tattoos/piercings may require a waiting period.'
+    )
+    
+    medications = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'List any medications you are currently taking'
+        }),
+        label="Current medications"
+    )
+    
     agree_to_terms = forms.BooleanField(
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        label="I agree to the terms and conditions and confirm that the information provided is true.",
+        label="I confirm that all information provided is true and accurate to the best of my knowledge.",
         error_messages={'required': 'You must agree before submitting.'}
     )
 
@@ -421,12 +499,24 @@ class DonorEligibilityForm(forms.ModelForm):
         # If donor exists, populate hidden age field
         if donor and donor.dob:
             self.initial['age'] = self.calculate_age(donor.dob)
+            self.age_value = self.initial['age']
 
     def clean(self):
         cleaned_data = super().clean()
         gender = cleaned_data.get('gender')
         pregnant = cleaned_data.get('pregnant')
         good_health = cleaned_data.get('good_health')
+        travel_history = cleaned_data.get('travel_history')
+        travel_destination = cleaned_data.get('travel_destination')
+        recent_surgery = cleaned_data.get('recent_surgery')
+        recent_tattoo = cleaned_data.get('recent_tattoo')
+        
+        # Validate travel details if travel_history is True
+        if travel_history:
+            if not travel_destination:
+                self.add_error('travel_destination', 'Please specify your travel destination.')
+            if not cleaned_data.get('travel_duration'):
+                self.add_error('travel_duration', 'Please specify the duration of your stay.')
 
         if good_health is False:
             self.add_error('good_health', "You must be in good health to donate.")
@@ -436,6 +526,8 @@ class DonorEligibilityForm(forms.ModelForm):
                 self.add_error('pregnant', 'Please specify if you are currently pregnant.')
         else:
             cleaned_data['pregnant'] = False
+            cleaned_data['recent_childbirth'] = False
+            cleaned_data['breastfeeding'] = False
 
         # Age check
         age = cleaned_data.get('age')
@@ -443,8 +535,13 @@ class DonorEligibilityForm(forms.ModelForm):
             age = self.calculate_age(self.donor.dob)
             cleaned_data['age'] = age
 
-        if age is not None and (age < 18 or age > 65):
-            raise ValidationError("Your age must be between 18 and 65 years based on your date of birth.")
+        if age is not None:
+            if age < 18:
+                raise ValidationError("You must be at least 18 years old to donate blood.")
+            elif age > 65:
+                # First-time donors over 65 need physician approval
+                if not hasattr(self, 'physician_approved') or not self.physician_approved:
+                    self.add_error(None, "First-time donors over 65 require physician approval. Please consult your doctor.")
 
         return cleaned_data
 

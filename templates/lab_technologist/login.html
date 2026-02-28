@@ -1,39 +1,79 @@
 <!-- templates/lab_technologist/login.html -->
-{% extends 'lab_technologist/base.html' %}
+{% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Login - Lab Technologist{% endblock %}
+{% block title %}Lab Technologist Login - BloodConnect{% endblock %}
+
+{% block auth_icon %}fas fa-flask{% endblock %}
+{% block auth_title %}Lab Technologist Login{% endblock %}
+{% block auth_card_class %}lab-tech{% endblock %}
 
 {% block auth_content %}
 <form method="post">
     {% csrf_token %}
     
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            Invalid username or password. Please try again.
+        </div>
+    {% endif %}
+    
     <div class="mb-3">
-        <label for="username" class="form-label">Username</label>
-        <input type="text" class="form-control" id="username" name="username" required autofocus>
+        <label for="username" class="form-label">
+            <i class="fas fa-user me-2"></i>Username
+        </label>
+        <input type="text" 
+               class="form-control" 
+               id="username" 
+               name="username" 
+               required 
+               autofocus
+               placeholder="Enter your username">
     </div>
     
     <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" name="password" required>
+        <label for="password" class="form-label">
+            <i class="fas fa-lock me-2"></i>Password
+        </label>
+        <input type="password" 
+               class="form-control" 
+               id="password" 
+               name="password" 
+               required
+               placeholder="Enter your password">
     </div>
     
-    <div class="d-grid">
+    <div class="d-grid gap-2">
         <button type="submit" class="btn btn-primary">
-            <i class="fas fa-sign-in-alt"></i> Login
+            <i class="fas fa-sign-in-alt me-2"></i>Login
         </button>
     </div>
     
-    <a href="javascript:void(0)" class="text-secondary" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
-        <i class="fas fa-key mr-1"></i> Forgot password?
-    </a>
+    <div class="text-center mt-3">
+        <a href="javascript:void(0)" 
+           class="text-secondary" 
+           onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+            <i class="fas fa-key me-1"></i> Forgot password?
+        </a>
+    </div>
     
-    <div class="mt-2 text-center">
-        <p>Don't have an account? <a href="{% url 'lab_technologist:signup' %}">Register here</a></p>
+    <hr class="my-4">
+    
+    <div class="text-center">
+        <p class="mb-0">
+            Don't have an account? 
+            <a href="{% url 'lab_technologist:signup' %}" class="btn btn-link">
+                Register here <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </p>
+    </div>
+    
+    <div class="text-center mt-3">
+        <small class="text-muted">
+            <i class="fas fa-shield-alt me-1"></i>
+            Authorized laboratory personnel only
+        </small>
     </div>
 </form>
-
-<div class="text-center mt-3">
-    <small class="text-muted">Authorized laboratory personnel only</small>
-</div>
 {% endblock %}

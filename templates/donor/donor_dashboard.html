@@ -1,172 +1,491 @@
 {% extends 'donor/donorbase.html' %}
 {% load static %}
-{% block content %}
 
-<div class="container mt-4">
+{% block title %}Donor Dashboard - BloodConnect{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
   <!-- Enhanced Greeting Card -->
   {% include 'shared/greetings_card.html' %}
   
-  <!-- Location -->
-  {% if donor %}
-    <div class="location-info" id="locationDisplay">
-      <i class="fas fa-home"></i>
-      <span>
-        {% if donor.county %}
-          {{ donor.county }}
-        {% else %}
-          County not set
-        {% endif %}
-      </span>
-      
-      {% if donor.location_name %}
-        <span class="mx-2">|</span>
-        <i class="fas fa-map-marker-alt"></i>
-        <span id="locationName">{{ donor.location_name }}</span>
-      {% endif %}
-      
-      <button id="updateLocationBtn" class="btn btn-sm ms-2" type="button">
-        <i class="fas fa-sync-alt"></i> Update Location
-      </button>
-      
-      <!-- Hidden latitude/longitude for backend use -->
-      {% if donor.latitude %}
-        <span id="latText" style="display:none;">{{ donor.latitude }}</span>
-      {% endif %}
-      {% if donor.longitude %}
-        <span id="lonText" style="display:none;">{{ donor.longitude }}</span>
-      {% endif %}
-    </div>
-  {% endif %}
-
-  <!-- Dashboard Stats -->
-  <div class="row g-4 mt-4 animated">
-    {% for item in dashboard_stats %}
-      <div class="col-lg-3 col-md-6">
-        <div class="card dashboard-card">
-          <div class="dashboard-card-body">
-            <i class="fas {{ item.icon }} dashboard-icon {{ item.color }}"></i>
-            <div class="card-count">{{ item.count }}</div>
-            <div class="card-label">{{ item.label }}</div>
-            <div class="card-description">{{ item.description }}</div>
+  <!-- Pre-Eligibility Awareness Modal -->
+  {% if show_eligibility_modal %}
+  <div class="modal fade" id="eligibilityAwarenessModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-question-circle me-2"></i>
+            Before You Start Your Donation Journey
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="lead mb-4 text-center">
+            <i class="fas fa-heart text-danger me-2"></i>
+            <strong>Everyone has a role in saving lives</strong> — whether through donation or support.
+            Let's find your path!
+          </p>
+          
+          <div class="row g-4">
+            <div class="col-md-6">
+              <div class="card h-100 border-primary">
+                <div class="card-body text-center">
+                  <div class="display-1 text-primary mb-3">
+                    <i class="fas fa-hand-holding-heart"></i>
+                  </div>
+                  <h4>I'm Ready to Donate</h4>
+                  <p class="text-muted">
+                    I believe I may be eligible and want to complete the eligibility form to start donating.
+                  </p>
+                  <a href="{% url 'donor:donor-eligibility' %}" class="btn btn-primary w-100">
+                    <i class="fas fa-clipboard-check me-2"></i>
+                    Complete Eligibility Form
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="card h-100 border-success">
+                <div class="card-body text-center">
+                  <div class="display-1 text-success mb-3">
+                    <i class="fas fa-hands-helping"></i>
+                  </div>
+                  <h4>I Want to Support Differently</h4>
+                  <p class="text-muted">
+                    I may not be eligible to donate, but I still want to help save lives in other ways.
+                  </p>
+                  <button class="btn btn-success w-100" data-bs-target="#supportOptionsModal" data-bs-toggle="modal">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    Explore Support Options
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Support Options Modal -->
+  <div class="modal fade" id="supportOptionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-heart me-2"></i>
+            Ways You Can Still Make a Difference
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-center mb-4">
+            <i class="fas fa-quote-left text-muted me-2"></i>
+            Every person has the power to make a difference, whether through donation, advocacy, or support.
+            <i class="fas fa-quote-right text-muted ms-2"></i>
+          </p>
+          
+          <div class="row g-4">
+            {% for option in donor_support_options|slice:":6" %}
+            <div class="col-md-6">
+              <div class="card h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center mb-3">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="{{ option.icon }} fa-2x text-success"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-1 fw-bold">{{ option.title }}</h6>
+                      {% if option.badge %}
+                      <span class="badge bg-warning text-dark">{{ option.badge }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <p class="small text-muted mb-3">{{ option.description }}</p>
+                  <a href="{{ option.url }}" class="btn btn-outline-success btn-sm w-100">
+                    Learn More <i class="fas fa-arrow-right ms-2"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Location Card -->
+  {% if donor %}
+  <div class="card mb-4" id="locationDisplay">
+    <div class="card-body">
+      <div class="d-flex align-items-center flex-wrap gap-3">
+        <div class="location-info d-flex align-items-center gap-2">
+          <i class="fas fa-map-marker-alt text-primary"></i>
+          <span class="fw-medium">Your Location:</span>
+          <span>
+            {% if donor.county %}
+              {{ donor.county }}
+            {% else %}
+              <span class="text-muted">County not set</span>
+            {% endif %}
+          </span>
+          
+          {% if donor.location_name %}
+            <span class="text-muted mx-1">|</span>
+            <i class="fas fa-home text-primary"></i>
+            <span id="locationName">{{ donor.location_name }}</span>
+          {% endif %}
+        </div>
+        
+        <button id="updateLocationBtn" class="btn btn-outline-primary btn-sm ms-auto" type="button">
+          <i class="fas fa-sync-alt me-1"></i> Update Location
+        </button>
+        
+        <!-- Hidden coordinates -->
+        {% if donor.latitude %}
+          <span id="latText" class="d-none">{{ donor.latitude }}</span>
+        {% endif %}
+        {% if donor.longitude %}
+          <span id="lonText" class="d-none">{{ donor.longitude }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Motivational Banner -->
+  <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i class="fas fa-quote-left fa-2x me-3 text-primary"></i>
+    <div>
+      <strong class="fs-5">{{ donor_motivational_message|default:"Everyone has a role in saving lives." }}</strong>
+    </div>
+  </div>
+
+  <!-- Quick Action Buttons -->
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    {% for action in quick_actions %}
+      {% if action.show %}
+      <a href="javascript:void(0);" 
+      onclick="alert('This feature is coming soon! Thank you for your interest.'); return false;" 
+      class="btn btn-{{ action.color }}">
+       <i class="fas {{ action.icon }} me-2"></i>{{ action.text }}
+   </a>
+      {% endif %}
     {% endfor %}
   </div>
 
+  <!-- Dashboard Stats Cards -->
+  <div class="row g-4 mb-4">
+    {% if donor_dashboard_stats %}
+      <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3">
+                  <i class="fas fa-tint fa-2x text-primary"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <div class="card-count">{{ donor_dashboard_stats.total_safe_donations }}</div>
+                <div class="card-label">Safe Donations</div>
+                <div class="card-description small text-muted">Lives impacted: {{ donor_dashboard_stats.total_safe_donations|add:"0" }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="dashboard-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3">
+                  <i class="fas fa-star fa-2x text-warning"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <div class="card-count">{{ donor_dashboard_stats.total_points }}</div>
+                <div class="card-label">Points Earned</div>
+                <div class="card-description small text-muted">{{ donor_dashboard_stats.hero_level }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="dashboard-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3">
+                  <i class="fas fa-tint fa-2x text-danger"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <div class="card-count">{{ donor_dashboard_stats.blood_group|default:"—" }}</div>
+                <div class="card-label">Blood Group</div>
+                <div class="card-description small text-muted">
+                  {% if donor_dashboard_stats.blood_group_verified %}
+                    <span class="text-success"><i class="fas fa-check-circle"></i> Verified</span>
+                  {% else %}
+                    <span class="text-warning"><i class="fas fa-clock"></i> Pending</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3">
+                  <i class="fas fa-calendar-check fa-2x text-info"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <div class="card-count">{{ pending_tests }}</div>
+                <div class="card-label">Pending Tests</div>
+                <div class="card-description small text-muted">Awaiting lab results</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
   <!-- Points & Next Donation Row -->
-  <div class="row g-4 mt-3 animated">
+  <div class="row g-4 mb-4">
     <!-- Points Card -->
-    <div class="col-md-6">
-      <div class="card dashboard-card">
-        <div class="dashboard-card-body">
-          <h5 class="mb-3"><i class="fas fa-trophy text-warning"></i> Reward Points</h5>
+    <div class="col-lg-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="reward-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-2 me-2">
+              <i class="fas fa-trophy text-warning fa-2x"></i>
+            </div>
+            <h5 class="mb-0">Reward Points</h5>
+          </div>
+          
           {% if points > 0 %}
-            <div class="card-count text-success">{{ points }}</div>
-            <p class="mb-0">From {{ total_donations }} approved donation{{ total_donations|pluralize }}</p>
-            <small class="text-muted">Keep donating to earn more rewards!</small>
+            <div class="display-4 text-success fw-bold mb-2">{{ points }}</div>
+            <p class="mb-1">From <strong>{{ total_safe_donations }}</strong> safe donation{{ total_safe_donations|pluralize }}</p>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>Keep donating to earn more rewards!
+            </small>
           {% else %}
-            <div class="card-count text-muted">0</div>
-            <p class="mb-0 text-danger">No points yet</p>
-            <small class="text-muted">Donate your first unit to start earning!</small>
+            <div class="display-4 text-muted fw-bold mb-2">0</div>
+            <p class="mb-1">
+              {% if is_unsafe_donor %}
+                <span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Contact blood bank</span>
+              {% else %}
+                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>No points yet</span>
+              {% endif %}
+            </p>
+            <small class="text-muted">
+              <i class="fas fa-lightbulb me-1"></i>
+              {% if is_unsafe_donor %}
+                Please contact the blood bank for guidance.
+              {% else %}
+                Donate your first unit to start earning!
+              {% endif %}
+            </small>
           {% endif %}
         </div>
       </div>
     </div>
 
     <!-- Next Donation Card -->
-    <div class="col-md-6">
-      <div class="card dashboard-card">
-        <div class="dashboard-card-body">
-          <h5 class="mb-3"><i class="fas fa-calendar-alt text-danger"></i> Next Eligible Donation</h5>
-          {% if next_donation_date %}
-            <p class="mb-2">You can donate again on:</p>
-            <div class="card-count text-primary" style="font-size: 1.5rem;">{{ next_donation_date }}</div>
+    <div class="col-lg-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-2">
+              <i class="fas fa-calendar-alt text-danger fa-2x"></i>
+            </div>
+            <h5 class="mb-0">
+              {% if is_unsafe_donor %}
+                Donation Status
+              {% else %}
+                Next Eligible Donation
+              {% endif %}
+            </h5>
+          </div>
+          
+          {% if is_unsafe_donor %}
+            <div class="alert alert-warning mb-3">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Important:</strong> Please contact the blood bank regarding your recent donation.
+            </div>
+            {% if unsafe_reason %}
+            <p class="text-muted small mb-3">{{ unsafe_reason }}</p>
+            {% endif %}
+            <a href="{% url 'contact' %}" class="btn btn-warning">
+              <i class="fas fa-phone-alt me-2"></i>Contact Blood Bank
+            </a>
+            
+          {% elif next_donation_date %}
+            <p class="text-muted mb-2">You can donate again on:</p>
+            <div class="display-6 text-primary fw-bold mb-3">{{ next_donation_date }}</div>
+            
             {% if days_until_next == 0 %}
-              <div class="eligible-badge">
-                <i class="fas fa-check-circle"></i> You're eligible now!
+              <div class="alert alert-success py-2 mb-3">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>You're eligible now!</strong>
               </div>
             {% else %}
-              <p id="countdown">Calculating...</p>
+              <div class="alert alert-info py-2 mb-3" id="countdown">
+                <i class="fas fa-hourglass-half me-2"></i>
+                <strong>{{ days_until_next }} days</strong> remaining
+              </div>
             {% endif %}
-            <div class="mt-3">
-              <a href="{% url 'sickle_cell' %}" class="btn-impact">
-                <i class="fas fa-heart"></i> See Your Impact
-              </a>
-            </div>
+            
+            <a href="{% url 'sickle_cell' %}" class="btn btn-outline-primary">
+              <i class="fas fa-heart me-2"></i>See Your Impact
+            </a>
           {% else %}
-            <p class="mb-2">No previous donations recorded</p>
-            <div class="eligible-badge">
-              <i class="fas fa-hand-holding-heart"></i> Ready to donate!
+            <p class="text-muted mb-3">No previous donations recorded</p>
+            <div class="alert alert-success py-2 mb-3">
+              <i class="fas fa-hand-holding-heart me-2"></i>
+              <strong>Ready to start your journey!</strong>
             </div>
-            <div class="mt-3">
-              <a href="{% url 'donate-blood' %}" class="btn-impact">
-                <i class="fas fa-tint"></i> Schedule Donation
-              </a>
-            </div>
+            <a href="{% url 'donor:donate-blood' %}" class="btn btn-primary">
+              <i class="fas fa-tint me-2"></i>Schedule Donation
+            </a>
           {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Nearby Centers Buttons -->
-  <div class="text-center mt-4 animated">
-    <div class="d-flex justify-content-center gap-3 flex-wrap">
-      <a href="{% url 'nearby-centers' %}" class="btn btn-success btn-nearby">
-        <i class="fas fa-hospital"></i> Find Donation Centers Nearby
-      </a>
+  <!-- Support Options Section (for non-eligible donors) -->
+  {% if show_support_options %}
+  <div class="card border-success mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">
+        <i class="fas fa-heart me-2"></i>
+        {{ support_options_heading }}
+      </h5>
+    </div>
+    <div class="card-body">
+      <p class="lead mb-4">{{ support_options_message }}</p>
+      
+      <div class="row g-3">
+        {% for option in donor_support_options|slice:":4" %}
+        <div class="col-md-6">
+          <div class="d-flex align-items-start">
+            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+              <i class="{{ option.icon }} text-success"></i>
+            </div>
+            <div>
+              <h6 class="mb-1">{{ option.title }}</h6>
+              <p class="small text-muted mb-2">{{ option.description }}</p>
+              <a href="{{ option.url }}" class="btn btn-sm btn-outline-success">
+                Learn More <i class="fas fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <div class="text-center mt-4">
+        <a href="{% url 'donor:volunteer' %}" class="btn btn-outline-success">
+          <i class="fas fa-hands-helping me-2"></i>View All Volunteer Opportunities
+        </a>
+      </div>
     </div>
   </div>
+  {% endif %}
 
-  <!-- Progress Circle -->
-  <div class="row mt-4 animated">
-    <div class="col-12">
+  <!-- Nearby Centers Button -->
+  <div class="text-center mb-4">
+    <a href="{% url 'nearby-centers' %}" class="btn btn-success btn-lg px-5">
+      <i class="fas fa-hospital me-2"></i>Find Donation Centers Nearby
+    </a>
+  </div>
+
+  <!-- Progress Circle & Milestone Row -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-{% if next_milestone %}8{% else %}12{% endif %}">
       <div class="card dashboard-card">
         <div class="card-body text-center">
-          <h5 class="mb-4"><i class="fas fa-bullseye"></i> Your Donation Goal Progress</h5>
-          <div class="progress-circle-container">
-            <svg width="180" height="180" role="img" aria-label="Donation progress">
-              <circle cx="90" cy="90" r="70" stroke="#e6e6e6" stroke-width="12" fill="none" />
-              <circle cx="90" cy="90" r="70" stroke="#28a745" stroke-width="12" fill="none"
-                      stroke-dasharray="440" stroke-dashoffset="{{ stroke_dashoffset }}"
+          <h5 class="mb-4">
+            <i class="fas fa-bullseye text-primary me-2"></i>
+            Your Donation Goal Progress
+          </h5>
+          
+          <div class="progress-circle-container mx-auto mb-3">
+            <svg width="180" height="180" viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="70" fill="none" 
+                      stroke="var(--light-gray)" stroke-width="12"/>
+              <circle cx="90" cy="90" r="70" fill="none" 
+                      stroke="var(--success)" stroke-width="12"
+                      stroke-dasharray="440" 
+                      stroke-dashoffset="{{ stroke_dashoffset }}"
                       transform="rotate(-90 90 90)" 
                       style="transition: stroke-dashoffset 1s ease;" />
             </svg>
             <div class="progress-text">
-              <div class="progress-number">{{ total_donations }}/{{ goal }}</div>
+              <div class="progress-number">{{ total_safe_donations }}/{{ goal }}</div>
               <div class="progress-label">Donations</div>
             </div>
           </div>
-          <p class="text-muted mt-3">{{ progress }}% towards your goal of {{ goal }} donations</p>
+          
+          <p class="text-muted">
+            {{ progress }}% towards your goal of {{ goal }} donations
+          </p>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Milestone Card -->
-  {% if next_milestone %}
-  <div class="milestone-card animated mt-4">
-    <i class="fas fa-medal milestone-icon"></i>
-    <div class="milestone-text">Next Milestone</div>
-    <div class="milestone-count">{{ next_milestone }} Donations</div>
-    <p class="mb-0">Only {{ donations_to_milestone }} more donation{{ donations_to_milestone|pluralize }} to reach your next milestone!</p>
+    <!-- Milestone Card -->
+    {% if next_milestone %}
+    <div class="col-lg-4">
+      <div class="card milestone-card h-100">
+        <div class="card-body text-center">
+          <i class="fas fa-medal fa-3x text-warning mb-3"></i>
+          <h6 class="text-uppercase text-muted small fw-bold">Next Milestone</h6>
+          <div class="display-4 fw-bold text-primary mb-2">{{ next_milestone }}</div>
+          <p class="mb-0">
+            Only <strong>{{ donations_to_milestone }}</strong> more 
+            donation{{ donations_to_milestone|pluralize }} to reach your next milestone!
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- Info Cards Section -->
-  <div class="section-header animated mt-4">
-    <i class="fas fa-info-circle"></i>
-    <span>Resources & Information</span>
+  <div class="section-header d-flex align-items-center mb-3">
+    <i class="fas fa-info-circle fs-4 text-primary me-2"></i>
+    <h5 class="mb-0">Resources & Information</h5>
   </div>
-  <div class="row g-4 animated">
+  
+  <div class="row g-4 mb-4">
     {% for item in info_cards %}
       <div class="col-lg-3 col-md-6">
-        <div class="card info-card {{ item.color }}">
-          <div class="info-card-body">
-            <i class="fas {{ item.icon }} info-icon"></i>
-            <h5 class="mb-3">{{ item.title }}</h5>
-            <p class="text-muted mb-0">{{ item.desc }}</p>
+        <div class="card info-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="info-icon-wrapper me-3">
+                <i class="fas {{ item.icon }} fa-2x text-{{ item.color }}"></i>
+              </div>
+              <h6 class="mb-0 fw-bold">{{ item.title }}</h6>
+            </div>
+            <p class="small text-muted mb-0">{{ item.desc }}</p>
           </div>
         </div>
       </div>
@@ -175,21 +494,22 @@
 
   <!-- Recent Donations Section -->
   {% if recent_donations %}
-  <div class="section-header animated mt-4">
-    <i class="fas fa-history"></i>
-    <span>Recent Donation History</span>
+  <div class="section-header d-flex align-items-center mb-3">
+    <i class="fas fa-history fs-4 text-primary me-2"></i>
+    <h5 class="mb-0">Recent Donation History</h5>
   </div>
-  <div class="recent-donations-card animated">
-    <div class="card-body">
+  
+  <div class="card mb-4">
+    <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table donations-table">
-          <thead>
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
             <tr>
               <th>Date</th>
               <th>Donation Center</th>
               <th>Units</th>
               <th>Status</th>
-              <th>Disease</th>
+              <th>Result</th>
             </tr>
           </thead>
           <tbody>
@@ -198,25 +518,45 @@
               <td>{{ donation.date|date:"M d, Y" }}</td>
               <td>
                 {% if donation.donation_center %}
-                  {{ donation.donation_center.hospital_name }}
+                  {{ donation.donation_center.name }}
                 {% else %}
-                  N/A
+                  <span class="text-muted">N/A</span>
                 {% endif %}
               </td>
-              <td>{{ donation.unit }}</td>
+              <td><span class="badge bg-info">{{ donation.unit }} ml</span></td>
               <td>
-                <span class="status-badge status-{{ donation.status }}">
+                <span class="badge 
+                  {% if donation.status == 'approved' %}bg-success
+                  {% elif donation.status == 'pending' %}bg-warning text-dark
+                  {% elif donation.status == 'collected' %}bg-primary
+                  {% elif donation.status == 'cancelled' %}bg-secondary
+                  {% elif donation.status == 'rejected' %}bg-danger
+                  {% else %}bg-light text-dark{% endif %}">
+                  
                   {% if donation.status == 'approved' %}
-                    <i class="fas fa-check"></i>
+                    <i class="fas fa-check-circle me-1"></i> Approved
                   {% elif donation.status == 'pending' %}
-                    <i class="fas fa-clock"></i>
+                    <i class="fas fa-clock me-1"></i> Pending
+                  {% elif donation.status == 'collected' %}
+                    <i class="fas fa-tint me-1"></i> Collected
+                  {% elif donation.status == 'cancelled' %}
+                    <i class="fas fa-times-circle me-1"></i> Cancelled
+                  {% elif donation.status == 'rejected' %}
+                    <i class="fas fa-exclamation-circle me-1"></i> Rejected
                   {% else %}
-                    <i class="fas fa-times"></i>
+                    {{ donation.status|title }}
                   {% endif %}
-                  {{ donation.status|title }}
                 </span>
               </td>
-              <td>{{ donation.disease|default:"None reported" }}</td>
+              <td>
+                {% if donation.status == 'tested_safe' %}
+                  <span class="badge bg-success"><i class="fas fa-check"></i> Safe</span>
+                {% elif donation.status == 'tested_unsafe' %}
+                  <span class="badge bg-danger"><i class="fas fa-exclamation"></i> Unsafe</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -226,25 +566,38 @@
   </div>
   {% endif %}
 
-  <!-- Last Donation Info -->
+  <!-- Last Donation Alert -->
   {% if last_donation_date %}
-  <div class="alert alert-info mt-4 animated" style="border-radius: 15px;">
-    <i class="fas fa-info-circle"></i>
-    <strong>Last Donation:</strong> {{ last_donation_date|date:"F d, Y" }}
-    ({{ last_donation_date|timesince }} ago)
+  <div class="alert alert-info d-flex align-items-center" role="alert">
+    <i class="fas fa-info-circle fs-4 me-3"></i>
+    <div>
+      <strong>Last Donation:</strong> {{ last_donation_date|date:"F d, Y" }}
+      <span class="text-muted ms-2">({{ last_donation_date|timesince }} ago)</span>
+    </div>
   </div>
   {% endif %}
 </div>
+{% endblock %}
 
-<!-- Scripts -->
+{% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Countdown Timer
+  // ========================================
+  // SHOW ELIGIBILITY AWARENESS MODAL
+  // ========================================
+  {% if show_eligibility_modal %}
+    const eligibilityModal = new bootstrap.Modal(document.getElementById('eligibilityAwarenessModal'));
+    eligibilityModal.show();
+  {% endif %}
+
+  // ========================================
+  // COUNTDOWN TIMER FOR NEXT DONATION
+  // ========================================
   const nextDonationIso = "{{ next_donation_date_iso|default:'' }}";
   const daysUntilNext = {{ days_until_next|default:0 }};
+  const countdownElem = document.getElementById("countdown");
 
-  if (nextDonationIso && daysUntilNext > 0) {
-    const countdownElem = document.getElementById("countdown");
+  if (nextDonationIso && daysUntilNext > 0 && countdownElem) {
     const countDownDate = new Date(nextDonationIso).getTime();
     
     const timerInterval = setInterval(function() {
@@ -253,7 +606,10 @@ document.addEventListener("DOMContentLoaded", function() {
       
       if (distance <= 0) {
         clearInterval(timerInterval);
-        countdownElem.innerHTML = '<span class="eligible-badge"><i class="fas fa-check-circle"></i> You are eligible to donate now!</span>';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success py-2 mb-3';
+        alertDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>You\'re eligible now!</strong>';
+        countdownElem.parentNode.replaceChild(alertDiv, countdownElem);
         return;
       }
       
@@ -263,13 +619,15 @@ document.addEventListener("DOMContentLoaded", function() {
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
       
       countdownElem.innerHTML = `
-        <i class="fas fa-hourglass-half"></i> 
-        ${days}d ${hours}h ${minutes}m ${seconds}s remaining
+        <i class="fas fa-hourglass-half me-2"></i>
+        <strong>${days}d ${hours}h ${minutes}m ${seconds}s</strong> remaining
       `;
     }, 1000);
   }
 
-  // Get CSRF Token
+  // ========================================
+  // CSRF TOKEN HELPER
+  // ========================================
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -285,101 +643,173 @@ document.addEventListener("DOMContentLoaded", function() {
     return cookieValue;
   }
 
-  // Update Location Button
+  // ========================================
+  // UPDATE LOCATION BUTTON
+  // ========================================
   const updateBtn = document.getElementById('updateLocationBtn');
   if (updateBtn) {
     updateBtn.addEventListener('click', function() {
       if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser.');
+        showNotification('Geolocation is not supported by your browser.', 'danger');
         return;
       }
 
-      // Show loading state
       updateBtn.disabled = true;
-      updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+      updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Updating...';
 
       navigator.geolocation.getCurrentPosition(
         function(position) {
           const lat = position.coords.latitude.toFixed(6);
           const lon = position.coords.longitude.toFixed(6);
           
-          // Create hidden elements if they don't exist
           let latText = document.getElementById('latText');
           let lonText = document.getElementById('lonText');
           
           if (!latText) {
             latText = document.createElement('span');
             latText.id = 'latText';
-            latText.style.display = 'none';
-            document.getElementById('locationDisplay').appendChild(latText);
+            latText.className = 'd-none';
+            document.getElementById('locationDisplay')?.appendChild(latText);
           }
           if (!lonText) {
             lonText = document.createElement('span');
             lonText.id = 'lonText';
-            lonText.style.display = 'none';
-            document.getElementById('locationDisplay').appendChild(lonText);
+            lonText.className = 'd-none';
+            document.getElementById('locationDisplay')?.appendChild(lonText);
           }
           
           latText.textContent = lat;
           lonText.textContent = lon;
 
-          const data = new URLSearchParams();
-          data.append('latitude', lat);
-          data.append('longitude', lon);
+          const formData = new FormData();
+          formData.append('latitude', lat);
+          formData.append('longitude', lon);
 
           fetch("{% url 'save-user-location' %}", {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
               'X-CSRFToken': getCookie('csrftoken')
             },
-            body: data.toString()
+            body: formData
           })
-          .then(res => res.json())
-          .then(json => {
-            console.log('Location update response:', json);
-            
-            if (json.status === 'success' && json.location_name) {
-              let locNameElem = document.getElementById('locationName');
-              if (!locNameElem) {
-                const locationDisplay = document.getElementById('locationDisplay');
-                const separator = document.createElement('span');
-                separator.className = 'mx-2';
-                separator.textContent = '|';
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-map-marker-alt';
-                const span = document.createElement('span');
-                span.id = 'locationName';
-                span.textContent = json.location_name;
-                locationDisplay.appendChild(separator);
-                locationDisplay.appendChild(icon);
-                locationDisplay.appendChild(span);
-              } else {
-                locNameElem.textContent = json.location_name;
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              let locationNameSpan = document.getElementById('locationName');
+              
+              if (data.location_name) {
+                if (!locationNameSpan) {
+                  const locationDisplay = document.getElementById('locationDisplay');
+                  if (locationDisplay) {
+                    const separator = document.createElement('span');
+                    separator.className = 'text-muted mx-1';
+                    separator.textContent = '|';
+                    
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-map-marker-alt text-primary me-1';
+                    
+                    const span = document.createElement('span');
+                    span.id = 'locationName';
+                    span.textContent = data.location_name;
+                    
+                    locationDisplay.appendChild(separator);
+                    locationDisplay.appendChild(icon);
+                    locationDisplay.appendChild(span);
+                  }
+                } else {
+                  locationNameSpan.textContent = data.location_name;
+                }
               }
+              
+              updateBtn.innerHTML = '<i class="fas fa-check me-1"></i> Updated!';
+              updateBtn.classList.remove('btn-outline-primary');
+              updateBtn.classList.add('btn-success');
+              
+              showNotification(data.message || 'Location updated successfully!', 'success');
+              
+              setTimeout(() => {
+                updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
+                updateBtn.classList.remove('btn-success');
+                updateBtn.classList.add('btn-outline-primary');
+                updateBtn.disabled = false;
+              }, 3000);
+            } else {
+              throw new Error(data.message || 'Failed to update location');
             }
-            
-            alert(json.message || 'Location updated successfully!');
-            updateBtn.disabled = false;
-            updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
           })
-          .catch(err => {
-            console.error('Fetch error:', err);
-            alert("Failed to update location. Please try again.");
+          .catch(error => {
+            console.error('Error:', error);
+            showNotification(error.message || 'Failed to update location. Please try again.', 'danger');
+            
+            updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
             updateBtn.disabled = false;
-            updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
           });
         },
         function(error) {
-          alert("Error getting location: " + error.message);
+          let errorMessage = 'Error getting location: ';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'Please allow location access.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'Location information unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'Location request timed out.';
+              break;
+            default:
+              errorMessage += error.message;
+          }
+          
+          showNotification(errorMessage, 'warning');
+          
+          updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
           updateBtn.disabled = false;
-          updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
         }
       );
     });
   }
 
-  // Add scroll animations
+  // ========================================
+  // NOTIFICATION HELPER
+  // ========================================
+  function showNotification(message, type = 'info') {
+    let container = document.querySelector('.notification-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'notification-container position-fixed top-0 end-0 p-3';
+      container.style.zIndex = '9999';
+      document.body.appendChild(container);
+    }
+    
+    const id = 'notification-' + Date.now();
+    const icon = type === 'success' ? 'fa-check-circle' : 
+                 type === 'danger' ? 'fa-exclamation-circle' : 
+                 type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+    
+    const notification = document.createElement('div');
+    notification.id = id;
+    notification.className = `alert alert-${type} alert-dismissible fade show shadow`;
+    notification.innerHTML = `
+      <i class="fas ${icon} me-2"></i>
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+      const notif = document.getElementById(id);
+      if (notif) {
+        notif.classList.remove('show');
+        setTimeout(() => notif.remove(), 300);
+      }
+    }, 5000);
+  }
+
+  // ========================================
+  // SCROLL ANIMATIONS
+  // ========================================
   const observerOptions = {
     threshold: 0.1,
     rootMargin: '0px 0px -50px 0px'
@@ -390,16 +820,27 @@ document.addEventListener("DOMContentLoaded", function() {
       if (entry.isIntersecting) {
         entry.target.style.opacity = '1';
         entry.target.style.transform = 'translateY(0)';
+        observer.unobserve(entry.target);
       }
     });
   }, observerOptions);
 
-  document.querySelectorAll('.animated').forEach(el => {
+  document.querySelectorAll('.card, .alert, .btn').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(20px)';
     el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
     observer.observe(el);
   });
+
+  // ========================================
+  // TOOLTIP INITIALIZATION
+  // ========================================
+  if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  }
 });
 </script>
 {% endblock %}

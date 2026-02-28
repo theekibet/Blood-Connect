@@ -1,0 +1,79 @@
+/* Messages/Alerts Styles */
+.messages-container {
+    position: fixed;
+    top: calc(var(--navbar-height) + var(--spacing-3));
+    right: var(--spacing-4);
+    z-index: var(--z-index-tooltip);
+    max-width: 400px;
+}
+
+.alert {
+    padding: var(--spacing-3) var(--spacing-4);
+    border: none;
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-2);
+    animation: slideInRight 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    box-shadow: var(--shadow-lg);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+    color: var(--white);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
+    color: var(--dark);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+    color: var(--white);
+}
+
+.alert-info {
+    background: linear-gradient(135deg, var(--info) 0%, var(--info-dark) 100%);
+    color: var(--white);
+}
+
+.alert i {
+    font-size: var(--font-size-lg);
+}
+
+.alert .close {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: currentColor;
+    opacity: 0.8;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.alert .close:hover {
+    opacity: 1;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* For auth pages */
+.auth-wrapper .messages-container {
+    position: relative;
+    top: 0;
+    right: 0;
+    max-width: 100%;
+    margin-bottom: var(--spacing-4);
+}

@@ -1,0 +1,176 @@
+{% extends 'shared/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}About Us - BloodConnect{% endblock %}
+
+{% block auth_icon %}fas fa-droplet{% endblock %}
+{% block auth_title %}About BloodConnect{% endblock %}
+
+{% block extra_css %}
+<!-- Animate.css for additional animations -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+
+{% endblock %}
+
+{% block auth_content %}
+<div class="about-us-container">
+
+    <h1 class="animate__animated animate__fadeInDown">
+        <i class="fa-solid fa-droplet"></i> About BloodConnect
+    </h1>
+
+    <!-- Mission -->
+    <div class="section animate-on-scroll">
+        <h2><i class="fa-solid fa-bullseye"></i> Our Mission</h2>
+        <p>
+            BloodConnect exists to bridge the gap between generous donors and patients in urgent need.  
+            Through technology, automation, and real-time communication, we work to make blood donation  
+            safer, easier, and more accessible for everyone.  
+            Our mission is simple: <strong class="text-danger">to save lives through innovation and community connection.</strong>
+        </p>
+    </div>
+
+    <!-- Vision -->
+    <div class="section animate-on-scroll">
+        <h2><i class="fa-solid fa-eye"></i> Our Vision</h2>
+        <p>
+            We envision a future where no life is lost due to lack of timely blood.  
+            A future where digital tools empower donors, hospitals, and communities to collaborate effortlessly.  
+            <br><br>
+            BloodConnect aims to become the most trusted, transparent, and intelligent blood management system  
+            in the region.
+        </p>
+    </div>
+
+    <!-- Values -->
+    <div class="section animate-on-scroll">
+        <h2><i class="fa-solid fa-heart"></i> Our Core Values</h2>
+        <ul class="values-list">
+            <li><i class="fa-solid fa-heart"></i> Compassion – Every donation is an act of love.</li>
+            <li><i class="fa-solid fa-shield-halved"></i> Safety – We prioritize donor and patient wellbeing.</li>
+            <li><i class="fa-solid fa-robot"></i> Innovation – Leveraging AI to transform healthcare systems.</li>
+            <li><i class="fa-solid fa-users"></i> Community – We believe in collective impact.</li>
+            <li><i class="fa-solid fa-handshake-angle"></i> Trust – Integrity guides everything we do.</li>
+            <li><i class="fa-solid fa-clock"></i> Urgency – Every second counts in saving lives.</li>
+        </ul>
+    </div>
+
+    <!-- Team -->
+    <div class="section animate-on-scroll">
+        <h2><i class="fa-solid fa-people-group"></i> Our Team</h2>
+        <p>
+            Behind BloodConnect is a passionate and diverse team of developers, healthcare partners,  
+            and community volunteers committed to reimagining the blood donation ecosystem.  
+            Together, we design solutions that improve response times, reliability, and accessibility.
+        </p>
+        
+        <div class="team-grid">
+            <div class="team-member">
+                <div class="team-member-avatar">
+                    <i class="fa-solid fa-user-md"></i>
+                </div>
+                <h4>Healthcare Professionals</h4>
+                <p>Medical Advisory Board</p>
+            </div>
+            <div class="team-member">
+                <div class="team-member-avatar">
+                    <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <h4>Tech Innovators</h4>
+                <p>Development Team</p>
+            </div>
+            <div class="team-member">
+                <div class="team-member-avatar">
+                    <i class="fa-solid fa-hand-heart"></i>
+                </div>
+                <h4>Community Volunteers</h4>
+                <p>Outreach Coordinators</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Get Involved -->
+    <div class="section animate-on-scroll">
+        <h2><i class="fa-solid fa-rocket"></i> Get Involved</h2>
+        <p>
+            Whether you are a donor, a healthcare worker, or simply someone who wants to make a difference,  
+            you are welcome to be part of this journey.  
+            Click the button below to see how you can contribute.
+        </p>
+        <div style="text-align: center;">
+            <a href="{% url 'contact' %}" class="btn-custom">
+                <i class="fa-solid fa-handshake"></i> Join the Initiative
+            </a>
+        </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact-info animate-on-scroll">
+        <p><strong><i class="fa-solid fa-heart text-danger"></i> Stay Connected <i class="fa-solid fa-heart text-danger"></i></strong></p>
+        <div>
+            <a href="tel:+254781024762"><i class="fa-solid fa-phone"></i> +254 781 024 762</a>
+            <a href="mailto:allankibet1820@gmail.com"><i class="fa-solid fa-envelope"></i> allankibet1820@gmail.com</a>
+            <a href="#" target="_blank"><i class="fa-brands fa-twitter"></i> @BloodConnect</a>
+            <a href="#" target="_blank"><i class="fa-brands fa-facebook"></i> BloodConnect</a>
+        </div>
+    </div>
+
+    <!-- Back -->
+    <div class="back-button">
+        <button onclick="history.back()" class="btn-custom">
+            <i class="fa-solid fa-arrow-left"></i> Go Back
+        </button>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Intersection Observer for scroll animations
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    });
+
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Add hover effect to team member avatars
+    $('.team-member-avatar').hover(
+        function() {
+            $(this).css('transform', 'scale(1.1) rotate(5deg)');
+        },
+        function() {
+            $(this).css('transform', 'scale(1) rotate(0)');
+        }
+    );
+    
+    // Animate values list items sequentially
+    $('.values-list li').each(function(index) {
+        $(this).css({
+            'opacity': 0,
+            'transform': 'translateX(-20px)',
+            'transition': 'all 0.3s ease'
+        });
+        
+        setTimeout(() => {
+            $(this).css({
+                'opacity': 1,
+                'transform': 'translateX(0)'
+            });
+        }, 100 * (index + 1));
+    });
+});
+</script>
+{% endblock %}

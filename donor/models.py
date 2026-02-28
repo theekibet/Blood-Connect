@@ -89,17 +89,23 @@ GENDER_CHOICES = (
 
 
 class Donor(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='donor'  # Explicitly set related_name
+    )
     profile_pic = models.ImageField(upload_to='profile_pic/Donor/', null=True, blank=True)
     bloodgroup = models.CharField(max_length=10, choices=BLOODGROUP_CHOICES, null=True, blank=True)
-    bloodgroup_verified = models.BooleanField(default=False, help_text="Blood group verified by nurse on first donation")
+    bloodgroup_verified = models.BooleanField(default=False, help_text="Blood group verified by lab technician on first donation")
     bloodgroup_verified_by = models.ForeignKey(
         User, 
         null=True, 
         blank=True, 
         on_delete=models.SET_NULL, 
         related_name='verified_donor_bloodgroups',
-        help_text="Nurse who verified the blood group"
+        help_text="lab tech who verified the blood group"
     )
     bloodgroup_verified_at = models.DateTimeField(null=True, blank=True)
     total_donations = models.PositiveIntegerField(default=0, help_text="Total number of successful donations")
@@ -118,6 +124,39 @@ class Donor(models.Model):
         object_id_field='recipient_object_id',
         related_query_name='donor_notifications'
     )
+    
+    # Add timestamp for when profile was created/updated
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Donor"
+        verbose_name_plural = "Donors"
+        ordering = ['user__username']
+        # Add database constraints
+        constraints = [
+            # Ensure user is unique (already OneToOne, but this adds explicit constraint)
+            models.UniqueConstraint(
+                fields=['user'],
+                name='unique_donor_user'
+            ),
+            # Ensure mobile is unique (already set, but explicit)
+            models.UniqueConstraint(
+                fields=['mobile'],
+                name='unique_donor_mobile'
+            ),
+            # Ensure national_id is unique when not null
+            models.UniqueConstraint(
+                fields=['national_id'],
+                name='unique_donor_national_id',
+                condition=models.Q(national_id__isnull=False)
+            ),
+        ]
+        # Add indexes for frequently queried fields
+        indexes = [
+            models.Index(fields=['bloodgroup']),
+            models.Index(fields=['county']),
+            models.Index(fields=['last_donation_date']),
+        ]
 
     @property
     def age(self):
@@ -141,14 +180,100 @@ class Donor(models.Model):
     @property
     def total_donations(self):
         return self.blooddonate_set.filter(status='approved').count()
+        
+    def get_age_group(self):
+        """Helper method for donor segmentation"""
+        age = self.age
+        if age is None:
+            return 'Unknown'
+        elif age < 18:
+            return 'Under 18'
+        elif age < 30:
+            return '18-29'
+        elif age < 45:
+            return '30-44'
+        elif age < 60:
+            return '45-59'
+        else:
+            return '60+'
+            
+    def can_donate(self):
+        """Check if donor is eligible to donate"""
+        if not self.is_eligible():
+            return False, "Donor not eligible"
+        
+        days_until = self.days_until_next_donation()
+        if days_until > 0:
+            return False, f"Must wait {days_until} more days"
+            
+        # Add other eligibility checks here
+        return True, "Eligible to donate"
 
-    class Meta:
-        verbose_name = "Donor"
-        verbose_name_plural = "Donors"
-        ordering = ['user__username']
+    def is_eligible(self):
+        """Basic eligibility check (override with actual logic)"""
+        # This should be customized based on your eligibility criteria
+        if self.age and self.age < 18:
+            return False
+        if not self.bloodgroup:
+            return False
+        # Add more eligibility criteria
+        return True
 
     def __str__(self):
-        return f"{self.user.username} - {self.bloodgroup}"
+        return f"{self.user.username if self.user else 'No user'} - {self.bloodgroup or 'No blood group'}"
+
+    def clean(self):
+        """
+        Validate that user doesn't have other profiles
+        Called automatically by ModelForm in admin
+        """
+        from django.core.exceptions import ValidationError
+        from blood.utils.validators import validate_single_profile  
+        
+        # Skip validation if this is an existing instance being updated
+        if self.pk:
+            return
+        
+        # Only validate if user is set
+        if self.user:
+            try:
+                validate_single_profile(
+                    user=self.user,
+                    current_profile_type='donor',
+                    exclude_self=True
+                )
+            except ValidationError as e:
+                # Add a more user-friendly message
+                raise ValidationError({
+                    'user': f"This user already has a different profile. Each user can only have one role in the system."
+                })
+        
+        # Validate age if dob is provided
+        if self.dob and self.age and self.age < 16:  # Assuming 16 is minimum age
+            raise ValidationError({
+                'dob': f"Donor must be at least 16 years old. Current age: {self.age}"
+            })
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to ensure validation runs
+        """
+        # Call full_clean() which will call clean() and field validation
+        self.full_clean()
+        
+        # If user is set but no username exists in string representation
+        if self.user and not self.pk:
+            # Any pre-save logic here
+            pass
+            
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """
+        Optional: Handle cleanup when donor is deleted
+        """
+   
+        super().delete(*args, **kwargs)
 logger = logging.getLogger(__name__)
 
 

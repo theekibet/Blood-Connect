@@ -2,168 +2,162 @@
 {% load static %}
 {% block content %}
 
-<div class="profile-container">
-  <div class="profile-card">
-
-    <!-- Profile header -->
-    <div class="profile-header">
-      {% if donor.profile_pic %}
-        <img src="{{ donor.profile_pic.url }}" alt="{{ user.get_full_name }}" class="profile-img" />
-      {% else %}
-        <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" class="profile-img" />
-      {% endif %}
-      <div class="profile-name">{{ user.get_full_name|default:"Donor Name" }}</div>
-    </div>
-
-    <!-- Messages -->
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      
+      <!-- Use Bootstrap card class like blood bank -->
+      <div class="card">
+        
+        <!-- Use Bootstrap card-header with bg-primary -->
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">
+            <i class="fas fa-user-circle mr-2"></i>Donor Profile
+          </h4>
+          <a href="{% url 'donor-edit-profile' %}" class="btn btn-light btn-sm">
+            <i class="fas fa-edit"></i> Edit Profile
+          </a>
         </div>
-      {% endfor %}
-    {% endif %}
 
-    <!-- Blood Group Verification Badge (if verified) -->
-    {% if donor.bloodgroup_verified %}
-    <div class="verification-badge text-center mb-3">
-      <span class="badge bg-success p-2">
-        <i class="fas fa-check-circle"></i> Blood Group Verified
-      </span>
-      <small class="d-block text-muted mt-1">
-        Verified by {{ donor.bloodgroup_verified_by.get_full_name|default:"Staff" }} 
-        on {{ donor.bloodgroup_verified_at|date:"M d, Y" }}
-      </small>
-    </div>
-    {% endif %}
-
-    <!-- Profile details table -->
-    <div class="profile-info">
-      <table>
-        <tbody>
-          <tr>
-            <th>Blood Group</th>
-            <td>
-              {{ donor.bloodgroup|default:"Not Provided" }}
+        <!-- Use Bootstrap card-body -->
+        <div class="card-body">
+          
+          <!-- Profile Picture - Keep inline styles only for specific dimensions -->
+          <div class="text-center mb-4">
+            {% if donor.profile_pic %}
+              <img src="{{ donor.profile_pic.url }}" alt="{{ user.get_full_name }}" 
+                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            {% else %}
+              <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: bold; margin: 0 auto; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                {{ user.first_name|first|default:user.username|first|upper }}
+              </div>
+            {% endif %}
+            
+            <!-- Use Bootstrap badges like blood bank -->
+            <div class="mt-2">
               {% if donor.bloodgroup_verified %}
-                <i class="fas fa-check-circle text-success ms-1" 
-                   title="Verified by {{ donor.bloodgroup_verified_by.get_full_name }} on {{ donor.bloodgroup_verified_at|date:'M d, Y' }}"></i>
+                <span class="badge bg-success">
+                  <i class="fas fa-check-circle"></i> Blood Group Verified
+                </span>
+                <small class="d-block text-muted mt-1">
+                  Verified by {{ donor.bloodgroup_verified_by.get_full_name|default:"Staff" }} 
+                  on {{ donor.bloodgroup_verified_at|date:"M d, Y" }}
+                </small>
               {% else %}
-                <i class="fas fa-clock text-warning ms-1" title="Pending verification (will be verified on first donation)"></i>
+                <span class="badge bg-warning text-dark">
+                  <i class="fas fa-clock"></i> Pending Verification
+                </span>
               {% endif %}
-            </td>
-          </tr>
-          <tr>
-            <th>County of Residence</th>
-            <td>{{ donor.county|default:"Not Provided" }}</td>
-          </tr>
-          <tr>
-            <th>Mobile</th>
-            <td>{{ donor.mobile|default:"Not Provided" }}</td>
-          </tr>
-          <tr>
-            <th>National ID</th>
-            <td>{{ donor.national_id|default:"Not Provided" }}</td>
-          </tr>
-          <tr>
-            <th>Date of Birth</th>
-            <td>{% if donor.dob %}{{ donor.dob|date:"M d, Y" }}{% else %}Not Provided{% endif %}</td>
-          </tr>
-          <tr>
-            <th>Points Earned</th>
-            <td>
-              {{ donor.points }}
-              {% if donor.points > 0 %}
-                <i class="fas fa-star text-warning ms-1" title="Reward points earned from donations"></i>
-              {% endif %}
-            </td>
-          </tr>
-          <tr>
-            <th>Last Donation Date</th>
-            <td>{% if donor.last_donation_date %}{{ donor.last_donation_date|date:"M d, Y" }}{% else %}N/A{% endif %}</td>
-          </tr>
-          <tr>
-            <th>Next Eligible Donation Date</th>
-            <td>{% if next_donation_date %}{{ next_donation_date|date:"M d, Y" }}{% else %}N/A{% endif %}</td>
-          </tr>
-          <tr>
-            <th>Days Until Next Donation</th>
-            <td>
-              {% if days_until_next %}
-                {% if days_until_next == 0 %}
-                  <span class="text-success">Eligible now!</span>
-                {% elif days_until_next < 0 %}
-                  <span class="text-success">Eligible now!</span>
-                {% else %}
-                  {{ days_until_next }} days
-                {% endif %}
-              {% else %}
-                N/A
-              {% endif %}
-            </td>
-          </tr>
-          <tr>
-            <th>Current Location</th>
-            <td>
-              {{ donor.location_name|default:"Not Set" }}
-              {% if donor.latitude and donor.longitude %}
-                <i class="fas fa-map-marker-alt text-info ms-1" 
-                   title="Coordinates: {{ donor.latitude|floatformat:4 }}, {{ donor.longitude|floatformat:4 }}"></i>
-              {% endif %}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </div>
+          </div>
 
-    <!-- Donation Statistics (Optional Enhancement) -->
-    {% if donor.donation_count > 0 %}
-    <div class="donation-stats mt-4 p-3 bg-light rounded">
-      <h6 class="text-center mb-3"><i class="fas fa-chart-bar"></i> Your Donation Impact</h6>
-      <div class="row text-center">
-        <div class="col-4">
-          <div class="stat-number h4">{{ donor.donation_count|default:"0" }}</div>
-          <div class="stat-label small">Total Donations</div>
+          <!-- Use Bootstrap table classes like blood bank -->
+          <div class="row">
+            <div class="col-md-6">
+              <h5 class="border-bottom pb-2">
+                <i class="fas fa-user-circle text-primary mr-2"></i>Personal Information
+              </h5>
+              <table class="table table-borderless">
+                <tr>
+                  <th width="40%">Full Name:</th>
+                  <td><strong>{{ user.get_full_name|default:"Not provided" }}</strong></td>
+                </tr>
+                <tr>
+                  <th>Username:</th>
+                  <td>@{{ user.username }}</td>
+                </tr>
+                <tr>
+                  <th>Email:</th>
+                  <td>
+                    {% if user.email %}
+                      <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+                    {% else %}
+                      <span class="text-muted">Not provided</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Mobile:</th>
+                  <td>{{ donor.mobile|default:"<span class='text-muted'>Not provided</span>" }}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div class="col-md-6">
+              <h5 class="border-bottom pb-2">
+                <i class="fas fa-tint text-danger mr-2"></i>Donor Details
+              </h5>
+              <table class="table table-borderless">
+                <tr>
+                  <th width="40%">Blood Group:</th>
+                  <td>
+                    <span class="badge bg-danger p-2">{{ donor.bloodgroup|default:"Not set" }}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>National ID:</th>
+                  <td>{{ donor.national_id|default:"<span class='text-muted'>Not provided</span>" }}</td>
+                </tr>
+                <tr>
+                  <th>Date of Birth:</th>
+                  <td>{{ donor.dob|date:"M d, Y"|default:"<span class='text-muted'>Not provided</span>" }}</td>
+                </tr>
+                <tr>
+                  <th>County:</th>
+                  <td>{{ donor.county|default:"<span class='text-muted'>Not provided</span>" }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Donation Stats using Bootstrap grid -->
+          <div class="row mt-4">
+            <div class="col-md-4">
+              <div class="border rounded p-3 text-center">
+                <div class="h3 text-primary">{{ donor.points|default:"0" }}</div>
+                <div class="small text-muted">Points Earned</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-3 text-center">
+                <div class="h3 text-success">{{ donor.last_donation_date|date:"M d"|default:"-" }}</div>
+                <div class="small text-muted">Last Donation</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-3 text-center">
+                <div class="h3 {% if days_until_next == 0 %}text-success{% else %}text-warning{% endif %}">
+                  {% if days_until_next == 0 %}Now{% else %}{{ days_until_next }}d{% endif %}
+                </div>
+                <div class="small text-muted">Next Eligible</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location info using Bootstrap -->
+          {% if donor.location_name %}
+          <div class="alert alert-info mt-4">
+            <i class="fas fa-map-marker-alt"></i>
+            <strong>Current Location:</strong> {{ donor.location_name }}
+            {% if donor.latitude and donor.longitude %}
+              <small class="d-block text-muted mt-1">
+                Coordinates: {{ donor.latitude|floatformat:4 }}, {{ donor.longitude|floatformat:4 }}
+              </small>
+            {% endif %}
+          </div>
+          {% endif %}
+
+        </div> <!-- end card-body -->
+        
+        <!-- Optional card footer like blood bank -->
+        <div class="card-footer">
+          <a href="{% url 'donor-dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+          </a>
         </div>
-        <div class="col-4">
-          <div class="stat-number h4">{{ donor.total_units|default:"0" }}</div>
-          <div class="stat-label small">Units Donated</div>
-        </div>
-        <div class="col-4">
-          <div class="stat-number h4">{{ donor.lives_impacted|default:"0" }}</div>
-          <div class="stat-label small">Lives Impacted</div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Edit Profile Button -->
-    <div class="text-center mt-4">
-      <a href="{% url 'donor-edit-profile' %}" class="btn btn-edit">
-        <i class="fas fa-edit"></i> Edit Profile
-      </a>
-    </div>
-
-  </div>
-</div>
-
-
-<script>
-// Add tooltip initialization if you're using Bootstrap
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Bootstrap tooltips if available
-  if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-  }
-  
-  console.log('Donor profile loaded - Blood group verified: {{ donor.bloodgroup_verified|yesno:"true,false" }}');
-});
-</script>
-
+        
+      </div> <!-- end card -->
+    </div> <!-- end col -->
+  </div> <!-- end row -->
+</div> <!-- end container -->
 {% endblock %}

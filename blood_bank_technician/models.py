@@ -23,9 +23,51 @@ class BloodBankTechProfile(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
+    class Meta:
+        verbose_name = 'Blood Bank Technician Profile'
+        verbose_name_plural = 'Blood Bank Technician Profiles'
+        # Add database constraint for extra safety
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                name='unique_bloodbank_tech_user'
+            )
+        ]
+    
     def __str__(self):
         return f"Blood Bank Tech: {self.user.get_full_name()} - {self.employee_id}"
-
+    
+    def clean(self):
+        """
+        Validate that user doesn't have other profiles
+        Called automatically by ModelForm in admin
+        """
+        from django.core.exceptions import ValidationError
+        from blood.utils.validators import validate_single_profile  
+        
+        # Skip validation if this is an existing instance being updated
+        if self.pk:
+            return
+        
+        try:
+            validate_single_profile(
+                user=self.user,
+                current_profile_type='blood_bank_tech_profile',
+                exclude_self=True
+            )
+        except ValidationError as e:
+            # Add a more user-friendly message
+            raise ValidationError({
+                'user': f"This user already has a different profile. Each user can only have one role in the system."
+            })
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to ensure validation runs
+        """
+        # Call full_clean() which will call clean() and field validation
+        self.full_clean()
+        super().save(*args, **kwargs)
 class BloodDispatch(models.Model):
     """Record of blood dispatched to hospitals"""
     

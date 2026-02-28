@@ -24,7 +24,7 @@ def signup_view(request):
     """Lab Technologist signup view"""
     
     if request.method == 'POST':
-        form = LabTechnologistSignupForm(request.POST)
+        form = LabTechnologistSignupForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 profile = form.save()
@@ -35,8 +35,10 @@ def signup_view(request):
                 )
                 return redirect('lab_technologist:login')
             except Exception as e:
+                logger.error(f"Signup error: {str(e)}", exc_info=True)
                 messages.error(request, f'Registration failed: {str(e)}')
         else:
+            # Form errors will be displayed in template
             messages.error(request, 'Please correct the errors below.')
     else:
         form = LabTechnologistSignupForm()

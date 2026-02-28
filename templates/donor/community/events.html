@@ -1,0 +1,25 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block title %}Events - BloodConnect{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-calendar-alt text-primary me-2"></i>Upcoming Events</h2>
+    
+    <div class="list-group">
+        <div class="list-group-item">
+            <h5>Community Blood Drive</h5>
+            <p class="mb-1">March 15, 2025 - City Hall</p>
+        </div>
+        <div class="list-group-item">
+            <h5>Donor Appreciation Day</h5>
+            <p class="mb-1">April 10, 2025 - Central Park</p>
+        </div>
+        <div class="list-group-item">
+            <h5>Health Awareness Workshop</h5>
+            <p class="mb-1">May 5, 2025 - Community Center</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

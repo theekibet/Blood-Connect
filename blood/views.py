@@ -68,7 +68,7 @@ from django.db.models import Prefetch
 from .forms import AdminLoginForm
 import random
 import re
-
+from blood.utils.validators import check_for_duplicate_profiles,get_user_profile_type
 from django.http import HttpResponseServerError
 import requests
 from .models import DonationFunFact, UserFactInteraction, DailyFactChallenge
@@ -223,7 +223,7 @@ def home_view(request):
             'lives_impacted': stats[4]['stat_value'] if isinstance(stats, list) else None,
         }
         
-        return render(request, 'blood/index.html', context)
+        return render(request, 'shared/index.html', context)
         
     except Exception as e:
         logger.error(f"Error in home_view: {e}", exc_info=True)
@@ -295,6 +295,7 @@ def adminlogin_view(request):
 
     return render(request, 'blood/adminlogin.html', {"form": form})
 
+
 def afterlogin_view(request):
     """
     Redirect users to their respective dashboards based on their SINGLE profile
@@ -302,46 +303,48 @@ def afterlogin_view(request):
     user = request.user
     
     try:
-        # Admin/staff first
+        # Safety check for duplicate profiles
+        duplicate_profiles = check_for_duplicate_profiles(user)
+        
+        if len(duplicate_profiles) > 1:
+            logger.error(f"User {user.username} has MULTIPLE profiles: {duplicate_profiles}")
+            messages.error(
+                request, 
+                "Your account has multiple profiles. Please contact support immediately."
+            )
+            return redirect('home')
+        
+        # Admin/staff check
         if user.is_staff or user.is_superuser:
             logger.info(f"Admin user {user.username} redirected to admin-dashboard")
             return redirect('admin-dashboard')
         
-        # Check each profile type - ONLY ONE should exist per user
-        if hasattr(user, 'patient') and user.patient:
-            logger.info(f"User {user.username} redirected to patient-dashboard")
-            return redirect('patient-dashboard')
+        # Get user's profile type and redirect
+        profile_type, profile = get_user_profile_type(user)
         
-        if hasattr(user, 'donor') and user.donor:
-            logger.info(f"User {user.username} redirected to donor-dashboard")
+        if profile_type == 'donor':
             return redirect('donor-dashboard')
-        
-        if hasattr(user, 'nurse') and user.nurse:
-            if user.nurse.is_approved:
-                logger.info(f"User {user.username} redirected to nurse-dashboard")
-                return redirect('nurse-dashboard')
-            else:
+        elif profile_type == 'nurse':
+            # Check if nurse needs approval
+            if hasattr(profile, 'is_approved') and not profile.is_approved:
                 return redirect('nurse-pending-approval')
-        
-        if hasattr(user, 'lab_tech_profile') and user.lab_tech_profile:
-            logger.info(f"User {user.username} redirected to lab_technologist:dashboard")
+            return redirect('nurse-dashboard')
+        elif profile_type == 'hospital_staff':
+            return redirect('hospital:dashboard')
+        elif profile_type == 'lab_technologist':
             return redirect('lab_technologist:dashboard')
-        
-        if hasattr(user, 'blood_bank_tech_profile') and user.blood_bank_tech_profile:
-            logger.info(f"User {user.username} redirected to blood_bank_technician:dashboard")
+        elif profile_type == 'blood_bank_technician':
             return redirect('blood_bank_technician:dashboard')
-        
-        # No profile found
-        logger.warning(f"User {user.username} has no profile")
-        messages.error(request, "Your account has no profile. Please complete registration.")
-        return redirect('role_selection')
-        
+        else:
+            # No profile found
+            logger.warning(f"User {user.username} has no profile")
+            messages.info(request, "Please complete your registration to get started.")
+            return redirect('role_selection')  # or your registration page
+            
     except Exception as e:
         logger.error(f"Error in afterlogin_view: {str(e)}", exc_info=True)
-        messages.error(request, "An error occurred during login.")
+        messages.error(request, "An error occurred during login. Please try again.")
         return redirect('home')
-
-
 @login_required(login_url='adminlogin')
 @user_passes_test(lambda u: u.is_staff, login_url='adminlogin')
 def admin_dashboard_view(request):
@@ -806,18 +809,18 @@ def contact_view(request):
             return redirect('contact_success')  # Redirect to contact_success
     else:
         form = ContactForm()
-    return render(request, 'blood/contact_us.html', {'form': form})
+    return render(request, 'shared/contact_us.html', {'form': form})
 
 def contact_success(request):
-    return render(request, 'blood/contact_success.html')
+    return render(request, 'shared/contact_success.html')
 
 
 
 def learn_more_view(request):
-    return render(request, 'blood/learn_more.html')
+    return render(request, 'shared/learn_more.html')
 
 def about_us_view(request):
-    return render(request, 'blood/about_us.html')
+    return render(request, 'shared/about_us.html')
 
 
 
@@ -1158,20 +1161,18 @@ logger = logging.getLogger(__name__)
 def nearby_centers_view(request):
     """
     Unified view for finding nearby donation centers.
-    Works for logged-in patients, donors, and guests.
+    Works for logged-in donors and guests.
     """
 
     latitude, longitude = None, None
 
-    # 1️⃣ If logged-in, try pulling location from profile
+    # 1️⃣ If logged-in, try pulling location from donor profile
     if request.user.is_authenticated:
         user = request.user
-        if hasattr(user, 'patient') and user.patient.latitude and user.patient.longitude:
-            latitude = user.patient.latitude
-            longitude = user.patient.longitude
-        elif hasattr(user, 'donor') and user.donor.latitude and user.donor.longitude:
+        if hasattr(user, 'donor') and user.donor.latitude and user.donor.longitude:
             latitude = user.donor.latitude
             longitude = user.donor.longitude
+            logger.info(f"[Donor] Using location from donor profile: {latitude}, {longitude}")
 
     # 2️⃣ If guest (or missing), check GET params
     if latitude is None or longitude is None:
@@ -1184,27 +1185,28 @@ def nearby_centers_view(request):
                 logger.info(f"[Guest/Public] Using lat={latitude}, lng={longitude}")
             except ValueError:
                 messages.error(request, "Invalid location coordinates provided.")
-                return render(request, 'blood/nearby_centers.html', {})
+                return render(request, 'shared/nearby_centers.html', {})
 
     # 3️⃣ Still missing? -> ask user to update profile or allow location
     if latitude is None or longitude is None:
         if request.user.is_authenticated:
-            messages.error(request, "Your location is not set. Please update your profile or allow location detection.")
+            messages.error(
+                request, 
+                "Your location is not set. Please update your profile or allow location detection."
+            )
             if hasattr(request.user, 'donor'):
-                return redirect('donor-edit-profile')
-            elif hasattr(request.user, 'patient'):
-                return redirect('patient-edit-profile')  # adjust this if your patient route differs
+                return redirect('donor:donor-edit-profile')
             else:
                 return redirect('home')
         else:
             messages.error(request, "Location coordinates are required to find nearby centers.")
-            return render(request, 'blood/nearby_centers.html', {})
+            return render(request, 'shared/nearby_centers.html', {})
 
-    # 4️⃣ Fetch nearby centers (you already have this helper)
+    # 4️⃣ Fetch nearby centers
     centers = find_nearby_centers(latitude, longitude)
     logger.info(f"Found {len(centers)} centers near lat={latitude}, lng={longitude}")
 
-    return render(request, 'blood/nearby_centers.html', {
+    return render(request, 'shared/nearby_centers.html', {
         'nearby_centers': centers,
         'user_latitude': latitude,
         'user_longitude': longitude,

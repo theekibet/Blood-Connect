@@ -558,7 +558,7 @@ def approve_request(request, request_id):
     )
     patient_name = f"{blood_request.patient_first_name} {blood_request.patient_last_name}"
     
-    # Check availability
+    # Check availability)
     available_units = StockUnit.objects.filter(
         center=center,
         bloodgroup=blood_request.blood_group,
@@ -566,7 +566,7 @@ def approve_request(request, request_id):
         is_quarantined=False,
         unit__gt=0,
         expiry_date__gte=today
-    ).order_by('expiry_date', 'created_at')
+    ).order_by('expiry_date', 'added_on')
     
     total_available = available_units.aggregate(total=Sum('unit'))['total'] or 0
     can_fulfill = total_available >= blood_request.units_requested

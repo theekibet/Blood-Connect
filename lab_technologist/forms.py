@@ -7,7 +7,8 @@ import os
 from .models import LabTechnologistProfile
 from blood.models import DonationCenter
 
-class LabTechnologistSignupForm(forms.ModelForm):
+
+class LabTechnologistSignupForm(forms.Form):  # Changed from ModelForm to Form
     # User fields
     username = forms.CharField(
         max_length=150,
@@ -60,16 +61,16 @@ class LabTechnologistSignupForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'License number'})
     )
+    profile_pic = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={'class': 'form-control'})
+    )
     
     terms = forms.BooleanField(
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         label="I agree to the terms and conditions"
     )
-    
-    class Meta:
-        model = LabTechnologistProfile
-        fields = ['employee_id', 'center', 'phone', 'qualification', 'license_number']
     
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
@@ -116,26 +117,38 @@ class LabTechnologistSignupForm(forms.ModelForm):
             raise ValidationError("Enter a valid phone number (10-15 digits).")
         return phone
     
-    def save(self, commit=True):
-        # Create user
-        user = User.objects.create_user(
-            username=self.cleaned_data['username'],
-            email=self.cleaned_data['email'],
-            password=self.cleaned_data['password1'],
-            first_name=self.cleaned_data['first_name'],
-            last_name=self.cleaned_data['last_name'],
-            is_active=True  # Active but needs profile approval
-        )
-        
-        # Create profile
-        profile = super().save(commit=False)
-        profile.user = user
-        profile.is_active = False  # Requires admin approval
-        
-        if commit:
-            profile.save()
-        
-        return profile
+    def save(self):
+        """Create user and profile"""
+        try:
+            # Create user first
+            user = User.objects.create_user(
+                username=self.cleaned_data['username'],
+                email=self.cleaned_data['email'],
+                password=self.cleaned_data['password1'],
+                first_name=self.cleaned_data['first_name'],
+                last_name=self.cleaned_data['last_name'],
+                is_active=True  # User is active but needs profile approval
+            )
+            
+            # Then create profile with user reference
+            profile = LabTechnologistProfile.objects.create(
+                user=user,
+                employee_id=self.cleaned_data['employee_id'].upper(),
+                center=self.cleaned_data.get('center'),
+                phone=self.cleaned_data['phone'],
+                qualification=self.cleaned_data.get('qualification', ''),
+                license_number=self.cleaned_data.get('license_number', ''),
+                profile_pic=self.cleaned_data.get('profile_pic'),
+                is_active=False  # Requires admin approval
+            )
+            
+            return profile
+            
+        except Exception as e:
+            # If profile creation fails, delete the user to maintain consistency
+            if 'user' in locals():
+                user.delete()
+            raise e
 class LabTechnologistProfileForm(forms.ModelForm):
     """Form for Lab Technologist profile"""
     

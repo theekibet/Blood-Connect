@@ -1,0 +1,56 @@
+/* Sidebar Styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: linear-gradient(180deg, var(--white) 0%, var(--light) 100%);
+    box-shadow: var(--shadow);
+    z-index: var(--z-index-fixed);
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+}
+
+.sidebar h4 {
+    padding: var(--spacing-4);
+    margin: 0;
+    color: var(--primary);
+    border-bottom: 2px solid var(--light-gray);
+    font-size: var(--font-size-lg);
+}
+
+.sidebar h4 i {
+    margin-right: var(--spacing-2);
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
+    color: var(--gray);
+    text-decoration: none;
+    transition: var(--transition-all);
+    border-left: 3px solid transparent;
+}
+
+.sidebar a:hover {
+    background: var(--light);
+    color: var(--primary);
+    border-left-color: var(--primary);
+}
+
+.sidebar a.active {
+    background: rgba(220, 38, 38, 0.05);
+    color: var(--primary);
+    border-left-color: var(--primary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Sidebar icons */
+.sidebar a i {
+    width: 20px;
+    text-align: center;
+    color: inherit;
+}

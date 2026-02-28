@@ -379,7 +379,7 @@
                   Schedule Donation
                 {% endif %}
               </button>
-              <a href="{% url 'donor-dashboard' %}" class="btn btn-secondary btn-lg px-5 ms-2">
+              <a href="{% url 'donor:donor-dashboard' %}" class="btn btn-secondary btn-lg px-5 ms-2">
                 <i class="fas fa-times"></i> Cancel
               </a>
             </div>
@@ -443,103 +443,7 @@
   </div>
 </div>
 
-<style>
-.section-header {
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 8px;
-  margin-bottom: 15px;
-}
 
-.section-header h5 {
-  margin-bottom: 0;
-}
-
-.card-header.bg-success {
-  background-color: #28a745 !important;
-}
-
-.card-header.bg-warning {
-  background-color: #ffc107 !important;
-  color: #212529 !important;
-}
-
-/* Countdown timer styles */
-.countdown-timer {
-  background: rgba(0, 123, 255, 0.1);
-  border-radius: 10px;
-  padding: 15px;
-  margin: 10px 0;
-}
-
-.countdown-number {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #007bff;
-  line-height: 1.2;
-  animation: pulse 2s infinite;
-}
-
-.countdown-label {
-  font-size: 0.9rem;
-  color: #6c757d;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-/* Form field focus effects */
-.form-control:focus, .form-select:focus {
-  border-color: #80bdff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-/* Read-only field styling */
-input[readonly].bg-light {
-  background-color: #e9ecef !important;
-  cursor: not-allowed;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .card-body {
-    padding: 1rem;
-  }
-  
-  .btn-lg {
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-  }
-  
-  .countdown-number {
-    font-size: 1.8rem;
-  }
-  
-  .d-flex .fa-3x {
-    font-size: 2rem;
-  }
-}
-
-/* Unsafe donor banner styling */
-.alert-danger {
-  border-left: 5px solid #dc3545;
-  background-color: #fff3f3;
-}
-
-.alert-danger .fa-exclamation-triangle {
-  color: #dc3545;
-}
-
-/* First-time donor welcome message */
-.alert-primary {
-  border-left: 5px solid #007bff;
-  background-color: #e7f1ff;
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -1,101 +1,16 @@
+{% extends 'shared/base.html' %}
 {% load static %}
 {% load widget_tweaks %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Donor Signup</title>
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <style>
-        .help-block { color: #dc3545; font-size: 0.875em; margin-top: 0.25rem; }
-        .help-text { color: #6c757d; font-size: 0.875em; margin-top: 0.25rem; }
-        .validation-feedback { font-size: 0.875em; margin-top: 0.25rem; font-weight: 500; }
-        .validation-success { color: #28a745; }
-        .validation-error { color: #dc3545; }
-        .validation-checking { color: #007bff; }
-        .match-feedback { font-size: 0.875em; margin-top: 0.25rem; }
-        .match { color: #28a745; }
-        .nomatch { color: #dc3545; }
-        #passwordStrength { font-size: 0.875em; margin-top: 0.25rem; font-weight: bold; }
-        .required-asterisk { color: #dc3545; }
-        body { background-color: #f8f9fa; }
-        .card { border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        ul.list-unstyled { margin-bottom: 0; padding-left: 0; }
-        .username-suggestions { 
-            background: #e7f3ff; 
-            border: 1px solid #bee5eb; 
-            border-radius: 5px; 
-            padding: 12px; 
-            margin-top: 10px;
-            animation: fadeIn 0.3s;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .suggestion-badge {
-            cursor: pointer;
-            margin: 3px;
-            transition: all 0.2s;
-            display: inline-block;
-        }
-        .suggestion-badge:hover {
-            transform: scale(1.08);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .spinner-border-sm {
-            width: 1rem;
-            height: 1rem;
-            border-width: 0.15em;
-        }
-        .section-header {
-            border-bottom: 2px solid #dee2e6;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #dc3545;
-            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-        }
-    </style>
-</head>
-<body>
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-9 col-md-11">
-                <div class="card">
-                    <div class="card-header text-center bg-danger text-white py-3">
-                        <h2 class="mb-0">🩸 Donor Registration</h2>
-                        <small>Join us in saving lives through blood donation</small>
-                    </div>
-                    <div class="card-body p-4">
-    
-    
-                        <!-- Django messages -->
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                    {{ message|safe }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-    
-                        <!-- Non-field errors for user_form -->
-                        {% if user_form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                <ul class="mb-0">
-                                    {% for error in user_form.non_field_errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-    
-                        <!-- Non-field errors for donor_form -->
+{% block title %}Donor Signup - BloodConnect{% endblock %}
+
+{% block auth_icon %}fas fa-hand-holding-heart{% endblock %}
+{% block auth_title %}Donor Registration{% endblock %}
+{% block auth_card_class %}donor{% endblock %}
+
+{% block auth_content %}
+
+
                         {% if donor_form.non_field_errors %}
                             <div class="alert alert-danger">
                                 <ul class="mb-0">
@@ -105,449 +20,398 @@
                                 </ul>
                             </div>
                         {% endif %}
-    
+
                         <form method="POST" autocomplete="off" enctype="multipart/form-data" id="signupForm">
                             {% csrf_token %}
-    
+
                             <!-- Personal Information Section -->
-                            <h5 class="text-danger section-header"><i class="fas fa-user"></i> Personal Information</h5>
+                            <h5 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-user text-primary me-2"></i>Personal Information
+                            </h5>
                             
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="{{ user_form.first_name.id_for_label }}" class="form-label">
-                                        First Name (as per ID/Passport)<span class="required-asterisk">*</span>
+                                        First Name <span class="text-danger">*</span>
                                     </label>
                                     {% if user_form.first_name.errors %}
-                                        {{ user_form.first_name|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in user_form.first_name.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field user_form.first_name class="form-control is-invalid" placeholder="Enter first name" %}
+                                        <div class="invalid-feedback">{{ user_form.first_name.errors|first }}</div>
                                     {% else %}
-                                        {{ user_form.first_name|add_class:"form-control" }}
+                                        {% render_field user_form.first_name class="form-control" placeholder="Enter first name" %}
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
                                     <label for="{{ user_form.last_name.id_for_label }}" class="form-label">
-                                        Last Name (as per ID/Passport) <span class="required-asterisk">*</span>
+                                        Last Name <span class="text-danger">*</span>
                                     </label>
                                     {% if user_form.last_name.errors %}
-                                        {{ user_form.last_name|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in user_form.last_name.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field user_form.last_name class="form-control is-invalid" placeholder="Enter last name" %}
+                                        <div class="invalid-feedback">{{ user_form.last_name.errors|first }}</div>
                                     {% else %}
-                                        {{ user_form.last_name|add_class:"form-control" }}
+                                        {% render_field user_form.last_name class="form-control" placeholder="Enter last name" %}
                                     {% endif %}
                                 </div>
                             </div>
-    
+
                             <!-- Account Information Section -->
-                            <h5 class="text-danger section-header mt-4"><i class="fas fa-lock"></i> Account Information</h5>
-    
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="fas fa-key text-primary me-2"></i>Account Information
+                            </h5>
+
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="{{ user_form.username.id_for_label }}" class="form-label">
-                                        Username <span class="required-asterisk">*</span>
+                                        Username <span class="text-danger">*</span>
                                     </label>
-                                    {% if user_form.username.errors %}
-                                        {{ user_form.username|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in user_form.username.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                        
-                                        <!-- Username Suggestions from server-side validation -->
-                                        {% if username_suggestions %}
-                                            <div class="username-suggestions">
-                                                <small class="text-muted"><strong>💡 Available usernames you can use:</strong></small>
-                                                <div class="mt-2">
-                                                    {% for suggestion in username_suggestions %}
-                                                        <span class="badge bg-primary suggestion-badge" onclick="selectUsername('{{ suggestion }}')">
-                                                            {{ suggestion }}
-                                                        </span>
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
+                                    <div class="position-relative">
+                                        {% if user_form.username.errors %}
+                                            {% render_field user_form.username class="form-control is-invalid" placeholder="Choose username" %}
+                                            <div class="invalid-feedback">{{ user_form.username.errors|first }}</div>
+                                        {% else %}
+                                            {% render_field user_form.username class="form-control" placeholder="Choose username" %}
                                         {% endif %}
-                                    {% else %}
-                                        {{ user_form.username|add_class:"form-control" }}
+                                        <span class="validation-icon" id="usernameIcon"></span>
+                                    </div>
+                                    <div id="usernameFeedback" class="small mt-1"></div>
+                                    
+                                    <!-- Username Suggestions -->
+                                    {% if username_suggestions %}
+                                        <div class="mt-2">
+                                            <small class="text-muted"><strong>Available usernames:</strong></small>
+                                            <div class="mt-1">
+                                                {% for suggestion in username_suggestions %}
+                                                    <span class="badge bg-primary suggestion-badge me-1 mb-1" onclick="selectUsername('{{ suggestion }}')">
+                                                        {{ suggestion }}
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
                                     {% endif %}
-                                    <div id="usernameFeedback" class="validation-feedback"></div>
-                                    <div id="usernameSuggestions"></div>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="{{ user_form.email.id_for_label }}" class="form-label">
-                                        Email <span class="required-asterisk">*</span>
+                                        Email <span class="text-danger">*</span>
                                     </label>
-                                    {% if user_form.email.errors %}
-                                        {{ user_form.email|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in user_form.email.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        {{ user_form.email|add_class:"form-control" }}
-                                    {% endif %}
-                                    <div id="emailFeedback" class="validation-feedback"></div>
-                                    <small class="text-muted">This will be used for account verification and communication</small>
+                                    <div class="position-relative">
+                                        {% if user_form.email.errors %}
+                                            {% render_field user_form.email class="form-control is-invalid" placeholder="Enter email address" type="email" %}
+                                            <div class="invalid-feedback">{{ user_form.email.errors|first }}</div>
+                                        {% else %}
+                                            {% render_field user_form.email class="form-control" placeholder="Enter email address" type="email" %}
+                                        {% endif %}
+                                        <span class="validation-icon" id="emailIcon"></span>
+                                    </div>
+                                    <small class="text-muted">Used for verification and communication</small>
                                 </div>
                             </div>
-    
+
                             <div class="row g-3 mt-2">
                                 <div class="col-md-6">
                                     <label for="{{ user_form.password.id_for_label }}" class="form-label">
-                                        Password <span class="required-asterisk">*</span>
+                                        Password <span class="text-danger">*</span>
                                     </label>
                                     {% if user_form.password.errors %}
-                                        {{ user_form.password|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in user_form.password.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field user_form.password class="form-control is-invalid" placeholder="Enter password" %}
+                                        <div class="invalid-feedback">{{ user_form.password.errors|first }}</div>
                                     {% else %}
-                                        {{ user_form.password|add_class:"form-control" }}
-                                        <small class="help-text">At least 8 characters with letters and numbers</small>
+                                        {% render_field user_form.password class="form-control" placeholder="Enter password" %}
                                     {% endif %}
-                                    <div id="passwordStrength"></div>
+                                    <div id="passwordStrength" class="small mt-1"></div>
+                                    <small class="text-muted">At least 8 characters with letters and numbers</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="{{ user_form.confirm_password.id_for_label }}" class="form-label">
-                                        Confirm Password <span class="required-asterisk">*</span>
+                                        Confirm Password <span class="text-danger">*</span>
                                     </label>
                                     {% if user_form.confirm_password.errors %}
-                                        {{ user_form.confirm_password|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in user_form.confirm_password.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field user_form.confirm_password class="form-control is-invalid" placeholder="Confirm password" %}
+                                        <div class="invalid-feedback">{{ user_form.confirm_password.errors|first }}</div>
                                     {% else %}
-                                        {{ user_form.confirm_password|add_class:"form-control" }}
+                                        {% render_field user_form.confirm_password class="form-control" placeholder="Confirm password" %}
                                     {% endif %}
-                                    <div id="matchFeedback" class="match-feedback"></div>
+                                    <div id="matchFeedback" class="small mt-1"></div>
                                 </div>
                             </div>
-    
+
                             <!-- Donor Details Section -->
-                            <h5 class="text-danger section-header mt-4"><i class="fas fa-heartbeat"></i> Donor Details</h5>
-    
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="fas fa-heartbeat text-primary me-2"></i>Donor Details
+                            </h5>
+
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label for="{{ donor_form.bloodgroup.id_for_label }}" class="form-label">
                                         Blood Group
                                     </label>
                                     {% if donor_form.bloodgroup.errors %}
-                                        {{ donor_form.bloodgroup|add_class:"form-select is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in donor_form.bloodgroup.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field donor_form.bloodgroup class="form-select is-invalid" %}
+                                        <div class="invalid-feedback">{{ donor_form.bloodgroup.errors|first }}</div>
                                     {% else %}
-                                        {{ donor_form.bloodgroup|add_class:"form-select" }}
+                                        {% render_field donor_form.bloodgroup class="form-select" %}
                                     {% endif %}
-                                    <small class="help-text">Optional if unsure, will be verified & updated automatically at first appointment</small>
+                                    <small class="text-muted">Optional - will be verified at first donation</small>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="{{ donor_form.national_id.id_for_label }}" class="form-label">
-                                        National ID <span class="required-asterisk">*</span>
+                                        National ID <span class="text-danger">*</span>
                                     </label>
-                                    {% if donor_form.national_id.errors %}
-                                        {{ donor_form.national_id|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in donor_form.national_id.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        {{ donor_form.national_id|add_class:"form-control" }}
-                                    {% endif %}
-                                    <div id="nationalIdFeedback" class="validation-feedback"></div>
+                                    <div class="position-relative">
+                                        {% if donor_form.national_id.errors %}
+                                            {% render_field donor_form.national_id class="form-control is-invalid" placeholder="Enter ID number" %}
+                                            <div class="invalid-feedback">{{ donor_form.national_id.errors|first }}</div>
+                                        {% else %}
+                                            {% render_field donor_form.national_id class="form-control" placeholder="Enter ID number" %}
+                                        {% endif %}
+                                        <span class="validation-icon" id="nationalIdIcon"></span>
+                                    </div>
+                                    <div id="nationalIdFeedback" class="small mt-1"></div>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="{{ donor_form.dob.id_for_label }}" class="form-label">
-                                        Date of Birth <span class="required-asterisk">*</span>
+                                        Date of Birth <span class="text-danger">*</span>
                                     </label>
                                     {% if donor_form.dob.errors %}
-                                        {{ donor_form.dob|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in donor_form.dob.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field donor_form.dob class="form-control is-invalid" type="date" %}
+                                        <div class="invalid-feedback">{{ donor_form.dob.errors|first }}</div>
                                     {% else %}
-                                        {{ donor_form.dob|add_class:"form-control" }}
+                                        {% render_field donor_form.dob class="form-control" type="date" %}
                                     {% endif %}
-                                    <small class="help-text">Must be 18+ years old</small>
+                                    <small class="text-muted">Must be 18+ years old</small>
                                 </div>
                             </div>
-    
+
                             <!-- Contact Information Section -->
-                            <h5 class="text-danger section-header mt-4"><i class="fas fa-address-book"></i> Contact Information</h5>
-    
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="fas fa-address-book text-primary me-2"></i>Contact Information
+                            </h5>
+
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="{{ donor_form.mobile.id_for_label }}" class="form-label">
-                                        Mobile Number <span class="required-asterisk">*</span>
+                                        Mobile Number <span class="text-danger">*</span>
                                     </label>
-                                    {% if donor_form.mobile.errors %}
-                                        {{ donor_form.mobile|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in donor_form.mobile.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        {{ donor_form.mobile|add_class:"form-control" }}
-                                    {% endif %}
-                                    <div id="mobileFeedback" class="validation-feedback"></div>
+                                    <div class="position-relative">
+                                        {% if donor_form.mobile.errors %}
+                                            {% render_field donor_form.mobile class="form-control is-invalid" placeholder="Enter mobile number" %}
+                                            <div class="invalid-feedback">{{ donor_form.mobile.errors|first }}</div>
+                                        {% else %}
+                                            {% render_field donor_form.mobile class="form-control" placeholder="Enter mobile number" %}
+                                        {% endif %}
+                                        <span class="validation-icon" id="mobileIcon"></span>
+                                    </div>
+                                    <div id="mobileFeedback" class="small mt-1"></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="id_county">Select Your County of Residence</label>
+                                    <label for="{{ donor_form.county.id_for_label }}" class="form-label">
+                                        County of Residence
+                                    </label>
                                     {% if donor_form.county.errors %}
-                                        {{ donor_form.county|add_class:"form-control is-invalid" }}
-                                        <ul class="help-block list-unstyled">
-                                            {% for error in donor_form.county.errors %}
-                                                <li>{{ error }}</li>
-                                            {% endfor %}
-                                        </ul>
+                                        {% render_field donor_form.county class="form-control is-invalid" placeholder="Enter county" %}
+                                        <div class="invalid-feedback">{{ donor_form.county.errors|first }}</div>
                                     {% else %}
-                                        {{ donor_form.county|add_class:"form-control" }}
+                                        {% render_field donor_form.county class="form-control" placeholder="Enter county" %}
                                     {% endif %}
                                 </div>
                             </div>
-    
+
                             <!-- Profile Picture -->
-                            <div class="mt-3">
+                            <div class="mt-4">
                                 <label for="{{ donor_form.profile_pic.id_for_label }}" class="form-label">
-                                    <i class="fas fa-camera"></i> Profile Picture
+                                    <i class="fas fa-camera me-2"></i>Profile Picture
                                 </label>
                                 {% if donor_form.profile_pic.errors %}
-                                    {{ donor_form.profile_pic|add_class:"form-control is-invalid" }}
-                                    <ul class="help-block list-unstyled">
-                                        {% for error in donor_form.profile_pic.errors %}
-                                            <li>{{ error }}</li>
-                                        {% endfor %}
-                                    </ul>
+                                    {% render_field donor_form.profile_pic class="form-control is-invalid" %}
+                                    <div class="invalid-feedback">{{ donor_form.profile_pic.errors|first }}</div>
                                 {% else %}
-                                    {{ donor_form.profile_pic|add_class:"form-control" }}
+                                    {% render_field donor_form.profile_pic class="form-control" %}
                                 {% endif %}
-                                <small class="help-text">Optional - Upload a clear photo of yourself</small>
+                                <small class="text-muted">Optional - Upload a clear photo of yourself</small>
                             </div>
-    
+
                             <!-- Hidden location fields -->
-                            {{ donor_form.latitude }}
-                            {{ donor_form.longitude }}
-    
+                            {% render_field donor_form.latitude type="hidden" %}
+                            {% render_field donor_form.longitude type="hidden" %}
+
                             <!-- Terms and Conditions -->
-                            <div class="card mt-4 border-info">
-                                <div class="card-body">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="termsCheck" required>
-                                        <label class="form-check-label" for="termsCheck">
-                                            I agree to the 
-                                            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#termsModal">
-                                                Terms and Conditions
-                                            </a>
-                                            <span class="required-asterisk">*</span>
-                                        </label>
-                                    </div>
-                                    <div class="form-check mt-2">
-                                        <input class="form-check-input" type="checkbox" id="emailConsent" required>
-                                        <label class="form-check-label" for="emailConsent">
-                                            I understand that I must verify my email address before logging in
-                                            <span class="required-asterisk">*</span>
-                                        </label>
-                                    </div>
+                            <div class="mt-4 p-3 bg-light rounded">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                                    <label class="form-check-label" for="termsCheck">
+                                        I agree to the 
+                                        <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#termsModal">
+                                            Terms and Conditions
+                                        </a>
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailConsent" required>
+                                    <label class="form-check-label" for="emailConsent">
+                                        I understand that I must verify my email address before logging in
+                                        <span class="text-danger">*</span>
+                                    </label>
                                 </div>
                             </div>
-    
-                            <div class="text-center mt-4">
-                                <button type="submit" id="submitBtn" class="btn btn-danger btn-lg px-5" disabled>
-                                    <i class="fas fa-user-plus"></i> Register as Donor
+
+                            <!-- Submit Buttons -->
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'home' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Home
+                                </a>
+                                <button type="submit" id="submitBtn" class="btn btn-primary" disabled>
+                                    <i class="fas fa-user-plus me-2"></i>Register as Donor
                                 </button>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-shield-alt"></i> Your information is secure and protected
-                                    </small>
-                                </div>
                             </div>
                         </form>
-    
-                        <div class="text-center mt-4">
-                            <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <a href="{% url 'donorlogin' %}?user_type=donor" class="btn btn-outline-success btn-block">
-                                        <i class="fas fa-sign-in-alt"></i> Already a Donor? Login Here
-                                    </a>
-                                </div>
-                                <div class="col-md-6 mb-2">
 
-                                </div>
-                            </div>
+                        <div class="text-center mt-4">
+                            <p class="mb-0">
+                                Already have an account? 
+                                <a href="{% url 'donor:donorlogin' %}?user_type=donor" class="btn btn-link">
+                                    Login here <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Terms and Conditions Modal -->
-    <div class="modal fade" id="termsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Terms and Conditions</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <h6>Email Verification</h6>
-                    <p>You must verify your email address by clicking the link sent to your inbox before you can log in to your account.</p>
-                    
-                    <h6>Account Security</h6>
-                    <p>You are responsible for maintaining the confidentiality of your login credentials.</p>
-                    
-                    <h6>Data Privacy</h6>
-                    <p>Your personal and medical information will be kept confidential and used only for blood donation purposes.</p>
-                    
-                    <h6>Eligibility</h6>
-                    <p>You must meet all donor eligibility criteria to donate blood.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">I Understand</button>
-                </div>
+</div>
+
+<!-- Terms and Conditions Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Terms and Conditions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Email Verification</h6>
+                <p>You must verify your email address by clicking the link sent to your inbox before you can log in to your account.</p>
+                
+                <h6>Account Security</h6>
+                <p>You are responsible for maintaining the confidentiality of your login credentials.</p>
+                
+                <h6>Data Privacy</h6>
+                <p>Your personal and medical information will be kept confidential and used only for blood donation purposes.</p>
+                
+                <h6>Eligibility</h6>
+                <p>You must meet all donor eligibility criteria to donate blood.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
             </div>
         </div>
     </div>
-    
-    <script src="{% static 'js/ajax-validators.js' %}"></script>
-    <script>
-        // Password strength checker
-        const passwordInput = document.getElementById('id_password');
-        if (passwordInput) {
-            passwordInput.addEventListener('input', function() {
-                const strengthText = document.getElementById('passwordStrength');
-                const value = this.value;
-                
-                if (!value) { 
-                    strengthText.textContent = ""; 
-                    return; 
-                }
-                
-                if (value.length < 8) { 
-                    strengthText.textContent = "⚠️ Too Short"; 
-                    strengthText.style.color = "red"; 
-                }
-                else if (/[a-zA-Z]/.test(value) && /\d/.test(value)) { 
-                    strengthText.textContent = "✓ Strong Password"; 
-                    strengthText.style.color = "green"; 
-                }
-                else { 
-                    strengthText.textContent = "⚠️ Moderate - Add numbers and letters"; 
-                    strengthText.style.color = "orange"; 
-                }
-            });
-        }
-    
-        // Password match checker
-        const confirmInput = document.getElementById('id_confirm_password');
-        if (confirmInput && passwordInput) {
-            confirmInput.addEventListener('input', checkPasswordMatch);
-            passwordInput.addEventListener('input', checkPasswordMatch);
-        }
-    
-        function checkPasswordMatch() {
-            const matchFeedback = document.getElementById('matchFeedback');
-            const password = passwordInput.value;
-            const confirm = confirmInput.value;
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/ajax-validators.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Password strength checker
+    const passwordInput = document.getElementById('id_password');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            const strengthText = document.getElementById('passwordStrength');
+            const value = this.value;
             
-            if (!confirm) {
-                matchFeedback.textContent = "";
-                return;
+            if (!value) { 
+                strengthText.textContent = ""; 
+                return; 
             }
             
-            if (confirm !== password) { 
-                matchFeedback.textContent = "✗ Passwords do not match!";
-                matchFeedback.className = "match-feedback nomatch"; 
+            if (value.length < 8) { 
+                strengthText.textContent = "⚠️ Too Short"; 
+                strengthText.style.color = "#dc3545"; 
+            }
+            else if (/[a-zA-Z]/.test(value) && /\d/.test(value)) { 
+                strengthText.textContent = "✓ Strong Password"; 
+                strengthText.style.color = "#28a745"; 
             }
             else { 
-                matchFeedback.textContent = "✓ Passwords match!";
-                matchFeedback.className = "match-feedback match"; 
-            }
-        }
-    
-        // Geolocation capture
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    const latInput = document.querySelector('input[name="latitude"]');
-                    const lonInput = document.querySelector('input[name="longitude"]');
-                    if (latInput) latInput.value = pos.coords.latitude;
-                    if (lonInput) lonInput.value = pos.coords.longitude;
-                },
-                function(error) {
-                    console.log('Geolocation error:', error.message);
-                }
-            );
-        }
-    
-        // Enable submit button only when terms are checked
-        const termsCheck = document.getElementById('termsCheck');
-        const emailConsent = document.getElementById('emailConsent');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        function updateSubmitButton() {
-            if (termsCheck.checked && emailConsent.checked) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register as Donor';
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-lock"></i> Accept Terms to Register';
-            }
-        }
-        
-        termsCheck.addEventListener('change', updateSubmitButton);
-        emailConsent.addEventListener('change', updateSubmitButton);
-        
-        // Form submission handling
-        const form = document.getElementById('signupForm');
-        
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                // Show loading state
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registering...';
-                }
-                
-                // Show success message
-                setTimeout(function() {
-                    document.getElementById('successMessage').style.display = 'block';
-                }, 1000);
-            });
-        }
-        
-        // Show verification reminder after successful submission (demo)
-        window.addEventListener('pageshow', function(event) {
-            if (event.persisted || performance.getEntriesByType('navigation')[0].type === 'back_forward') {
-                // Page loaded from cache, show reminder
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('registered') === 'true') {
-                    alert('Please check your email for the verification link!');
-                }
+                strengthText.textContent = "⚠️ Moderate - Add numbers and letters"; 
+                strengthText.style.color = "#ffc107"; 
             }
         });
-    </script>
+    }
+
+    // Password match checker
+    const confirmInput = document.getElementById('id_confirm_password');
+    if (confirmInput && passwordInput) {
+        confirmInput.addEventListener('input', checkPasswordMatch);
+        passwordInput.addEventListener('input', checkPasswordMatch);
+    }
+
+    function checkPasswordMatch() {
+        const matchFeedback = document.getElementById('matchFeedback');
+        const password = passwordInput.value;
+        const confirm = confirmInput.value;
+        
+        if (!confirm) {
+            matchFeedback.textContent = "";
+            return;
+        }
+        
+        if (confirm !== password) { 
+            matchFeedback.textContent = "✗ Passwords do not match!";
+            matchFeedback.style.color = "#dc3545"; 
+        }
+        else { 
+            matchFeedback.textContent = "✓ Passwords match!";
+            matchFeedback.style.color = "#28a745"; 
+        }
+    }
+
+    // Geolocation capture
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                const latInput = document.querySelector('input[name="latitude"]');
+                const lonInput = document.querySelector('input[name="longitude"]');
+                if (latInput) latInput.value = pos.coords.latitude;
+                if (lonInput) lonInput.value = pos.coords.longitude;
+            },
+            function(error) {
+                console.log('Geolocation error:', error.message);
+            }
+        );
+    }
+
+    // Enable submit button only when terms are checked
+    const termsCheck = document.getElementById('termsCheck');
+    const emailConsent = document.getElementById('emailConsent');
+    const submitBtn = document.getElementById('submitBtn');
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
-    </body>
-</html>
+    function updateSubmitButton() {
+        if (termsCheck && emailConsent && submitBtn) {
+            if (termsCheck.checked && emailConsent.checked) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+    }
+    
+    if (termsCheck && emailConsent) {
+        termsCheck.addEventListener('change', updateSubmitButton);
+        emailConsent.addEventListener('change', updateSubmitButton);
+    }
+    
+    // Username suggestion selector
+    window.selectUsername = function(username) {
+        const usernameField = document.getElementById('id_username');
+        if (usernameField) {
+            usernameField.value = username;
+            // Trigger validation if needed
+            usernameField.dispatchEvent(new Event('input'));
+        }
+    };
+});
+</script>
+{% endblock %}

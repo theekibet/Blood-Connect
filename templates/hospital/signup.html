@@ -3,237 +3,204 @@
 
 {% block title %}Create Staff Account - BloodConnect{% endblock %}
 
+{% block auth_icon %}fas fa-user-plus{% endblock %}
+{% block auth_title %}Staff Signup{% endblock %}
+{% block auth_card_class %}hospital-staff{% endblock %}
+
 {% block auth_content %}
-<style>
-    /* Force fix for input fields */
-    .auth-body input,
-    .auth-body select,
-    .auth-body textarea,
-    .auth-body .form-control,
-    .auth-body .form-select {
-        width: 100% !important;
-        min-width: 100% !important;
-        max-width: 100% !important;
-        display: block !important;
-        box-sizing: border-box !important;
-        padding: 12px 15px !important;
-        font-size: 16px !important;
-        line-height: 1.5 !important;
-        border: 1px solid #ced4da !important;
-        border-radius: 8px !important;
-        background-color: #fff !important;
-        margin: 0 0 5px 0 !important;
-    }
-    
-    /* Fix for select dropdowns */
-    .auth-body select {
-        appearance: auto !important;
-        -webkit-appearance: menulist !important;
-        -moz-appearance: menulist !important;
-        background-image: none !important;
-        padding-right: 30px !important;
-    }
-    
-    /* Fix for row layout */
-    .auth-body .row {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        margin: 0 -10px !important;
-        width: 100% !important;
-    }
-    
-    .auth-body .col-md-6 {
-        flex: 0 0 calc(50% - 20px) !important;
-        max-width: calc(50% - 20px) !important;
-        margin: 0 10px 15px 10px !important;
-        padding: 0 !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Fix for container */
-    .auth-body .container {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    /* Fix for form layout */
-    .auth-body form {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-    
-    /* Ensure labels are above inputs */
-    .auth-body label {
-        display: block !important;
-        width: 100% !important;
-        margin-bottom: 5px !important;
-        font-weight: 600 !important;
-        color: #333 !important;
-        font-size: 14px !important;
-    }
-    
-    /* Fix for the "Get Current Location" button */
-    .btn-outline-primary {
-        width: auto !important;
-        min-width: 200px !important;
-        display: inline-block !important;
-        padding: 10px 20px !important;
-    }
-    
-    /* Mobile responsiveness */
-    @media (max-width: 768px) {
-        .auth-body .col-md-6 {
-            flex: 0 0 calc(100% - 20px) !important;
-            max-width: calc(100% - 20px) !important;
-        }
-    }
-    
-    /* Ensure auth card has proper width */
-    .auth-card {
-        width: 100% !important;
-        max-width: 900px !important;
-        margin: 0 auto !important;
-    }
-    
-    /* Fix auth body padding */
-    .auth-body {
-        padding: 30px !important;
-        overflow: visible !important;
-    }
-    
-    /* Fix for text-danger error messages */
-    .text-danger {
-        display: block !important;
-        width: 100% !important;
-        clear: both !important;
-        font-size: 12px !important;
-        margin-top: 2px !important;
-    }
-</style>
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-lg-6">
-            <div class="auth-card fade-in">
-                <div class="auth-header">
-                    <h3><i class="fas fa-user-plus me-2"></i>Staff Signup</h3>
-                    <p>Create your hospital staff account</p>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-user text-primary me-2"></i>Personal Information
+                </h5>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                            First Name <span class="text-danger">*</span>
+                        </label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                        <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                            Last Name <span class="text-danger">*</span>
+                        </label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                        <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
                 </div>
                 
-                <div class="auth-body">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        <h5 class="mb-3 text-primary">
-                            <i class="fas fa-user me-2"></i>Personal Information
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-                                {{ form.first_name }}
-                                {% if form.first_name.errors %}
-                                <div class="text-danger mt-1">{{ form.first_name.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-                                {{ form.last_name }}
-                                {% if form.last_name.errors %}
-                                <div class="text-danger mt-1">{{ form.last_name.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
-                            {{ form.username }}
-                            {% if form.username.errors %}
-                            <div class="text-danger mt-1">{{ form.username.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
-                            {{ form.email }}
-                            {% if form.email.errors %}
-                            <div class="text-danger mt-1">{{ form.email.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <hr class="my-4">
-                        
-                        <h5 class="mb-3 text-primary">
-                            <i class="fas fa-lock me-2"></i>Password
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
-                                {{ form.password1 }}
-                                {% if form.password1.errors %}
-                                <div class="text-danger mt-1">{{ form.password1.errors.0 }}</div>
-                                {% endif %}
-                                <small class="text-muted">At least 8 characters</small>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password</label>
-                                {{ form.password2 }}
-                                {% if form.password2.errors %}
-                                <div class="text-danger mt-1">{{ form.password2.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <hr class="my-4">
-                        
-                        <h5 class="mb-3 text-primary">
-                            <i class="fas fa-hospital me-2"></i>Hospital Details
-                        </h5>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.hospital.id_for_label }}" class="form-label">Hospital</label>
-                            {{ form.hospital }}
-                            {% if form.hospital.errors %}
-                            <div class="text-danger mt-1">{{ form.hospital.errors.0 }}</div>
-                            {% endif %}
-                            <small class="text-muted">Select your hospital from the list</small>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="{{ form.role.id_for_label }}" class="form-label">Role</label>
-                            {{ form.role }}
-                            {% if form.role.errors %}
-                            <div class="text-danger mt-1">{{ form.role.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-user-check me-2"></i>Create Account
-                            </button>
-                        </div>
-                        
-                        <div class="text-center mt-3">
-                            <p class="mb-0">
-                                Already have an account? <a href="{% url 'hospital:login' %}" class="text-decoration-none">Sign In</a>
-                            </p>
-                        </div>
-                    </form>
+                <div class="mt-3">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                        Username <span class="text-danger">*</span>
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                    <div id="usernameFeedback" class="small mt-1"></div>
                 </div>
-            </div>
+                
+                <div class="mt-3">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        Email <span class="text-danger">*</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                    <small class="text-muted">Used for account verification</small>
+                </div>
+                
+                <h5 class="border-bottom pb-2 mb-3 mt-4">
+                    <i class="fas fa-lock text-primary me-2"></i>Password
+                </h5>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">
+                            Password <span class="text-danger">*</span>
+                        </label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                        <div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>
+                        {% endif %}
+                        <div id="passwordStrength" class="small mt-1"></div>
+                        <small class="text-muted">At least 8 characters with letters and numbers</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">
+                            Confirm Password <span class="text-danger">*</span>
+                        </label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                        <div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>
+                        {% endif %}
+                        <div id="matchFeedback" class="small mt-1"></div>
+                    </div>
+                </div>
+                
+                <h5 class="border-bottom pb-2 mb-3 mt-4">
+                    <i class="fas fa-hospital text-primary me-2"></i>Hospital Details
+                </h5>
+                
+                <div class="mt-3">
+                    <label for="{{ form.hospital.id_for_label }}" class="form-label">
+                        Hospital <span class="text-danger">*</span>
+                    </label>
+                    {{ form.hospital }}
+                    {% if form.hospital.errors %}
+                    <div class="text-danger small mt-1">{{ form.hospital.errors.0 }}</div>
+                    {% endif %}
+                    <small class="text-muted">Select your hospital from the list</small>
+                </div>
+                
+                <div class="mt-3">
+                    <label for="{{ form.role.id_for_label }}" class="form-label">
+                        Role <span class="text-danger">*</span>
+                    </label>
+                    {{ form.role }}
+                    {% if form.role.errors %}
+                    <div class="text-danger small mt-1">{{ form.role.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-user-check me-2"></i>Create Account
+                    </button>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <p class="mb-0">
+                        Already have an account? 
+                        <a href="{% url 'hospital:login' %}" class="btn btn-link">
+                            Sign In <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </p>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Password strength checker
+    const passwordInput = document.getElementById('{{ form.password1.id_for_label }}');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            const strengthText = document.getElementById('passwordStrength');
+            const value = this.value;
+            
+            if (!value) { 
+                strengthText.textContent = ""; 
+                return; 
+            }
+            
+            if (value.length < 8) { 
+                strengthText.textContent = "⚠️ Too Short"; 
+                strengthText.style.color = "#dc3545"; 
+            }
+            else if (/[a-zA-Z]/.test(value) && /\d/.test(value)) { 
+                strengthText.textContent = "✓ Strong Password"; 
+                strengthText.style.color = "#28a745"; 
+            }
+            else { 
+                strengthText.textContent = "⚠️ Moderate - Add numbers and letters"; 
+                strengthText.style.color = "#ffc107"; 
+            }
+        });
+    }
+
+    // Password match checker
+    const confirmInput = document.getElementById('{{ form.password2.id_for_label }}');
+    if (confirmInput && passwordInput) {
+        confirmInput.addEventListener('input', checkPasswordMatch);
+        passwordInput.addEventListener('input', checkPasswordMatch);
+    }
+
+    function checkPasswordMatch() {
+        const matchFeedback = document.getElementById('matchFeedback');
+        const password = passwordInput.value;
+        const confirm = confirmInput.value;
+        
+        if (!confirm) {
+            matchFeedback.textContent = "";
+            return;
+        }
+        
+        if (confirm !== password) { 
+            matchFeedback.textContent = "✗ Passwords do not match!";
+            matchFeedback.style.color = "#dc3545"; 
+        }
+        else { 
+            matchFeedback.textContent = "✓ Passwords match!";
+            matchFeedback.style.color = "#28a745"; 
+        }
+    }
+});
+</script>
 {% endblock %}

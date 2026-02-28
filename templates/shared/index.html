@@ -1,0 +1,799 @@
+{% extends 'shared/base.html' %}
+{% load static %}
+
+{% block title %}BloodConnect - Save Lives Through Blood Donation{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Keep only index-specific styles */
+    .banner-slider {
+        margin-top: 80px;
+    }
+    
+    /* Login dropdown styling */
+    .login-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .login-dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f9f9f9;
+        min-width: 300px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+        border-radius: 8px;
+        padding: 15px;
+        right: 0;
+    }
+    
+    .login-dropdown:hover .login-dropdown-content {
+        display: block;
+    }
+    
+    .login-category {
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    
+    .login-category:last-child {
+        border-bottom: none;
+    }
+    
+    .login-category h4 {
+        color: #dc3545;
+        font-size: 16px;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    
+    .login-category a {
+        display: block;
+        padding: 8px 12px;
+        color: #333;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background 0.3s;
+    }
+    
+    .login-category a:hover {
+        background: #f0f0f0;
+        color: #dc3545;
+    }
+    
+    .login-category i {
+        width: 20px;
+        margin-right: 10px;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block public_wrapper %}
+<!-- Override the auth wrapper - this is a public landing page -->
+{% block content %}
+
+<!-- ADMIN BANNERS SECTION -->
+{% if banners %}
+<section class="banner-slider">
+    <div class="banner-container">
+        {% for banner in banners %}
+        <div class="banner-slide {% if forloop.first %}active{% endif %}" data-banner-id="{{ banner.id }}">
+            <div class="banner-content" {% if banner.background_image %}style="background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('{{ banner.background_image.url }}'); background-size: cover;"{% endif %}>
+                <span class="banner-type-badge banner-type-{{ banner.banner_type }}">
+                    {% if banner.banner_type == 'urgent' %}<i class="fas fa-exclamation-circle"></i>{% endif %}
+                    {% if banner.banner_type == 'info' %}<i class="fas fa-info-circle"></i>{% endif %}
+                    {% if banner.banner_type == 'success' %}<i class="fas fa-check-circle"></i>{% endif %}
+                    {% if banner.banner_type == 'event' %}<i class="fas fa-calendar-alt"></i>{% endif %}
+                    {{ banner.get_banner_type_display }}
+                </span>
+                <h3>{{ banner.title }}</h3>
+                <p>{{ banner.message }}</p>
+                {% if banner.link_url %}
+                <a href="{{ banner.link_url }}" class="banner-link">
+                    {{ banner.link_text|default:"Learn More" }} <i class="fas fa-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if banners|length > 1 %}
+        <div class="banner-dots">
+            {% for banner in banners %}
+            <span class="banner-dot {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}"></span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-container">
+        <div class="hero-content">
+            <h1>Every Drop Counts.<br>Save Lives Today.</h1>
+            <p>Join our community of life-savers. Connect with blood donors, request blood, and make a difference in someone's life.</p>
+            <div class="hero-buttons">
+                <a href="{% url 'hospital:register' %}" class="btn-primary">Register Hospital</a>
+                <a href="{% url 'donor:donorsignup' %}" class="btn-secondary">
+                    Become a Donor <i class="fas fa-heart"></i>
+                </a>
+                
+                <!-- Enhanced Login Dropdown -->
+                <div class="login-dropdown">
+                    <button class="btn-outline-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <div class="login-dropdown-content">
+                        <!-- Donor Login -->
+                        <div class="login-category">
+                            <h4><i class="fas fa-hand-holding-heart"></i> Donor Login</h4>
+                            <a href="{% url 'donor:donorlogin' %}">
+                                <i class="fas fa-user"></i> Donor Login
+                            </a>
+                        </div>
+                        
+                        <!-- Nurse Login -->
+                        <div class="login-category">
+                            <h4><i class="fas fa-user-nurse"></i> Nurse Login</h4>
+                            <a href="{% url 'nurse:nurselogin' %}">
+                                <i class="fas fa-user-nurse"></i> Nurse Login
+                            </a>
+                        </div>
+                        
+                        <!-- Donation Center Related Logins -->
+                        <div class="login-category">
+                            <h4><i class="fas fa-hospital"></i> Donation Center</h4>
+                            <a href="{% url 'blood_bank_technician:login' %}">
+                                <i class="fas fa-flask"></i> Blood Bank Technician
+                            </a>
+                            <a href="{% url 'lab_technologist:login' %}">
+                                <i class="fas fa-microscope"></i> Lab Technologist
+                            </a>
+                        </div>
+                        
+                        <!-- Hospital Related Logins -->
+                        <div class="login-category">
+                            <h4><i class="fas fa-building"></i> Hospital</h4>
+                            <a href="{% url 'hospital:login' %}">
+                                <i class="fas fa-hospital"></i> Hospital Login
+                            </a>
+                            <!-- Hospital Staff Login - Note: This URL doesn't exist in your hospital/urls.py -->
+                            <a href="{% url 'hospital:login' %}" class="text-muted">
+                                <i class="fas fa-user-md"></i> Hospital Staff (Use Hospital Login)
+                            </a>
+                        </div>
+                        
+                        <!-- Admin Login (Separate) -->
+                        <div class="login-category">
+                            <h4><i class="fas fa-user-shield"></i> Administration</h4>
+                            <a href="{% url 'adminlogin' %}">
+                                <i class="fas fa-shield-alt"></i> Admin Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-image">
+            <i class="fas fa-hand-holding-heart"></i>
+        </div>
+    </div>
+</section>
+
+<!-- SOS Section -->
+<section class="sos-section">
+    <button class="sos-button" id="sosButton">
+        <i class="fas fa-location-crosshairs"></i>
+        SOS - Find Nearest Donation Center
+    </button>
+    <div id="sosMessage" style="margin-top: 1rem; color: var(--primary); font-weight: 600;"></div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats">
+    <div class="stats-container">
+        {% for stat in stats %}
+        <div class="stat-item">
+            <i class="{{ stat.icon_class }}" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+            <span class="stat-number" data-target="{{ stat.stat_value }}">0</span>
+            <span class="stat-label">{{ stat.stat_name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features">
+    <div class="features-container">
+        <h2 class="section-title">How BloodConnect Works</h2>
+        <p class="section-subtitle">Simple, fast, and reliable blood donation management system</p>
+        
+        <div class="features-grid">
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-search-location"></i>
+                </div>
+                <h3>Find Donors Nearby</h3>
+                <p>Search for compatible blood donors in your area based on blood type and distance.</p>
+                <a href="{% url 'nearby-centers' %}" class="btn-secondary">Search Now</a>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <h3>Book Appointments</h3>
+                <p>Schedule appointments with certified nurses at nearby donation centers instantly.</p>
+                <a href="{% url 'hospital:login' %}">Hospital Login</a>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h3>Track Your Impact</h3>
+                <p>Monitor your donation history and see how many lives you've helped save.</p>
+                <a href="{% url 'donor:donorlogin' %}" class="btn-secondary">View Impact</a>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Safe & Secure</h3>
+                <p>Your health information is protected with industry-standard security measures.</p>
+                <a href="{% url 'about-us' %}" class="btn-secondary">Learn More</a>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3>Real-time Notifications</h3>
+                <p>Get instant alerts when blood is needed or when your donation helps someone.</p>
+                
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Stock Monitoring</h3>
+                <p>Check real-time blood stock levels at donation centers near you.</p>
+                <a href="{% url 'nearby-centers' %}" class="btn-secondary">View Stock</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- BLOOD DRIVES SECTION -->
+{% if blood_drives %}
+<section class="blood-drives">
+    <div class="blood-drives-container">
+        <h2 class="section-title">Upcoming Blood Drives</h2>
+        <p class="section-subtitle">Join us at these upcoming events and help save lives</p>
+        
+        <div class="blood-drives-grid">
+            {% for drive in blood_drives %}
+            <div class="drive-card" onclick="window.location.href='{% url 'blood-drive-detail' drive.pk %}'">
+                <div class="drive-image">
+                    {% if drive.image %}
+                    <img src="{{ drive.image.url }}" alt="{{ drive.title }}">
+                    {% else %}
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                        <i class="fas fa-calendar-alt" style="font-size: 4rem; color: white;"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="drive-content">
+                    <h3 class="drive-title">{{ drive.title }}</h3>
+                    <div class="drive-location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>{{ drive.location }}</span>
+                    </div>
+                    <div class="drive-date">
+                        <i class="fas fa-calendar"></i>
+                        <span>{{ drive.event_date|date:"F d, Y - g:i A" }}</span>
+                    </div>
+                    <p class="drive-description">{{ drive.description|truncatewords:20 }}</p>
+                    <a href="{% url 'blood-drive-detail' drive.pk %}" class="drive-cta">
+                        View Details <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if blood_drives|length >= 6 %}
+        <a href="{% url 'blood-drives-list' %}" class="view-all-btn">
+            View All Blood Drives <i class="fas fa-arrow-right"></i>
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- TESTIMONIALS SECTION -->
+{% if testimonials %}
+<section class="testimonials">
+    <div class="testimonials-container">
+        <h2 class="section-title">What People Say</h2>
+        <p class="section-subtitle">Real stories from our community of donors and recipients</p>
+        
+        <div class="testimonials-grid">
+            {% for testimonial in testimonials %}
+            <div class="testimonial-card fade-in">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">
+                        {% if testimonial.avatar %}
+                        <img src="{{ testimonial.avatar.url }}" alt="{{ testimonial.name }}">
+                        {% else %}
+                        {{ testimonial.name|first }}
+                        {% endif %}
+                    </div>
+                    <div class="testimonial-info">
+                        <h4>{{ testimonial.name }}</h4>
+                        <p>{{ testimonial.role }}</p>
+                    </div>
+                </div>
+                <div class="testimonial-rating">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= testimonial.rating %}
+                        <i class="fas fa-star"></i>
+                        {% else %}
+                        <i class="far fa-star"></i>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <p class="testimonial-text">"{{ testimonial.testimonial }}"</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Impact Section -->
+<section class="impact">
+    <div class="impact-container">
+        <h2>How Your Donation Helps Sickle Cell Patients</h2>
+        <p>Sickle cell disease causes red blood cells to become misshapen and block blood flow, leading to severe pain and complications. Your blood donation provides healthy red blood cells that improve oxygen delivery, reduce painful crises, and prevent life-threatening complications.</p>
+        <a href="{% url 'sickle_cell' %}" class="btn-primary">
+            See Your Impact <i class="fas fa-heartbeat"></i>
+        </a>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta">
+    <div class="cta-container">
+        <h2>Ready to Make a Difference?</h2>
+        <p>Join thousands of donors and patients who trust BloodConnect</p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="{% url 'contact' %}" class="btn-secondary">Contact Us</a>
+        </div>
+    </div>
+</section>
+
+<!-- CHATBOT UI -->
+<button class="chatbot-button" id="chatbotButton">
+    <i class="fas fa-comments"></i>
+    <span class="chatbot-notification"></span>
+</button>
+
+<div class="chatbot-container" id="chatbotContainer">
+    <div class="chatbot-header">
+        <div class="chatbot-header-content">
+            <div class="chatbot-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="chatbot-header-text">
+                <h3>BloodConnect Assistant</h3>
+                <p>Online • Here to help</p>
+            </div>
+        </div>
+        <button class="chatbot-close" id="chatbotClose">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="chatbot-messages" id="chatbotMessages"></div>
+
+    <div class="chatbot-typing" id="chatbotTyping">
+        <div class="message-avatar bot">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    </div>
+
+    <div class="chatbot-input-container">
+        <div class="chatbot-input-wrapper">
+            <input 
+                type="text" 
+                class="chatbot-input" 
+                id="chatbotInput" 
+                placeholder="Ask me anything about blood donation..."
+                autocomplete="off"
+            >
+            <button class="chatbot-send-btn" id="chatbotSend">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ========================================
+    // BANNER SLIDER
+    // ========================================
+    const bannerSlides = document.querySelectorAll('.banner-slide');
+    const bannerDots = document.querySelectorAll('.banner-dot');
+    let currentBannerIndex = 0;
+
+    function showBanner(index) {
+        bannerSlides.forEach(slide => slide.classList.remove('active'));
+        bannerDots.forEach(dot => dot.classList.remove('active'));
+        
+        if (bannerSlides[index]) {
+            bannerSlides[index].classList.add('active');
+        }
+        if (bannerDots[index]) {
+            bannerDots[index].classList.add('active');
+        }
+    }
+
+    function nextBanner() {
+        currentBannerIndex = (currentBannerIndex + 1) % bannerSlides.length;
+        showBanner(currentBannerIndex);
+    }
+
+    // Auto-rotate banners every 5 seconds
+    if (bannerSlides.length > 1) {
+        setInterval(nextBanner, 5000);
+    }
+
+    // Banner dot click handlers
+    bannerDots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            currentBannerIndex = index;
+            showBanner(currentBannerIndex);
+        });
+    });
+
+    // ========================================
+    // EXISTING SCRIPTS
+    // ========================================
+
+    // Navbar Scroll Effect
+    const navbar = document.getElementById('navbar');
+    if (navbar) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+    }
+
+    // Counter Animation
+    function animateCounter(element) {
+        const target = parseInt(element.getAttribute('data-target'));
+        const duration = 2000;
+        const increment = target / (duration / 16);
+        let current = 0;
+
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            element.textContent = Math.floor(current).toLocaleString();
+        }, 16);
+    }
+
+    // Intersection Observer for animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -100px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+
+                if (entry.target.classList.contains('stat-item')) {
+                    const counter = entry.target.querySelector('.stat-number');
+                    animateCounter(counter);
+                }
+
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.stat-item, .fade-in').forEach(el => {
+        observer.observe(el);
+    });
+
+    // SOS Button Functionality
+    const sosButton = document.getElementById('sosButton');
+    if (sosButton) {
+        sosButton.addEventListener('click', function() {
+            const messageElem = document.getElementById('sosMessage');
+            if (!messageElem) return;
+            
+            messageElem.textContent = 'Getting your location...';
+
+            if (!navigator.geolocation) {
+                messageElem.textContent = "Geolocation is not supported by your browser.";
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function success(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const isLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
+
+                    if (isLoggedIn) {
+                        fetch("{% url 'save-user-location' %}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: `latitude=${lat}&longitude=${lon}`
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                window.location.href = "{% url 'nearby-centers' %}";
+                            } else {
+                                messageElem.textContent = data.message || "Failed to save location.";
+                            }
+                        })
+                        .catch(err => {
+                            messageElem.textContent = "Error saving location. Please try again.";
+                            console.error('Error:', err);
+                        });
+                    } else {
+                        window.location.href = `{% url 'nearby-centers' %}?lat=${lat}&lng=${lon}`;
+                    }
+                },
+                function error(err) {
+                    let errorMessage = "Unable to get location. ";
+                    switch (err.code) {
+                        case err.PERMISSION_DENIED:
+                            errorMessage += "Please allow location access.";
+                            break;
+                        case err.POSITION_UNAVAILABLE:
+                            errorMessage += "Location information unavailable.";
+                            break;
+                        case err.TIMEOUT:
+                            errorMessage += "Location request timed out.";
+                            break;
+                        default:
+                            errorMessage += "An unknown error occurred.";
+                    }
+                    messageElem.textContent = errorMessage;
+                },
+                { timeout: 10000 }
+            );
+        });
+    }
+
+    // ========================================
+    // CHATBOT FUNCTIONALITY
+    // ========================================
+
+    const chatbotButton = document.getElementById('chatbotButton');
+    const chatbotContainer = document.getElementById('chatbotContainer');
+    const chatbotClose = document.getElementById('chatbotClose');
+    const chatbotMessages = document.getElementById('chatbotMessages');
+    const chatbotInput = document.getElementById('chatbotInput');
+    const chatbotSend = document.getElementById('chatbotSend');
+    const chatbotTyping = document.getElementById('chatbotTyping');
+
+    // Generate unique session ID
+    function generateSessionId() {
+        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    let sessionId = localStorage.getItem('chatbot_session_id');
+    if (!sessionId) {
+        sessionId = generateSessionId();
+        localStorage.setItem('chatbot_session_id', sessionId);
+    }
+
+    // Add message to chat
+    function addMessage(content, type = 'bot') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chatbot-message ${type}`;
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = `message-avatar ${type}`;
+        avatarDiv.innerHTML = type === 'bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        // Convert markdown-style formatting to HTML
+        let formattedContent = content
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+
+        contentDiv.innerHTML = formattedContent;
+
+        messageDiv.appendChild(avatarDiv);
+        messageDiv.appendChild(contentDiv);
+
+        chatbotMessages.appendChild(messageDiv);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    // Show/hide typing indicator
+    function showTyping(show) {
+        if (show) {
+            chatbotTyping.classList.add('active');
+        } else {
+            chatbotTyping.classList.remove('active');
+        }
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    // Send message to chatbot API
+    async function sendMessage(message) {
+        if (!message.trim()) return;
+
+        // Add user message
+        addMessage(message, 'user');
+        chatbotInput.value = '';
+        if (chatbotSend) chatbotSend.disabled = true;
+
+        // Show typing indicator
+        showTyping(true);
+
+        try {
+            const response = await fetch('/chatbot/api/chatbot/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId
+                })
+            });
+
+            const data = await response.json();
+
+            // Hide typing indicator
+            showTyping(false);
+
+            if (data.error) {
+                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            } else {
+                addMessage(data.reply, 'bot');
+            }
+        } catch (error) {
+            console.error('Chatbot error:', error);
+            showTyping(false);
+            addMessage('Sorry, I\'m having trouble connecting. Please try again later.', 'bot');
+        }
+
+        if (chatbotSend) chatbotSend.disabled = false;
+    }
+
+    // Quick action suggestions
+    function addQuickActions() {
+        const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+        const quickActionsDiv = document.createElement('div');
+        quickActionsDiv.className = 'quick-actions';
+
+        let actions = isAuthenticated ? [
+            'My profile',
+            'Check my eligibility',
+            'Find nearest center',
+            'Help'
+        ] : [
+            'How do I become a donor?',
+            'Find donation centers',
+            'Blood donation eligibility',
+            'What blood types are needed?'
+        ];
+
+        actions.forEach(action => {
+            const btn = document.createElement('button');
+            btn.className = 'quick-action-btn';
+            btn.textContent = action;
+            btn.onclick = () => {
+                sendMessage(action);
+                quickActionsDiv.remove();
+            };
+            quickActionsDiv.appendChild(btn);
+        });
+
+        chatbotMessages.appendChild(quickActionsDiv);
+    }
+
+    // Initialize chatbot
+    function initChatbot() {
+        const welcomeMessage = {{ user.is_authenticated|yesno:"true,false" }} 
+            ? "👋 Hello! I'm your BloodConnect Assistant. How can I help you today?" 
+            : "👋 Welcome to BloodConnect! I'm here to help answer your questions about blood donation. How can I assist you?";
+
+        addMessage(welcomeMessage, 'bot');
+        addQuickActions();
+    }
+
+    // Toggle chatbot
+    if (chatbotButton && chatbotContainer) {
+        chatbotButton.addEventListener('click', () => {
+            chatbotContainer.classList.add('active');
+            chatbotButton.style.display = 'none';
+
+            if (chatbotMessages.children.length === 0) {
+                initChatbot();
+            }
+
+            if (chatbotInput) chatbotInput.focus();
+        });
+    }
+
+    if (chatbotClose && chatbotContainer) {
+        chatbotClose.addEventListener('click', () => {
+            chatbotContainer.classList.remove('active');
+            if (chatbotButton) chatbotButton.style.display = 'flex';
+        });
+    }
+
+    // Send message handlers
+    if (chatbotSend && chatbotInput) {
+        chatbotSend.addEventListener('click', () => {
+            sendMessage(chatbotInput.value);
+        });
+
+        chatbotInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage(chatbotInput.value);
+            }
+        });
+
+        chatbotInput.addEventListener('input', () => {
+            chatbotSend.disabled = chatbotInput.value.trim() === '';
+        });
+    }
+
+    // Prevent chatbot from closing when clicking inside
+    if (chatbotContainer) {
+        chatbotContainer.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    // Show notification badge after 5 seconds
+    setTimeout(() => {
+        const notification = document.querySelector('.chatbot-notification');
+        if (notification && chatbotContainer && !chatbotContainer.classList.contains('active')) {
+            notification.style.display = 'block';
+        }
+    }, 5000);
+</script>
+{% endblock %}

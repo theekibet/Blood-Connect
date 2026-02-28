@@ -228,6 +228,10 @@ def create_blood_request(request):
             blood_request.hospital = hospital
             blood_request.requested_by = hospital_user
             blood_request.status = 'pending'
+            
+            # ⭐ ADD THIS LINE - This is the fix!
+            blood_request.assigned_centre = hospital.serving_centre
+            
             blood_request.save()
             
             # Notify blood bank techs
@@ -267,6 +271,7 @@ def create_blood_request(request):
         'hospital': hospital,
     }
     return render(request, 'hospital/create_request.html', context)
+
 
 
 @login_required

@@ -1,0 +1,25 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block title %}Awareness Campaigns - BloodConnect{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-calendar-alt text-primary me-2"></i>Awareness Campaigns</h2>
+    
+    <div class="list-group">
+        <div class="list-group-item">
+            <h5>World Blood Donor Day <span class="badge bg-primary float-end">June 14</span></h5>
+            <p>Join us in celebrating donors worldwide</p>
+        </div>
+        <div class="list-group-item">
+            <h5>Emergency Blood Drive <span class="badge bg-danger float-end">Urgent</span></h5>
+            <p>Critical shortage of O- blood type</p>
+        </div>
+        <div class="list-group-item">
+            <h5>Youth Donor Campaign <span class="badge bg-success float-end">Ongoing</span></h5>
+            <p>Encouraging young donors to step forward</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

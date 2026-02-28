@@ -1,0 +1,130 @@
+{% extends 'shared/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Learn More - BloodConnect{% endblock %}
+
+{% block auth_icon %}fas fa-circle-info{% endblock %}
+{% block auth_title %}Learn More About BloodConnect{% endblock %}
+
+{% block extra_css %}
+
+{% endblock %}
+
+{% block auth_content %}
+<div class="learn-more-container">
+    <h1><i class="fa-solid fa-circle-info"></i> Learn More About BloodConnect</h1>
+    
+    <!-- Optional stats section -->
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Active Donors</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">1000+</div>
+            <div class="stat-label">Lives Saved</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">50+</div>
+            <div class="stat-label">Partner Hospitals</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Emergency Support</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2><i class="fas fa-bullseye"></i> Our Mission</h2>
+        <p>At Blood Connect, our mission is to bridge the gap between blood donors and those in need, fostering a community that values life and generosity. We strive to make blood donation accessible, efficient, and rewarding for everyone involved.</p>
+    </div>
+    
+    <div class="section">
+        <h2><i class="fas fa-hand-holding-heart"></i> How You Can Help</h2>
+        <p>By registering as a donor, volunteering your time, or spreading awareness, you can make a significant difference in the lives of others. Every donation can save up to three lives, and your involvement creates a ripple effect of hope in our community.</p>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+            <div style="flex: 1; min-width: 150px; text-align: center;">
+                <i class="fas fa-droplet" style="color: #dc3545; font-size: 2rem;"></i>
+                <p style="margin-top: 5px;"><strong>Donate Blood</strong></p>
+            </div>
+            <div style="flex: 1; min-width: 150px; text-align: center;">
+                <i class="fas fa-calendar-check" style="color: #dc3545; font-size: 2rem;"></i>
+                <p style="margin-top: 5px;"><strong>Volunteer</strong></p>
+            </div>
+            <div style="flex: 1; min-width: 150px; text-align: center;">
+                <i class="fas fa-share-alt" style="color: #dc3545; font-size: 2rem;"></i>
+                <p style="margin-top: 5px;"><strong>Spread Word</strong></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2><i class="fas fa-rocket"></i> Get Involved</h2>
+        <p>Ready to take the first step? Join our community of life-savers today. Whether you're looking to donate, volunteer, or partner with us, we'd love to hear from you.</p>
+        
+        <div style="text-align: center;">
+            <a href="{% url 'contact' %}" class="get-involved-btn">
+                <i class="fas fa-envelope"></i> Get Involved Today
+            </a>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <p class="text-muted">
+                <i class="fas fa-check-circle" style="color: #28a745;"></i> 
+                Already have an account? <a href="{% url 'donorlogin' %}" style="color: #dc3545;">Login here</a>
+            </p>
+        </div>
+    </div>
+    
+    <div class="back-button">
+        <button onclick="history.back()" class="btn-custom">
+            <i class="fas fa-arrow-left"></i> Go Back
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Animate stats numbers on page load
+    $('.stat-number').each(function() {
+        const $this = $(this);
+        const target = parseInt($this.text().replace(/[^0-9]/g, ''));
+        let current = 0;
+        
+        if (!isNaN(target)) {
+            const increment = target / 50; // Divide animation into 50 steps
+            
+            const timer = setInterval(function() {
+                current += increment;
+                if (current >= target) {
+                    $this.text($this.text().replace(/\d+/, target));
+                    clearInterval(timer);
+                } else {
+                    $this.text($this.text().replace(/\d+/, Math.floor(current)));
+                }
+            }, 30);
+        }
+    });
+    
+    // Add fade-in animation for sections
+    $('.section').each(function(index) {
+        $(this).css({
+            'opacity': 0,
+            'transform': 'translateY(20px)',
+            'transition': 'opacity 0.5s ease, transform 0.5s ease'
+        });
+        
+        setTimeout(() => {
+            $(this).css({
+                'opacity': 1,
+                'transform': 'translateY(0)'
+            });
+        }, 100 * (index + 1));
+    });
+});
+</script>
+{% endblock %}

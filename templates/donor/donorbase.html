@@ -1,7 +1,7 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Donor Dashboard{% endblock %}
+{% block title %}Donor Dashboard - BloodConnect{% endblock %}
 
 {% block nav_icon %}fas fa-hand-holding-heart{% endblock %}
 {% block app_name %}Donor Portal{% endblock %}
@@ -16,50 +16,189 @@
 {% block auth_title %}Donor Login{% endblock %}
 
 {% block profile_menu %}
-    <a class="dropdown-item" href="{% url 'donor-profile' %}">
+    <a class="dropdown-item" href="{% url 'donor:donor-profile' %}">
         <i class="fas fa-user-circle"></i> View Profile
     </a>
-    <a class="dropdown-item" href="{% url 'donor-edit-profile' %}">
+    <a class="dropdown-item" href="{% url 'donor:donor-edit-profile' %}">
         <i class="fas fa-edit"></i> Edit Profile
     </a>
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item" href="{% url 'donor:volunteer' %}">
+        <i class="fas fa-hands-helping"></i> Volunteer Opportunities
+    </a>
+
 {% endblock %}
 
-{% block profile_url %}{% url 'donor-profile' %}{% endblock %}
-{% block edit_profile_url %}{% url 'donor-edit-profile' %}{% endblock %}
-{% block notifications_url %}{% url 'donor-notifications' %}{% endblock %}
+{% block profile_url %}{% url 'donor:donor-profile' %}{% endblock %}
+{% block edit_profile_url %}{% url 'donor:donor-edit-profile' %}{% endblock %}
+{% block notifications_url %}{% url 'donor:donor-notifications' %}{% endblock %}
 
 {% block extra_nav_items %}
-    <!-- Rewards/Eligibility Icon - Donor specific -->
+    <!-- Rewards/Eligibility Icon -->
     <li class="nav-item mx-2">
-        <a class="nav-link" href="{% url 'donor-eligibility-status' %}" title="Rewards / Eligibility">
+        <a class="nav-link" href="{% url 'donor:donor-eligibility-status' %}" title="Rewards / Eligibility">
             <div class="rewards-icon">
                 <i class="fas fa-medal"></i>
+                {% if donor_eligibility_status and donor_eligibility_status.is_eligible %}
+                    <span class="status-badge eligible"></span>
+                {% endif %}
+            </div>
+        </a>
+    </li>
+    
+    <!-- Impact Icon - For everyone -->
+    <li class="nav-item mx-2">
+        <a class="nav-link" href="{% url 'donor:impact' %}" title="Our Collective Impact">
+            <div class="impact-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </a>
+    </li>
+    
+    <!-- Community Icon -->
+    <li class="nav-item mx-2">
+        <a class="nav-link" href="{% url 'donor:community' %}" title="Community">
+            <div class="community-icon">
+                <i class="fas fa-users"></i>
             </div>
         </a>
     </li>
 {% endblock %}
 
 {% block sidebar_menu %}
-    <a href="/" class="{% if request.path == '/' %}active{% endif %}">
-        <i class="fas fa-home"></i> Home
-    </a>
-    <a href="/donor/donate-blood" class="{% if '/donate-blood' in request.path %}active{% endif %}">
-        <i class="fas fa-hand-holding-medical"></i> Donate Blood
-    </a>
-    <a href="/donor/donation-history" class="{% if '/donation-history' in request.path %}active{% endif %}">
-        <i class="fas fa-history"></i> Donation History
-    </a>
-    <a href="/donor/make-request" class="{% if '/make-request' in request.path %}active{% endif %}">
-        <i class="fas fa-sync-alt"></i> Blood Request
-    </a>
-    <a href="/donor/request-history" class="{% if '/request-history' in request.path %}active{% endif %}">
-        <i class="fas fa-history"></i> Request History
-    </a>
+    <!-- Main Dashboard -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">MAIN</div>
+        <a href="{% url 'donor:donor-dashboard' %}" class="{% if request.resolver_match.url_name == 'donor-dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+    </div>
+
+    <!-- Donation Related -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">DONATION</div>
+        <a href="{% url 'donor:donate-blood' %}" class="{% if 'donate-blood' in request.path %}active{% endif %}">
+            <i class="fas fa-hand-holding-medical"></i> Donate Blood
+        </a>
+        <a href="{% url 'donor:donation-history' %}" class="{% if 'donation-history' in request.path %}active{% endif %}">
+            <i class="fas fa-history"></i> Donation History
+        </a>
+        <a href="{% url 'donor:donor-eligibility' %}" class="{% if 'eligibility' in request.path %}active{% endif %}">
+            <i class="fas fa-clipboard-check"></i> Eligibility Check
+        </a>
+    </div>
+
+    <!-- Engagement for Everyone -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">GET INVOLVED</div>
+        <a href="{% url 'donor:volunteer' %}" class="{% if 'volunteer' in request.path %}active{% endif %}">
+            <i class="fas fa-hands-helping"></i> Volunteer
+        </a>
+        <a href="{% url 'donor:awareness-hub' %}" class="{% if 'awareness' in request.path %}active{% endif %}">
+            <i class="fas fa-bullhorn"></i> Spread Awareness
+        </a>
+
+
+    </div>
+
+    <!-- Resources -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">RESOURCES</div>
+        <a href="{% url 'donor:donor-resources' %}" class="{% if 'resources' in request.path %}active{% endif %}">
+            <i class="fas fa-book"></i> Resources
+        </a>
+        <a href="{% url 'donor:health-tips' %}" class="{% if 'health' in request.path %}active{% endif %}">
+            <i class="fas fa-heartbeat"></i> Health Tips
+        </a>
+        <a href="{% url 'donor:faqs' %}" class="{% if 'faqs' in request.path %}active{% endif %}">
+            <i class="fas fa-question-circle"></i> FAQs
+        </a>
+        <a href="{% url 'donor:donor-advice' %}" class="{% if 'advice' in request.path %}active{% endif %}">
+            <i class="fas fa-comments"></i> Donor Advice
+        </a>
+    </div>
+
+    <!-- Community -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COMMUNITY</div>
+        <a href="{% url 'donor:events' %}" class="{% if 'events' in request.path %}active{% endif %}">
+            <i class="fas fa-calendar-alt"></i> Events
+        </a>
+        <a href="{% url 'donor:success-stories' %}" class="{% if 'stories' in request.path %}active{% endif %}">
+            <i class="fas fa-star"></i> Success Stories
+        </a>
+        <a href="{% url 'donor:impact' %}" class="{% if 'impact' in request.path %}active{% endif %}">
+            <i class="fas fa-chart-line"></i> Our Impact
+        </a>
+    </div>
+
+    <!-- Profile -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">PROFILE</div>
+        <a href="{% url 'donor:donor-profile' %}" class="{% if 'profile' in request.path and not 'edit' in request.path %}active{% endif %}">
+            <i class="fas fa-user-circle"></i> View Profile
+        </a>
+        <a href="{% url 'donor:donor-edit-profile' %}" class="{% if 'edit' in request.path %}active{% endif %}">
+            <i class="fas fa-edit"></i> Edit Profile
+        </a>
+        <a href="{% url 'donor:donor-notifications' %}" class="{% if 'notifications' in request.path %}active{% endif %}">
+            <i class="fas fa-bell"></i> Notifications
+            {% if donor_unread_notification_count > 0 %}
+                <span class="notification-badge-sidebar">{{ donor_unread_notification_count }}</span>
+            {% endif %}
+        </a>
+    </div>
 {% endblock %}
 
 {% block extra_css %}
-    <!-- No custom CSS needed - all styles come from main.css -->
-    <!-- Delete the donor.css link -->
+<style>
+    /* Sidebar section styling */
+    .sidebar-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .sidebar-section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray);
+        padding: 0 1rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    .rewards-icon, .impact-icon, .community-icon {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .status-badge.eligible {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 10px;
+        height: 10px;
+        background-color: var(--success);
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+    
+    .notification-badge-sidebar {
+        float: right;
+        background-color: var(--danger);
+        color: white;
+        border-radius: 50%;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar-section-title {
+            padding: 0 0.5rem;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -270,5 +409,11 @@
     {% if donor_unread_notification_count > 0 %}
     console.log('You have {{ donor_unread_notification_count }} unread notifications');
     {% endif %}
+    
+    // Track page views for impact
+    document.addEventListener('DOMContentLoaded', function() {
+        // This could be used for analytics
+        console.log('Donor dashboard loaded - ' + new Date().toLocaleString());
+    });
 </script>
 {% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block title %}Health Tips - BloodConnect{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Health Tips for Donors</h4>
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Drink plenty of water before donating</li>
+                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Eat a healthy meal rich in iron</li>
+                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Get a good night's sleep</li>
+                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Avoid fatty foods before donation</li>
+                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Rest after donation and hydrate</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+/* Mobile Menu Toggle Styles */
+.mobile-menu-toggle {
+    position: fixed;
+    bottom: var(--spacing-5);
+    right: var(--spacing-5);
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    color: var(--white);
+    border-radius: var(--border-radius-circle);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-index-fixed);
+    transition: var(--transition-all);
+}
+
+.mobile-menu-toggle:hover {
+    background: var(--primary-dark);
+    transform: scale(1.1);
+}
+
+/* Show on mobile */
+@media (max-width: 992px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+}

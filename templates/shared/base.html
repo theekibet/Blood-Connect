@@ -17,7 +17,7 @@
     <!-- Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     
-    <!-- Main Universal Stylesheet - ALL styles come from here -->
+    <!-- Main Universal Stylesheet -->
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
 
     <link rel="icon" href="{% static 'app/img/favicon.ico' %}">
@@ -50,10 +50,26 @@
                 <a class="dropdown-toggle" href="#" id="profileDropdown" role="button" data-toggle="dropdown">
                     <div class="profile-dropdown">
                         {% if user_profile and user_profile.profile_pic %}
-                            <img src="{{ user_profile.profile_pic.url }}" alt="Profile">
+                            <img src="{{ user_profile.profile_pic.url }}" alt="Profile" class="profile-image">
                         {% else %}
                             <div class="avatar-placeholder">
-                                {{ user.first_name|first|default:user.username|first|upper }}
+                                {% if user.profile_pic and user.profile_pic.url %}
+                                    <img src="{{ user.profile_pic.url }}" alt="Profile" class="profile-image">
+                                {% elif donor_profile and donor_profile.profile_pic %}
+                                    <img src="{{ donor_profile.profile_pic.url }}" alt="Profile" class="profile-image">
+                                {% elif nurse_profile and nurse_profile.profile_pic %}
+                                    <img src="{{ nurse_profile.profile_pic.url }}" alt="Profile" class="profile-image">
+                                {% elif lab_tech_profile and lab_tech_profile.profile_pic %}
+                                    <img src="{{ lab_tech_profile.profile_pic.url }}" alt="Profile" class="profile-image">
+                                {% elif blood_bank_tech_profile and blood_bank_tech_profile.profile_pic %}
+                                    <img src="{{ blood_bank_tech_profile.profile_pic.url }}" alt="Profile" class="profile-image">
+                                {% elif hospital_profile and hospital_profile.profile_pic %}
+                                    <img src="{{ hospital_profile.profile_pic.url }}" alt="Profile" class="profile-image">
+                                {% else %}
+                                    <div class="avatar-placeholder-text">
+                                        {{ user.first_name|first|default:user.username|first|upper }}
+                                    </div>
+                                {% endif %}
                             </div>
                         {% endif %}
                         <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
@@ -68,19 +84,24 @@
                     <div class="dropdown-divider"></div>
                     
                     {% block profile_menu %}
+                        <!-- For admin users, this block can be empty -->
+                        {% if not is_admin %}
                         <a class="dropdown-item" href="{% block profile_url %}#{% endblock %}">
                             <i class="fas fa-user-circle"></i> View Profile
                         </a>
                         <a class="dropdown-item" href="{% block edit_profile_url %}#{% endblock %}">
                             <i class="fas fa-edit"></i> Edit Profile
                         </a>
+                        {% endif %}
                     {% endblock %}
                     
+                    <!-- Change Password - Show for all except admin -->
+                    {% if not is_admin %}
                     <div class="dropdown-divider"></div>
-                    
                     <a class="dropdown-item" href="{% url 'password_change' %}">
                         <i class="fas fa-key"></i> Change Password
                     </a>
+                    {% endif %}
                     
                     <div class="dropdown-divider"></div>
                     
@@ -130,30 +151,33 @@
     <!-- Public Navbar -->
     {% include 'shared/public_navbar.html' %}
 
-    <!-- Auth Content Wrapper -->
-    <div class="auth-wrapper">
-        <div class="auth-card {% block auth_card_class %}{% endblock %}">
-            <div class="card-header">
-                <h4><i class="{% block auth_icon %}{% endblock %}"></i> {% block auth_title %}{% endblock %}</h4>
-            </div>
-            <div class="card-body">
-                <!-- Messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
-                            {{ message }}
-                            <button type="button" class="close" data-dismiss="alert">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+    <!-- This block allows pages to choose between auth wrapper or full public content -->
+    {% block public_wrapper %}
+        <!-- Default: Auth Content Wrapper (for login/signup pages) -->
+        <div class="auth-wrapper">
+            <div class="auth-card {% block auth_card_class %}{% endblock %}">
+                <div class="card-header">
+                    <h4><i class="{% block auth_icon %}{% endblock %}"></i> {% block auth_title %}{% endblock %}</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
 
-                {% block auth_content %}{% endblock %}
+                    {% block auth_content %}{% endblock %}
+                </div>
             </div>
         </div>
-    </div>
+    {% endblock %}
 
     <!-- Public Footer -->
     {% include 'shared/public_footer.html' %}
@@ -188,6 +212,23 @@
             $(alert).alert('close');
         });
     }, 5000);
+    
+    // Handle broken profile images
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileImages = document.querySelectorAll('.profile-image');
+        profileImages.forEach(img => {
+            img.onerror = function() {
+                this.style.display = 'none';
+                const parent = this.parentElement;
+                if (parent) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'avatar-placeholder-text';
+                    placeholder.textContent = '{{ user.first_name|first|default:user.username|first|upper }}';
+                    parent.appendChild(placeholder);
+                }
+            };
+        });
+    });
     
     {% block extra_js %}{% endblock %}
 </script>

@@ -1,0 +1,33 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block title %}Support Options - BloodConnect{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-hand-holding-usd text-primary me-2"></i>Support Our Mission</h2>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-hand-holding-usd fa-3x text-success mb-3"></i>
+                    <h5>Financial Donation</h5>
+                    <p>Support our operations</p>
+                    <a href="{% url 'donor:financial-donate' %}" class="btn btn-success">Donate Now</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-building fa-3x text-primary mb-3"></i>
+                    <h5>Corporate Partnership</h5>
+                    <p>Bring your organization on board</p>
+                    <a href="{% url 'donor:corporate-partnership' %}" class="btn btn-primary">Partner With Us</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

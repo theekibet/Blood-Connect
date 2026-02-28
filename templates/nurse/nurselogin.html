@@ -37,20 +37,6 @@
             </div>
         </div>
 
-        <!-- Two-step process card -->
-        <div class="card bg-light border-0 mb-4">
-            <div class="card-body p-3">
-                <h6 class="mb-2 text-primary">
-                    <i class="fas fa-list-ol mr-2"></i>Nurse Login Process:
-                </h6>
-                <ol class="mb-0 pl-3 small">
-                    <li><strong>Register</strong> as a nurse (requires admin approval)</li>
-                    <li><strong>Verify</strong> your email (check your inbox)</li>
-                    <li><strong>Wait</strong> for admin approval notification</li>
-                    <li><strong>Login</strong> with your credentials</li>
-                </ol>
-            </div>
-        </div>
 
         <!-- Login Form -->
         <form method="POST" action="{% url 'nurse:nurselogin' %}">
@@ -118,11 +104,7 @@
                             <i class="fas fa-key mr-1"></i> Forgot password?
                         </a>
                     </div>
-                    <div class="col-6">
-                        <a href="/resend-verification/" class="text-secondary small">
-                            <i class="fas fa-envelope"></i> Resend Verification
-                        </a>
-                    </div>
+
                 </div>
             </div>
         </form>
@@ -140,29 +122,8 @@
             </div>
         </div>
 
-        <!-- Support Card -->
-        <div class="card bg-light border-0 mt-4">
-            <div class="card-body p-3">
-                <h6 class="mb-2 text-secondary">
-                    <i class="fas fa-headset mr-2"></i>Nurse Support
-                </h6>
-                <p class="small mb-2">
-                    Having trouble logging in?<br>
-                    Contact: <strong>nurse-support@bloodconnect.com</strong>
-                </p>
-                <div class="small text-muted">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    For admin approval status, check your email or contact administrator.
-                </div>
-            </div>
-        </div>
 
-        <!-- Back Button -->
-        <div class="text-center mt-3">
-            <button onclick="history.back()" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-        </div>
+
     </div>
 </div>
 

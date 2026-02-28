@@ -1,0 +1,36 @@
+/* Main Content Area Styles */
+.main-content {
+    margin-left: var(--sidebar-width);
+    margin-top: var(--navbar-height);
+    padding: var(--spacing-5);
+    min-height: calc(100vh - var(--navbar-height));
+    background: var(--light);
+    transition: margin-left 0.3s ease;
+}
+
+/* Dashboard pages background */
+.dashboard-page .main-content {
+    background: var(--light);
+}
+
+/* Content containers */
+.content-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Page headers */
+.page-header {
+    margin-bottom: var(--spacing-6);
+}
+
+.page-header h1 {
+    font-size: var(--font-size-2xl);
+    color: var(--dark);
+    margin-bottom: var(--spacing-2);
+}
+
+.page-header p {
+    color: var(--gray);
+    font-size: var(--font-size-base);
+}

@@ -1,0 +1,67 @@
+{% extends 'donor/donorbase.html' %}
+{% load static %}
+
+{% block title %}Volunteer Opportunities - BloodConnect{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-hands-helping text-primary me-2"></i>Volunteer Opportunities</h2>
+    
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-flag fa-3x text-primary mb-3"></i>
+                    <h5>Blood Drive Ambassador</h5>
+                    <p class="small text-muted">Organize blood drives in your community</p>
+                    <a href="{% url 'donor:blood-drive-ambassador' %}" class="btn btn-sm btn-primary">Learn More</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-share-alt fa-3x text-info mb-3"></i>
+                    <h5>Social Media Advocate</h5>
+                    <p class="small text-muted">Share donation stories and urgent needs</p>
+                    <a href="{% url 'donor:social-media-advocate' %}" class="btn btn-sm btn-info">Learn More</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-truck fa-3x text-success mb-3"></i>
+                    <h5>Transportation Volunteer</h5>
+                    <p class="small text-muted">Help donors get to donation centers</p>
+                    <a href="{% url 'donor:transport-volunteer' %}" class="btn btn-sm btn-success">Learn More</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-signature fa-3x text-secondary mb-3"></i>
+                    <h5>Administrative Support</h5>
+                    <p class="small text-muted">Help with paperwork and coordination</p>
+                    <a href="{% url 'donor:admin-support' %}" class="btn btn-sm btn-secondary">Learn More</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chalkboard-teacher fa-3x text-warning mb-3"></i>
+                    <h5>Donor Mentor</h5>
+                    <p class="small text-muted">Guide new donors through their journey</p>
+                    <a href="{% url 'donor:donor-mentor' %}" class="btn btn-sm btn-warning">Learn More</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{% url 'donor:contact' %}" class="btn btn-outline-primary">Contact Volunteer Coordinator</a>
+    </div>
+</div>
+{% endblock %}

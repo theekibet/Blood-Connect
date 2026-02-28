@@ -1,0 +1,491 @@
+/* Donor Profile/Dashboard Content Styles */
+.donor-dashboard {
+    padding: var(--spacing-4);
+}
+
+/* ========================================
+   Location Info Styles
+   ======================================== */
+.location-info {
+    background: var(--white);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-4);
+    border: 1px solid var(--light-gray);
+}
+
+.location-info i {
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.location-info span {
+    color: var(--dark);
+    font-size: var(--font-size-sm);
+}
+
+#updateLocationBtn {
+    background: var(--light);
+    color: var(--primary);
+    border: 1px solid var(--primary-light);
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: var(--border-radius-full);
+    font-size: var(--font-size-xs);
+    transition: var(--transition-all);
+}
+
+#updateLocationBtn:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   Dashboard Stats Cards
+   ======================================== */
+.dashboard-card {
+    background: var(--white);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow);
+    transition: var(--transition-all);
+    height: 100%;
+    border: 1px solid var(--light-gray);
+    overflow: hidden;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.dashboard-card-body {
+    padding: var(--spacing-5);
+    text-align: center;
+}
+
+.dashboard-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-3);
+    display: inline-block;
+}
+
+.dashboard-icon.text-primary { color: var(--primary); }
+.dashboard-icon.text-success { color: var(--success); }
+.dashboard-icon.text-info { color: var(--info); }
+.dashboard-icon.text-warning { color: var(--warning); }
+
+.card-count {
+    font-size: 2rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--dark);
+    line-height: 1.2;
+    margin-bottom: var(--spacing-1);
+}
+
+.card-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: var(--font-weight-medium);
+}
+
+.card-description {
+    font-size: var(--font-size-xs);
+    color: var(--gray);
+    margin-top: var(--spacing-2);
+}
+
+/* ========================================
+   Points & Next Donation Cards
+   ======================================== */
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-danger { color: var(--danger) !important; }
+.text-muted { color: var(--gray) !important; }
+.text-primary { color: var(--primary) !important; }
+
+.eligible-badge {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--border-radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-2);
+}
+
+.eligible-badge i {
+    font-size: 1rem;
+}
+
+#countdown {
+    color: var(--primary);
+    font-weight: var(--font-weight-medium);
+    margin-top: var(--spacing-2);
+}
+
+/* ========================================
+   Impact Button
+   ======================================== */
+.btn-impact {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--white);
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--border-radius-full);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    transition: var(--transition-all);
+}
+
+.btn-impact:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-primary);
+    color: var(--white);
+    text-decoration: none;
+}
+
+.btn-impact i {
+    font-size: 1rem;
+}
+
+/* ========================================
+   Progress Circle
+   ======================================== */
+.progress-circle-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto var(--spacing-3);
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-number {
+    font-size: 1.8rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--dark);
+    line-height: 1;
+}
+
+.progress-label {
+    font-size: var(--font-size-xs);
+    color: var(--gray);
+    text-transform: uppercase;
+}
+
+/* ========================================
+   Milestone Card
+   ======================================== */
+.milestone-card {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    color: var(--white);
+    padding: var(--spacing-5);
+    border-radius: var(--border-radius-xl);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.milestone-card::before {
+    content: '🏆';
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    font-size: 5rem;
+    opacity: 0.2;
+    transform: rotate(15deg);
+}
+
+.milestone-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-2);
+    color: #FFD700;
+}
+
+.milestone-text {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-2);
+}
+
+.milestone-count {
+    font-size: 2rem;
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--spacing-2);
+}
+
+/* ========================================
+   Info Cards
+   ======================================== */
+.info-card {
+    background: var(--white);
+    border-radius: var(--border-radius-xl);
+    padding: var(--spacing-5);
+    height: 100%;
+    transition: var(--transition-all);
+    border: 1px solid var(--light-gray);
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.info-card.primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; }
+.info-card.success { background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); color: white; }
+.info-card.info { background: linear-gradient(135deg, var(--info) 0%, var(--info-dark) 100%); color: white; }
+.info-card.warning { background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%); color: var(--dark); }
+
+.info-card.primary .info-icon,
+.info-card.success .info-icon,
+.info-card.info .info-icon {
+    color: white;
+}
+
+.info-card.warning .info-icon {
+    color: var(--dark);
+}
+
+.info-icon {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-3);
+    color: var(--primary);
+}
+
+.info-card h5 {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-2);
+}
+
+.info-card p {
+    font-size: var(--font-size-sm);
+    opacity: 0.9;
+}
+
+/* ========================================
+   Section Header
+   ======================================== */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-2);
+    border-bottom: 2px solid var(--light-gray);
+}
+
+.section-header i {
+    font-size: 1.2rem;
+    color: var(--primary);
+}
+
+.section-header span {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--dark);
+}
+
+/* ========================================
+   Recent Donations Table
+   ======================================== */
+.recent-donations-card {
+    background: var(--white);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.donations-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.donations-table th {
+    background: var(--light);
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--dark);
+    text-align: left;
+}
+
+.donations-table td {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--light-gray);
+    color: var(--gray);
+    font-size: var(--font-size-sm);
+}
+
+.donations-table tr:hover {
+    background: var(--light);
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--border-radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+}
+
+.status-approved {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.1);
+    color: var(--warning);
+}
+
+.status-rejected {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger);
+}
+
+.status-cancelled {
+    background: rgba(108, 117, 125, 0.1);
+    color: var(--gray);
+}
+
+.status-badge i {
+    font-size: 0.8rem;
+}
+
+/* ========================================
+   Nearby Centers Button
+   ======================================== */
+.btn-nearby {
+    background: linear-gradient(135deg, var(--success), var(--success-dark));
+    color: white;
+    padding: var(--spacing-3) var(--spacing-6);
+    border-radius: var(--border-radius-full);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    transition: var(--transition-all);
+    border: none;
+    font-weight: var(--font-weight-medium);
+}
+
+.btn-nearby:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* ========================================
+   Alert Styles
+   ======================================== */
+.alert-info {
+    background: linear-gradient(135deg, var(--info), var(--info-dark));
+    color: white;
+    padding: var(--spacing-3) var(--spacing-4);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.alert-info i {
+    font-size: 1.2rem;
+}
+
+/* ========================================
+   Utility Classes
+   ======================================== */
+.mx-2 {
+    margin-left: var(--spacing-2);
+    margin-right: var(--spacing-2);
+}
+
+.ms-2 {
+    margin-left: var(--spacing-2);
+}
+
+.mb-3 {
+    margin-bottom: var(--spacing-3);
+}
+
+.mb-4 {
+    margin-bottom: var(--spacing-4);
+}
+
+.mt-3 {
+    margin-top: var(--spacing-3);
+}
+
+.mt-4 {
+    margin-top: var(--spacing-4);
+}
+
+.g-4 {
+    gap: var(--spacing-4);
+}
+
+.animated {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 768px) {
+    .location-info {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .card-count {
+        font-size: 1.5rem;
+    }
+    
+    .milestone-count {
+        font-size: 1.5rem;
+    }
+    
+    .progress-circle-container {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .progress-number {
+        font-size: 1.5rem;
+    }
+}

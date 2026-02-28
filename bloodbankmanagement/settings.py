@@ -126,8 +126,12 @@ TEMPLATES = [
 
                 # Custom
                 'donor.context_processors.donor_notification_count',
+                'donor.context_processors.donor_eligibility_context',
+                'donor.context_processors.donor_support_options',
+
                 'nurse.context_processors.nurse_unread_notifications',
                 'hospital.context_processors.hospital_user_context',
+                
             ],
         },
     },

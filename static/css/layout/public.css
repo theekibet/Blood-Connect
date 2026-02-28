@@ -1,0 +1,70 @@
+/* Public/Auth Pages Layout */
+.auth-page {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+}
+
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-4);
+}
+
+.auth-card {
+    max-width: 450px;
+    width: 100%;
+    background: var(--white);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease;
+}
+
+.auth-card .card-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--white);
+    padding: var(--spacing-5);
+    text-align: center;
+}
+
+.auth-card .card-header h4 {
+    margin: var(--spacing-2) 0 0;
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+}
+
+.auth-card .card-header i {
+    font-size: 3rem;
+    opacity: 0.9;
+}
+
+.auth-card .card-body {
+    padding: var(--spacing-6);
+}
+
+/* Donor specific auth card */
+.auth-card.donor .card-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+/* Hospital specific auth card */
+.auth-card.hospital .card-header {
+    background: linear-gradient(135deg, var(--info), var(--info-dark));
+}
+
+/* Patient specific auth card */
+.auth-card.patient .card-header {
+    background: linear-gradient(135deg, var(--success), var(--success-dark));
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
