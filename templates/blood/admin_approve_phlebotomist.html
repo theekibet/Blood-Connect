@@ -1,0 +1,65 @@
+{% extends 'blood/adminbase.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4><i class="fas fa-check-circle"></i> Approve Phlebotomist</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        You are about to approve this phlebotomist's account. They will be able to log in and access the system.
+                    </div>
+                    
+                    <h5>Phlebotomist Details:</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="30%">Full Name:</th>
+                            <td>{{ phlebotomist.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ phlebotomist.user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Registration Number:</th>
+                            <td><code>{{ phlebotomist.registration_number }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Specialization:</th>
+                            <td>{{ phlebotomist.get_specialization_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>{{ phlebotomist.phone }}</td>
+                        </tr>
+                        <tr>
+                            <th>Donation Center:</th>
+                            <td>{{ phlebotomist.donation_center.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Registered On:</th>
+                            <td>{{ phlebotomist.created_at|date:"F d, Y H:i" }}</td>
+                        </tr>
+                    </table>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'admin-phlebotomist-view' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check"></i> Confirm Approval
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

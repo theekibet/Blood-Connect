@@ -13,7 +13,7 @@ class BloodTest(models.Model):
         ('unsafe', 'Unsafe'),
     )
     
-    # Link to the blood collected by nurse
+    # Link to the blood collected by phlebotomist
     blood_collection = models.OneToOneField(
         BloodDonate, 
         on_delete=models.CASCADE,

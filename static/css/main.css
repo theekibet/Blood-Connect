@@ -28,6 +28,8 @@
 /* Page Specific - Content Only */
 @import 'pages/home.css';
 
+@import 'components/dark-mode.css';
+@import 'pages/about.css'; 
 
 /* ========================================
    End of imports

@@ -28,13 +28,13 @@ idna==3.10
 iniconfig==2.1.0
 jiter==0.10.0
 kombu==5.6.1
-openai==1.99.6
+
 packaging==25.0
 pillow==11.3.0
 pluggy==1.6.0
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.10
-pydantic==2.9.2
+
 Pygments==2.19.2
 pytest==8.4.1
 python-dateutil==2.9.0.post0

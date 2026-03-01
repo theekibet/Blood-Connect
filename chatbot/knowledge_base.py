@@ -1,7 +1,7 @@
 from blood.models import Stock, DonationCenter, StockUnit
 from donor.models import Donor, BloodDonate
 # # from patient.models import Patient, BloodRequest
-from nurse.models import Nurse, Appointment
+from phlebotomist.models import Phlebotomist, Appointment
 from django.contrib.auth.models import User
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
@@ -19,7 +19,7 @@ class BloodDonationKnowledgeBase:
         try:
             total_donors = Donor.objects.count()
             total_patients = 0
-            total_nurses = Nurse.objects.count()
+            total_phlebotomists = Phlebotomist.objects.count()
             total_centers = DonationCenter.objects.count()
             
             # Active requests
@@ -45,7 +45,7 @@ class BloodDonationKnowledgeBase:
             context = {
                 'total_donors': total_donors,
                 'total_patients': 0,
-                'total_nurses': total_nurses,
+                'total_phlebotomists': total_phlebotomists,
                 'total_centers': total_centers,
                 'active_requests': active_requests,
                 'recent_donations': recent_donations,
@@ -206,7 +206,7 @@ class BloodDonationKnowledgeBase:
                 {
                     'date': appt.date.strftime('%b %d, %Y %I:%M %p'),
                     'status': appt.status,
-                    'nurse': appt.nurse.user.get_full_name() if appt.nurse else 'Not assigned',
+                    'phlebotomist': appt.phlebotomist.user.get_full_name() if appt.phlebotomist else 'Not assigned',
                     'center': appt.donation_center.name if appt.donation_center else 'N/A'
                 }
                 for appt in upcoming_appointments
@@ -217,22 +217,22 @@ class BloodDonationKnowledgeBase:
             return {'error': str(e)}
     
     @staticmethod
-    def get_nurse_specific_info(nurse):
-        """Get comprehensive nurse-specific information"""
+    def get_phlebotomist_specific_info(phlebotomist):
+        """Get comprehensive phlebotomist-specific information"""
         try:
             info = {
-                'username': nurse.user.username,
-                'full_name': nurse.user.get_full_name(),
-                'email': nurse.user.email,
-                'specialization': nurse.specialization,
-                'registration_number': nurse.registration_number,
-                'donation_center': nurse.donation_center.name if nurse.donation_center else 'Not assigned',
+                'username': phlebotomist.user.username,
+                'full_name': phlebotomist.user.get_full_name(),
+                'email': phlebotomist.user.email,
+                'specialization': phlebotomist.specialization,
+                'registration_number': phlebotomist.registration_number,
+                'donation_center': phlebotomist.donation_center.name if phlebotomist.donation_center else 'Not assigned',
             }
             
             # Today's appointments
             today = timezone.now().date()
             today_appointments = Appointment.objects.filter(
-                nurse=nurse,
+                phlebotomist=phlebotomist,
                 date__date=today
             ).count()
             
@@ -240,7 +240,7 @@ class BloodDonationKnowledgeBase:
             
             # Pending approvals
             pending_approvals = Appointment.objects.filter(
-                nurse=nurse,
+                phlebotomist=phlebotomist,
                 status='pending'
             ).count()
             
@@ -248,7 +248,7 @@ class BloodDonationKnowledgeBase:
             
             # Upcoming appointments
             upcoming = Appointment.objects.filter(
-                nurse=nurse,
+                phlebotomist=phlebotomist,
                 date__gte=timezone.now(),
                 status__in=['pending', 'approved']
             ).order_by('date')[:5]
@@ -265,10 +265,10 @@ class BloodDonationKnowledgeBase:
                 for appt in upcoming
             ]
             
-            # Center stock summary (if nurse has a center)
-            if nurse.donation_center:
+            # Center stock summary (if phlebotomist has a center)
+            if phlebotomist.donation_center:
                 stock_summary = StockUnit.objects.filter(
-                    center=nurse.donation_center,
+                    center=phlebotomist.donation_center,
                     unit__gt=0
                 ).values('bloodgroup').annotate(
                     total=Sum('unit')
@@ -281,7 +281,7 @@ class BloodDonationKnowledgeBase:
                 
                 # Critical stock alerts
                 critical_stock = Stock.objects.filter(
-                    center=nurse.donation_center,
+                    center=phlebotomist.donation_center,
                     unit__lt=1000
                 )
                 
@@ -320,8 +320,8 @@ class IntentClassifier:
                 return 'system_stats', 'donors'
             elif any(word in message_lower for word in ['patient', 'patients']):
                 return 'system_stats', 'patients'
-            elif any(word in message_lower for word in ['nurse', 'nurses', 'staff']):
-                return 'system_stats', 'nurses'
+            elif any(word in message_lower for word in ['phlebotomist', 'phlebotomists', 'staff']):
+                return 'system_stats', 'phlebotomists'
             elif any(word in message_lower for word in ['center', 'centers', 'location', 'locations']):
                 return 'system_stats', 'centers'
             elif any(word in message_lower for word in ['request', 'requests']):
@@ -364,13 +364,13 @@ class IntentClassifier:
         if any(word in message_lower for word in ['request blood', 'need blood', 'blood request', 'urgent', 'emergency']):
             return 'blood_request', None
         
-        # Stock queries (nurse-specific)
+        # Stock queries (phlebotomist-specific)
         if any(word in message_lower for word in ['stock', 'inventory', 'available blood', 'blood supply']):
             return 'stock_info', None
         
-        # Nurse duties
+        # Phlebotomist duties
         if any(word in message_lower for word in ['my duties', 'my responsibilities', 'what should i do', 'my tasks']):
-            return 'nurse_duties', None
+            return 'phlebotomist_duties', None
         
         # Points and rewards (donor-specific)
         if any(word in message_lower for word in ['points', 'rewards', 'earn', 'badges', 'achievements']):

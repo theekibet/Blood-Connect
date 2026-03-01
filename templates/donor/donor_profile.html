@@ -14,7 +14,7 @@
           <h4 class="mb-0">
             <i class="fas fa-user-circle mr-2"></i>Donor Profile
           </h4>
-          <a href="{% url 'donor-edit-profile' %}" class="btn btn-light btn-sm">
+          <a href="{% url 'donor:donor-edit-profile' %}" class="btn btn-light btn-sm">
             <i class="fas fa-edit"></i> Edit Profile
           </a>
         </div>
@@ -151,7 +151,7 @@
         
         <!-- Optional card footer like blood bank -->
         <div class="card-footer">
-          <a href="{% url 'donor-dashboard' %}" class="btn btn-secondary">
+          <a href="{% url 'donor:donor-dashboard' %}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Back to Dashboard
           </a>
         </div>

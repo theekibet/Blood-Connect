@@ -40,10 +40,14 @@ class BloodBankTechProfile(models.Model):
     def clean(self):
         """
         Validate that user doesn't have other profiles
-        Called automatically by ModelForm in admin
+        Skip validation if user is not set yet (during signup)
         """
         from django.core.exceptions import ValidationError
         from blood.utils.validators import validate_single_profile  
+        
+        # Skip validation if this is a new instance without a user
+        if not self.pk and not self.user_id:
+            return
         
         # Skip validation if this is an existing instance being updated
         if self.pk:
@@ -63,10 +67,11 @@ class BloodBankTechProfile(models.Model):
     
     def save(self, *args, **kwargs):
         """
-        Override save to ensure validation runs
+        Override save to ensure validation runs only when appropriate
         """
-        # Call full_clean() which will call clean() and field validation
-        self.full_clean()
+        # Only run full_clean if this is an existing instance or if user is set
+        if self.pk or self.user_id:
+            self.full_clean()
         super().save(*args, **kwargs)
 class BloodDispatch(models.Model):
     """Record of blood dispatched to hospitals"""

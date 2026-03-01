@@ -140,7 +140,7 @@
                 </td>
                 <td>
                   {% if donation.display_status in 'pending,approved' %}
-                  <form method="POST" action="{% url 'cancel-donation' donation.id %}" 
+                  <form method="POST" action="{% url 'donor:cancel-donation' donation.id %}" 
                         class="d-inline" onsubmit="return confirm('Cancel this donation?');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger">

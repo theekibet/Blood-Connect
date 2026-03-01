@@ -6,12 +6,12 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from blood.models import DonationCenter
 from .models import Donor, DonorEligibility, BloodDonate
-from nurse.models import Nurse
+from phlebotomist.models import Phlebotomist
 from datetime import date
-from datetime import datetime
+from datetime import datetime,timedelta
 from donor.models import BLOODGROUP_CHOICES
 from donor.models import KENYAN_COUNTIES
-
+from datetime import datetime, timedelta, time as datetime_time
 # -------------------------------
 # DonorUserForm
 # -------------------------------
@@ -194,7 +194,7 @@ class DonorLoginForm(AuthenticationForm):
 class DonorProfileForm(forms.ModelForm):
     """
     Form for editing donor profile.
-    Blood group becomes read-only after nurse verification.
+    Blood group becomes read-only after phlebotomist verification.
     Email is always read-only for security.
     """
     
@@ -295,7 +295,7 @@ class DonorProfileForm(forms.ModelForm):
                 self.fields['bloodgroup'].choices = [(self.instance.bloodgroup, self.instance.bloodgroup)]
                 
                 # Add verification info to help text
-                verified_by = self.instance.bloodgroup_verified_by.get_full_name() if self.instance.bloodgroup_verified_by else 'nurse'
+                verified_by = self.instance.bloodgroup_verified_by.get_full_name() if self.instance.bloodgroup_verified_by else 'phlebotomist'
                 verified_date = self.instance.bloodgroup_verified_at.strftime('%B %d, %Y') if self.instance.bloodgroup_verified_at else 'first donation'
                 
                 self.fields['bloodgroup'].help_text = (
@@ -311,8 +311,8 @@ class DonorProfileForm(forms.ModelForm):
                 self.fields['bloodgroup'].help_text = (
                     "<div class='alert alert-warning mt-2 mb-0 p-2'>"
                     "<i class='fas fa-exclamation-triangle'></i> "
-                    "<strong>Not yet verified.</strong> Your blood group will be verified by a nurse during your first donation. "
-                    "You can update it here, but the nurse's verification will be final."
+                    "<strong>Not yet verified.</strong> Your blood group will be verified by a lab technologist during your first donation. "
+                    "You can update it here for now, but the lab test's verification will be final and automatically updated and unchangeable after."
                     "</div>"
                 )
 
@@ -554,246 +554,247 @@ class DonorEligibilityForm(forms.ModelForm):
 # BloodDonate
 # -------------------------------
 class BloodDonateForm(forms.ModelForm):
-    BLOOD_GROUPS = list(BLOODGROUP_CHOICES)
-
+    """
+    Form for donors to schedule blood donation appointments.
+    MATCHES TEMPLATE: Uses separate appointment_date and appointment_time fields.
+    """
+    
+    # Optional fields that donors might fill (readonly)
     first_name = forms.CharField(
-        label="First Name", 
-        max_length=30, 
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'First Name',
+            'readonly': 'readonly'
+        })
     )
     
     last_name = forms.CharField(
-        label="Last Name", 
-        max_length=30, 
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-    
-    national_id = forms.CharField(
-        label="National ID", 
-        max_length=20, 
-        required=False, 
-        disabled=True,
+        max_length=100,
+        required=False,
         widget=forms.TextInput(attrs={
-            'readonly': 'readonly',
-            'class': 'form-control'
+            'class': 'form-control',
+            'placeholder': 'Last Name',
+            'readonly': 'readonly'
         })
     )
     
     mobile = forms.CharField(
-        label="Mobile Number", 
-        max_length=20, 
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-    
-    bloodgroup = forms.ChoiceField(
-        choices=[('', 'Select blood group (optional)')] + BLOOD_GROUPS,
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label="Blood Group",
-        required=False
-    )
-    
-    unit = forms.IntegerField(
-    label="Unit (ml)",
-    min_value=350,
-    max_value=450,
-    required=False,  # Optional field
-    widget=forms.NumberInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'volume 350-450 ml(optional)*=1unit*'
-    }),
-    help_text="Optional. If provided, must be between 350 ml and 450 ml."
-)
-
-    
-    donation_center = forms.ModelChoiceField(
-        queryset=DonationCenter.objects.all(),
-        widget=forms.Select(attrs={
-            'id': 'donationCenterSelect',
-            'class': 'form-select'
-        }),
-        label="Donation Center",
-        required=True
-    )
-    
-    nurse = forms.ModelChoiceField(
-        queryset=Nurse.objects.none(),
-        widget=forms.Select(attrs={
-            'id': 'nurseSelect',
-            'disabled': 'disabled',
-            'class': 'form-select'
-        }),
-        label="Nurse",
-        required=True
-    )
-    
-    appointment_date = forms.DateField(
-        widget=forms.DateInput(attrs={
-            'type': 'date',
+        max_length=15,
+        required=False,
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Select appointment date',
-        }),
-        label="Appointment Date",
-        required=True
+            'placeholder': 'Mobile Number',
+            'readonly': 'readonly'
+        })
     )
     
-    # Hidden field for time - populated by JavaScript
-    appointment_time = forms.CharField(
-        widget=forms.HiddenInput(),
-        required=True
+    # Donation center selection
+    donation_center = forms.ModelChoiceField(
+        queryset=DonationCenter.objects.filter(is_active=True),
+        required=True,
+        empty_label="Select Donation Center",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        help_text='Select your preferred donation center'
     )
-
+    
+    # Phlebotomist selection (will be populated via AJAX)
+    phlebotomist = forms.ModelChoiceField(
+        queryset=Phlebotomist.objects.none(),  # Populated dynamically
+        required=True,
+        empty_label="Select a center first",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        help_text='Select a phlebotomist (nurse)'
+    )
+    
+    # Separate date and time fields (matching template)
+    appointment_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+            'min': (timezone.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        }),
+        help_text='Select appointment date (Monday-Friday only)'
+    )
+    
+    # Time slot choices (8 AM to 5 PM)
+    TIME_CHOICES = [
+        ('', 'Select Time'),
+        ('08:00', '8:00 AM'),
+        ('08:30', '8:30 AM'),
+        ('09:00', '9:00 AM'),
+        ('09:30', '9:30 AM'),
+        ('10:00', '10:00 AM'),
+        ('10:30', '10:30 AM'),
+        ('11:00', '11:00 AM'),
+        ('11:30', '11:30 AM'),
+        ('12:00', '12:00 PM'),
+        ('12:30', '12:30 PM'),
+        ('13:00', '1:00 PM'),
+        ('13:30', '1:30 PM'),
+        ('14:00', '2:00 PM'),
+        ('14:30', '2:30 PM'),
+        ('15:00', '3:00 PM'),
+        ('15:30', '3:30 PM'),
+        ('16:00', '4:00 PM'),
+        ('16:30', '4:30 PM'),
+    ]
+    
+    appointment_time = forms.ChoiceField(
+        choices=TIME_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        help_text='Select appointment time (8 AM - 5 PM)'
+    )
+    
+    # Unit choices
+    UNIT_CHOICES = [
+        (450, '450 ml (Standard)'),
+        (350, '350 ml (Reduced)'),
+    ]
+    
+    unit = forms.ChoiceField(
+        choices=UNIT_CHOICES,
+        initial=450,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        help_text='Standard donation amount'
+    )
+    
+    class Meta:
+        model = BloodDonate
+        fields = ['bloodgroup', 'unit', 'donation_center', 'phlebotomist']
+        widgets = {
+            'bloodgroup': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+        }
+    
     def __init__(self, *args, donor=None, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Store donor instance for later use
         self.donor = donor
-
-        # Pre-populate donor information
-        if donor:
-            self.fields['first_name'].initial = donor.user.first_name
-            self.fields['last_name'].initial = donor.user.last_name
-            self.fields['national_id'].initial = getattr(donor, 'national_id', '')
-            self.fields['mobile'].initial = getattr(donor, 'mobile', '')
-            
-            # ==========================================
-            # BLOOD GROUP VERIFICATION LOGIC
-            # ==========================================
-            if donor.bloodgroup_verified and donor.bloodgroup:
-                # Blood group is verified - make it read-only and pre-filled
-                self.fields['bloodgroup'].initial = donor.bloodgroup
-                self.fields['bloodgroup'].widget.attrs.update({
-                    'readonly': 'readonly',
-                    'disabled': 'disabled',
-                    'style': 'background-color: #e9ecef; cursor: not-allowed; font-weight: bold; font-size: 1.1rem;',
-                    'title': f'Your verified blood group: {donor.bloodgroup}'
-                })
-                self.fields['bloodgroup'].help_text = (
-                    f'✓ Verified blood group: <strong>{donor.bloodgroup}</strong> '
-                    f'(Confirmed by nurse on first donation)'
-                )
-                self.fields['bloodgroup'].required = False
-                
-                # Override choices to show only verified blood group
-                self.fields['bloodgroup'].choices = [(donor.bloodgroup, donor.bloodgroup)]
-                
-            else:
-                # First donation - blood group is optional
-                self.fields['bloodgroup'].help_text = (
-                    'Optional - Your blood group will be verified by the nurse during your first donation'
-                )
-                self.fields['bloodgroup'].widget.attrs.update({
-                    'class': 'form-select',
-                    'style': 'font-size: 1rem;'
-                })
-
-        # Handle nurse dropdown based on donation center selection
+        
+        # If donor is provided and has a verified blood group, lock it
+        if donor and donor.bloodgroup_verified and donor.bloodgroup:
+            self.fields['bloodgroup'].initial = donor.bloodgroup
+            self.fields['bloodgroup'].disabled = True
+            self.fields['bloodgroup'].widget.attrs['readonly'] = True
+        
+        # Populate phlebotomists based on selected center (for edit forms)
         if 'donation_center' in self.data:
             try:
                 center_id = int(self.data.get('donation_center'))
-                self.fields['nurse'].queryset = Nurse.objects.filter(
-                    donation_center_id=center_id
-                ).select_related('user').order_by('user__first_name')
-                # Enable nurse dropdown when center is selected
-                self.fields['nurse'].widget.attrs.pop('disabled', None)
+                self.fields['phlebotomist'].queryset = Phlebotomist.objects.filter(
+                    center_id=center_id
+                ).select_related('user')
             except (ValueError, TypeError):
-                self.fields['nurse'].queryset = Nurse.objects.none()
-                self.fields['nurse'].widget.attrs['disabled'] = 'disabled'
-        elif self.instance.pk and hasattr(self.instance, 'donation_center') and self.instance.donation_center:
-            self.fields['nurse'].queryset = self.instance.donation_center.nurses.order_by('user__first_name')
-            self.fields['nurse'].widget.attrs.pop('disabled', None)
-        else:
-            self.fields['nurse'].queryset = Nurse.objects.none()
-            self.fields['nurse'].widget.attrs['disabled'] = 'disabled'
-
-    def clean_appointment_time(self):
-        appointment_time = self.cleaned_data.get('appointment_time')
-        if not appointment_time:
-            raise ValidationError("Please select an appointment time.")
-        return appointment_time
-
+                pass
+        elif self.instance.pk and self.instance.donation_center:
+            self.fields['phlebotomist'].queryset = Phlebotomist.objects.filter(
+                center=self.instance.donation_center
+            ).select_related('user')
+    
     def clean_appointment_date(self):
-        appointment_date = self.cleaned_data.get('appointment_date')
+        """Validate appointment date."""
+        date = self.cleaned_data.get('appointment_date')
         
-        if appointment_date:
+        if date:
             today = timezone.now().date()
-            if appointment_date < today:
-                raise ValidationError("Appointment date cannot be in the past.")
+            
+            # Must be in the future
+            if date <= today:
+                raise forms.ValidationError("Appointment date must be in the future.")
+            
+            # Cannot be more than 3 months in advance
+            max_date = today + timedelta(days=90)
+            if date > max_date:
+                raise forms.ValidationError("Appointments cannot be scheduled more than 3 months in advance.")
+            
+            # Must be a weekday (Monday-Friday)
+            if date.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+                raise forms.ValidationError("Appointments are only available Monday through Friday.")
         
-        return appointment_date
-    def clean_unit(self):
-        unit = self.cleaned_data.get('unit')
-        if unit is None:
-            raise forms.ValidationError("Donation volume is required.")
-        if unit < 350:
-            raise forms.ValidationError("The minimum allowed donation volume is 350 ml.")
-        if unit > 450:
-            raise forms.ValidationError("The maximum allowed donation volume is 450 ml.")
-        return unit
-
-    def clean_bloodgroup(self):
-        """
-        Clean blood group field with verification logic.
-        If donor has verified blood group, always use it regardless of form input.
-        """
-        bloodgroup = self.cleaned_data.get('bloodgroup')
+        return date
+    
+    def clean_appointment_time(self):
+        """Validate appointment time."""
+        time_str = self.cleaned_data.get('appointment_time')
         
-        # If donor exists and has verified blood group, use it
-        if self.donor and self.donor.bloodgroup_verified:
-            return self.donor.bloodgroup
+        if not time_str:
+            raise forms.ValidationError("Please select an appointment time.")
         
-        # For first-time donors, blood group is optional
-        return bloodgroup if bloodgroup else None
-
+        return time_str
+    
     def clean(self):
+        """Additional validation and combine date+time."""
         cleaned_data = super().clean()
+        
         appointment_date = cleaned_data.get('appointment_date')
         appointment_time = cleaned_data.get('appointment_time')
-        nurse = cleaned_data.get('nurse')
-        donation_center = cleaned_data.get('donation_center')
-
-        # Validate nurse belongs to selected donation center
-        if nurse and donation_center:
-            if nurse.donation_center != donation_center:
-                raise ValidationError({
-                    'nurse': 'Selected nurse does not belong to the selected donation center.'
-                })
-
-        # Validate appointment time format and combine with date
+        
+        # Combine date and time into a datetime object
         if appointment_date and appointment_time:
             try:
-                # Parse time (format: "09:00 AM" or "09:00")
-                if 'AM' in appointment_time or 'PM' in appointment_time:
-                    time_obj = datetime.strptime(appointment_time.strip(), "%I:%M %p").time()
-                else:
-                    # Handle 24-hour format
-                    time_obj = datetime.strptime(appointment_time.strip(), "%H:%M").time()
+                # Parse time string (format: "HH:MM")
+                hour, minute = map(int, appointment_time.split(':'))
                 
-                appointment_datetime = datetime.combine(appointment_date, time_obj)
-                cleaned_data['appointment_datetime'] = appointment_datetime
+                # Create datetime object
+                appointment_datetime = timezone.make_aware(
+                    datetime.combine(appointment_date, datetime_time(hour, minute))
+                )
                 
-                # Validate appointment is in the future
-                if timezone.make_aware(appointment_datetime) <= timezone.now():
-                    raise ValidationError(
-                        "Appointment must be scheduled for a future date and time."
-                    )
-                    
-            except ValueError as e:
-                raise ValidationError(f"Invalid appointment time format: {str(e)}")
-
-        # Blood group validation for verified donors
-        if self.donor and self.donor.bloodgroup_verified:
-            # Force the verified blood group
-            cleaned_data['bloodgroup'] = self.donor.bloodgroup
-
+                # Store in cleaned_data for use in view
+                cleaned_data['combined_datetime'] = appointment_datetime
+                
+            except (ValueError, AttributeError) as e:
+                raise forms.ValidationError(f"Invalid time format: {e}")
+        
+        # Check donor eligibility (56 days between donations)
+        if self.donor and self.donor.last_donation_date:
+            next_eligible_date = self.donor.last_donation_date + timedelta(days=56)
+            
+            if appointment_date and appointment_date < next_eligible_date:
+                raise forms.ValidationError(
+                    f"You are not eligible to donate until {next_eligible_date.strftime('%B %d, %Y')}. "
+                    f"You must wait 56 days between donations."
+                )
+        
+        # Check for pending donations
+        if self.donor:
+            pending_donations = BloodDonate.objects.filter(
+                donor=self.donor,
+                status='pending'
+            )
+            
+            if self.instance.pk:
+                pending_donations = pending_donations.exclude(pk=self.instance.pk)
+            
+            if pending_donations.exists():
+                raise forms.ValidationError(
+                    "You already have a pending donation appointment. "
+                    "Please complete or cancel it before scheduling a new one."
+                )
+        
         return cleaned_data
     
-
-    class Meta:
-        model = BloodDonate
-        fields = [
-            'bloodgroup', 'unit', 'donation_center', 'nurse'
-        ]
- 
+    def save(self, commit=True):
+        """Save with combined datetime."""
+        instance = super().save(commit=False)
+        
+        # Get the combined datetime from cleaned_data
+        if hasattr(self, 'cleaned_data') and 'combined_datetime' in self.cleaned_data:
+            instance.date = self.cleaned_data['combined_datetime']
+        
+        if commit:
+            instance.save()
+        
+        return instance

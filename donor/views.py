@@ -16,16 +16,16 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_GET
-from nurse.models import Nurse, Appointment
+from phlebotomist.models import Phlebotomist, Appointment
 from .models import Donor, DonorEligibility, BloodDonate
-
+from blood.models import BloodDriveEvent
 from .forms import (
     DonorUserForm, DonorForm, DonorProfileForm, DonorEligibilityForm,
     BloodDonateForm, DonorLoginForm
 )
 from django.core.exceptions import PermissionDenied
 from utils.models import Notification
-from nurse.forms import AppointmentForm
+from phlebotomist.forms import AppointmentForm
 from datetime import date
 import logging
 from django.db import transaction
@@ -39,6 +39,7 @@ from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.conf import settings
 from blood.models import DonationCenter
+from datetime import time
 import re
 import random
 from blood.utils.notifications import create_notification
@@ -132,7 +133,7 @@ def donor_signup_view(request):
                 )
                 
                 # Redirect to donor login
-                return redirect('donorlogin')
+                return redirect('donor:donorlogin')
                 
             except Exception as e:
                 # Log the error for debugging
@@ -176,7 +177,7 @@ def donorlogin_view(request):
     """
     # If user is already authenticated and is a donor, redirect to dashboard
     if request.user.is_authenticated and request.user.groups.filter(name='DONOR').exists():
-        return redirect('donor-dashboard')
+        return redirect('donor:donor-dashboard')
     
     next_url = request.GET.get('next') or request.POST.get('next') or None
 
@@ -236,14 +237,14 @@ def donorlogin_view(request):
                             request, 
                             "📋 Welcome! Please complete your eligibility form to start donating blood."
                         )
-                        return redirect('donor-eligibility')
+                        return redirect('donor:donor-eligibility')
                     
                     messages.success(
                         request, 
                         f"👋 Welcome back, {user.first_name or user.username}! "
                         f"Ready to save lives today?"
                     )
-                    return redirect('donor-dashboard')
+                    return redirect('donor:donor-dashboard')
                     
                 else:
                     # User exists but not in DONOR group
@@ -262,9 +263,9 @@ def donorlogin_view(request):
                     elif user.groups.filter(name='NURSE').exists():
                         messages.info(
                             request,
-                            f'It looks like you have a nurse account. '
-                            f'<a href="{reverse("central_login")}?user_type=nurse" class="alert-link">'
-                            f'Click here to login as a nurse</a>'
+                            f'It looks like you have a phlebotomist account. '
+                            f'<a href="{reverse("central_login")}?user_type=phlebotomist" class="alert-link">'
+                            f'Click here to login as a phlebotomist</a>'
                         )
                     
             else:
@@ -414,7 +415,7 @@ def get_donor_eligibility_status(user):
     
     return status
 
-
+# Remove the decorator - this function is called internally
 def get_volunteer_suggestions(user):
     """
     Returns volunteer opportunities based on donor status.
@@ -453,21 +454,27 @@ def get_volunteer_suggestions(user):
     # Add donor-specific suggestions if they're eligible
     try:
         donor = Donor.objects.get(user=user)
-        eligibility = DonorEligibility.objects.get(donor=donor)
         
-        if eligibility.approved:
-            suggestions.append({
-                'title': 'Become a Mentor',
-                'description': 'Guide new donors through their first donation',
-                'icon': 'fa-chalkboard-teacher',
-                'url': '/volunteer/mentor/',
-                'for_anyone': False
-            })
-    except:
+        # Check if eligibility exists (use try/except or hasattr)
+        try:
+            eligibility = DonorEligibility.objects.get(donor=donor)
+            if eligibility.approved:
+                suggestions.append({
+                    'title': 'Become a Mentor',
+                    'description': 'Guide new donors through their first donation',
+                    'icon': 'fa-chalkboard-teacher',
+                    'url': '/volunteer/mentor/',
+                    'for_anyone': False
+                })
+        except DonorEligibility.DoesNotExist:
+            # Donor doesn't have eligibility record yet
+            pass
+            
+    except Donor.DoesNotExist:
+        # User is not a donor
         pass
     
     return suggestions
-
 
 def check_dashboard_access(user):
     """
@@ -586,7 +593,7 @@ def donor_eligibility_view(request):
                 is_eligible = False
             elif weight < 55 and age < 18:
                 # Additional safety for young donors
-                recommendations.append("Young donors under 18 with lower weight should consult with our nurse.")
+                recommendations.append("Young donors under 18 with lower weight should consult with our phlebotomist.")
             
             # 3. HEALTH STATUS
             if not good_health:
@@ -616,7 +623,7 @@ def donor_eligibility_view(request):
             # 5. SURGERY RULE (Varies by procedure)
             if recent_surgery:
                 reasons.append("• Recent surgery requires waiting period (usually 3-12 months)")
-                recommendations.append("Please consult with our nurse about your specific surgery.")
+                recommendations.append("Please consult with our phlebotomist about your specific surgery.")
                 is_eligible = False
             
             # 6. TRAVEL HISTORY (Malaria risk areas)
@@ -682,7 +689,7 @@ def donor_eligibility_view(request):
                             reasons.append(f"• {med} requires waiting period (consult doctor)")
                         else:
                             reasons.append(f"• {med} may require temporary deferral")
-                        recommendations.append("Please inform our nurse about your medications.")
+                        recommendations.append("Please inform our phlebotomist about your medications.")
                         is_eligible = False
                         break
             
@@ -709,7 +716,7 @@ def donor_eligibility_view(request):
                 messages.success(
                     request, 
                     "✅ Great news! Based on your responses, you appear eligible to donate blood. "
-                    "Our nurse will do a final health screening on donation day."
+                    "Our phlebotomist will do a final health screening on donation day."
                 )
                 
                 # Create notification
@@ -717,7 +724,7 @@ def donor_eligibility_view(request):
                     from utils.models import Notification
                     Notification.objects.create(
                         title="🩸 You're Likely Eligible!",
-                        message="You appear eligible to donate! Schedule your appointment today. Final screening will be done by our nurse.",
+                        message="You appear eligible to donate! Schedule your appointment today. Final screening will be done by our phlebotomist.",
                         recipient=donor.user,
                         notification_type='success'
                     )
@@ -925,10 +932,7 @@ def donor_eligibility_status_view(request):
 # -------------------------------
 # Dashboard
 # -------------------------------
-# -------------------------------
-# Dashboard
-# -------------------------------
-@login_required(login_url='donorlogin')
+@login_required(login_url='donor:donorlogin')
 def donor_dashboard_view(request):
     """
     Donor dashboard with updated stats, points, eligibility, milestones, and recent donations.
@@ -987,7 +991,7 @@ def donor_dashboard_view(request):
         ).order_by('-date').first()
         
         # Get upcoming appointments for greeting
-        from nurse.models import Appointment
+        from phlebotomist.models import Appointment
         upcoming_appointments = Appointment.objects.filter(
             donor=donor,
             date__gte=timezone.now(),
@@ -1024,7 +1028,7 @@ def donor_dashboard_view(request):
         }
 
     # ==========================================
-    # LAST DONATION & NEXT ELIGIBILITY
+    # LAST DONATION & NEXT ELIGIBILITY (FIXED DATE COMPARISON)
     # ==========================================
     last_donation = BloodDonate.objects.filter(
         donor=donor, 
@@ -1032,9 +1036,12 @@ def donor_dashboard_view(request):
     ).order_by('-date').first()
 
     if last_donation:
+        # Convert datetime to date for comparison if needed
+        last_donation_date = last_donation.date.date() if hasattr(last_donation.date, 'date') else last_donation.date
+        
         # Update donor.last_donation_date if outdated
-        if not donor.last_donation_date or donor.last_donation_date < last_donation.date:
-            donor.last_donation_date = last_donation.date
+        if not donor.last_donation_date or donor.last_donation_date < last_donation_date:
+            donor.last_donation_date = last_donation_date
             donor.save(update_fields=['last_donation_date'])
             logger.debug(f"Updated last_donation_date for donor {donor.id}")
 
@@ -1125,12 +1132,12 @@ def donor_dashboard_view(request):
     # UPCOMING APPOINTMENTS
     # ==========================================
     try:
-        from nurse.models import Appointment
+        from phlebotomist.models import Appointment
         upcoming_appointments = Appointment.objects.filter(
             donor=donor,
             date__gte=timezone.now(),
             status='scheduled'
-        ).select_related('nurse', 'nurse__donation_center').order_by('date')[:3]
+        ).select_related('phlebotomist', 'phlebotomist__donation_center').order_by('date')[:3]
     except:
         upcoming_appointments = []
 
@@ -1223,6 +1230,21 @@ def donor_dashboard_view(request):
     ]
 
     # ==========================================
+    # NOTIFICATION COUNT
+    # ==========================================
+    from django.contrib.contenttypes.models import ContentType
+    from utils.models import Notification
+    
+    notification_count = 0
+    if hasattr(donor, 'id'):
+        donor_content_type = ContentType.objects.get_for_model(Donor)
+        notification_count = Notification.objects.filter(
+            recipient_content_type=donor_content_type,
+            recipient_object_id=donor.id,
+            is_read=False
+        ).count()
+
+    # ==========================================
     # BUILD COMPREHENSIVE CONTEXT
     # ==========================================
     context = {
@@ -1266,32 +1288,28 @@ def donor_dashboard_view(request):
         'volunteer_suggestions': access_context.get('volunteer_suggestions', []),
         'motivational_message': access_context.get('motivational_message', ''),
         'quick_actions': quick_actions,
-        
-        # Notification count for badge
-'donor_unread_notification_count': Notification.objects.filter(
-    recipient_content_type=ContentType.objects.get_for_model(Donor),
-    recipient_object_id=donor.id,
-    is_read=False  
-).count() if hasattr(donor, 'id') else 0,
+        'donor_unread_notification_count': notification_count,
     }
 
     logger.debug(f"Rendering donor dashboard for user '{user.username}' with {total_safe_donations} safe donations and {donor.points} points")
     return render(request, 'donor/donor_dashboard.html', context)
 
-
 # -------------------------------
 # DonateBloodView
 # -------------------------------
+
+
 @login_required(login_url='donor:donorlogin')
 def donate_blood_view(request):
     """
     View for donors to schedule blood donation appointments.
+    FIXED: Now properly creates Appointment objects that phlebotomists can see.
     """
     try:
         donor = Donor.objects.get(user=request.user)
     except Donor.DoesNotExist:
         messages.error(request, "⚠️ You must complete your donor profile before donating blood.")
-        return redirect('donor:donor-profile')  # FIX: Added namespace
+        return redirect('donor:donor-profile')
 
     # ==========================================
     # DETERMINE DONOR SAFETY STATUS
@@ -1329,6 +1347,7 @@ def donate_blood_view(request):
             'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
             'unsafe_reason': latest_unsafe.unsafe_reason if latest_unsafe else 'Medical reasons',
             'is_unsafe': True,
+            'has_unsafe_donation': True,
             'show_contact_banner': True,
             'form_hidden': True,
         }
@@ -1341,11 +1360,11 @@ def donate_blood_view(request):
         eligibility = DonorEligibility.objects.get(donor=donor)
     except DonorEligibility.DoesNotExist:
         messages.info(request, "ℹ️ Please complete your eligibility form before donating blood.")
-        return redirect('donor:donor-eligibility')  # FIX: Added namespace
+        return redirect('donor:donor-eligibility')
 
     if not eligibility.approved:
         messages.warning(request, "⚠️ Your eligibility has not been approved yet.")
-        return redirect('donor:donor-eligibility-status')  # FIX: Added namespace
+        return redirect('donor:donor-eligibility-status')
 
     # ==========================================
     # CALCULATE NEXT ELIGIBLE DATE
@@ -1364,10 +1383,128 @@ def donate_blood_view(request):
         status__in=['pending', 'approved']
     ).first()
 
+    # ==========================================
+    # HANDLE POST REQUEST (FORM SUBMISSION)
+    # ==========================================
     if request.method == 'POST':
-        # ... (rest of your POST handling code)
-        pass
+        logger.info(f"📝 Donation form submitted by {donor.user.username}")
+        logger.info(f"📝 POST data: {request.POST}")
+        
+        donate_form = BloodDonateForm(request.POST, donor=donor)
+        
+        if donate_form.is_valid():
+            try:
+                logger.info(f"✅ Form validation passed for {donor.user.username}")
+                
+                # Save the donation
+                donation = donate_form.save(commit=False)
+                donation.donor = donor
+                donation.status = 'pending'
+                
+                # Get values from form
+                donation_center = donation.donation_center
+                phlebotomist = donation.phlebotomist
+                
+                # The date is already combined by the form's save method
+                donation_datetime = donation.date
+                
+                logger.info(f"💉 Donation details:")
+                logger.info(f"  - Center: {donation_center}")
+                logger.info(f"  - Phlebotomist: {phlebotomist}")
+                logger.info(f"  - DateTime: {donation_datetime}")
+                logger.info(f"  - Blood Group: {donation.bloodgroup}")
+                logger.info(f"  - Unit: {donation.unit}")
+                
+                # Validate required fields
+                if not donation_center:
+                    messages.error(request, "❌ Donation center is required.")
+                    logger.error("❌ Missing donation center")
+                    return render(request, 'donor/donate_blood.html', {
+                        'donation_form': donate_form,
+                        'donor': donor,
+                        'active_donation': active_donation,
+                        'bloodgroup_verified': donor.bloodgroup_verified,
+                        'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                    })
+                
+                if not phlebotomist:
+                    messages.error(request, "❌ Phlebotomist selection is required.")
+                    logger.error("❌ Missing phlebotomist")
+                    return render(request, 'donor/donate_blood.html', {
+                        'donation_form': donate_form,
+                        'donor': donor,
+                        'active_donation': active_donation,
+                        'bloodgroup_verified': donor.bloodgroup_verified,
+                        'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                    })
+                
+                # Save the donation first
+                donation.save()
+                logger.info(f"✅ BloodDonate saved with ID: {donation.id}")
+                
+                # ==========================================
+                # CREATE APPOINTMENT FOR PHLEBOTOMIST
+                # ==========================================
+                try:
+                    # Get ContentType for BloodDonate
+                    blood_donate_ct = ContentType.objects.get_for_model(BloodDonate)
+                    logger.info(f"📋 BloodDonate ContentType ID: {blood_donate_ct.id}")
+                    
+                    # Create the appointment
+                    appointment = Appointment.objects.create(
+                        donor=donor,
+                        request_content_type=blood_donate_ct,
+                        request_object_id=donation.id,
+                        date=donation_datetime,
+                        center=donation_center,
+                        phlebotomist=phlebotomist,
+                        status='pending',
+                        notes=f"Blood donation appointment - {donor.user.get_full_name() or donor.user.username}"
+                    )
+                    
+                    logger.info(f"✅✅✅ APPOINTMENT CREATED SUCCESSFULLY!")
+                    logger.info(f"  - Appointment ID: {appointment.id}")
+                    logger.info(f"  - Donation ID: {donation.id}")
+                    logger.info(f"  - Donor: {donor.user.username}")
+                    logger.info(f"  - Phlebotomist: {phlebotomist.user.username}")
+                    logger.info(f"  - Center: {donation_center.name}")
+                    logger.info(f"  - Date: {donation_datetime}")
+                    logger.info(f"  - Status: {appointment.status}")
+                    
+                    messages.success(request, "✅ Your blood donation appointment has been scheduled successfully!")
+                    return redirect('donor:donation-history')
+                    
+                except Exception as e:
+                    logger.error(f"❌ FAILED to create appointment for donation {donation.id}")
+                    logger.error(f"❌ Error: {str(e)}")
+                    logger.error(f"❌ Error type: {type(e).__name__}")
+                    import traceback
+                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
+                    
+                    # Delete the donation since appointment creation failed
+                    donation.delete()
+                    logger.info(f"🗑️ Deleted donation {donation.id} due to appointment creation failure")
+                    
+                    messages.error(
+                        request, 
+                        f"❌ Failed to create appointment: {str(e)}. Please try again or contact support."
+                    )
+                
+            except Exception as e:
+                logger.error(f"❌ Error saving donation: {str(e)}")
+                logger.error(f"❌ Error type: {type(e).__name__}")
+                import traceback
+                logger.error(f"❌ Traceback: {traceback.format_exc()}")
+                messages.error(request, f"❌ An error occurred: {str(e)}")
+        else:
+            # Form has errors
+            logger.warning(f"⚠️ Form validation failed for {donor.user.username}")
+            logger.warning(f"⚠️ Form errors: {donate_form.errors}")
+            messages.error(request, "❌ Please correct the errors below.")
     else:
+        # ==========================================
+        # HANDLE GET REQUEST (DISPLAY FORM)
+        # ==========================================
         donate_form = BloodDonateForm(donor=donor)
         
         # Pre-fill form with donor data
@@ -1382,6 +1519,9 @@ def donate_blood_view(request):
             
         donate_form.initial.update(initial_data)
 
+    # ==========================================
+    # COMMON CONTEXT FOR BOTH GET AND POST
+    # ==========================================
     context = {
         'donation_form': donate_form,
         'donor': donor,
@@ -1391,11 +1531,13 @@ def donate_blood_view(request):
         'days_until_next': days_until_next,
         'next_donation_date': next_donation_date,
         'is_unsafe': False,
+        'has_unsafe_donation': False,
         'has_safe_donation': is_safe_donor,
         'is_first_time_donor': is_first_time_donor
     }
 
     return render(request, 'donor/donate_blood.html', context)
+
 # -------------------------------
 # Donation History
 # -------------------------------
@@ -1491,23 +1633,23 @@ def cancel_donation_request_view(request, donation_id):
         appointment.save()
         logger.info(f"Appointment ID {appointment.id} cancelled by donor {user.id}.")
 
-        # Notify nurses at the donation center
+        # Notify phlebotomists at the donation center
         try:
             center = getattr(appointment, 'donation_center', None) or getattr(donation, 'donation_center', None)
-            nurses = Nurse.objects.filter(donation_center=center) if center else Nurse.objects.all()
-            for nurse in nurses:
+            phlebotomists = Phlebotomist.objects.filter(donation_center=center) if center else Phlebotomist.objects.all()
+            for phlebotomist in phlebotomists:
                 Notification.objects.create(
                     title="Donation Appointment Cancelled",
                     message=(
                         f"Donor {user.get_full_name() or user.username} cancelled their donation appointment "
                         f"(ID: {appointment.id}) scheduled for {appointment.date.strftime('%b %d, %Y %I:%M %p')}."
                     ),
-                    recipient=nurse,
+                    recipient=phlebotomist,
                     sender=user.donor
                 )
             logger.info(f"Nurses at {center} notified about donor cancellation (Appointment ID: {appointment.id}).")
         except Exception as e:
-            logger.warning(f"Failed to notify nurses about donor cancellation (Appointment ID: {appointment.id}): {e}")
+            logger.warning(f"Failed to notify phlebotomists about donor cancellation (Appointment ID: {appointment.id}): {e}")
 
     messages.success(request, "Your donation request and appointment have been cancelled successfully.")
     return redirect('donation-history')
@@ -1545,7 +1687,7 @@ def donor_profile_view(request):
 def donor_edit_profile_view(request):
     """
     Allow a donor to edit their profile.
-    Blood group becomes read-only after nurse verification.
+    Blood group becomes read-only after phlebotomist verification.
     Email is always read-only.
     """
     try:
@@ -2077,7 +2219,7 @@ def donor_advice_view(request):
                 'avatar': 'images/avatars/sarah.jpg'
             },
             {
-                'from': 'Dr. James, nurse',
+                'from': 'Dr. James, phlebotomist',
                 'tip': 'Eat a good meal beforehand and wear comfortable clothes with short sleeves.',
                 'avatar': 'images/avatars/james.jpg'
             },
@@ -2097,96 +2239,109 @@ def donor_advice_view(request):
 
 
 
-
-
-@login_required(login_url='donorlogin')
+@login_required(login_url='donor:donorlogin')
 def events_view(request):
-    """Upcoming events"""
-    # In a real app, you'd fetch from database
-    events = [
-        {
-            'id': 1,
-            'title': 'Community Blood Drive',
-            'date': '2025-03-15',
-            'time': '9:00 AM - 4:00 PM',
-            'location': 'City Hall, Main Auditorium',
-            'description': 'Join us for our monthly community blood drive.',
-            'capacity': 50,
-            'registered': 32,
-            'status': 'upcoming',
-            'image': 'images/events/blood-drive.jpg'
-        },
-        {
-            'id': 2,
-            'title': 'Donor Appreciation Day',
-            'date': '2025-04-10',
-            'time': '11:00 AM - 3:00 PM',
-            'location': 'Central Park, Pavilion A',
-            'description': 'Celebrating our amazing donors! Food, fun, and recognition.',
-            'capacity': 100,
-            'registered': 45,
-            'status': 'upcoming',
-            'image': 'images/events/appreciation.jpg'
-        },
-        {
-            'id': 3,
-            'title': 'Health Awareness Workshop',
-            'date': '2025-05-05',
-            'time': '2:00 PM - 5:00 PM',
-            'location': 'Community Center, Room 101',
-            'description': 'Learn about blood health and donation benefits.',
-            'capacity': 30,
-            'registered': 12,
-            'status': 'upcoming',
-            'image': 'images/events/workshop.jpg'
-        },
-    ]
-    context = {
-        'page_title': 'Events',
-        'page_icon': 'fa-calendar-alt',
-        'events': events
-    }
-    return render(request, 'donor/community/events.html', context)
+    """Display upcoming events from BloodDriveEvent model"""
+    try:
+        now = timezone.now()
+        
+        # Fetch upcoming events created by admin
+        upcoming_events = BloodDriveEvent.objects.filter(
+            is_active=True,
+            event_date__gte=now  # Compare datetime with datetime
+        ).order_by('display_order', 'event_date')
+        
+        # Fetch past events
+        past_events = BloodDriveEvent.objects.filter(
+            is_active=True,
+            event_date__lt=now
+        ).order_by('-event_date')[:5]
+        
+        # Format the data for display
+        events_data = []
+        for event in upcoming_events:
+            events_data.append({
+                'id': event.id,
+                'title': event.title,
+                'date': event.event_date.strftime('%B %d, %Y'),
+                'time': event.event_date.strftime('%I:%M %p'),  # Extract time from event_date
+                'location': event.location,
+                'address': event.address,
+                'description': event.description,
+                'capacity': event.capacity if hasattr(event, 'capacity') else 50,
+                'registered': event.registered_count if hasattr(event, 'registered_count') else 0,
+                'available_slots': event.available_slots if hasattr(event, 'available_slots') else 50,
+                'status': 'upcoming',
+                'image': event.image.url if event.image else None,
+                'organizer': event.organizer_name if hasattr(event, 'organizer_name') else 'Blood Drive Team',
+                'contact_phone': event.contact_phone,
+                'contact_email': event.contact_email,
+                'end_date': event.end_date.strftime('%B %d, %Y at %I:%M %p') if event.end_date else None,
+            })
+        
+        # Format past events
+        past_events_data = []
+        for event in past_events:
+            past_events_data.append({
+                'id': event.id,
+                'title': event.title,
+                'date': event.event_date.strftime('%B %d, %Y'),
+                'location': event.location,
+                'image': event.image.url if event.image else None,
+            })
+        
+        context = {
+            'page_title': 'Community Blood Drive Events',
+            'page_icon': 'fa-calendar-alt',
+            'events': events_data,
+            'past_events': past_events_data,
+            'has_events': bool(events_data or past_events_data),
+        }
+        
+        return render(request, 'donor/events.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error in events_view: {e}", exc_info=True)
+        context = {
+            'page_title': 'Community Events',
+            'page_icon': 'fa-calendar-alt',
+            'events': [],
+            'past_events': [],
+            'has_events': False,
+            'error_message': 'Unable to load events at this time. Please try again later.'
+        }
+        return render(request, 'donor/events.html', context)
 
 
-@login_required(login_url='donorlogin')
+@login_required(login_url='donor:donorlogin')
 def event_detail_view(request, event_id):
-    """Event detail page"""
-    # In a real app, fetch from database
-    event = {
-        'id': event_id,
-        'title': 'Community Blood Drive',
-        'date': '2025-03-15',
-        'time': '9:00 AM - 4:00 PM',
-        'location': 'City Hall, Main Auditorium',
-        'address': '123 Main Street, Cityville',
-        'description': 'Join us for our monthly community blood drive. Every donation saves up to 3 lives!',
-        'long_description': 'Our monthly blood drive is the perfect opportunity to give back to your community. We provide a comfortable, safe environment with friendly staff. Refreshments provided after donation.',
-        'capacity': 50,
-        'registered': 32,
-        'contact': 'events@bloodconnect.org',
-        'phone': '(555) 123-4567',
-        'requirements': [
-            'Age 18-65',
-            'Weight at least 50kg',
-            'Valid ID',
-            'Well rested and hydrated'
-        ],
-        'schedule': [
-            {'time': '9:00 AM', 'activity': 'Registration Opens'},
-            {'time': '9:30 AM', 'activity': 'First Donation Slot'},
-            {'time': '12:00 PM', 'activity': 'Lunch Break'},
-            {'time': '1:00 PM', 'activity': 'Afternoon Slots'},
-            {'time': '4:00 PM', 'activity': 'Event Ends'}
-        ]
-    }
-    context = {
-        'page_title': event['title'],
-        'page_icon': 'fa-calendar-alt',
-        'event': event
-    }
-    return render(request, 'donor/community/event_detail.html', context)
-
+    """Display details for a specific event"""
+    try:
+        event = get_object_or_404(BloodDriveEvent, id=event_id, is_active=True)
+        
+        # Check if event is in the past
+        is_past = event.event_date < timezone.now()
+        
+        context = {
+            'event': event,
+            'page_title': event.title,
+            'is_past': is_past,
+            'is_upcoming': event.is_upcoming,
+            'formatted_date': event.event_date.strftime('%B %d, %Y at %I:%M %p'),
+            'formatted_end_date': event.end_date.strftime('%B %d, %Y at %I:%M %p') if event.end_date else None,
+            'capacity': event.capacity if hasattr(event, 'capacity') else 50,
+            'registered': event.registered_count if hasattr(event, 'registered_count') else 0,
+            'available_slots': event.available_slots if hasattr(event, 'available_slots') else 50,
+        }
+        return render(request, 'donor/event_detail.html', context)
+        
+    except BloodDriveEvent.DoesNotExist:
+        messages.error(request, "Event not found.")
+        return redirect('donor:events')
+    except Exception as e:
+        logger.error(f"Error in event_detail_view: {e}", exc_info=True)
+        messages.error(request, "Error loading event details.")
+        return redirect('donor:events')
 
 @login_required(login_url='donorlogin')
 def success_stories_view(request):

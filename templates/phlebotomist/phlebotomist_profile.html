@@ -1,0 +1,92 @@
+{% extends 'phlebotomist/phlebotomistbase.html' %}
+{% load static %}
+
+{% block content %}
+
+
+<div class="profile-container">
+    <div class="profile-card">
+        <!-- Profile header -->
+        <div class="profile-header">
+            {% if phlebotomist.profile_pic %}
+                <img src="{{ phlebotomist.profile_pic.url }}" alt="{{ phlebotomist.get_full_name }}" class="profile-img" />
+            {% else %}
+                <img src="{% static 'images/default-profile.png' %}" alt="No Profile Picture" class="profile-img" />
+            {% endif %}
+            <div class="profile-name">{{ phlebotomist.get_full_name|default:"Phlebotomist Name" }}</div>
+            <div class="profile-role">
+                <i class="fas fa-user-phlebotomist"></i> Registered Phlebotomist
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Profile details table -->
+        <div class="profile-info">
+            <table>
+                <tbody>
+                    <tr>
+                        <th><i class="fas fa-user info-icon"></i>Username</th>
+                        <td>{{ phlebotomist.user.username|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-envelope info-icon"></i>Email</th>
+                        <td>{{ phlebotomist.user.email|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-id-badge info-icon"></i>First Name</th>
+                        <td>{{ phlebotomist.user.first_name|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-id-card info-icon"></i>Last Name</th>
+                        <td>{{ phlebotomist.user.last_name|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-stethoscope info-icon"></i>Specialization</th>
+                        <td>{{ phlebotomist.get_specialization_display|default:"Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-phone info-icon"></i>Phone</th>
+                        <td>{{ phlebotomist.phone|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-certificate info-icon"></i>Registration Number</th>
+                        <td>{{ phlebotomist.registration_number|default:"Not provided" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-hospital info-icon"></i>Donation Center</th>
+                        <td>{{ phlebotomist.donation_center.name|default:"Not assigned" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-align-left info-icon"></i>Bio</th>
+                        <td>
+                            {% if phlebotomist.bio %}
+                                {{ phlebotomist.bio|linebreaksbr }}
+                            {% else %}
+                                <em>No bio available</em>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Edit Profile Button -->
+        <div class="mt-4">
+            <a href="{% url 'phlebotomist:phlebotomist-profile-edit' phlebotomist.pk %}" class="btn btn-edit">
+                <i class="fas fa-edit"></i> Edit Profile
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

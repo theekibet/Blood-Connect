@@ -8,7 +8,7 @@ from .models import (
     DonationFunFact, UserFactInteraction, DailyFactChallenge,
     QuizAttempt, FactContribution, BloodBagBarcode
 )
-from nurse.models import Appointment
+from phlebotomist.models import Appointment
 
 # Existing admin registrations
 admin.site.register(Stock)
@@ -27,14 +27,14 @@ class StockUnitAdmin(admin.ModelAdmin):
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'date', 'donor', 'nurse', 
+        'id', 'date', 'donor', 'phlebotomist', 
         'center', 'status_colored', 'created_at'
     )
     
     list_filter = (
         'status',
         'center',
-        'nurse',
+        'phlebotomist',
         'date',
     )
     
@@ -42,9 +42,9 @@ class AppointmentAdmin(admin.ModelAdmin):
         'donor__user__username',
         'donor__user__first_name',
         'donor__user__last_name',
-        'nurse__user__username',
-        'nurse__user__first_name',
-        'nurse__user__last_name',
+        'phlebotomist__user__username',
+        'phlebotomist__user__first_name',
+        'phlebotomist__user__last_name',
         'status',
     )
     
@@ -54,7 +54,7 @@ class AppointmentAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('date', 'center', 'nurse', 'donor')
+            'fields': ('date', 'center', 'phlebotomist', 'donor')
         }),
         ('Status', {
             'fields': ('status', 'notes')

@@ -60,7 +60,7 @@ INSTALLED_APPS = [
     'blood',
     'donor',
     'utils', 
-    'nurse',
+    'phlebotomist.apps.PhlebotomistConfig',
     'chatbot',
     'hospital',
     'lab_technologist', 
@@ -129,7 +129,7 @@ TEMPLATES = [
                 'donor.context_processors.donor_eligibility_context',
                 'donor.context_processors.donor_support_options',
 
-                'nurse.context_processors.nurse_unread_notifications',
+                'phlebotomist.context_processors.phlebotomist_unread_notifications',
                 'hospital.context_processors.hospital_user_context',
                 
             ],
@@ -264,17 +264,6 @@ if not DEBUG:
         logger = logging.getLogger(__name__)
         logger.warning("Email credentials not configured. Email functionality will not work.")
 
-# =============================
-# CELERY CONFIGURATION (Optional)
-# =============================
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Africa/Nairobi'
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 
 # =============================
 # LOGGING

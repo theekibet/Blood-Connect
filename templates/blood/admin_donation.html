@@ -17,7 +17,7 @@
       <i class="fas fa-hand-holding-medical"></i>
       Blood Donation Management
     </h1>
-    <p class="mb-0">Track donation appointments and monitor nurse activities in real-time</p>
+    <p class="mb-0">Track donation appointments and monitor phlebotomist activities in real-time</p>
   </div>
 
   <!-- Export Section -->
@@ -93,10 +93,10 @@
               <div>{{ donation.donation_center.name|default:"N/A" }}</div>
               <small class="text-muted">
                 {% with donation.prefetched_appointments.0 as appt %}
-                  {% if appt and appt.nurse %}
-                    Nurse: {{ appt.nurse.user.get_full_name }}
+                  {% if appt and appt.phlebotomist %}
+                    Nurse: {{ appt.phlebotomist.user.get_full_name }}
                   {% else %}
-                    No nurse assigned
+                    No phlebotomist assigned
                   {% endif %}
                 {% endwith %}
               </small>

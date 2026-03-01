@@ -17,8 +17,8 @@ def validate_single_profile(user, current_profile_type=None, exclude_self=True):
         # From donor app
         'donor': 'donor',
         
-        # From nurse app
-        'nurse': 'nurse',
+        # From phlebotomist app
+        'phlebotomist': 'phlebotomist',
         
         # From hospital app
         'hospital_staff': 'hospitaluser',  # HospitalUser model
@@ -66,7 +66,7 @@ def get_user_profile_type(user):
     """
     PROFILE_TYPES = {
         'donor': 'donor',
-        'nurse': 'nurse',
+        'phlebotomist': 'phlebotomist',
         'hospital_staff': 'hospitaluser',
         'lab_technologist': 'lab_tech_profile',
         'blood_bank_technician': 'blood_bank_tech_profile',
@@ -90,7 +90,7 @@ def check_for_duplicate_profiles(user):
     """
     PROFILE_TYPES = {
         'donor': 'donor',
-        'nurse': 'nurse',
+        'phlebotomist': 'phlebotomist',
         'hospital_staff': 'hospitaluser',
         'lab_technologist': 'lab_tech_profile',
         'blood_bank_technician': 'blood_bank_tech_profile',
@@ -126,7 +126,7 @@ def get_profile_dashboard_url(user):
     # Adjust these URL names based on your urls.py
     DASHBOARD_URLS = {
         'donor': 'donor-dashboard',
-        'nurse': 'nurse-dashboard',
+        'nurse': 'phlebotomist-dashboard',
         'hospital_staff': 'hospital:dashboard',
         'lab_technologist': 'lab_technologist:dashboard',
         'blood_bank_technician': 'blood_bank_technician:dashboard',

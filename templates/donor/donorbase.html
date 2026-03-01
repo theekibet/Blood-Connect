@@ -132,73 +132,11 @@
         </a>
     </div>
 
-    <!-- Profile -->
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">PROFILE</div>
-        <a href="{% url 'donor:donor-profile' %}" class="{% if 'profile' in request.path and not 'edit' in request.path %}active{% endif %}">
-            <i class="fas fa-user-circle"></i> View Profile
-        </a>
-        <a href="{% url 'donor:donor-edit-profile' %}" class="{% if 'edit' in request.path %}active{% endif %}">
-            <i class="fas fa-edit"></i> Edit Profile
-        </a>
-        <a href="{% url 'donor:donor-notifications' %}" class="{% if 'notifications' in request.path %}active{% endif %}">
-            <i class="fas fa-bell"></i> Notifications
-            {% if donor_unread_notification_count > 0 %}
-                <span class="notification-badge-sidebar">{{ donor_unread_notification_count }}</span>
-            {% endif %}
-        </a>
-    </div>
+
 {% endblock %}
 
 {% block extra_css %}
-<style>
-    /* Sidebar section styling */
-    .sidebar-section {
-        margin-bottom: 1.5rem;
-    }
-    
-    .sidebar-section-title {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--gray);
-        padding: 0 1rem;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-    }
-    
-    .rewards-icon, .impact-icon, .community-icon {
-        position: relative;
-        display: inline-block;
-    }
-    
-    .status-badge.eligible {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        width: 10px;
-        height: 10px;
-        background-color: var(--success);
-        border-radius: 50%;
-        border: 2px solid white;
-    }
-    
-    .notification-badge-sidebar {
-        float: right;
-        background-color: var(--danger);
-        color: white;
-        border-radius: 50%;
-        padding: 0.2rem 0.5rem;
-        font-size: 0.7rem;
-        font-weight: bold;
-    }
-    
-    @media (max-width: 768px) {
-        .sidebar-section-title {
-            padding: 0 0.5rem;
-        }
-    }
-</style>
+
 {% endblock %}
 
 {% block extra_js %}

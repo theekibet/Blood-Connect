@@ -60,6 +60,12 @@ class BloodBankTechSignupForm(forms.ModelForm):
         model = BloodBankTechProfile
         fields = ['employee_id', 'center', 'phone']
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Mark that this form doesn't have an instance yet
+        if not self.instance.pk:
+            self.instance._state.adding = True
+    
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
         if User.objects.filter(username__iexact=username).exists():
@@ -106,20 +112,20 @@ class BloodBankTechSignupForm(forms.ModelForm):
         return phone
     
     def save(self, commit=True):
-        # Create user
+        # Create user first
         user = User.objects.create_user(
             username=self.cleaned_data['username'],
             email=self.cleaned_data['email'],
             password=self.cleaned_data['password1'],
             first_name=self.cleaned_data['first_name'],
             last_name=self.cleaned_data['last_name'],
-            is_active=True  # Active but needs profile approval
+            is_active=True
         )
         
-        # Create profile
+        # Create profile instance
         profile = super().save(commit=False)
         profile.user = user
-        profile.is_active = False  # Requires admin approval
+        profile.is_active = False
         
         if commit:
             profile.save()

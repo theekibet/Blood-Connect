@@ -38,8 +38,8 @@
             <label class="form-check-label" for="group_donors">All Donors</label>
           </div>
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="group_nurses" name="recipient_group" value="nurse">
-            <label class="form-check-label" for="group_nurses">All Nurses</label>
+            <input class="form-check-input" type="checkbox" id="group_phlebotomists" name="recipient_group" value="phlebotomist">
+            <label class="form-check-label" for="group_phlebotomists">All Phlebotomists</label>
           </div>
         </div>
 
@@ -63,10 +63,10 @@
               {% endfor %}
             </optgroup>
 
-            <optgroup label="Nurses" id="nurse-options">
-              {% for nurse in nurses %}
-                {% if nurse.user %}
-                  <option value="{{ nurse.user.id }}" data-type="nurse">{{ nurse.user.username }}</option>
+            <optgroup label="Phlebotomists" id="phlebotomist-options">
+              {% for phlebotomist in phlebotomists %}
+                {% if phlebotomist.user %}
+                  <option value="{{ phlebotomist.user.id }}" data-type="phlebotomist">{{ phlebotomist.user.username }}</option>
                 {% endif %}
               {% endfor %}
             </optgroup>

@@ -5,7 +5,7 @@ from utils.models import Notification
 from django.utils import timezone
 from datetime import date, timedelta
 from utils.models import Notification
-# from nurse.models import Appointment  # Commented out to break circular import
+# from phlebotomist.models import Appointment  # Commented out to break circular import
 from django.core.exceptions import ValidationError
 import logging
 KENYAN_COUNTIES = [
@@ -275,11 +275,8 @@ class Donor(models.Model):
    
         super().delete(*args, **kwargs)
 logger = logging.getLogger(__name__)
-
-
-
 class BloodDonate(models.Model):
-    donor = models.ForeignKey(Donor, on_delete=models.CASCADE)
+    donor = models.ForeignKey('donor.Donor', on_delete=models.CASCADE)
 
     bloodgroup = models.CharField(
         max_length=10,
@@ -287,9 +284,12 @@ class BloodDonate(models.Model):
         blank=True,
         null=True
     )
-    unit = models.PositiveIntegerField(default=0, blank=True, null=True)
+    unit = models.PositiveIntegerField(default=450, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    date = models.DateField(default=timezone.now)
+    
+    # UPDATED: Changed from DateField to DateTimeField to support appointments
+    date = models.DateTimeField(default=timezone.now)
+    
     is_seen = models.BooleanField(default=False)
 
     donation_center = models.ForeignKey(
@@ -298,57 +298,204 @@ class BloodDonate(models.Model):
         null=True,
         blank=True
     )
-    nurse = models.ForeignKey(
-        'nurse.Nurse',
+    
+    # Changed from 'nurse' to 'phlebotomist'
+    phlebotomist = models.ForeignKey(
+        'phlebotomist.Phlebotomist',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        help_text="Nurse responsible for this donation"
+        help_text="Phlebotomist responsible for this donation"
     )
 
-    # Approval fields
-    approved_by_nurse = models.ForeignKey(
+    # ===== NEW FIELDS FOR ENHANCED COLLECTION =====
+    # Vital Signs
+    temperature = models.DecimalField(
+        max_digits=4, 
+        decimal_places=1, 
+        null=True, 
+        blank=True,
+        help_text="Body temperature in °C"
+    )
+    pulse = models.IntegerField(
+        null=True, 
+        blank=True,
+        help_text="Heart rate in beats per minute"
+    )
+    blood_pressure_systolic = models.IntegerField(
+        null=True, 
+        blank=True,
+        help_text="Systolic blood pressure (top number)"
+    )
+    blood_pressure_diastolic = models.IntegerField(
+        null=True, 
+        blank=True,
+        help_text="Diastolic blood pressure (bottom number)"
+    )
+    haemoglobin = models.DecimalField(
+        max_digits=4, 
+        decimal_places=1, 
+        null=True, 
+        blank=True,
+        help_text="Haemoglobin level in g/dL"
+    )
+
+    # Donation Details
+    DONATION_TYPE_CHOICES = [
+        ('whole_blood', 'Whole Blood'),
+        ('double_red', 'Double Red Cells'),
+        ('platelets', 'Platelets'),
+        ('plasma', 'Plasma'),
+        ('pediatric', 'Pediatric'),
+    ]
+    
+    donation_type = models.CharField(
+        max_length=20,
+        choices=DONATION_TYPE_CHOICES,
+        default='whole_blood'
+    )
+
+    bleed_time_start = models.TimeField(
+        null=True, 
+        blank=True,
+        help_text="Time when blood collection started"
+    )
+    bleed_time_end = models.TimeField(
+        null=True, 
+        blank=True,
+        help_text="Time when blood collection completed"
+    )
+    
+    BLEED_COMPLETION_CHOICES = [
+        ('complete', 'Complete - Full Unit'),
+        ('partial', 'Partial - Underweight'),
+        ('incomplete', 'Incomplete - Stopped Early'),
+    ]
+    
+    bleed_completion = models.CharField(
+        max_length=20,
+        choices=BLEED_COMPLETION_CHOICES,
+        default='complete'
+    )
+
+    # Arm/Vein Details
+    ARM_CHOICES = [
+        ('left', 'Left Arm'),
+        ('right', 'Right Arm'),
+    ]
+    
+    arm_used = models.CharField(
+        max_length=10, 
+        choices=ARM_CHOICES, 
+        null=True, 
+        blank=True
+    )
+    
+    VEIN_QUALITY_CHOICES = [
+        ('good', 'Good - Easy access'),
+        ('fair', 'Fair - Acceptable'),
+        ('poor', 'Poor - Difficult'),
+    ]
+    
+    vein_quality = models.CharField(
+        max_length=20,
+        choices=VEIN_QUALITY_CHOICES,
+        null=True,
+        blank=True
+    )
+    
+    attempts_count = models.IntegerField(
+        default=1,
+        help_text="Number of venipuncture attempts"
+    )
+    
+    phlebotomist_notes = models.TextField(
+        blank=True,
+        help_text="Phlebotomist's observations during collection"
+    )
+
+    # Adverse Events
+    ADVERSE_EVENT_CHOICES = [
+        ('none', 'None'),
+        ('hematoma', 'Hematoma'),
+        ('fainting', 'Fainting/Syncope'),
+        ('nausea', 'Nausea/Vomiting'),
+        ('pain', 'Excessive Pain'),
+        ('other', 'Other'),
+    ]
+    
+    adverse_event = models.CharField(
+        max_length=20,
+        choices=ADVERSE_EVENT_CHOICES,
+        default='none'
+    )
+    
+    adverse_event_details = models.TextField(
+        blank=True,
+        help_text="Description of adverse event if occurred"
+    )
+
+    # Collection Notes
+    collection_notes = models.TextField(
+        blank=True,
+        help_text="General notes about the collection process"
+    )
+
+    # ===== EXISTING FIELDS (KEEP AS IS) =====
+    # Approval fields - updated field names
+    approved_by_phlebotomist = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='nurse_approved_donations'
+        related_name='phlebotomist_approved_donations'
     )
-    approved_at_nurse = models.DateTimeField(null=True, blank=True)
+    approved_at_phlebotomist = models.DateTimeField(null=True, blank=True)
 
-    # Completion fields
-    completed_by_nurse = models.ForeignKey(
+    # Completion fields - updated field names
+    completed_by_phlebotomist = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='nurse_completed_donations'
+        related_name='phlebotomist_completed_donations'
     )
-    completed_at_nurse = models.DateTimeField(null=True, blank=True)
+    completed_at_phlebotomist = models.DateTimeField(null=True, blank=True)
 
     # Rejection / cancellation
+    REJECTED_BY_CHOICES = [
+        ('phlebotomist', 'Phlebotomist'),
+        ('admin', 'Admin'),
+    ]
+    
     rejected_by = models.CharField(
-        max_length=10,
-        choices=[('nurse', 'Nurse')],
+        max_length=15,
+        choices=REJECTED_BY_CHOICES,
         null=True,
         blank=True
     )
     rejected_at = models.DateTimeField(null=True, blank=True)
 
+    CANCELLED_BY_CHOICES = [
+        ('phlebotomist', 'Phlebotomist'),
+        ('donor', 'Donor'),
+        ('admin', 'Admin'),
+    ]
+    
     cancelled_by = models.CharField(
-        max_length=10,
-        choices=[('nurse', 'Nurse'), ('donor', 'Donor')],
+        max_length=15,
+        choices=CANCELLED_BY_CHOICES,
         null=True,
         blank=True
     )
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
     # Stock update
-    stock_added_by_nurse = models.BooleanField(default=False)
+    stock_added_by_phlebotomist = models.BooleanField(default=False)
 
-    # Appointment relation - using string reference
+    # Appointment relation
     appointments = GenericRelation(
-        'nurse.Appointment',
+        'phlebotomist.Appointment',
         content_type_field='request_content_type',
         object_id_field='request_object_id',
         related_query_name='blood_donations'
@@ -368,7 +515,7 @@ class BloodDonate(models.Model):
         """Return donor's age at time of donation if DOB and date are set."""
         if self.donor and self.donor.dob and self.date:
             birth_date = self.donor.dob
-            donation_date = self.date
+            donation_date = self.date.date() if hasattr(self.date, 'date') else self.date
             age = donation_date.year - birth_date.year - (
                 (donation_date.month, donation_date.day) < (birth_date.month, birth_date.day)
             )
@@ -382,20 +529,41 @@ class BloodDonate(models.Model):
 
     @property
     def is_approved(self):
-        """Check if donation has been approved by a nurse."""
-        return bool(self.approved_by_nurse)
+        """Check if donation has been approved by a phlebotomist."""
+        return bool(self.approved_by_phlebotomist)
+    
+    @property
+    def blood_pressure(self):
+        """Return formatted blood pressure string."""
+        if self.blood_pressure_systolic and self.blood_pressure_diastolic:
+            return f"{self.blood_pressure_systolic}/{self.blood_pressure_diastolic}"
+        return None
+    
+    @property
+    def bleed_duration_minutes(self):
+        """Calculate bleed duration in minutes."""
+        if self.bleed_time_start and self.bleed_time_end:
+            from datetime import datetime, timedelta
+            dummy_date = datetime.now().date()
+            start = datetime.combine(dummy_date, self.bleed_time_start)
+            end = datetime.combine(dummy_date, self.bleed_time_end)
+            if end < start:
+                end += timedelta(days=1)
+            duration = (end - start).total_seconds() / 60
+            return round(duration, 1)
+        return None
 
     def get_action_actor(self):
         """
         Returns a human-readable actor string for finalized actions.
-        Example: "Nurse Jane", "the Donor", or "system".
+        Example: "Phlebotomist Jane", "the Donor", or "system".
         """
-        if self.completed_by_nurse:
-            return f"Nurse {self.completed_by_nurse.get_full_name() or self.completed_by_nurse.username}"
-        if self.rejected_by == 'nurse':
-            return "a Nurse"
-        if self.cancelled_by == 'nurse':
-            return "a Nurse"
+        if self.completed_by_phlebotomist:
+            return f"Phlebotomist {self.completed_by_phlebotomist.get_full_name() or self.completed_by_phlebotomist.username}"
+        if self.rejected_by == 'phlebotomist':
+            return "a Phlebotomist"
+        if self.cancelled_by == 'phlebotomist':
+            return "a Phlebotomist"
         if self.cancelled_by == 'donor':
             return "the Donor"
         return "system"
@@ -410,8 +578,6 @@ class BloodDonate(models.Model):
                 raise ValidationError(
                     "You already have a pending donation request. Please resolve it before creating a new one."
                 )
-
-
 class DonorEligibility(models.Model):
     donor = models.OneToOneField(Donor, on_delete=models.CASCADE)
     age = models.IntegerField(default=0)

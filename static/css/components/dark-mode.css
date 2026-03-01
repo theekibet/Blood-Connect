@@ -1,0 +1,418 @@
+/* ========================================
+   Dark Mode Theme Overrides
+   Applied when body has 'dark-mode' class
+   ======================================== */
+
+   body.dark-mode {
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+}
+
+/* Navbar */
+body.dark-mode .navbar {
+    background-color: #2d2d2d !important;
+}
+
+/* Sidebar */
+body.dark-mode .sidebar {
+    background-color: #2d2d2d;
+}
+
+/* ========================================
+   Cards and Containers
+   ======================================== */
+body.dark-mode .card,
+body.dark-mode .auth-card,
+body.dark-mode .pending-approval-card {  /* Add specific class for pending approval */
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .card-header,
+body.dark-mode .auth-card .card-header {
+    background-color: #363636;
+    border-bottom-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .card-body,
+body.dark-mode .auth-card .card-body {
+    background-color: #2d2d2d;
+    color: #f0f0f0;
+}
+
+/* ========================================
+   Pending Approval Page Specific
+   ======================================== */
+body.dark-mode .pending-approval-container {
+    background-color: #1a1a1a;
+}
+
+body.dark-mode .pending-approval-card {
+    background-color: #2d2d2d;
+    border: 1px solid #404040;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .pending-approval-card h2,
+body.dark-mode .pending-approval-card h3,
+body.dark-mode .pending-approval-card h4 {
+    color: #f0f0f0;
+}
+
+body.dark-mode .pending-approval-card p {
+    color: #d0d0d0;
+}
+
+/* "What happens next?" section */
+body.dark-mode .next-steps-section {
+    background-color: #363636;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+body.dark-mode .next-steps-section h5 {
+    color: #f0f0f0;
+    border-bottom: 1px solid #404040;
+    padding-bottom: 0.5rem;
+}
+
+body.dark-mode .next-steps-section ul,
+body.dark-mode .next-steps-section ol {
+    color: #d0d0d0;
+}
+
+body.dark-mode .next-steps-section li {
+    color: #d0d0d0;
+    margin-bottom: 0.5rem;
+}
+
+body.dark-mode .next-steps-section .step-item {
+    background-color: #2d2d2d;
+    border: 1px solid #404040;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Checklist items (the ones with [x] in your screenshot) */
+body.dark-mode .checklist-item {
+    background-color: #2d2d2d;
+    border: 1px solid #404040;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+    color: #d0d0d0;
+}
+
+body.dark-mode .checklist-item.completed {
+    background-color: #1e3a2e;  /* Dark green for completed items */
+    border-color: #2d6a4f;
+}
+
+body.dark-mode .checklist-item .check-icon {
+    color: #2d6a4f;
+}
+
+body.dark-mode .checklist-item .pending-icon {
+    color: #b8860b;  /* Dark gold for pending */
+}
+
+/* Loading indicator */
+body.dark-mode .loading-container {
+    color: #d0d0d0;
+}
+
+body.dark-mode .loading-spinner {
+    border-color: #404040;
+    border-top-color: #66b0ff;
+}
+
+/* ========================================
+   Tables
+   ======================================== */
+body.dark-mode .table {
+    color: #f0f0f0;
+}
+
+body.dark-mode .table thead th {
+    background-color: #363636;
+    border-bottom-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .table td,
+body.dark-mode .table th {
+    border-top-color: #404040;
+    background-color: #2d2d2d;
+    color: #f0f0f0;
+}
+
+body.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+    background-color: #323232;
+}
+
+/* ========================================
+   Forms
+   ======================================== */
+body.dark-mode .form-control {
+    background-color: #363636;
+    border-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .form-control:focus {
+    background-color: #404040;
+    color: #f0f0f0;
+    border-color: #66b0ff;
+    box-shadow: 0 0 0 0.2rem rgba(102, 176, 255, 0.25);
+}
+
+body.dark-mode .form-label {
+    color: #d0d0d0;
+}
+
+body.dark-mode .form-text {
+    color: #a0a0a0;
+}
+
+/* ========================================
+   Dropdowns
+   ======================================== */
+body.dark-mode .dropdown-menu {
+    background-color: #2d2d2d;
+    border-color: #404040;
+}
+
+body.dark-mode .dropdown-item {
+    color: #f0f0f0;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: #404040;
+    color: #ffffff;
+}
+
+body.dark-mode .dropdown-divider {
+    border-top-color: #404040;
+}
+
+/* ========================================
+   Alerts and Messages
+   ======================================== */
+body.dark-mode .alert {
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .alert-success {
+    background-color: #1e3a2e;
+    border-color: #2d6a4f;
+    color: #d4edda;
+}
+
+body.dark-mode .alert-warning {
+    background-color: #3a3a1e;
+    border-color: #b8860b;
+    color: #fff3cd;
+}
+
+body.dark-mode .alert-danger {
+    background-color: #3a1e1e;
+    border-color: #b33a3a;
+    color: #f8d7da;
+}
+
+body.dark-mode .alert-info {
+    background-color: #1e3a4d;
+    border-color: #0b5e8a;
+    color: #d1ecf1;
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+body.dark-mode .btn-primary {
+    background-color: #0069d9;
+    border-color: #0062cc;
+    color: #ffffff;
+}
+
+body.dark-mode .btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #004e9e;
+}
+
+body.dark-mode .btn-secondary {
+    background-color: #4a4a4a;
+    border-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .btn-secondary:hover {
+    background-color: #5a5a5a;
+    border-color: #505050;
+}
+
+body.dark-mode .btn-outline-primary {
+    color: #66b0ff;
+    border-color: #66b0ff;
+}
+
+body.dark-mode .btn-outline-primary:hover {
+    background-color: #66b0ff;
+    color: #1a1a1a;
+}
+
+body.dark-mode .btn-outline-secondary {
+    color: #a0a0a0;
+    border-color: #404040;
+}
+
+body.dark-mode .btn-outline-secondary:hover {
+    background-color: #404040;
+    color: #f0f0f0;
+}
+
+/* ========================================
+   Text Utilities
+   ======================================== */
+body.dark-mode .text-muted {
+    color: #a0a0a0 !important;
+}
+
+body.dark-mode .text-primary {
+    color: #66b0ff !important;
+}
+
+body.dark-mode .text-success {
+    color: #6fcf97 !important;
+}
+
+body.dark-mode .text-warning {
+    color: #f1c40f !important;
+}
+
+body.dark-mode .text-danger {
+    color: #e74c3c !important;
+}
+
+body.dark-mode .text-info {
+    color: #5dade2 !important;
+}
+
+body.dark-mode .bg-light {
+    background-color: #2d2d2d !important;
+}
+
+body.dark-mode .bg-white {
+    background-color: #2d2d2d !important;
+}
+
+/* ========================================
+   Borders
+   ======================================== */
+body.dark-mode .border-bottom {
+    border-bottom-color: #404040 !important;
+}
+
+body.dark-mode .border-top {
+    border-top-color: #404040 !important;
+}
+
+body.dark-mode .border-left {
+    border-left-color: #404040 !important;
+}
+
+body.dark-mode .border-right {
+    border-right-color: #404040 !important;
+}
+
+body.dark-mode .border {
+    border-color: #404040 !important;
+}
+
+/* ========================================
+   Links
+   ======================================== */
+body.dark-mode a {
+    color: #66b0ff;
+}
+
+body.dark-mode a:hover {
+    color: #99ccff;
+}
+
+body.dark-mode a.text-danger:hover {
+    color: #ff6b6b !important;
+}
+
+/* ========================================
+   Chatbot
+   ======================================== */
+body.dark-mode .chatbot-container {
+    background-color: #2d2d2d;
+    border-color: #404040;
+}
+
+body.dark-mode .chatbot-header {
+    background-color: #363636;
+    border-bottom-color: #404040;
+    color: #f0f0f0;
+}
+
+body.dark-mode .chatbot-message.bot .message-content {
+    background-color: #363636;
+    color: #f0f0f0;
+}
+
+body.dark-mode .chatbot-message.user .message-content {
+    background-color: #0069d9;
+    color: #ffffff;
+}
+
+/* ========================================
+   Notifications
+   ======================================== */
+body.dark-mode .notification-badge {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+
+body.dark-mode .notification-item {
+    background-color: #2d2d2d;
+    border-color: #404040;
+}
+
+body.dark-mode .notification-item:hover {
+    background-color: #363636;
+}
+
+/* ========================================
+   Mobile Menu
+   ======================================== */
+body.dark-mode .mobile-menu-toggle {
+    background-color: #2d2d2d;
+    color: #f0f0f0;
+    border-color: #404040;
+}
+
+/* ========================================
+   Loading/Spinner
+   ======================================== */
+body.dark-mode .spinner-border {
+    color: #66b0ff !important;
+}
+
+body.dark-mode .spinner-grow {
+    color: #66b0ff !important;
+}
+
+/* ========================================
+   End of Dark Mode Styles
+   ======================================== */

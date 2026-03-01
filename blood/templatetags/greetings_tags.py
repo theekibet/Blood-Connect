@@ -1,7 +1,8 @@
 from django import template
 from blood.utils.greetings import (
-    get_nurse_greeting,  
-    get_donor_greeting, get_generic_greeting
+    get_phlebotomist_greeting,  
+    get_donor_greeting, 
+    get_generic_greeting
 )
 
 register = template.Library()
@@ -10,7 +11,7 @@ register = template.Library()
 def show_greeting_card(user, user_type, context_data=None):
     """
     Template tag to show greeting card for any user type
-    Usage: {% show_greeting_card request.user 'nurse' nurse_context %}
+    Usage: {% show_greeting_card request.user 'phlebotomist' phlebotomist_context %}
     """
     greeting_data = get_generic_greeting(user, user_type)
     

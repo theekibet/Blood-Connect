@@ -36,9 +36,10 @@ def get_day_specific_message():
     return day_messages.get(current_day, "Have a wonderful day!")
 
 
-def get_nurse_greeting(nurse, appointment_count, next_appointment=None):
-    """Generate personalized greeting for nurses"""
-    greeting = get_time_based_greeting(nurse.user.first_name)
+def get_phlebotomist_greeting(phlebotomist, appointment_count=0, next_appointment=None):
+    """Generate personalized greeting for phlebotomists"""
+    # Fix: Use phlebotomist.user.first_name instead of nurse.user.first_name
+    greeting = get_time_based_greeting(phlebotomist.user.first_name)
     day_message = get_day_specific_message()
     
     if appointment_count == 0:
@@ -55,16 +56,23 @@ def get_nurse_greeting(nurse, appointment_count, next_appointment=None):
     next_app_msg = ""
     if next_appointment:
         time_str = next_appointment.date.strftime("%I:%M %p")
+        # Fix: Define participant variable or remove it
+        participant = "the donor"  # You can customize this
         next_app_msg = f" Your next appointment is at {time_str} with {participant}."
     
     return {
         'greeting': greeting,
         'context_message': context,
         'next_appointment_msg': next_app_msg,
-        'user_type': 'nurse',
-        'icon': '👩‍⚕️'
+        'user_type': 'phlebotomist',
+        'icon': '👩‍⚕️',
+        'profile_pic': phlebotomist.profile_pic if hasattr(phlebotomist, 'profile_pic') else None,
+        'is_hero': appointment_count > 3,  # Example: Busy phlebotomists are heroes
+        'meta_items': [
+            {'icon': 'fas fa-flask', 'text': f'{appointment_count} appointments'},
+            {'icon': 'fas fa-clock', 'text': 'On duty'},
+        ]
     }
-
 
 
 def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):
@@ -152,14 +160,35 @@ def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):
         'profile_pic': donor.profile_pic if hasattr(donor, 'profile_pic') else None
     }
 
+
 def get_generic_greeting(user, user_type=None):
     """Fallback generic greeting for any user type"""
     greeting = get_time_based_greeting(user.first_name)
     day_message = get_day_specific_message()
     
+    # If specific user type functions exist, call them
+    if user_type == 'phlebotomist' and hasattr(user, 'phlebotomist'):
+        try:
+            from phlebotomist.models import Phlebotomist
+            phlebotomist = Phlebotomist.objects.get(user=user)
+            return get_phlebotomist_greeting(phlebotomist)
+        except:
+            pass
+    elif user_type == 'donor' and hasattr(user, 'donor'):
+        try:
+            from donor.models import Donor
+            donor = Donor.objects.get(user=user)
+            return get_donor_greeting(donor)
+        except:
+            pass
+    
+    # Fallback to generic greeting
     return {
         'greeting': greeting,
         'context_message': day_message,
         'user_type': user_type or 'user',
-        'icon': '👋'
+        'icon': '👋',
+        'meta_items': [],
+        'is_hero': False,
+        'profile_pic': None
     }

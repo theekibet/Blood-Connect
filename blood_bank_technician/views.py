@@ -34,19 +34,27 @@ def signup_view(request):
     """Blood Bank Technician signup view"""
     
     if request.method == 'POST':
-        form = BloodBankTechSignupForm(request.POST)
+        form = BloodBankTechSignupForm(request.POST, request.FILES)
         if form.is_valid():
             try:
+                # The form's save method now handles everything correctly
                 profile = form.save()
+                
                 messages.success(
                     request, 
                     'Registration successful! Your account is pending admin approval. '
                     'You will be notified once your account is activated.'
                 )
                 return redirect('blood_bank_technician:login')
+                
             except Exception as e:
                 messages.error(request, f'Registration failed: {str(e)}')
+                # Log the error
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Blood bank tech signup error: {str(e)}", exc_info=True)
         else:
+            # Form errors will be displayed in the template
             messages.error(request, 'Please correct the errors below.')
     else:
         form = BloodBankTechSignupForm()

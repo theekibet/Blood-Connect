@@ -1,0 +1,104 @@
+<!-- templates/phlebotomist/select_barcode.html -->
+{% extends 'phlebotomist/phlebotomistbase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1><i class="fas fa-barcode"></i> Select Blood Bag Barcode</h1>
+        <p>Appointment for: <strong>{{ donor.user.get_full_name }}</strong></p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Available Blood Bags</h5>
+                </div>
+                <div class="card-body">
+                    {% if available_barcodes %}
+                        <div class="row">
+                            {% for barcode in available_barcodes %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card barcode-card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="mb-1">
+                                                    <i class="fas fa-barcode"></i> 
+                                                    <code>{{ barcode.barcode }}</code>
+                                                </h5>
+                                                <p class="mb-0">
+                                                    <small>
+                                                        Type: {{ barcode.get_bag_type_display }} | 
+                                                        Volume: {{ barcode.volume_ml }}ml |
+                                                        Expires: {{ barcode.expiry_date|date:"M d, Y" }}
+                                                    </small>
+                                                </p>
+                                            </div>
+                                            <form method="post" 
+                                                  action="{% url 'phlebotomist:assign_barcode' appointment.id barcode.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check"></i> Select
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            No available barcodes. Please contact admin to generate more.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Recently Used</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_barcodes %}
+                        <ul class="list-group">
+                            {% for barcode in recent_barcodes %}
+                            <li class="list-group-item">
+                                <code>{{ barcode.barcode }}</code><br>
+                                <small>{{ barcode.collected_at|timesince }} ago</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No recent collections</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5>Donor Information</h5>
+                    <p>
+                        <strong>Name:</strong> {{ donor.user.get_full_name }}<br>
+                        <strong>Blood Group:</strong> 
+                        {% if donor.bloodgroup %}
+                            {{ donor.bloodgroup }}
+                            {% if donor.bloodgroup_verified %}
+                                <span class="badge bg-success">Verified</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Not recorded</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

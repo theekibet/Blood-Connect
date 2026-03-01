@@ -1,9 +1,10 @@
 import random
 from django.contrib.contenttypes.models import ContentType
 from utils.models import Notification
-from donor.models import Donor, DonorEligibility
+from donor.models import Donor, DonorEligibility, BloodDonate
 from datetime import date, timedelta
 from django.utils import timezone
+from django.core.exceptions import FieldError
 
 def donor_notification_count(request):
     """
@@ -30,32 +31,70 @@ def donor_notification_count(request):
     if request.user.is_authenticated:
         try:
             donor = Donor.objects.get(user=request.user)
-            donor_ct = ContentType.objects.get_for_model(Donor)
             
             # ==========================================
-            # 1. NOTIFICATION COUNT
+            # 1. NOTIFICATION COUNT - SIMPLIFIED
             # ==========================================
-            unread_count = Notification.objects.filter(
-                recipient_content_type=donor_ct,
-                recipient_object_id=donor.id,
-                read=False
-            ).count()
+            try:
+                # Try direct ForeignKey to User first
+                unread_count = Notification.objects.filter(
+                    recipient=donor.user,
+                    is_read=False
+                ).count()
+            except (FieldError, AttributeError):
+                try:
+                    # Try GenericForeignKey to Donor
+                    donor_ct = ContentType.objects.get_for_model(Donor)
+                    unread_count = Notification.objects.filter(
+                        recipient_content_type=donor_ct,
+                        recipient_object_id=donor.id,
+                        is_read=False
+                    ).count()
+                except (FieldError, AttributeError):
+                    try:
+                        # Try GenericForeignKey to User
+                        user_ct = ContentType.objects.get_for_model(request.user.__class__)
+                        unread_count = Notification.objects.filter(
+                            recipient_content_type=user_ct,
+                            recipient_object_id=request.user.id,
+                            is_read=False
+                        ).count()
+                    except (FieldError, AttributeError) as e:
+                        print(f"Notification query error: {e}")
+                        unread_count = 0
+            
             context['donor_unread_notification_count'] = unread_count
             
             # ==========================================
-            # 2. ELIGIBILITY STATUS
+            # 2. ELIGIBILITY STATUS - FIXED (removed updated_at)
             # ==========================================
             try:
                 eligibility = DonorEligibility.objects.get(donor=donor)
-                context['donor_eligibility_status'] = {
-                    'is_eligible': eligibility.approved,
-                    'last_checked': eligibility.updated_at,
-                    'weight': eligibility.weight,
-                    'gender': eligibility.gender,
-                    'good_health': eligibility.good_health,
-                    'travel_history': eligibility.travel_history,
+                
+                # Check which fields actually exist
+                eligibility_data = {
+                    'is_eligible': getattr(eligibility, 'approved', False),
+                    'weight': getattr(eligibility, 'weight', None),
+                    'gender': getattr(eligibility, 'gender', None),
+                    'good_health': getattr(eligibility, 'good_health', None),
+                    'travel_history': getattr(eligibility, 'travel_history', None),
                 }
+                
+                # Add last_checked only if the field exists
+                if hasattr(eligibility, 'updated_at'):
+                    eligibility_data['last_checked'] = eligibility.updated_at
+                elif hasattr(eligibility, 'updated'):
+                    eligibility_data['last_checked'] = eligibility.updated
+                elif hasattr(eligibility, 'modified'):
+                    eligibility_data['last_checked'] = eligibility.modified
+                elif hasattr(eligibility, 'created_at'):
+                    eligibility_data['last_checked'] = eligibility.created_at
+                else:
+                    eligibility_data['last_checked'] = timezone.now()
+                
+                context['donor_eligibility_status'] = eligibility_data
                 context['donor_eligibility_completed'] = True
+                
             except DonorEligibility.DoesNotExist:
                 context['donor_eligibility_completed'] = False
                 # Show welcome modal for new donors who haven't completed eligibility
@@ -66,8 +105,6 @@ def donor_notification_count(request):
             # ==========================================
             # 3. DONATION STATS & NEXT ELIGIBILITY
             # ==========================================
-            from donor.models import BloodDonate
-            
             # Count safe donations
             safe_donations = BloodDonate.objects.filter(
                 donor=donor,
@@ -81,7 +118,7 @@ def donor_notification_count(request):
             ).exists()
             
             # Calculate next eligible donation date
-            if donor.last_donation_date:
+            if hasattr(donor, 'last_donation_date') and donor.last_donation_date:
                 # Standard waiting period is 56 days (8 weeks)
                 next_eligible = donor.last_donation_date + timedelta(days=56)
                 today = timezone.now().date()
@@ -89,7 +126,8 @@ def donor_notification_count(request):
                 
                 context['donor_can_donate_now'] = (
                     context['donor_eligibility_completed'] and
-                    context['donor_eligibility_status']['is_eligible'] and
+                    context['donor_eligibility_status'] and
+                    context['donor_eligibility_status'].get('is_eligible', False) and
                     not has_unsafe and
                     days_until == 0
                 )
@@ -100,7 +138,8 @@ def donor_notification_count(request):
                 # First-time donor
                 context['donor_can_donate_now'] = (
                     context['donor_eligibility_completed'] and
-                    context['donor_eligibility_status']['is_eligible'] and
+                    context['donor_eligibility_status'] and
+                    context['donor_eligibility_status'].get('is_eligible', False) and
                     not has_unsafe
                 )
             
@@ -114,7 +153,7 @@ def donor_notification_count(request):
                         'target': milestone,
                         'current': safe_donations,
                         'remaining': milestone - safe_donations,
-                        'percentage': int((safe_donations / milestone) * 100)
+                        'percentage': int((safe_donations / milestone) * 100) if safe_donations > 0 else 0
                     }
                     break
             
@@ -136,7 +175,9 @@ def donor_notification_count(request):
             # 6. VOLUNTEER SUGGESTIONS (for non-eligible donors)
             # ==========================================
             if (not context['donor_eligibility_completed'] or 
-                (context['donor_eligibility_completed'] and not context['donor_eligibility_status']['is_eligible'])):
+                (context['donor_eligibility_completed'] and 
+                 context['donor_eligibility_status'] and 
+                 not context['donor_eligibility_status'].get('is_eligible', False))):
                 
                 context['donor_volunteer_suggestions'] = [
                     {
@@ -181,9 +222,9 @@ def donor_notification_count(request):
             # ==========================================
             context['donor_dashboard_stats'] = {
                 'total_safe_donations': safe_donations,
-                'total_points': donor.points,
-                'blood_group': donor.bloodgroup,
-                'blood_group_verified': donor.bloodgroup_verified,
+                'total_points': getattr(donor, 'points', 0),
+                'blood_group': getattr(donor, 'bloodgroup', 'Unknown'),
+                'blood_group_verified': getattr(donor, 'bloodgroup_verified', False),
                 'is_hero': safe_donations >= 1,
                 'hero_level': 'Gold' if safe_donations >= 10 else 'Silver' if safe_donations >= 5 else 'Bronze' if safe_donations >= 1 else 'New Donor',
             }
@@ -191,7 +232,6 @@ def donor_notification_count(request):
             # ==========================================
             # 8. URGENT BLOOD NEEDS (context for all donors)
             # ==========================================
-            # This could be fetched from a BloodRequest model
             context['donor_urgent_needs'] = [
                 {'blood_type': 'O-', 'message': 'Critical shortage', 'priority': 'high'},
                 {'blood_type': 'A-', 'message': 'Low supply', 'priority': 'medium'},
@@ -205,6 +245,7 @@ def donor_notification_count(request):
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error in donor_notification_count context processor: {e}")
+            print(f"Context processor error: {e}")  # For development debugging
     
     return context
 
@@ -304,4 +345,3 @@ def donor_support_options(request):
             },
         ]
     }
-

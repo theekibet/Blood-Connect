@@ -170,12 +170,26 @@
     {% for action in quick_actions %}
       {% if action.show %}
       <a href="javascript:void(0);" 
-      onclick="alert('This feature is coming soon! Thank you for your interest.'); return false;" 
-      class="btn btn-{{ action.color }}">
-       <i class="fas {{ action.icon }} me-2"></i>{{ action.text }}
-   </a>
+         onclick="alert('This feature is coming soon! Thank you for your interest.'); return false;" 
+         class="btn btn-{{ action.color }}">
+        <i class="fas {{ action.icon }} me-2"></i>{{ action.text }}
+      </a>
       {% endif %}
     {% endfor %}
+  </div>
+  
+  <!-- Action Buttons Row -->
+  <div class="row mb-4">
+    <div class="col-md-6 mb-2 mb-md-0">
+      <a href="{% url 'donor:events' %}" class="btn btn-primary btn-lg w-100 py-3">
+        <i class="fas fa-calendar-alt me-2"></i>View Upcoming Events
+      </a>
+    </div>
+    <div class="col-md-6">
+      <a href="{% url 'nearby-centers' %}" class="btn btn-success btn-lg w-100 py-3">
+        <i class="fas fa-hospital me-2"></i>Find Nearby Donation Centres
+      </a>
+    </div>
   </div>
 
   <!-- Dashboard Stats Cards -->
@@ -409,12 +423,6 @@
   </div>
   {% endif %}
 
-  <!-- Nearby Centers Button -->
-  <div class="text-center mb-4">
-    <a href="{% url 'nearby-centers' %}" class="btn btn-success btn-lg px-5">
-      <i class="fas fa-hospital me-2"></i>Find Donation Centers Nearby
-    </a>
-  </div>
 
   <!-- Progress Circle & Milestone Row -->
   <div class="row g-4 mb-4">
@@ -468,29 +476,7 @@
     {% endif %}
   </div>
 
-  <!-- Info Cards Section -->
-  <div class="section-header d-flex align-items-center mb-3">
-    <i class="fas fa-info-circle fs-4 text-primary me-2"></i>
-    <h5 class="mb-0">Resources & Information</h5>
-  </div>
-  
-  <div class="row g-4 mb-4">
-    {% for item in info_cards %}
-      <div class="col-lg-3 col-md-6">
-        <div class="card info-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="info-icon-wrapper me-3">
-                <i class="fas {{ item.icon }} fa-2x text-{{ item.color }}"></i>
-              </div>
-              <h6 class="mb-0 fw-bold">{{ item.title }}</h6>
-            </div>
-            <p class="small text-muted mb-0">{{ item.desc }}</p>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
+
 
   <!-- Recent Donations Section -->
   {% if recent_donations %}

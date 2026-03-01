@@ -1,0 +1,94 @@
+{% load static %}
+<div class="theme-switcher dropdown">
+    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="themeDropdown" data-toggle="dropdown">
+        <i class="fas {% if request.COOKIES.theme == 'dark' %}fa-moon{% else %}fa-sun{% endif %}"></i>
+        <span class="d-none d-md-inline ml-1">
+            {% if request.COOKIES.theme == 'dark' %}Dark{% else %}Light{% endif %}
+        </span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item theme-option" href="#" data-theme="light">
+            <i class="fas fa-sun mr-2"></i> Light
+        </a>
+        <a class="dropdown-item theme-option" href="#" data-theme="dark">
+            <i class="fas fa-moon mr-2"></i> Dark
+        </a>
+        <a class="dropdown-item theme-option" href="#" data-theme="auto">
+            <i class="fas fa-desktop mr-2"></i> System
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for saved theme preference
+    const savedTheme = getCookie('theme') || 'light';
+    applyTheme(savedTheme);
+    
+    // Theme switcher click handlers
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            const theme = this.dataset.theme;
+            setTheme(theme);
+        });
+    });
+    
+    function setTheme(theme) {
+        // Save to cookie (expires in 1 year)
+        document.cookie = `theme=${theme}; path=/; max-age=31536000`;
+        applyTheme(theme);
+        
+        // Update button icon
+        updateButtonIcon(theme);
+    }
+    
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+        } else if (theme === 'light') {
+            document.body.classList.remove('dark-mode');
+        } else {
+            // Auto - follow system preference
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+    }
+    
+    function updateButtonIcon(theme) {
+        const button = document.querySelector('#themeDropdown i');
+        const text = document.querySelector('#themeDropdown span');
+        
+        if (theme === 'dark') {
+            button.className = 'fas fa-moon';
+            if (text) text.textContent = 'Dark';
+        } else if (theme === 'light') {
+            button.className = 'fas fa-sun';
+            if (text) text.textContent = 'Light';
+        } else {
+            button.className = 'fas fa-desktop';
+            if (text) text.textContent = 'System';
+        }
+    }
+    
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (getCookie('theme') === 'auto') {
+            if (e.matches) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+    });
+});
+</script>

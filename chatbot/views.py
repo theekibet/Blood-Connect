@@ -29,8 +29,8 @@ def get_user_role(user):
     
     if hasattr(user, 'donor'):
         return 'donor'
-    elif hasattr(user, 'nurse'):
-        return 'nurse'
+    elif hasattr(user, 'phlebotomist'):
+        return 'phlebotomist'
     elif user.is_staff:
         return 'admin'
     return None
@@ -55,7 +55,7 @@ You can ask me about:
 
 Just type your question!""",
         
-        'nurse': f"""👋 Hello Nurse {name}! Welcome to your Dashboard Assistant.
+        'phlebotomist': f"""👋 Hello Phlebotomist {name}! Welcome to your Dashboard Assistant.
 
 **How can I help you today?**
 
@@ -123,21 +123,21 @@ def generate_response(intent, context_data, user_message, user=None):
 • **Active Donors:** {stats.get('total_donors', 0):,}
 
 """
-            if role == 'nurse':
+            if role == 'phlebotomist':
                 response += "💡 *Tip: You can view detailed donor information in your dashboard.*"
             elif role == 'donor':
                 response += f"🎖️ You're one of our {stats.get('total_donors', 0):,} registered donors! Keep up the great work!"
             
             return response
         
-        elif intent_detail == 'nurses':
-            response = f"""📊 **Nursing Staff Statistics**
+        elif intent_detail == 'phlebotomists':
+            response = f"""📊 **Phlebotomy Staff Statistics**
 
-• **Total Nurses:** {stats.get('total_nurses', 0)}
+• **Total Phlebotomists:** {stats.get('total_phlebotomists', 0)}
 • **Donation Centers:** {stats.get('total_centers', 0)}
 
 """
-            if role == 'nurse':
+            if role == 'phlebotomist':
                 response += "👩‍⚕️ You're part of our dedicated healthcare team!"
             
             return response
@@ -151,8 +151,8 @@ def generate_response(intent, context_data, user_message, user=None):
 """
             if role == 'donor':
                 response += "Would you like to know which centers are nearest to you?"
-            elif role == 'nurse' and user and hasattr(user, 'nurse') and user.nurse.donation_center:
-                response += f"\n🏥 Your assigned center: **{user.nurse.donation_center.name}**"
+            elif role == 'phlebotomist' and user and hasattr(user, 'phlebotomist') and user.phlebotomist.donation_center:
+                response += f"\n🏥 Your assigned center: **{user.phlebotomist.donation_center.name}**"
             
             return response
         
@@ -163,7 +163,7 @@ def generate_response(intent, context_data, user_message, user=None):
 • **Pending Approvals:** {stats.get('active_requests', 0)}
 
 """
-            if role == 'nurse':
+            if role == 'phlebotomist':
                 response += "💡 Check your dashboard for requests requiring your attention."
             elif role == 'donor':
                 response += "🩸 Your donation could help fulfill these requests! Check if you're eligible to donate."
@@ -184,7 +184,7 @@ def generate_response(intent, context_data, user_message, user=None):
             response = f"""📊 **System Overview**
 
 • **Registered Donors:** {stats.get('total_donors', 0):,}
-• **Nursing Staff:** {stats.get('total_nurses', 0)}
+• **Phlebotomy Staff:** {stats.get('total_phlebotomists', 0)}
 • **Donation Centers:** {stats.get('total_centers', 0)}
 • **Active Blood Requests:** {stats.get('active_requests', 0)}
 • **Recent Donations (30 days):** {stats.get('recent_donations', 0):,}
@@ -192,7 +192,7 @@ def generate_response(intent, context_data, user_message, user=None):
 """
             if role == 'donor':
                 response += f"🎖️ **Your Contribution:** {user.donor.total_donations if hasattr(user, 'donor') else 0} donations"
-            elif role == 'nurse':
+            elif role == 'phlebotomist':
                 response += "👩‍⚕️ **Your Role:** Healthcare Professional"
             
             return response
@@ -229,7 +229,7 @@ def generate_response(intent, context_data, user_message, user=None):
                     days = user.donor.days_until_next_donation()
                     response += f"You can donate again in **{days} days**."
         
-        elif role == 'nurse':
+        elif role == 'phlebotomist':
             if info.get('pending_requests', 0) > 0:
                 response += f"\n⚠️ **Attention:** {info.get('pending_requests')} pending requests for this blood type."
         
@@ -259,8 +259,8 @@ def generate_response(intent, context_data, user_message, user=None):
         
         if role == 'donor':
             response += "\n💡 *Tip: You can schedule an appointment at any of these centers through your dashboard.*"
-        elif role == 'nurse' and user and hasattr(user, 'nurse') and user.nurse.donation_center:
-            response += f"\n🏥 *Your assigned center: {user.nurse.donation_center.name}*"
+        elif role == 'phlebotomist' and user and hasattr(user, 'phlebotomist') and user.phlebotomist.donation_center:
+            response += f"\n🏥 *Your assigned center: {user.phlebotomist.donation_center.name}*"
         
         return response
     
@@ -335,13 +335,13 @@ def generate_response(intent, context_data, user_message, user=None):
             if info.get('upcoming_appointments'):
                 response += "\n**Upcoming Appointments:**\n"
                 for appt in info['upcoming_appointments']:
-                    response += f"  • {appt['date']} - {appt['status']} with {appt['nurse']}\n"
+                    response += f"  • {appt['date']} - {appt['status']} with {appt['phlebotomist']}\n"
             
             response += "\n💡 *Schedule your next donation through your dashboard!*"
             return response
         
-        elif role == 'nurse':
-            info = BloodDonationKnowledgeBase.get_nurse_specific_info(user.nurse)
+        elif role == 'phlebotomist':
+            info = BloodDonationKnowledgeBase.get_phlebotomist_specific_info(user.phlebotomist)
             
             if 'error' in info:
                 return "❌ Unable to retrieve your profile information. Please try again."
@@ -388,7 +388,7 @@ def generate_response(intent, context_data, user_message, user=None):
             return "🔒 Please log in to view your appointments."
         
         if role == 'donor':
-            from nurse.models import Appointment
+            from phlebotomist.models import Appointment
             upcoming = Appointment.objects.filter(
                 donor=user.donor,
                 date__gte=timezone.now(),
@@ -406,17 +406,17 @@ You don't have any upcoming appointments.
             for appt in upcoming:
                 status_emoji = {"pending": "⏳", "approved": "✅", "completed": "✔️"}.get(appt.status, "📋")
                 response += f"{status_emoji} **{appt.date.strftime('%b %d, %Y %I:%M %p')}**\n"
-                response += f"   Nurse: {appt.nurse.user.get_full_name() if appt.nurse else 'Not assigned'}\n"
+                response += f"   Phlebotomist: {appt.phlebotomist.user.get_full_name() if appt.phlebotomist else 'Not assigned'}\n"
                 response += f"   Center: {appt.donation_center.name if appt.donation_center else 'N/A'}\n"
                 response += f"   Status: {appt.status.title()}\n\n"
             
             return response
         
-        elif role == 'nurse':
-            from nurse.models import Appointment
+        elif role == 'phlebotomist':
+            from phlebotomist.models import Appointment
             today = timezone.now().date()
             today_appts = Appointment.objects.filter(
-                nurse=user.nurse,
+                phlebotomist=user.phlebotomist,
                 date__date=today
             ).order_by('date')
             
@@ -434,7 +434,7 @@ You don't have any upcoming appointments.
             
             # Pending approvals
             pending = Appointment.objects.filter(
-                nurse=user.nurse,
+                phlebotomist=user.phlebotomist,
                 status='pending'
             ).count()
             
@@ -456,7 +456,7 @@ You don't have any upcoming appointments.
 3️⃣ **Check** your eligibility status
 4️⃣ **Schedule** an appointment at your nearest center
 5️⃣ **Arrive** 10-15 minutes before your appointment
-6️⃣ **Complete** health screening with our nurse
+6️⃣ **Complete** health screening with our phlebotomist
 7️⃣ **Donate** blood (takes about 10-15 minutes)
 8️⃣ **Rest** and enjoy refreshments
 9️⃣ **Receive** confirmation and earn points! 🎖️
@@ -501,10 +501,10 @@ Please call your nearest donation center directly.
 
 🔒 *Please log in with your hospital account to submit a blood request.*"""
         
-        elif role == 'nurse':
+        elif role == 'phlebotomist':
             return """🩸 **Hospital Blood Request**
 
-As a nurse, you can request blood for patients:
+As a phlebotomist, you can request blood for patients:
 
 1. Navigate to **"Blood Requests"** in your dashboard
 2. Click **"New Request"**
@@ -531,10 +531,10 @@ If you need blood for a patient:
 
 🚨 **For emergencies, contact your nearest donation center directly.**"""
     
-    # === STOCK INFO (Nurse-specific) ===
+    # === STOCK INFO (Phlebotomist-specific) ===
     elif intent_type == 'stock_info':
-        if role != 'nurse':
-            # Generic stock info for non-nurses
+        if role != 'phlebotomist':
+            # Generic stock info for non-phlebotomists
             stock_info = context_data.get('stock_info', [])
             if not stock_info:
                 return "Stock information is currently unavailable."
@@ -548,17 +548,17 @@ If you need blood for a patient:
             
             return response
         
-        # Detailed stock info for nurses
-        if not user or not hasattr(user, 'nurse'):
-            return "This information is only available to nursing staff."
+        # Detailed stock info for phlebotomists
+        if not user or not hasattr(user, 'phlebotomist'):
+            return "This information is only available to phlebotomy staff."
         
-        nurse = user.nurse
-        if not nurse.donation_center:
+        phlebotomist = user.phlebotomist
+        if not phlebotomist.donation_center:
             return "⚠️ You are not assigned to a donation center."
         
-        info = BloodDonationKnowledgeBase.get_nurse_specific_info(nurse)
+        info = BloodDonationKnowledgeBase.get_phlebotomist_specific_info(phlebotomist)
         
-        response = f"🩸 **Blood Stock at {nurse.donation_center.name}**\n\n"
+        response = f"🩸 **Blood Stock at {phlebotomist.donation_center.name}**\n\n"
         
         if info.get('center_stock'):
             for bg, units in sorted(info['center_stock'].items()):
@@ -582,8 +582,8 @@ If you need blood for a patient:
         return response
     
     # === NURSE DUTIES ===
-    elif intent_type == 'nurse_duties':
-        if role != 'nurse':
+    elif intent_type == 'phlebotomist_duties':
+        if role != 'phlebotomist':
             return "This information is specific to nursing staff."
         
         return """👩‍⚕️ **Your Nursing Responsibilities**
@@ -704,7 +704,7 @@ Our system rewards blood donors with points for each successful donation!
    • Check points balance
 
 """
-        elif role == 'nurse':
+        elif role == 'phlebotomist':
             response += """**Quick Links for Nurses:**
    • Manage appointments
    • Check blood stock
@@ -767,7 +767,7 @@ def chatbot_api(request):
 
 I'm here to help! Here's what I can assist you with:
 
-{'**As a Donor:**' if role == 'donor' else '**As a Nurse:**' if role == 'nurse' else '**General Information:**'}
+{'**As a Donor:**' if role == 'donor' else '**As a Phlebotomist:**' if role == 'phlebotomist' else '**General Information:**'}
 
 """
                 if role == 'donor':
@@ -776,7 +776,7 @@ I'm here to help! Here's what I can assist you with:
 • Find nearby donation centers
 • Schedule donation appointments
 • Track your next eligible donation date"""
-                elif role == 'nurse':
+                elif role == 'phlebotomist':
                     reply += """• View today's appointments
 • Check blood stock levels
 • Manage pending approvals

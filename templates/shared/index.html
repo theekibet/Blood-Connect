@@ -5,11 +5,6 @@
 
 {% block extra_css %}
 <style>
-    /* Keep only index-specific styles */
-    .banner-slider {
-        margin-top: 80px;
-    }
-    
     /* Login dropdown styling */
     .login-dropdown {
         position: relative;
@@ -75,42 +70,6 @@
 <!-- Override the auth wrapper - this is a public landing page -->
 {% block content %}
 
-<!-- ADMIN BANNERS SECTION -->
-{% if banners %}
-<section class="banner-slider">
-    <div class="banner-container">
-        {% for banner in banners %}
-        <div class="banner-slide {% if forloop.first %}active{% endif %}" data-banner-id="{{ banner.id }}">
-            <div class="banner-content" {% if banner.background_image %}style="background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('{{ banner.background_image.url }}'); background-size: cover;"{% endif %}>
-                <span class="banner-type-badge banner-type-{{ banner.banner_type }}">
-                    {% if banner.banner_type == 'urgent' %}<i class="fas fa-exclamation-circle"></i>{% endif %}
-                    {% if banner.banner_type == 'info' %}<i class="fas fa-info-circle"></i>{% endif %}
-                    {% if banner.banner_type == 'success' %}<i class="fas fa-check-circle"></i>{% endif %}
-                    {% if banner.banner_type == 'event' %}<i class="fas fa-calendar-alt"></i>{% endif %}
-                    {{ banner.get_banner_type_display }}
-                </span>
-                <h3>{{ banner.title }}</h3>
-                <p>{{ banner.message }}</p>
-                {% if banner.link_url %}
-                <a href="{{ banner.link_url }}" class="banner-link">
-                    {{ banner.link_text|default:"Learn More" }} <i class="fas fa-arrow-right"></i>
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-        
-        {% if banners|length > 1 %}
-        <div class="banner-dots">
-            {% for banner in banners %}
-            <span class="banner-dot {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}"></span>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-</section>
-{% endif %}
-
 <!-- Hero Section -->
 <section class="hero">
     <div class="hero-container">
@@ -137,11 +96,11 @@
                             </a>
                         </div>
                         
-                        <!-- Nurse Login -->
+                        <!-- Phlebotomist Login -->
                         <div class="login-category">
-                            <h4><i class="fas fa-user-nurse"></i> Nurse Login</h4>
-                            <a href="{% url 'nurse:nurselogin' %}">
-                                <i class="fas fa-user-nurse"></i> Nurse Login
+                            <h4><i class="fas fa-user-nurse"></i> Phlebotomist Login</h4>
+                            <a href="{% url 'phlebotomist:phlebotomistlogin' %}">
+                                <i class="fas fa-user-nurse"></i> Phlebotomist Login
                             </a>
                         </div>
                         
@@ -162,7 +121,6 @@
                             <a href="{% url 'hospital:login' %}">
                                 <i class="fas fa-hospital"></i> Hospital Login
                             </a>
-                            <!-- Hospital Staff Login - Note: This URL doesn't exist in your hospital/urls.py -->
                             <a href="{% url 'hospital:login' %}" class="text-muted">
                                 <i class="fas fa-user-md"></i> Hospital Staff (Use Hospital Login)
                             </a>
@@ -229,7 +187,7 @@
                 </div>
                 <h3>Book Appointments</h3>
                 <p>Schedule appointments with certified nurses at nearby donation centers instantly.</p>
-                <a href="{% url 'hospital:login' %}">Hospital Login</a>
+                <a href="{% url 'hospital:login' %}" class="btn-secondary">Hospital Login</a>
             </div>
 
             <div class="feature-card fade-in">
@@ -256,7 +214,6 @@
                 </div>
                 <h3>Real-time Notifications</h3>
                 <p>Get instant alerts when blood is needed or when your donation helps someone.</p>
-                
             </div>
 
             <div class="feature-card fade-in">
@@ -270,53 +227,6 @@
         </div>
     </div>
 </section>
-
-<!-- BLOOD DRIVES SECTION -->
-{% if blood_drives %}
-<section class="blood-drives">
-    <div class="blood-drives-container">
-        <h2 class="section-title">Upcoming Blood Drives</h2>
-        <p class="section-subtitle">Join us at these upcoming events and help save lives</p>
-        
-        <div class="blood-drives-grid">
-            {% for drive in blood_drives %}
-            <div class="drive-card" onclick="window.location.href='{% url 'blood-drive-detail' drive.pk %}'">
-                <div class="drive-image">
-                    {% if drive.image %}
-                    <img src="{{ drive.image.url }}" alt="{{ drive.title }}">
-                    {% else %}
-                    <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
-                        <i class="fas fa-calendar-alt" style="font-size: 4rem; color: white;"></i>
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="drive-content">
-                    <h3 class="drive-title">{{ drive.title }}</h3>
-                    <div class="drive-location">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>{{ drive.location }}</span>
-                    </div>
-                    <div class="drive-date">
-                        <i class="fas fa-calendar"></i>
-                        <span>{{ drive.event_date|date:"F d, Y - g:i A" }}</span>
-                    </div>
-                    <p class="drive-description">{{ drive.description|truncatewords:20 }}</p>
-                    <a href="{% url 'blood-drive-detail' drive.pk %}" class="drive-cta">
-                        View Details <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        
-        {% if blood_drives|length >= 6 %}
-        <a href="{% url 'blood-drives-list' %}" class="view-all-btn">
-            View All Blood Drives <i class="fas fa-arrow-right"></i>
-        </a>
-        {% endif %}
-    </div>
-</section>
-{% endif %}
 
 <!-- TESTIMONIALS SECTION -->
 {% if testimonials %}
@@ -436,47 +346,8 @@
 {% block extra_js %}
 <script>
     // ========================================
-    // BANNER SLIDER
+    // NAVBAR SCROLL EFFECT
     // ========================================
-    const bannerSlides = document.querySelectorAll('.banner-slide');
-    const bannerDots = document.querySelectorAll('.banner-dot');
-    let currentBannerIndex = 0;
-
-    function showBanner(index) {
-        bannerSlides.forEach(slide => slide.classList.remove('active'));
-        bannerDots.forEach(dot => dot.classList.remove('active'));
-        
-        if (bannerSlides[index]) {
-            bannerSlides[index].classList.add('active');
-        }
-        if (bannerDots[index]) {
-            bannerDots[index].classList.add('active');
-        }
-    }
-
-    function nextBanner() {
-        currentBannerIndex = (currentBannerIndex + 1) % bannerSlides.length;
-        showBanner(currentBannerIndex);
-    }
-
-    // Auto-rotate banners every 5 seconds
-    if (bannerSlides.length > 1) {
-        setInterval(nextBanner, 5000);
-    }
-
-    // Banner dot click handlers
-    bannerDots.forEach((dot, index) => {
-        dot.addEventListener('click', () => {
-            currentBannerIndex = index;
-            showBanner(currentBannerIndex);
-        });
-    });
-
-    // ========================================
-    // EXISTING SCRIPTS
-    // ========================================
-
-    // Navbar Scroll Effect
     const navbar = document.getElementById('navbar');
     if (navbar) {
         window.addEventListener('scroll', () => {
@@ -488,7 +359,9 @@
         });
     }
 
-    // Counter Animation
+    // ========================================
+    // COUNTER ANIMATION
+    // ========================================
     function animateCounter(element) {
         const target = parseInt(element.getAttribute('data-target'));
         const duration = 2000;
@@ -505,7 +378,9 @@
         }, 16);
     }
 
-    // Intersection Observer for animations
+    // ========================================
+    // INTERSECTION OBSERVER FOR ANIMATIONS
+    // ========================================
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -100px 0px'
@@ -518,7 +393,9 @@
 
                 if (entry.target.classList.contains('stat-item')) {
                     const counter = entry.target.querySelector('.stat-number');
-                    animateCounter(counter);
+                    if (counter) {
+                        animateCounter(counter);
+                    }
                 }
 
                 observer.unobserve(entry.target);
@@ -530,17 +407,18 @@
         observer.observe(el);
     });
 
-    // SOS Button Functionality
+    // ========================================
+    // SOS BUTTON FUNCTIONALITY
+    // ========================================
     const sosButton = document.getElementById('sosButton');
-    if (sosButton) {
+    const sosMessage = document.getElementById('sosMessage');
+
+    if (sosButton && sosMessage) {
         sosButton.addEventListener('click', function() {
-            const messageElem = document.getElementById('sosMessage');
-            if (!messageElem) return;
-            
-            messageElem.textContent = 'Getting your location...';
+            sosMessage.textContent = 'Getting your location...';
 
             if (!navigator.geolocation) {
-                messageElem.textContent = "Geolocation is not supported by your browser.";
+                sosMessage.textContent = "Geolocation is not supported by your browser.";
                 return;
             }
 
@@ -551,6 +429,7 @@
                     const isLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
 
                     if (isLoggedIn) {
+                        // Save location for logged-in users
                         fetch("{% url 'save-user-location' %}", {
                             method: 'POST',
                             headers: {
@@ -559,19 +438,20 @@
                             },
                             body: `latitude=${lat}&longitude=${lon}`
                         })
-                        .then(r => r.json())
+                        .then(response => response.json())
                         .then(data => {
                             if (data.status === 'success') {
                                 window.location.href = "{% url 'nearby-centers' %}";
                             } else {
-                                messageElem.textContent = data.message || "Failed to save location.";
+                                sosMessage.textContent = data.message || "Failed to save location.";
                             }
                         })
-                        .catch(err => {
-                            messageElem.textContent = "Error saving location. Please try again.";
-                            console.error('Error:', err);
+                        .catch(error => {
+                            console.error('Error saving location:', error);
+                            sosMessage.textContent = "Error saving location. Please try again.";
                         });
                     } else {
+                        // Redirect with query parameters for non-logged-in users
                         window.location.href = `{% url 'nearby-centers' %}?lat=${lat}&lng=${lon}`;
                     }
                 },
@@ -590,9 +470,13 @@
                         default:
                             errorMessage += "An unknown error occurred.";
                     }
-                    messageElem.textContent = errorMessage;
+                    sosMessage.textContent = errorMessage;
+                    console.error('Geolocation error:', err);
                 },
-                { timeout: 10000 }
+                { 
+                    timeout: 10000,
+                    enableHighAccuracy: true 
+                }
             );
         });
     }
@@ -600,7 +484,6 @@
     // ========================================
     // CHATBOT FUNCTIONALITY
     // ========================================
-
     const chatbotButton = document.getElementById('chatbotButton');
     const chatbotContainer = document.getElementById('chatbotContainer');
     const chatbotClose = document.getElementById('chatbotClose');
@@ -649,12 +532,14 @@
 
     // Show/hide typing indicator
     function showTyping(show) {
-        if (show) {
-            chatbotTyping.classList.add('active');
-        } else {
-            chatbotTyping.classList.remove('active');
+        if (chatbotTyping) {
+            if (show) {
+                chatbotTyping.classList.add('active');
+            } else {
+                chatbotTyping.classList.remove('active');
+            }
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
         }
-        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
     }
 
     // Send message to chatbot API
@@ -777,7 +662,9 @@
         });
 
         chatbotInput.addEventListener('input', () => {
-            chatbotSend.disabled = chatbotInput.value.trim() === '';
+            if (chatbotSend) {
+                chatbotSend.disabled = chatbotInput.value.trim() === '';
+            }
         });
     }
 

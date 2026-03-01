@@ -1,0 +1,523 @@
+{% extends 'phlebotomist/phlebotomistbase.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1><i class="fas fa-syringe"></i> Complete Blood Collection</h1>
+        <p class="mb-3">Appointment for: <strong>{{ donor.user.get_full_name }}</strong></p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <!-- Barcode Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-barcode"></i> Selected Blood Bag</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>Barcode:</strong> <code class="h5">{{ barcode.barcode }}</code></p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Bag Type:</strong> {{ barcode.get_bag_type_display }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Volume:</strong> {{ barcode.volume_ml }} ml</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Anticoagulant:</strong> {{ barcode.get_anticoagulant_display }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collection Form Card -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Enhanced Collection Form (Kenya NBTS Standards)</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'phlebotomist:collect_with_barcode' appointment.id barcode.id %}" id="collectionForm">
+                        {% csrf_token %}
+                        
+                        <!-- Donor Information Summary -->
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Donor:</strong> {{ donor.user.get_full_name }}<br>
+                                    <strong>ID Number:</strong> {{ donor.national_id|default:"Not provided" }}<br>
+                                    <strong>Phone:</strong> {{ donor.mobile }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Blood Group:</strong> 
+                                    {% if donor.bloodgroup %}
+                                        {{ donor.bloodgroup }}
+                                        {% if donor.bloodgroup_verified %}
+                                            <span class="badge bg-success">Verified</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-warning">New Donor</span>
+                                    {% endif %}<br>
+                                    <strong>Age:</strong> {{ donor.age }} years<br>
+                                    <strong>Gender:</strong> {{ donor.gender|default:"Not specified" }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Appointment:</strong> {{ appointment.date|date:"M d, Y H:i" }}<br>
+                                    <strong>Center:</strong> {{ appointment.center.name }}<br>
+                                    <strong>Phlebotomist:</strong> {{ phlebotomist.user.get_full_name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 1: PRE-DONATION VITAL SIGNS -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-heartbeat"></i> Pre-Donation Vital Signs (Kenya NBTS Standards)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">Temperature (°C) *</label>
+                                        <input type="number" name="temperature" step="0.1" min="35" max="40" 
+                                               class="form-control" required placeholder="36.5" id="temperature">
+                                        <small class="text-muted">Normal: 36.5-37.5°C</small>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">Pulse (bpm) *</label>
+                                        <input type="number" name="pulse" min="40" max="120" 
+                                               class="form-control" required placeholder="72" id="pulse">
+                                        <small class="text-muted">Normal: 60-100 bpm</small>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">Blood Pressure *</label>
+                                        <div class="row g-1">
+                                            <div class="col-6">
+                                                <input type="number" name="bp_systolic" class="form-control" 
+                                                       placeholder="Systolic" required min="70" max="200" id="bpSystolic">
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="number" name="bp_diastolic" class="form-control" 
+                                                       placeholder="Diastolic" required min="40" max="120" id="bpDiastolic">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Normal: ≤140/90 mmHg</small>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">Haemoglobin (g/dL) *</label>
+                                        <input type="number" name="haemoglobin" step="0.1" min="5" max="20" 
+                                               class="form-control" required placeholder="12.5" id="haemoglobin">
+                                        <small class="text-muted">Min: 12.5 (women), 13.5 (men)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 2: BLOOD GROUP -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-tint"></i> Blood Group Determination</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold">Blood Group *</label>
+                                        {% if donor.bloodgroup_verified %}
+                                            <input type="text" class="form-control" value="{{ donor.bloodgroup }}" readonly>
+                                            <input type="hidden" name="bloodgroup" value="{{ donor.bloodgroup }}">
+                                            <small class="text-success">Verified blood group</small>
+                                        {% else %}
+                                            <select name="bloodgroup" class="form-control" id="bloodgroup" required>
+                                                <option value="">-- Select Blood Group --</option>
+                                                <option value="A+">A+</option>
+                                                <option value="A-">A-</option>
+                                                <option value="B+">B+</option>
+                                                <option value="B-">B-</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="AB-">AB-</option>
+                                                <option value="O+">O+</option>
+                                                <option value="O-">O-</option>
+                                            </select>
+                                            <small class="text-warning">Tentative - will be verified by lab</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold">Donation Type *</label>
+                                        <select name="donation_type" class="form-control" id="donationType" required>
+                                            <option value="whole_blood">Whole Blood (450ml)</option>
+                                            <option value="double_red">Double Red Cells</option>
+                                            <option value="platelets">Platelets (Apheresis)</option>
+                                            <option value="plasma">Plasma</option>
+                                            <option value="pediatric">Pediatric (450ml or less)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 3: COLLECTION DETAILS -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-syringe"></i> Collection Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Units Collected (ml) *</label>
+                                        <input type="number" name="unit" class="form-control" 
+                                               value="{{ barcode.volume_ml }}" min="100" max="500" step="50" id="unit" required>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Bleed Start Time *</label>
+                                        <input type="time" name="bleed_time_start" class="form-control" id="bleedStart" required>
+                                        <small class="text-muted">When collection started</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Bleed End Time *</label>
+                                        <input type="time" name="bleed_time_end" class="form-control" id="bleedEnd" required>
+                                        <small class="text-muted">When collection completed</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Bleed Completion *</label>
+                                        <select name="bleed_completion" class="form-control" id="bleedCompletion" required>
+                                            <option value="complete">Complete - Full Unit</option>
+                                            <option value="partial">Partial - Underweight</option>
+                                            <option value="incomplete">Incomplete - Stopped Early</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Arm Used *</label>
+                                        <select name="arm_used" class="form-control" id="armUsed" required>
+                                            <option value="">-- Select --</option>
+                                            <option value="left">Left Arm</option>
+                                            <option value="right">Right Arm</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Vein Quality *</label>
+                                        <select name="vein_quality" class="form-control" id="veinQuality" required>
+                                            <option value="good">Good - Easy access</option>
+                                            <option value="fair">Fair - Acceptable</option>
+                                            <option value="poor">Poor - Difficult</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Attempts *</label>
+                                        <input type="number" name="attempts_count" min="1" max="3" 
+                                               class="form-control" value="1" id="attemptsCount" required>
+                                    </div>
+                                    <div class="col-md-8 mb-3">
+                                        <label class="form-label fw-bold">Phlebotomist Notes</label>
+                                        <textarea name="phlebotomist_notes" class="form-control" rows="2" id="phlebotomistNotes"
+                                                  placeholder="Any observations about the collection..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 4: ADVERSE EVENTS -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-warning">
+                                <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Adverse Events (if any)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label fw-bold">Event Type</label>
+                                        <select name="adverse_event" class="form-control" id="adverseEvent">
+                                            <option value="none">None</option>
+                                            <option value="hematoma">Hematoma</option>
+                                            <option value="fainting">Fainting/Syncope</option>
+                                            <option value="nausea">Nausea/Vomiting</option>
+                                            <option value="pain">Excessive Pain</option>
+                                            <option value="nerve_stick">Nerve Stick</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-8 mb-3" id="adverseEventDetailsDiv" style="display: none;">
+                                        <label class="form-label fw-bold">Event Details</label>
+                                        <textarea name="adverse_event_details" class="form-control" rows="2" id="adverseEventDetails"
+                                                  placeholder="Describe any adverse events..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 5: COLLECTION NOTES -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-notes-medical"></i> Additional Notes</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <textarea name="collection_notes" class="form-control" rows="3" id="collectionNotes"
+                                                  placeholder="Any general observations or special instructions..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Confirmation -->
+                        <div class="form-group mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="confirm" required>
+                                <label class="form-check-label fw-bold" for="confirm">
+                                    I confirm that I have:
+                                    <ul class="mt-2">
+                                        <li>Verified donor identity and vital signs</li>
+                                        <li>Collected the blood sample according to NBTS Kenya standards</li>
+                                        <li>Attached the correct barcode to the blood bag</li>
+                                        <li>Completed all required documentation</li>
+                                    </ul>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'phlebotomist:select_barcode' appointment.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Barcode Selection
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                                <i class="fas fa-check"></i> Complete Collection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="alert alert-info mt-4">
+                <i class="fas fa-info-circle"></i>
+                <strong>Next Steps (Kenya NBTS Protocol):</strong>
+                <ol class="mb-0 mt-2">
+                    <li>Sample sent to lab for: HIV, Hepatitis B/C, Syphilis, Malaria screening</li>
+                    <li>Blood group confirmation by lab technician</li>
+                    <li>Component separation (if applicable)</li>
+                    <li>Quarantine until test results are available</li>
+                    <li>Release to inventory if all tests negative</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('collectionForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const confirmCheckbox = document.getElementById('confirm');
+    const adverseEvent = document.getElementById('adverseEvent');
+    const adverseEventDetailsDiv = document.getElementById('adverseEventDetailsDiv');
+    
+    // Enable/disable submit based on checkbox
+    if (confirmCheckbox) {
+        confirmCheckbox.addEventListener('change', function() {
+            submitBtn.disabled = !this.checked;
+        });
+    }
+    
+    // Show/hide adverse event details
+    if (adverseEvent && adverseEventDetailsDiv) {
+        adverseEvent.addEventListener('change', function() {
+            if (this.value === 'none') {
+                adverseEventDetailsDiv.style.display = 'none';
+                document.getElementById('adverseEventDetails').value = '';
+            } else {
+                adverseEventDetailsDiv.style.display = 'block';
+            }
+        });
+    }
+    
+    // Calculate bleed duration
+    const bleedStart = document.getElementById('bleedStart');
+    const bleedEnd = document.getElementById('bleedEnd');
+    
+    function validateBleedTimes() {
+        // Remove any existing warning
+        const existingWarning = document.getElementById('bleed-time-warning');
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+        
+        if (bleedStart.value && bleedEnd.value) {
+            // Parse time strings
+            const startParts = bleedStart.value.split(':');
+            const endParts = bleedEnd.value.split(':');
+            
+            // Create Date objects for today
+            const now = new Date();
+            const startTime = new Date(now);
+            startTime.setHours(parseInt(startParts[0]), parseInt(startParts[1]), 0);
+            
+            const endTime = new Date(now);
+            endTime.setHours(parseInt(endParts[0]), parseInt(endParts[1]), 0);
+            
+            // Calculate difference in minutes
+            let diffMins = (endTime - startTime) / (1000 * 60);
+            
+            // Handle next day scenario (end time is earlier than start time)
+            if (diffMins < 0) {
+                diffMins += 24 * 60; // Add 24 hours
+            }
+            
+            // Create warning element
+            const warningDiv = document.createElement('div');
+            warningDiv.id = 'bleed-time-warning';
+            warningDiv.className = 'mt-2';
+            
+            if (diffMins < 5) {
+                warningDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Bleed duration too short (' + Math.round(diffMins) + ' minutes). Minimum is 5 minutes.</span>';
+                bleedEnd.setCustomValidity('Bleed duration too short');
+            } else if (diffMins > 20) {
+                warningDiv.innerHTML = '<span class="text-warning"><i class="fas fa-clock"></i> Bleed duration seems long (' + Math.round(diffMins) + ' minutes). Please confirm.</span>';
+                bleedEnd.setCustomValidity('');
+            } else {
+                warningDiv.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Bleed duration: ' + Math.round(diffMins) + ' minutes</span>';
+                bleedEnd.setCustomValidity('');
+            }
+            
+            // Insert warning after bleed end field
+            const parentDiv = bleedEnd.closest('.mb-3');
+            if (parentDiv) {
+                parentDiv.appendChild(warningDiv);
+            }
+        }
+    }
+    
+    if (bleedStart && bleedEnd) {
+        bleedStart.addEventListener('change', validateBleedTimes);
+        bleedEnd.addEventListener('change', validateBleedTimes);
+        bleedEnd.addEventListener('blur', validateBleedTimes);
+    }
+    
+    // Form submission
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const temp = parseFloat(document.getElementById('temperature')?.value);
+            const pulse = parseInt(document.getElementById('pulse')?.value);
+            const bpSystolic = parseInt(document.getElementById('bpSystolic')?.value);
+            const bpDiastolic = parseInt(document.getElementById('bpDiastolic')?.value);
+            const hb = parseFloat(document.getElementById('haemoglobin')?.value);
+            const unit = parseInt(document.getElementById('unit')?.value);
+            
+            let errors = [];
+            let warnings = [];
+            
+            // Validate unit
+            if (!unit || unit < 100 || unit > 500 || unit % 50 !== 0) {
+                errors.push('Please enter a valid volume (100-500ml, multiples of 50).');
+            }
+            
+            // Validate temperature
+            if (temp && (temp < 35 || temp > 40)) {
+                errors.push('Temperature must be between 35°C and 40°C.');
+            }
+            
+            // Validate pulse
+            if (pulse && (pulse < 40 || pulse > 120)) {
+                errors.push('Pulse must be between 40 and 120 bpm.');
+            }
+            
+            // Validate blood pressure
+            if (bpSystolic && bpDiastolic) {
+                if (bpSystolic < 70 || bpSystolic > 200) {
+                    errors.push('Systolic pressure must be between 70 and 200 mmHg.');
+                }
+                if (bpDiastolic < 40 || bpDiastolic > 120) {
+                    errors.push('Diastolic pressure must be between 40 and 120 mmHg.');
+                }
+                if (bpSystolic <= bpDiastolic) {
+                    errors.push('Systolic pressure must be greater than diastolic pressure.');
+                }
+            }
+            
+            // Check haemoglobin based on donor gender
+            {% if donor.gender %}
+                if (hb) {
+                    {% if donor.gender == 'F' %}
+                        if (hb < 12.5) {
+                            errors.push(`Haemoglobin ${hb} g/dL is below minimum for females (12.5 g/dL). Cannot proceed with donation.`);
+                        } else if (hb > 16.5) {
+                            warnings.push(`Haemoglobin ${hb} g/dL is above average.`);
+                        }
+                    {% else %}
+                        if (hb < 13.5) {
+                            errors.push(`Haemoglobin ${hb} g/dL is below minimum for males (13.5 g/dL). Cannot proceed with donation.`);
+                        } else if (hb > 18) {
+                            warnings.push(`Haemoglobin ${hb} g/dL is above average.`);
+                        }
+                    {% endif %}
+                }
+            {% endif %}
+            
+            // Check blood group for first-time donors
+            {% if not donor.bloodgroup_verified %}
+                const bloodgroup = document.getElementById('bloodgroup')?.value;
+                if (!bloodgroup) {
+                    errors.push('Please select the blood group for this first-time donor.');
+                }
+            {% endif %}
+            
+            // Check bleed times
+            if (bleedStart.value && bleedEnd.value) {
+                const startParts = bleedStart.value.split(':');
+                const endParts = bleedEnd.value.split(':');
+                
+                const startTime = new Date();
+                startTime.setHours(parseInt(startParts[0]), parseInt(startParts[1]), 0);
+                
+                const endTime = new Date();
+                endTime.setHours(parseInt(endParts[0]), parseInt(endParts[1]), 0);
+                
+                let diffMins = (endTime - startTime) / (1000 * 60);
+                if (diffMins < 0) diffMins += 24 * 60;
+                
+                if (diffMins < 5) {
+                    errors.push(`Bleed duration (${Math.round(diffMins)} minutes) is too short. Minimum is 5 minutes.`);
+                } else if (diffMins > 20) {
+                    warnings.push(`Bleed duration (${Math.round(diffMins)} minutes) is longer than usual. Please confirm.`);
+                }
+            } else {
+                errors.push('Bleed start and end times are required.');
+            }
+            
+            // Show errors if any
+            if (errors.length > 0) {
+                alert('Please fix the following errors:\n- ' + errors.join('\n- '));
+                return;
+            }
+            
+            // Show warnings if any
+            if (warnings.length > 0) {
+                if (!confirm('Warnings:\n- ' + warnings.join('\n- ') + '\n\nDo you want to continue anyway?')) {
+                    return;
+                }
+            }
+            
+            // Final confirmation
+            if (!confirm('Confirm blood collection with all entered data? This action cannot be undone.')) {
+                return;
+            }
+            
+            // Disable and submit
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+            form.submit();
+        });
+    }
+});
+</script>
+
+{% endblock %}

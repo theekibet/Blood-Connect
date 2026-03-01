@@ -32,8 +32,9 @@
     <a href="{% url 'admin-dashboard' %}" class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
         <i class="fas fa-home"></i> Dashboard
     </a>
-    <a href="{% url 'admin-nurse' %}" class="{% if request.resolver_match.url_name == 'admin-nurse' %}active{% endif %}">
-        <i class="fas fa-user-md"></i> Nurses
+    <!-- FIXED: Changed from 'admin-phlebotomist' to 'admin-phlebotomist-view' -->
+    <a href="{% url 'admin-phlebotomist-view' %}" class="{% if request.resolver_match.url_name == 'admin-phlebotomist-view' %}active{% endif %}">
+        <i class="fas fa-user-md"></i> Phlebotomists
     </a>
     <a href="{% url 'admin-donor' %}" class="{% if request.resolver_match.url_name == 'admin-donor' %}active{% endif %}">
         <i class="fas fa-hand-holding-heart"></i> Donors

@@ -454,7 +454,7 @@ def perform_test(request, collection_id):
                 blood.save()
                 
                 # Update appointment status
-                from nurse.models import Appointment
+                from phlebotomist.models import Appointment
                 try:
                     appointment = Appointment.objects.get(
                         request_object_id=blood.id,
@@ -528,7 +528,7 @@ def perform_test(request, collection_id):
                 blood.save()
                 
                 # Update appointment status
-                from nurse.models import Appointment
+                from phlebotomist.models import Appointment
                 try:
                     appointment = Appointment.objects.get(
                         request_object_id=blood.id,
@@ -707,7 +707,7 @@ def mark_safe(request, test_id):
         blood.save()
         
         # Update appointment
-        from nurse.models import Appointment
+        from phlebotomist.models import Appointment
         try:
             appointment = Appointment.objects.get(
                 request_object_id=blood.id,
@@ -819,7 +819,7 @@ def mark_unsafe(request, test_id):
         blood.save()
         
         # Update appointment
-        from nurse.models import Appointment
+        from phlebotomist.models import Appointment
         try:
             appointment = Appointment.objects.get(
                 request_object_id=blood.id,

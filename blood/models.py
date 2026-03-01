@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 import uuid
 from django.contrib.auth.models import User
-# from nurse.models import Appointment  # Commented out to break circular import
+# from phlebotomist.models import Appointment  # Commented out to break circular import
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -67,7 +67,7 @@ class StockUnit(models.Model):
 
     # Who added this to stock
     ADDED_BY_ROLE_CHOICES = [
-        ('nurse', 'Nurse'),
+        ('phlebotomist', 'Phlebotomist'),
         ('lab_tech', 'Lab Technologist'),
         ('system', 'System'),
     ]
@@ -180,7 +180,7 @@ class StockUnit(models.Model):
     added_to_inventory_by_role = models.CharField(
         max_length=20,
         choices=ADDED_BY_ROLE_CHOICES,
-        default='nurse',
+        default='phlebotomist',
         null=True,
         blank=True,
         help_text='Role of the person who added to inventory'
@@ -238,7 +238,7 @@ class StockUnit(models.Model):
         }
         return f"{status_icons.get(self.safety_status, '')} {self.get_safety_status_display()}"
 
-    def mark_safe(self, verified_by_user, role='nurse', notes=None):
+    def mark_safe(self, verified_by_user, role='phlebotomist', notes=None):
         """Mark this stock unit as safe for use"""
         self.safety_status = 'safe'
         self.safety_verified_by = verified_by_user
@@ -260,7 +260,7 @@ class StockUnit(models.Model):
         if self.blood_bag_barcode:
             self.blood_bag_barcode.mark_tested()
     
-    def mark_unsafe(self, verified_by_user, role='nurse', reason=None, notes=None):
+    def mark_unsafe(self, verified_by_user, role='phlebotomist', reason=None, notes=None):
         """Mark this stock unit as unsafe and quarantine it"""
         self.safety_status = 'unsafe'
         self.safety_verified_by = verified_by_user
@@ -362,7 +362,7 @@ class Contact(models.Model):
 
     # 👉  for richer notifications
     action = models.CharField(max_length=20, blank=True, null=True)  # e.g. approved, rejected, completed
-    reason = models.TextField(blank=True, null=True)  # nurse’s reason if reject/cancel
+    reason = models.TextField(blank=True, null=True)  # phlebotomist’s reason if reject/cancel
     appointment_date = models.DateTimeField(blank=True, null=True)
     bloodgroup = models.CharField(max_length=10, blank=True, null=True)
     unit = models.PositiveIntegerField(blank=True, null=True)
@@ -382,7 +382,7 @@ class StockTransaction(models.Model):
 #     blood_request = models.ForeignKey('patient.BloodRequest', on_delete=models.CASCADE, null=True, blank=True)
     # ⭐ FIXED: Added 'donor.' prefix for cross-app reference
 # #     donor_blood_request = models.ForeignKey('donor.DonorBloodRequest', on_delete=models.CASCADE, null=True, blank=True)
-    appointment = models.ForeignKey('nurse.Appointment', on_delete=models.CASCADE, null=True, blank=True)
+    appointment = models.ForeignKey('phlebotomist.Appointment', on_delete=models.CASCADE, null=True, blank=True)
     
     # When blood is taken out for a request: record quantity_deducted
     quantity_deducted = models.PositiveIntegerField(null=True, blank=True)
@@ -512,7 +512,7 @@ class Banner(models.Model):
 class Testimonial(models.Model):
     """User testimonials and success stories"""
     name = models.CharField(max_length=100)
-    role = models.CharField(max_length=100, help_text="e.g., 'Blood Donor', 'Patient', 'Nurse'")
+    role = models.CharField(max_length=100, help_text="e.g., 'Blood Donor', 'Patient', 'Phlebotomist'")
     avatar = models.ImageField(upload_to='testimonials/', blank=True, null=True)
     testimonial = models.TextField(max_length=800)
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)], default=5)

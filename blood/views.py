@@ -30,18 +30,20 @@ from utils.models import Notification
 from django.contrib.contenttypes.models import ContentType
 from blood import models as blood_models
 from donor import models as donor_models
-from nurse import models as nurse_models
+from phlebotomist import models as phlebotomist_models
 from hospital import models as hospital_models
 from django.http import Http404
 from django.core.paginator import Paginator
 from blood import models
 from blood import models as bmodels
-from nurse.models import Nurse
-from nurse import forms as nurse_forms
+from phlebotomist.models import Phlebotomist
+from phlebotomist import forms as phlebotomist_forms
 from .models import DonationCenter, StockUnit
 from .forms import BloodForm
 from .forms import StockUnitForm
 import json
+import os
+from datetime import datetime
 from datetime import date as dt_date
 from django.utils.timezone import now
 from collections import defaultdict
@@ -55,7 +57,7 @@ from django.utils import timezone
 from django.db import transaction
 from blood.utils.geolocation import find_nearby_centers
 from django.views.decorators.csrf import csrf_exempt
-from nurse.models import Appointment
+from phlebotomist.models import Appointment
 import logging
 from donor.models import BLOODGROUP_CHOICES
 from django.db.models import F
@@ -184,21 +186,7 @@ def home_view(request):
         # ==========================================
         # DYNAMIC CONTENT FROM ADMIN
         # ==========================================
-        now = timezone.now()
-        
-        # Get active banners (current date within start/end range)
-        banners = Banner.objects.filter(
-            is_active=True,
-            start_date__lte=now
-        ).filter(
-            Q(end_date__isnull=True) | Q(end_date__gte=now)
-        )[:5]
-        
-        # Get upcoming blood drive events
-        blood_drives = BloodDriveEvent.objects.filter(
-            is_active=True,
-            event_date__gte=now
-        )[:6]
+
         
         # Get featured testimonials
         testimonials = Testimonial.objects.filter(
@@ -212,8 +200,6 @@ def home_view(request):
         context = {
             'user_is_authenticated': request.user.is_authenticated,
             'stats': stats,
-            'banners': banners,
-            'blood_drives': blood_drives,
             'testimonials': testimonials,
             # Legacy context for backward compatibility
             'active_donors_count': stats[0]['stat_value'] if isinstance(stats, list) else None,
@@ -270,7 +256,7 @@ def is_donor(user):
 def is_patient(user):
     return user.groups.filter(name='PATIENT').exists()
 
-def is_nurse(user):
+def is_phlebotomist(user):
     return user.groups.filter(name='NURSE').exists()
 def adminlogin_view(request):
     """
@@ -323,12 +309,12 @@ def afterlogin_view(request):
         profile_type, profile = get_user_profile_type(user)
         
         if profile_type == 'donor':
-            return redirect('donor-dashboard')
-        elif profile_type == 'nurse':
-            # Check if nurse needs approval
+            return redirect('donor:donor-dashboard')
+        elif profile_type == 'phlebotomist':
+            # Check if phlebotomist needs approval
             if hasattr(profile, 'is_approved') and not profile.is_approved:
-                return redirect('nurse-pending-approval')
-            return redirect('nurse-dashboard')
+                return redirect('phlebotomist-pending-approval')
+            return redirect('phlebotomist-dashboard')
         elif profile_type == 'hospital_staff':
             return redirect('hospital:dashboard')
         elif profile_type == 'lab_technologist':
@@ -412,8 +398,8 @@ def admin_dashboard_view(request):
             "color": "#007bff"
         },
         {
-            "label": "Total Nurses", 
-            "value": nurse_models.Nurse.objects.count(), 
+            "label": "Total Phlebotomists", 
+            "value": phlebotomist_models.Phlebotomist.objects.count(), 
             "icon": "fas fa-user-nurse", 
             "color": "#28a745"
         },
@@ -754,14 +740,14 @@ def admin_donation_view(request):
     # Mark all unseen donations as seen
     BloodDonate.objects.filter(is_seen=False).update(is_seen=True)
 
-    # Prefetch related appointments with their nurse and user data
+    # Prefetch related appointments with their phlebotomist and user data
     donations = (
         BloodDonate.objects
         .select_related('donor__user', 'donation_center')
         .prefetch_related(
             Prefetch(
                 'appointments',
-                queryset=Appointment.objects.select_related('nurse', 'nurse__user'),
+                queryset=Appointment.objects.select_related('phlebotomist', 'phlebotomist__user'),
                 to_attr='prefetched_appointments'  # Access via donation.prefetched_appointments
             )
         )
@@ -784,7 +770,7 @@ from blood.models import (
 )
 from blood.utils.stock_utils import deduct_stock_fifo
 from hospital.models import HospitalBloodRequest
-from nurse.models import Appointment
+from phlebotomist.models import Appointment
 logger = logging.getLogger(__name__)
 def serialize_deductions(deductions):
     """
@@ -819,8 +805,127 @@ def contact_success(request):
 def learn_more_view(request):
     return render(request, 'shared/learn_more.html')
 
+
+from donor.models import BloodDonate
+
+
 def about_us_view(request):
-    return render(request, 'shared/about_us.html')
+
+    donor_count = Donor.objects.count()
+    lives_saved = BloodDonate.objects.filter(status='completed').count()
+
+    try:
+        from hospital.models import Hospital
+        hospital_count = Hospital.objects.count()
+    except ImportError:
+        hospital_count = 125
+
+    last_30_days = timezone.now().date() - timedelta(days=30)
+    recent_donations = BloodDonate.objects.filter(date__gte=last_30_days).count()
+    pending_donations = BloodDonate.objects.filter(status='pending').count()
+
+    # 🔥 Determine image source
+    profile_image = request.session.get('profile_image')
+    profile_image_url = request.session.get('profile_image_url')
+
+    if profile_image_url:
+        image_url = profile_image_url
+        use_static = False
+    elif profile_image:
+        image_url = profile_image
+        use_static = True
+    else:
+        image_url = "images/allan_kibet.jpg"  # default static image
+        use_static = True
+
+    context = {
+        'page_title': 'About Us - BloodConnect',
+        'current_year': timezone.now().year,
+        'creator': {
+            'name': 'Allan Kibet',
+            'role': 'Founder & Lead Developer',
+            'bio': 'Passionate developer on a mission to save lives through technology.',
+            'location': 'Nairobi, Kenya',
+            'email': 'allankibet1820@gmail.com',
+            'phone': '+254 781 024 762',
+            'quote': "I built BloodConnect to unite donors, phlebotomists, and hospitals in one life-saving network.",
+            'image_url': image_url,
+            'use_static': use_static,
+        },
+        'impact': [
+            {'number': f'{donor_count:,}+', 'label': 'Active Donors'},
+            {'number': f'{lives_saved:,}+', 'label': 'Lives Saved'},
+            {'number': f'{hospital_count:,}+', 'label': 'Partner Hospitals'},
+        ],
+        'stats': {
+            'donors': donor_count,
+            'lives_saved': lives_saved,
+            'hospitals': hospital_count,
+            'recent_donations': recent_donations,
+            'pending_donations': pending_donations,
+            'total_donations': BloodDonate.objects.count(),
+        }
+    }
+
+    return render(request, 'shared/about_us.html', context)
+
+
+@staff_member_required
+def update_profile_image(request):
+
+    if request.method == 'POST':
+
+        # FILE UPLOAD
+        if request.FILES.get('profile_image'):
+            image = request.FILES['profile_image']
+
+            allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg']
+            if image.content_type not in allowed_types:
+                messages.error(request, 'Invalid file type.')
+                return redirect('about-us')
+
+            if image.size > 5 * 1024 * 1024:
+                messages.error(request, 'File too large (max 5MB).')
+                return redirect('about-us')
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            ext = os.path.splitext(image.name)[1]
+            filename = f'allan_kibet_{timestamp}{ext}'
+
+            static_dir = os.path.join(settings.BASE_DIR, 'static', 'images')
+            os.makedirs(static_dir, exist_ok=True)
+
+            filepath = os.path.join(static_dir, filename)
+
+            with open(filepath, 'wb+') as destination:
+                for chunk in image.chunks():
+                    destination.write(chunk)
+
+            request.session['profile_image'] = f'images/{filename}'
+            request.session.pop('profile_image_url', None)
+
+            messages.success(request, 'Profile image updated.')
+
+        # URL UPLOAD
+        elif request.POST.get('image_url'):
+            url = request.POST['image_url']
+
+            if not url.startswith(('http://', 'https://')):
+                messages.error(request, 'Enter a valid URL.')
+                return redirect('about-us')
+
+            request.session['profile_image_url'] = url
+            request.session.pop('profile_image', None)
+
+            messages.success(request, 'Profile image URL updated.')
+
+        # REMOVE IMAGE
+        elif request.POST.get('remove_image'):
+            request.session.pop('profile_image', None)
+            request.session.pop('profile_image_url', None)
+            messages.success(request, 'Profile image removed.')
+
+    return redirect('about-us')
 
 
 
@@ -867,7 +972,7 @@ def admin_post_notification(request):
                 'hospital': Hospital,
                 'hospital_user': HospitalUser,
                 'donor': Donor,
-                'nurse': Nurse
+                'phlebotomist': Phlebotomist
             }
 
             for group in selected_groups:
@@ -916,12 +1021,12 @@ def admin_post_notification(request):
                         donor.user.id
                     )
 
-                # Check Nurses
-                nurses = Nurse.objects.filter(user__id__in=recipient_ids).select_related('user')
-                for nurse in nurses:
-                    user_id_map[nurse.user.id] = (
-                        ContentType.objects.get_for_model(nurse.user.__class__),
-                        nurse.user.id
+                # Check Phlebotomists
+                phlebotomists = Phlebotomist.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for phlebotomist in phlebotomists:
+                    user_id_map[phlebotomist.user.id] = (
+                        ContentType.objects.get_for_model(phlebotomist.user.__class__),
+                        phlebotomist.user.id
                     )
 
                 for user_id in recipient_ids:
@@ -951,57 +1056,62 @@ def admin_post_notification(request):
     hospitals = Hospital.objects.all()
     hospital_users = HospitalUser.objects.select_related('user', 'hospital').all()
     donors = Donor.objects.select_related('user').all()
-    nurses = Nurse.objects.select_related('user').all()
+    phlebotomists = Phlebotomist.objects.select_related('user').all()
 
     context = {
         'hospitals': hospitals,
         'hospital_users': hospital_users,
         'donors': donors,
-        'nurses': nurses,
+        'phlebotomists': phlebotomists,
     }
     return render(request, 'blood/admin_post_notification.html', context)
 # ---------------------------
-# Admin Nurse Management View
+# Admin Phlebotomist Management View
 # ---------------------------
 @login_required(login_url='adminlogin')
-def admin_nurse_view(request):
+def admin_phlebotomist_view(request):
     """
-    Display all nurses with filtering and search
+    Display all phlebotomists with filtering and search
     """
     # Get filter parameters
     status_filter = request.GET.get('status', 'all')
     query = request.GET.get('q', '').strip()
     
-    # Base queryset
-    nurses = Nurse.objects.select_related('user', 'donation_center', 'approved_by').all()
+    # Base queryset - Fixed: changed 'donation_center' to 'center' based on your error message
+    phlebotomists = Phlebotomist.objects.select_related('user', 'center', 'approved_by').all()
     
-    # Apply status filter
+    # Apply status filter - without rejection_reason field
     if status_filter == 'pending':
-        nurses = nurses.filter(is_approved=False, rejection_reason__isnull=True)
+        phlebotomists = phlebotomists.filter(is_approved=False)  # Pending = not approved
     elif status_filter == 'approved':
-        nurses = nurses.filter(is_approved=True)
+        phlebotomists = phlebotomists.filter(is_approved=True)
     elif status_filter == 'rejected':
-        nurses = nurses.filter(rejection_reason__isnull=False)
+        # Since we don't have rejection_reason, we might consider rejected as:
+        # Option 1: Show only phlebotomists that were ever approved then something? 
+        # For now, showing none as we can't differentiate
+        phlebotomists = phlebotomists.filter(is_approved=False)  # Same as pending for now
     
-    # Apply search
+    # Apply search - Removed first_name/last_name as they might not be direct fields
+    # Assuming user model has first_name and last_name
     if query:
-        nurses = nurses.filter(
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
+        phlebotomists = phlebotomists.filter(
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
             Q(user__email__icontains=query) |
             Q(phone__icontains=query) |
-            Q(registration_number__icontains=query) |
+            Q(license_number__icontains=query) |  # Changed from registration_number to license_number
             Q(user__username__icontains=query)
         )
     
-    # Calculate statistics
-    total_count = Nurse.objects.count()
-    pending_count = Nurse.objects.filter(is_approved=False, rejection_reason__isnull=True).count()
-    approved_count = Nurse.objects.filter(is_approved=True).count()
-    rejected_count = Nurse.objects.filter(rejection_reason__isnull=False).count()
+    # Calculate statistics - without rejection_reason
+    total_count = Phlebotomist.objects.count()
+    pending_count = Phlebotomist.objects.filter(is_approved=False).count()
+    approved_count = Phlebotomist.objects.filter(is_approved=True).count()
+    # For rejected count, we can't differentiate without rejection_reason
+    rejected_count = 0  # Or set to 0 since we can't identify rejected ones
     
     context = {
-        'nurses': nurses,
+        'phlebotomists': phlebotomists,
         'status_filter': status_filter,
         'query': query,
         'total_count': total_count,
@@ -1010,148 +1120,150 @@ def admin_nurse_view(request):
         'rejected_count': rejected_count,
     }
     
-    return render(request, 'blood/admin_nurse.html', context)
-# ---------------------------
-# Approve Nurse
-# ---------------------------
-@login_required(login_url='adminlogin')
-def admin_approve_nurse_view(request, pk):
-    """
-    Approve a pending nurse
-    """
-    nurse = get_object_or_404(Nurse, pk=pk)
-    
-    if request.method == 'POST':
-        nurse.approve(approved_by_user=request.user)
-        messages.success(
-            request,
-            f"✅ Nurse {nurse.full_name} has been approved successfully!"
-        )
-        
-        # TODO: Send email notification to nurse
-        # send_approval_email(nurse)
-        
-        return redirect('admin-nurse-view')
-    
-    context = {'nurse': nurse}
-    return render(request, 'blood/admin_approve_nurse.html', context)
-# ---------------------------
-# Reject Nurse
-# ---------------------------
-@login_required(login_url='adminlogin')
-def admin_reject_nurse_view(request, pk):
-    """
-    Reject a nurse with reason
-    """
-    nurse = get_object_or_404(Nurse, pk=pk)
-    
-    if request.method == 'POST':
-        reason = request.POST.get('rejection_reason', '').strip()
-        
-        if not reason:
-            messages.error(request, "❌ Please provide a reason for rejection.")
-            return render(request, 'blood/admin_reject_nurse.html', {'nurse': nurse})
-        
-        nurse.reject(reason=reason, rejected_by_user=request.user)
-        messages.success(
-            request,
-            f"✅ Nurse {nurse.full_name} has been rejected."
-        )
-        
-        # TODO: Send rejection email to nurse
-        # send_rejection_email(nurse, reason)
-        
-        return redirect('admin-nurse-view')
-    
-    context = {'nurse': nurse}
-    return render(request, 'blood/admin_reject_nurse.html', context)
+    return render(request, 'blood/admin_phlebotomist.html', context)
 
 
-# ---------------------------
-# Revoke Nurse Approval
-# ---------------------------
-@login_required(login_url='adminlogin')
-def admin_revoke_nurse_view(request, pk):
-    """
-    Revoke an approved nurse's access
-    """
-    nurse = get_object_or_404(Nurse, pk=pk)
-    
-    if request.method == 'POST':
-        reason = request.POST.get('revoke_reason', '').strip()
-        
-        if not reason:
-            messages.error(request, "❌ Please provide a reason for revocation.")
-            return render(request, 'blood/admin_revoke_nurse.html', {'nurse': nurse})
-        
-        nurse.reject(reason=reason, rejected_by_user=request.user)
-        messages.success(
-            request,
-            f"✅ Access revoked for {nurse.full_name}."
-        )
-        
-        # TODO: Send revocation email
-        # send_revocation_email(nurse, reason)
-        
-        return redirect('admin-nurse-view')
-    
-    context = {'nurse': nurse}
-    return render(request, 'blood/admin_revoke_nurse.html', context)
 
 @login_required(login_url='adminlogin')
-def update_nurse_view(request, pk):
-    # Fetch the nurse instance and related user
-    nurse = get_object_or_404(Nurse, id=pk)
-    user = nurse.user
+def update_phlebotomist_view(request, pk):
+    """
+    Update phlebotomist profile information
+    """
+    # Fetch the phlebotomist instance and related user
+    phlebotomist = get_object_or_404(Phlebotomist, id=pk)
+    user = phlebotomist.user
 
     if request.method == 'POST':
         # Bind POST data to forms
-        user_form = nurse_forms.NurseUserForm(request.POST, instance=user)
-        nurse_form = nurse_forms.NurseForm(request.POST, request.FILES, instance=nurse)
+        user_form = phlebotomist_forms.PhlebotomistUserForm(request.POST, instance=user)
+        phlebotomist_form = phlebotomist_forms.PhlebotomistForm(request.POST, request.FILES, instance=phlebotomist)
 
         # Handle profile picture removal if admin checked it
-        if 'clear_profile_pic' in request.POST and nurse.profile_pic:
-            nurse.profile_pic.delete(save=False)
-            nurse.profile_pic = None
+        if 'clear_profile_pic' in request.POST and phlebotomist.profile_pic:
+            phlebotomist.profile_pic.delete(save=False)
+            phlebotomist.profile_pic = None
 
         # Validate both forms
-        if user_form.is_valid() and nurse_form.is_valid():
+        if user_form.is_valid() and phlebotomist_form.is_valid():
             user_form.save()
-            nurse_form.save()
-            messages.success(request, "Nurse profile updated successfully.")
-            return redirect('admin-nurse')
+            phlebotomist_form.save()
+            messages.success(request, "✅ Phlebotomist profile updated successfully.")
+            # Use the correct URL name
+            return redirect('admin-phlebotomist-view')
         else:
-            messages.error(request, "Please fix the errors below.")
+            messages.error(request, "❌ Please fix the errors below.")
     else:
         # Prefill forms with current data
-        user_form = nurse_forms.NurseUserForm(instance=user)
-        nurse_form = nurse_forms.NurseForm(instance=nurse)
+        user_form = phlebotomist_forms.PhlebotomistUserForm(instance=user)
+        phlebotomist_form = phlebotomist_forms.PhlebotomistForm(instance=phlebotomist)
 
     context = {
         'userForm': user_form,   # match these variable names to template
-        'nurseForm': nurse_form,
-        'nurse': nurse,
+        'phlebotomistForm': phlebotomist_form,
+        'phlebotomist': phlebotomist,
     }
-    return render(request, 'blood/update_nurse.html', context)
+    return render(request, 'blood/update_phlebotomist.html', context)
+# ✅ ADD THIS NEW FUNCTION - Unified action view
 @login_required(login_url='adminlogin')
-def delete_nurse_view(request, pk):
-    nurse = get_object_or_404(Nurse, id=pk)
+def admin_phlebotomist_action_view(request, pk, action):
+    """
+    Unified view to handle approve, reject, and revoke actions for phlebotomists
+    """
+    phlebotomist = get_object_or_404(Phlebotomist, pk=pk)
+    
+    # Get full name for messages
+    full_name = f"{phlebotomist.user.first_name} {phlebotomist.user.last_name}".strip()
+    if not full_name:
+        full_name = phlebotomist.user.username
+    
+    # Only POST requests for security
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('admin-phlebotomist-view')
+    
+    # Handle different actions
+    if action == 'approve':
+        # Approve logic
+        phlebotomist.is_approved = True
+        phlebotomist.approved_at = timezone.now()
+        phlebotomist.approved_by = request.user
+        # phlebotomist.status = 'approved'  # Uncomment if you add status field
+        phlebotomist.save()
+        
+        messages.success(request, f"✅ Phlebotomist {full_name} has been approved successfully!")
+        
+    elif action == 'reject':
+        # Reject logic
+        reason = request.POST.get('reason', '').strip()
+        if not reason:
+            messages.error(request, "❌ Please provide a reason for rejection.")
+            return redirect('admin-phlebotomist-view')
+        
+        phlebotomist.is_approved = False
+        # Store reason if you have field
+        # phlebotomist.rejection_reason = reason
+        # phlebotomist.rejected_at = timezone.now()
+        # phlebotomist.rejected_by = request.user
+        # phlebotomist.status = 'rejected'
+        phlebotomist.save()
+        
+        messages.success(request, f"✅ Phlebotomist {full_name} has been rejected.")
+        
+    elif action == 'revoke':
+        # Revoke logic
+        reason = request.POST.get('reason', '').strip()
+        if not reason:
+            messages.error(request, "❌ Please provide a reason for revocation.")
+            return redirect('admin-phlebotomist-view')
+        
+        phlebotomist.is_approved = False
+        # Store reason if you have field
+        # phlebotomist.revocation_reason = reason
+        # phlebotomist.revoked_at = timezone.now()
+        # phlebotomist.revoked_by = request.user
+        # phlebotomist.status = 'revoked'
+        phlebotomist.save()
+        
+        messages.success(request, f"✅ Access revoked for {full_name}.")
+        
+    else:
+        messages.error(request, "❌ Invalid action.")
+    
+    return redirect('admin-phlebotomist-view')
 
-    try:
-        user = User.objects.get(id=nurse.user_id)
-        user.delete()
-    except User.DoesNotExist:
-        pass
+@login_required(login_url='adminlogin')
+def delete_phlebotomist_view(request, pk):
+    """
+    Delete a phlebotomist and optionally their associated user account
+    """
+    phlebotomist = get_object_or_404(Phlebotomist, id=pk)
+    
+    # Store information for success message
+    full_name = f"{phlebotomist.user.first_name} {phlebotomist.user.last_name}".strip()
+    if not full_name:
+        full_name = phlebotomist.user.username
 
-    nurse.delete()
+    if request.method == 'POST':
+        # Delete only the phlebotomist profile, keep the user account
+        phlebotomist.delete()
+        messages.success(request, f"✅ Phlebotomist profile for {full_name} has been deleted.")
+        
+        # IMPORTANT: Use the correct URL name
+        return redirect('admin-phlebotomist-view')  # Make sure this matches your URL name
+    
+    # If GET request, show confirmation page
+    context = {
+        'phlebotomist': phlebotomist,
+        'full_name': full_name
+    }
+    return render(request, 'blood/delete_phlebotomist_confirmation.html', context)
 
-    return HttpResponseRedirect('/admin-nurse')
 def sickle_cell_view(request):
     return render(request, 'blood/sickle_cell.html')
 
-# Admin user = staff who is NOT a nurse
+# Admin user = staff who is NOT a phlebotomist
 def is_admin(user):
-    return user.is_staff and (not is_nurse(user))
+    return user.is_staff and (not is_phlebotomist(user))
 
 
 
@@ -1282,7 +1394,7 @@ def admin_donation_report(request):
         'Blood Group',
         'Unit',
         'Donation Center',
-        'Nurse',
+        'Phlebotomist',
         'Appointment Date & Time',
         'Appointment Status',
         'Donation Status',
@@ -1291,7 +1403,7 @@ def admin_donation_report(request):
 
     donations = BloodDonate.objects.select_related(
         'donor__user', 'donation_center'
-    ).prefetch_related('appointments__nurse__user')
+    ).prefetch_related('appointments__phlebotomist__user')
 
     for d in donations:
         donor_name = d.donor.user.get_full_name() if d.donor else "N/A"
@@ -1306,12 +1418,12 @@ def admin_donation_report(request):
         activity_log = []
         if d.approved_by_admin:
             activity_log.append(f"App(Admin) {d.approved_at_admin.strftime('%b %d, %H:%M')}")
-        if d.approved_by_nurse:
-            activity_log.append(f"App(Nurse) {d.approved_at_nurse.strftime('%b %d, %H:%M')}")
+        if d.approved_by_phlebotomist:
+            activity_log.append(f"App(Phlebotomist) {d.approved_at_phlebotomist.strftime('%b %d, %H:%M')}")
         if d.completed_by_admin:
             activity_log.append(f"Cmp(Admin) {d.completed_at_admin.strftime('%b %d, %H:%M')}")
-        if d.completed_by_nurse:
-            activity_log.append(f"Cmp(Nurse) {d.completed_at_nurse.strftime('%b %d, %H:%M')}")
+        if d.completed_by_phlebotomist:
+            activity_log.append(f"Cmp(Phlebotomist) {d.completed_at_phlebotomist.strftime('%b %d, %H:%M')}")
         if d.status == 'cancelled':
             activity_log.append(f"Cn({d.cancelled_by or '?'}) {d.cancelled_at.strftime('%b %d, %H:%M') if d.cancelled_at else ''}")
         if d.status == 'rejected':
@@ -1327,7 +1439,7 @@ def admin_donation_report(request):
                 blood_group,
                 unit,
                 donation_center,
-                "N/A",  # Nurse
+                "N/A",  # Phlebotomist
                 "N/A",  # Appointment Date
                 "N/A",  # Appointment Status
                 main_status,
@@ -1335,7 +1447,7 @@ def admin_donation_report(request):
             ])
         else:
             for appt in d.appointments.all():
-                nurse_name = appt.nurse.user.get_full_name() if appt.nurse else "N/A"
+                phlebotomist_name = appt.phlebotomist.user.get_full_name() if appt.phlebotomist else "N/A"
                 appt_date = appt.date.strftime("%Y-%m-%d %H:%M") if appt.date else "N/A"
                 appt_status = appt.status
                 writer.writerow([
@@ -1345,7 +1457,7 @@ def admin_donation_report(request):
                     blood_group,
                     unit,
                     donation_center,
-                    nurse_name,
+                    phlebotomist_name,
                     appt_date,
                     appt_status,
                     main_status,
@@ -1540,7 +1652,7 @@ def check_national_id_ajax(request):
 def check_mobile_ajax(request):
     """
     System-wide mobile number validation
-    Checks if mobile number exists across Donor, Patient, and Nurse records
+    Checks if mobile number exists across Donor, Patient, and Phlebotomist records
     """
     mobile = request.GET.get('mobile', '').strip()
     
@@ -1587,9 +1699,9 @@ def check_mobile_ajax(request):
     
     # Check if mobile exists in any table
     donor_exists = Donor.objects.filter(mobile=normalized).exists()
-    nurse_exists = Nurse.objects.filter(phone=normalized).exists()
+    phlebotomist_exists = Phlebotomist.objects.filter(phone=normalized).exists()
     
-    if donor_exists or nurse_exists:
+    if donor_exists or phlebotomist_exists:
         return JsonResponse({
             'valid': False,
             'message': 'This mobile number is already registered',
@@ -1600,8 +1712,8 @@ def check_mobile_ajax(request):
         'message': 'Mobile number is available',
     })
 
-def ajax_check_nurse_registration(request):
-    """Check if nurse registration number is available."""
+def ajax_check_phlebotomist_registration(request):
+    """Check if phlebotomist registration number is available."""
     registration_number = request.GET.get('registration_number', '').strip().upper()
     
     if not registration_number:
@@ -1618,7 +1730,7 @@ def ajax_check_nurse_registration(request):
         })
     
     # Check if exists
-    exists = Nurse.objects.filter(registration_number=registration_number).exists()
+    exists = Phlebotomist.objects.filter(registration_number=registration_number).exists()
     
     if exists:
         return JsonResponse({
@@ -1633,8 +1745,8 @@ def ajax_check_nurse_registration(request):
 
 
 
-def ajax_check_nurse_phone(request):
-    """Check if nurse phone number is available."""
+def ajax_check_phlebotomist_phone(request):
+    """Check if phlebotomist phone number is available."""
     phone = request.GET.get('phone', '').strip()
     
     if not phone:
@@ -1654,7 +1766,7 @@ def ajax_check_nurse_phone(request):
         })
     
     # Check if exists
-    exists = Nurse.objects.filter(phone=phone_clean).exists()
+    exists = Phlebotomist.objects.filter(phone=phone_clean).exists()
     
     if exists:
         return JsonResponse({
@@ -1690,466 +1802,11 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
             context['user_type'] = 'patient'
         elif hasattr(self.request.user, 'donor'):
             context['user_type'] = 'donor'
-        elif hasattr(self.request.user, 'nurse'):
-            context['user_type'] = 'nurse'
+        elif hasattr(self.request.user, 'phlebotomist'):
+            context['user_type'] = 'phlebotomist'
         elif self.request.user.is_staff:
             context['user_type'] = 'admin'
         else:
             context['user_type'] = 'user'
         
         return context
-
-
-
-
-
-def load_fact_from_database(fact_id=None, category=None):
-    """Load fact from database or generate from FACT_DATABASE"""
-    # Try database first
-    if DonationFunFact.objects.exists():
-        facts = DonationFunFact.objects.filter(is_verified=True)
-        
-        if category:
-            facts = facts.filter(category=category)
-        
-        if fact_id:
-            try:
-                return facts.get(id=fact_id)
-            except DonationFunFact.DoesNotExist:
-                pass
-        
-        if facts.exists():
-            return random.choice(facts)
-    
-    # Fallback to FACT_DATABASE
-    available_facts = FACT_DATABASE
-    if category:
-        available_facts = [f for f in FACT_DATABASE if f.get('category') == category]
-    
-    if available_facts:
-        fact_data = random.choice(available_facts)
-        # Create a temporary fact object
-        return type('Fact', (), {
-            **fact_data,
-            'id': None,
-            'likes': 0,
-            'times_viewed': 0,
-            'get_category_display': lambda: dict(DonationFunFact.FACT_CATEGORIES).get(fact_data.get('category', ''), 'Unknown')
-        })()
-    
-    return None
-
-
-def did_you_know_home(request):
-    """Main interactive facts page with enhanced features"""
-    today = timezone.now().date()
-    
-    # Get or create daily challenge
-    daily_challenge = None
-    try:
-        daily_challenge = DailyFactChallenge.objects.select_related('fact').get(date=today)
-    except DailyFactChallenge.DoesNotExist:
-        if DonationFunFact.objects.filter(has_quiz=True, is_verified=True).exists():
-            quiz_facts = DonationFunFact.objects.filter(has_quiz=True, is_verified=True)
-            random_fact = random.choice(quiz_facts)
-            daily_challenge = DailyFactChallenge.objects.create(
-                date=today,
-                fact=random_fact
-            )
-    
-    # Get facts by category
-    all_facts = DonationFunFact.objects.filter(is_verified=True)
-    
-    if all_facts.exists():
-        random_fact = random.choice(all_facts)
-        trending_facts = all_facts.order_by('-likes', '-times_viewed')[:5]
-        recent_facts = all_facts.order_by('-created_at')[:5]
-        
-        # Category breakdown
-        category_stats = {}
-        for cat_key, cat_name in DonationFunFact.FACT_CATEGORIES:
-            count = all_facts.filter(category=cat_key).count()
-            if count > 0:
-                category_stats[cat_key] = {
-                    'name': cat_name,
-                    'count': count,
-                    'sample': all_facts.filter(category=cat_key).first()
-                }
-    else:
-        # Fallback to sample data
-        random_fact = load_fact_from_database()
-        trending_facts = []
-        recent_facts = []
-        
-        # Create category stats from FACT_DATABASE
-        category_stats = {}
-        for cat_key, cat_name in DonationFunFact.FACT_CATEGORIES:
-            cat_facts = [f for f in FACT_DATABASE if f.get('category') == cat_key]
-            if cat_facts:
-                category_stats[cat_key] = {
-                    'name': cat_name,
-                    'count': len(cat_facts),
-                    'sample': None
-                }
-    
-    # User statistics (if authenticated)
-    user_stats = None
-    if request.user.is_authenticated:
-        user_stats = {
-            'facts_viewed': UserFactInteraction.objects.filter(
-                user=request.user,
-                interaction_type='view'
-            ).count(),
-            'quizzes_taken': QuizAttempt.objects.filter(user=request.user).count(),
-            'average_score': QuizAttempt.objects.filter(user=request.user).aggregate(
-                avg=Avg('score')
-            )['avg'] or 0,
-            'liked_facts': UserFactInteraction.objects.filter(
-                user=request.user,
-                interaction_type='like'
-            ).count(),
-        }
-    
-    context = {
-        'daily_challenge': daily_challenge,
-        'random_fact': random_fact,
-        'trending_facts': trending_facts,
-        'recent_facts': recent_facts,
-        'category_stats': category_stats,
-        'quick_facts': random.sample(QUICK_FACTS, min(8, len(QUICK_FACTS))),
-        'categories': DonationFunFact.FACT_CATEGORIES,
-        'donation_tips': DONATION_TIPS,
-        'eligibility_criteria': ELIGIBILITY_CRITERIA,
-        'user_stats': user_stats,
-        'total_facts': all_facts.count() if all_facts.exists() else len(FACT_DATABASE),
-    }
-    
-    return render(request, 'shared/home.html', context)
-
-
-def fact_detail(request, fact_id):
-    """Detailed view of a single fact"""
-    try:
-        fact = DonationFunFact.objects.get(id=fact_id, is_verified=True)
-        
-        # Track view
-        fact.times_viewed += 1
-        fact.save(update_fields=['times_viewed'])
-        
-        if request.user.is_authenticated:
-            UserFactInteraction.objects.get_or_create(
-                user=request.user,
-                fact=fact,
-                interaction_type='view'
-            )
-        
-        # Get related facts
-        related_facts = DonationFunFact.objects.filter(
-            category=fact.category,
-            is_verified=True
-        ).exclude(id=fact.id).order_by('?')[:3]
-        
-        # Check if user has liked this fact
-        user_liked = False
-        if request.user.is_authenticated:
-            user_liked = UserFactInteraction.objects.filter(
-                user=request.user,
-                fact=fact,
-                interaction_type='like'
-            ).exists()
-        
-        context = {
-            'fact': fact,
-            'related_facts': related_facts,
-            'user_liked': user_liked,
-            'categories': DonationFunFact.FACT_CATEGORIES,
-        }
-        
-        return render(request, 'shared/donation_facts/fact_detail.html', context)
-        
-    except DonationFunFact.DoesNotExist:
-        return redirect('did_you_know_home')
-
-
-def fact_category(request, category=None):
-    """Show facts by category with pagination"""
-    if category and category not in dict(DonationFunFact.FACT_CATEGORIES):
-        return redirect('did_you_know_home')
-    
-    # Get facts from database
-    if category:
-        facts = DonationFunFact.objects.filter(category=category, is_verified=True)
-        category_name = dict(DonationFunFact.FACT_CATEGORIES).get(category)
-    else:
-        facts = DonationFunFact.objects.filter(is_verified=True)
-        category_name = "All Facts"
-    
-    # If no facts in database, use FACT_DATABASE
-    use_fallback = False
-    if not facts.exists():
-        use_fallback = True
-        if category:
-            facts = [f for f in FACT_DATABASE if f.get('category') == category]
-        else:
-            facts = FACT_DATABASE
-    
-    # Pagination
-    if not use_fallback:
-        paginator = Paginator(facts.order_by('-created_at'), 12)  # 12 facts per page
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-    else:
-        page_obj = facts  # No pagination for fallback data
-    
-    context = {
-        'facts': page_obj if not use_fallback else facts,
-        'selected_category': category,
-        'category_name': category_name,
-        'categories': DonationFunFact.FACT_CATEGORIES,
-        'use_fallback': use_fallback,
-        'total_facts': facts.count() if not use_fallback else len(facts),
-    }
-    
-    return render(request, 'shared/fact_list.html', context)
-
-
-def interactive_quiz(request):
-    """Interactive quiz page with scoring"""
-    # Get quiz facts from database
-    quiz_facts = DonationFunFact.objects.filter(has_quiz=True, is_verified=True)
-    
-    use_fallback = False
-    if not quiz_facts.exists():
-        use_fallback = True
-        quiz_facts = [f for f in FACT_DATABASE if f.get('has_quiz', False)]
-        selected_facts = random.sample(quiz_facts, min(5, len(quiz_facts)))
-    else:
-        # Select 10 random quiz questions
-        selected_facts = random.sample(list(quiz_facts), min(10, quiz_facts.count()))
-    
-    context = {
-        'quiz_facts': selected_facts,
-        'use_fallback': use_fallback,
-        'total_questions': len(selected_facts),
-    }
-    
-    return render(request, 'shared/quiz.html', context)
-
-
-@csrf_exempt
-def submit_quiz(request):
-    """Submit completed quiz and get score"""
-    if request.method == 'POST':
-        import json
-        data = json.loads(request.body)
-        
-        answers = data.get('answers', {})
-        total_questions = len(answers)
-        correct_answers = sum(1 for is_correct in answers.values() if is_correct)
-        score_percentage = (correct_answers / total_questions * 100) if total_questions > 0 else 0
-        
-        # Save quiz attempt if user is authenticated
-        if request.user.is_authenticated:
-            QuizAttempt.objects.create(
-                user=request.user,
-                total_questions=total_questions,
-                correct_answers=correct_answers,
-                score=score_percentage
-            )
-        
-        return JsonResponse({
-            'total': total_questions,
-            'correct': correct_answers,
-            'score': round(score_percentage, 1),
-            'passed': score_percentage >= 70
-        })
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-@csrf_exempt
-def check_quiz_answer(request):
-    """AJAX endpoint to check individual quiz answers"""
-    if request.method == 'POST':
-        fact_id = request.POST.get('fact_id')
-        user_answer = request.POST.get('answer')
-        
-        try:
-            fact = DonationFunFact.objects.get(id=fact_id)
-            is_correct = (user_answer == fact.correct_answer)
-            
-            # Update daily challenge stats
-            today = timezone.now().date()
-            try:
-                challenge = DailyFactChallenge.objects.get(date=today, fact=fact)
-                challenge.total_participants += 1
-                if is_correct:
-                    challenge.correct_answers += 1
-                challenge.save()
-            except DailyFactChallenge.DoesNotExist:
-                pass
-            
-            # Track interaction
-            if request.user.is_authenticated:
-                UserFactInteraction.objects.create(
-                    user=request.user,
-                    fact=fact,
-                    interaction_type='quiz_correct' if is_correct else 'quiz_wrong',
-                    user_answer=user_answer
-                )
-            
-            return JsonResponse({
-                'correct': is_correct,
-                'correct_answer': fact.correct_answer,
-                'explanation': fact.explanation
-            })
-        except DonationFunFact.DoesNotExist:
-            # Fallback to sample data
-            for fact_data in FACT_DATABASE:
-                if str(fact_data.get('id')) == str(fact_id) or fact_data.get('title') == fact_id:
-                    is_correct = (user_answer == fact_data.get('correct_answer', ''))
-                    return JsonResponse({
-                        'correct': is_correct,
-                        'correct_answer': fact_data.get('correct_answer', ''),
-                        'explanation': fact_data.get('explanation', '')
-                    })
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-@csrf_exempt
-def like_fact(request):
-    """AJAX endpoint to like a fact"""
-    if request.method == 'POST':
-        fact_id = request.POST.get('fact_id')
-        
-        try:
-            fact = DonationFunFact.objects.get(id=fact_id)
-            
-            # Check if user already liked
-            if request.user.is_authenticated:
-                existing_like = UserFactInteraction.objects.filter(
-                    user=request.user,
-                    fact=fact,
-                    interaction_type='like'
-                ).exists()
-                
-                if existing_like:
-                    return JsonResponse({'error': 'Already liked', 'likes': fact.likes}, status=400)
-            
-            fact.likes += 1
-            fact.save(update_fields=['likes'])
-            
-            if request.user.is_authenticated:
-                UserFactInteraction.objects.create(
-                    user=request.user,
-                    fact=fact,
-                    interaction_type='like'
-                )
-            
-            return JsonResponse({'likes': fact.likes, 'success': True})
-        except DonationFunFact.DoesNotExist:
-            return JsonResponse({'error': 'Fact not found', 'likes': 0}, status=404)
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-def random_fact_api(request):
-    """API endpoint to get a random fact (for AJAX)"""
-    category = request.GET.get('category')
-    fact = load_fact_from_database(category=category)
-    
-    if not fact:
-        return JsonResponse({'error': 'No facts available'}, status=404)
-    
-    # Track view if it's a database fact
-    if hasattr(fact, 'id') and fact.id:
-        fact.times_viewed += 1
-        fact.save(update_fields=['times_viewed'])
-    
-    fact_data = {
-        'id': fact.id if hasattr(fact, 'id') else 0,
-        'title': fact.title,
-        'fact_text': fact.fact_text,
-        'category': fact.category,
-        'image_url': fact.image_url if hasattr(fact, 'image_url') else None,
-        'has_quiz': fact.has_quiz,
-        'likes': fact.likes if hasattr(fact, 'likes') else 0,
-    }
-    
-    return JsonResponse(fact_data)
-
-
-def daily_challenge_progress(request):
-    """Track daily challenge progress"""
-    today = timezone.now().date()
-    challenge = DailyFactChallenge.objects.filter(date=today).first()
-    
-    if challenge:
-        accuracy = round((challenge.correct_answers / challenge.total_participants * 100), 1) if challenge.total_participants > 0 else 0
-        return JsonResponse({
-            'total_participants': challenge.total_participants,
-            'correct_answers': challenge.correct_answers,
-            'accuracy': accuracy,
-            'date': str(today)
-        })
-    
-    return JsonResponse({'error': 'No challenge today'}, status=404)
-
-
-@login_required
-def user_progress(request):
-    """Show user's learning progress and achievements"""
-    interactions = UserFactInteraction.objects.filter(user=request.user)
-    quiz_attempts = QuizAttempt.objects.filter(user=request.user).order_by('-created_at')
-    
-    stats = {
-        'total_facts_viewed': interactions.filter(interaction_type='view').count(),
-        'facts_liked': interactions.filter(interaction_type='like').count(),
-        'quizzes_taken': quiz_attempts.count(),
-        'average_score': quiz_attempts.aggregate(avg=Avg('score'))['avg'] or 0,
-        'best_score': quiz_attempts.aggregate(max=Max('score'))['max'] or 0,
-        'quiz_history': quiz_attempts[:10],  # Last 10 quizzes
-    }
-    
-    context = {
-        'stats': stats,
-        'categories': DonationFunFact.FACT_CATEGORIES,
-    }
-    
-    return render(request, 'shared/user_progress.html', context)
-
-
-def search_facts(request):
-    """Search facts by keyword"""
-    query = request.GET.get('q', '').strip()
-    
-    if not query:
-        return redirect('did_you_know_home')
-    
-    # Search in database
-    facts = DonationFunFact.objects.filter(
-        Q(title__icontains=query) | 
-        Q(fact_text__icontains=query) |
-        Q(explanation__icontains=query),
-        is_verified=True
-    ).order_by('-times_viewed')
-    
-    # Also search in FACT_DATABASE if needed
-    fallback_facts = []
-    if not facts.exists():
-        fallback_facts = [
-            f for f in FACT_DATABASE 
-            if query.lower() in f.get('title', '').lower() or 
-               query.lower() in f.get('fact_text', '').lower()
-        ]
-    
-    context = {
-        'facts': facts if facts.exists() else fallback_facts,
-        'query': query,
-        'use_fallback': not facts.exists(),
-        'categories': DonationFunFact.FACT_CATEGORIES,
-    }
-    
-    return render(request, 'shared/search_results.html', context)
-   

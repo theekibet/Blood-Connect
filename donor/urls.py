@@ -1,7 +1,7 @@
 from django.urls import path, include
 from . import views
 from blood.views import save_user_location
-from nurse import views as nurse_views
+from phlebotomist import views as phlebotomist_views
 
 app_name = 'donor'  # Add app_name for namespacing
 
@@ -84,5 +84,5 @@ urlpatterns = [
     # ==========================================
     # AJAX ENDPOINTS
     # ==========================================
-    path('ajax/booked-timeslots/', nurse_views.ajax_booked_timeslots, name='ajax_booked_timeslots'),
+    path('ajax/booked-timeslots/', phlebotomist_views.ajax_booked_timeslots, name='ajax_booked_timeslots'),
 ]

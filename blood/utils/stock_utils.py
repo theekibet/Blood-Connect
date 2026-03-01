@@ -60,7 +60,7 @@ def get_blood_stock_context(selected_center_id=None):
 
 def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending', 
               unsafe_reason=None, safety_notes=None, blood_donation=None, 
-              added_by_user=None, added_by_role='nurse'):
+              added_by_user=None, added_by_role='phlebotomist'):
     """
     Add blood units to StockUnit batch and update aggregate Stock.
     Creates a new StockUnit batch with a unique barcode.
@@ -80,7 +80,7 @@ def add_stock(center, bloodgroup, units, expiry_date, safety_status='pending',
         safety_notes (str, optional): Additional notes about safety verification.
         blood_donation (BloodDonate, optional): Link to the original blood donation.
         added_by_user (User, optional): User adding the stock.
-        added_by_role (str): Role of user adding stock ('nurse', 'lab_tech', 'system').
+        added_by_role (str): Role of user adding stock ('phlebotomist', 'lab_tech', 'system').
 
     Returns:
         StockUnit instance: The newly created stock batch.
@@ -214,7 +214,7 @@ def deduct_stock_fifo(center, bloodgroup, required_units, deducted_by_user=None,
         bloodgroup (str): The blood group (e.g., 'A+', 'O-').
         required_units (int): Quantity in ml to deduct.
         deducted_by_user (User, optional): User performing the deduction.
-        deducted_by_role (str): Role of user ('blood_bank_tech', 'nurse', 'admin').
+        deducted_by_role (str): Role of user ('blood_bank_tech', 'phlebotomist', 'admin').
         blood_request (BloodRequest, optional): Related blood request.
         appointment (Appointment, optional): Related appointment.
 
@@ -881,7 +881,7 @@ def fix_stock_inconsistencies():
 def bulk_verify_safe_stock(center, bloodgroup=None, verified_by_user=None, notes=None):
     """
     Bulk verify pending stock units as safe.
-    Useful for administrators or nurses to quickly verify multiple units.
+    Useful for administrators or phlebotomists to quickly verify multiple units.
     
     Args:
         center (DonationCenter): The donation center.
