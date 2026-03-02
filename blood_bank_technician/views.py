@@ -113,8 +113,14 @@ def blood_bank_tech_profile_detail(request, pk):
     if not request.user.is_superuser and profile.user != request.user:
         raise PermissionDenied("You don't have permission to view this profile.")
     
+    # Get profile picture URL for template
+    profile_pic_url = None
+    if profile.profile_pic and hasattr(profile.profile_pic, 'url') and profile.profile_pic.name:
+        profile_pic_url = profile.profile_pic.url
+    
     context = {
         'profile': profile,
+        'profile_pic_url': profile_pic_url,
         'profile_type': 'Blood Bank Technician'
     }
     return render(request, 'blood_bank_technician/profile_detail.html', context)
@@ -293,14 +299,50 @@ def dashboard(request):
     ).count()
     
     # ===== RECENT TRANSACTIONS =====
-    # FIXED: Removed 'blood_request' from select_related
     recent_transactions = StockTransaction.objects.filter(
         stockunit__center=center
     ).select_related(
         'stockunit',
         'user',
-        # 'appointment'  # Uncomment if you have appointment field in StockTransaction
     ).order_by('-transaction_at')[:10]
+    
+    # ===== GENERATE PERSONALIZED GREETING =====
+    try:
+        from blood.utils.greetings import get_blood_bank_tech_greeting
+        
+        greeting_data = get_blood_bank_tech_greeting(
+            bb_tech=profile,
+            safe_units=total_safe_units,
+            pending_requests=pending_requests_count,
+            expiring_soon=total_expiring_units
+        )
+    except ImportError:
+        # Fallback greeting if the utility doesn't exist
+        from datetime import datetime
+        hour = datetime.now().hour
+        if hour < 12:
+            time_of_day = "morning"
+        elif hour < 17:
+            time_of_day = "afternoon"
+        else:
+            time_of_day = "evening"
+            
+        name = profile.user.get_full_name().split()[0] if profile.user.get_full_name() else profile.user.username
+        
+        greeting_data = {
+            'greeting': f"Good {time_of_day}, {name}! 📦",
+            'context_message': f"Managing inventory at {center.name}",
+            'user_type': 'blood_bank_tech',
+            'icon': '📦',
+            'meta_items': [
+                {'icon': 'fas fa-building', 'text': center.name},
+                {'icon': 'fas fa-boxes', 'text': f'{total_safe_units} safe units'},
+                {'icon': 'fas fa-clock', 'text': f'{pending_requests_count} pending requests', 'color': 'text-warning' if pending_requests_count > 0 else ''},
+                {'icon': 'fas fa-exclamation-triangle', 'text': f'{total_expiring_units} expiring soon', 'color': 'text-danger' if total_expiring_units > 0 else ''}
+            ],
+            'show_quick_actions': True,
+            'profile_pic': profile.profile_pic if hasattr(profile, 'profile_pic') else None
+        }
     
     context = {
         'profile': profile,
@@ -317,10 +359,10 @@ def dashboard(request):
         'inventory_by_type': inventory_by_type,
         'recent_transactions': recent_transactions,
         'now': timezone.now(),
+        'greeting_data': greeting_data,  # Add greeting data to context
     }
     
     return render(request, 'blood_bank_technician/dashboard.html', context)
-
 # ======================
 # INVENTORY VIEW
 # ======================

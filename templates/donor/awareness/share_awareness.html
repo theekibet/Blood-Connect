@@ -5,28 +5,106 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0"><i class="fas fa-share-alt me-2"></i>Share Our Message</h4>
-        </div>
-        <div class="card-body">
-            <p class="lead">Help us spread the word!</p>
-            
-            <div class="mb-3">
-                <label class="form-label">Share on Facebook</label>
-                <a href="#" class="btn btn-primary d-block">Share</a>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Share on Twitter</label>
-                <a href="#" class="btn btn-info d-block">Tweet</a>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Share via WhatsApp</label>
-                <a href="#" class="btn btn-success d-block">Send</a>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-share-alt me-2"></i>Share Our Message</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-bullhorn fa-4x text-primary mb-3"></i>
+                        <p class="lead">Help us spread the word and save more lives!</p>
+                        <p class="text-muted">Share BloodConnect with your friends and family.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fab fa-facebook text-primary me-2"></i>Share on Facebook
+                        </label>
+                        <a href="#" onclick="alert('Facebook sharing coming soon! Stay tuned.'); return false;" class="btn btn-primary w-100 py-3">
+                            <i class="fab fa-facebook me-2"></i>Share on Facebook
+                        </a>
+                        <small class="text-muted d-block mt-1">Share our page with your Facebook friends</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fab fa-twitter text-info me-2"></i>Share on Twitter
+                        </label>
+                        <a href="#" onclick="alert('Twitter sharing coming soon! Stay tuned.'); return false;" class="btn btn-info w-100 py-3">
+                            <i class="fab fa-twitter me-2"></i>Tweet
+                        </a>
+                        <small class="text-muted d-block mt-1">Spread awareness on Twitter</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fab fa-whatsapp text-success me-2"></i>Share via WhatsApp
+                        </label>
+                        <a href="#" onclick="alert('WhatsApp sharing coming soon! Stay tuned.'); return false;" class="btn btn-success w-100 py-3">
+                            <i class="fab fa-whatsapp me-2"></i>Send
+                        </a>
+                        <small class="text-muted d-block mt-1">Share with your WhatsApp contacts</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-link text-secondary me-2"></i>Copy Link
+                        </label>
+                        <div class="mb-4">
+
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="https://github.com/theekibet/Blood-Connect" readonly id="copyLinkInput">
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyGitHubLink()">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <small class="text-muted d-block mt-1">Share the BloodConnect GitHub repository</small>
+                        </div>
+                        
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <h5 class="mb-3">Coming Soon!</h5>
+                        <p class="text-muted mb-4">We're working on integrating social sharing. Check back later! For now you can help by checking out and starring my github repo above</p>
+                        <div class="progress mb-3" style="height: 10px;">
+                            <div class="progress-bar bg-primary progress-bar-striped" style="width: 75%"></div>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{% url 'donor:awareness-hub' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Awareness Hub
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+<script>
+    function copyGitHubLink() {
+        const copyText = document.getElementById('copyLinkInput');
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard.writeText(copyText.value);
+        
+        // Show feedback
+        const btn = event.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-secondary');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }
+    </script>
 {% endblock %}

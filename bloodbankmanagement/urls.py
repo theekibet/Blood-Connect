@@ -66,7 +66,7 @@ urlpatterns = [
     path('about-us/', blood_views.about_us_view, name='about-us'),
     path('contact/', blood_views.contact_view, name='contact'),
     path('contact/success/', blood_views.contact_success, name='contact_success'),
-    path('sickle-cell/', blood_views.sickle_cell_view, name='sickle_cell'),
+
 
     # ===================================
     # APP-SPECIFIC URLS

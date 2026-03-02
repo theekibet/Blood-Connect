@@ -252,6 +252,7 @@ class PhlebotomistSignupForm(forms.ModelForm):
     # -------------------------
     def save(self, commit=True):
         """Create both User and Phlebotomist objects."""
+        # Create the User instance
         user = User(
             username=self.cleaned_data['username'],
             email=self.cleaned_data['email'],
@@ -263,8 +264,10 @@ class PhlebotomistSignupForm(forms.ModelForm):
         if commit:
             user.save()
 
+        # Create the Phlebotomist instance
         phlebotomist = super().save(commit=False)
         phlebotomist.user = user
+        phlebotomist.center = self.cleaned_data.get('donation_center')  # Assign the selected center
         phlebotomist.is_approved = False  # Set to pending approval
         phlebotomist.is_active = True
         
@@ -272,7 +275,6 @@ class PhlebotomistSignupForm(forms.ModelForm):
             phlebotomist.save()
         
         return phlebotomist
-
 
 # -------------------------
 # Edit Forms

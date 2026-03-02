@@ -1,69 +1,10 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}BloodConnect - Save Lives Through Blood Donation{% endblock %}
+{% block title %}BloodConnect Kenya - Save Lives Through Blood Donation{% endblock %}
 
 {% block extra_css %}
-<style>
-    /* Login dropdown styling */
-    .login-dropdown {
-        position: relative;
-        display: inline-block;
-    }
-    
-    .login-dropdown-content {
-        display: none;
-        position: absolute;
-        background-color: #f9f9f9;
-        min-width: 300px;
-        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-        z-index: 1;
-        border-radius: 8px;
-        padding: 15px;
-        right: 0;
-    }
-    
-    .login-dropdown:hover .login-dropdown-content {
-        display: block;
-    }
-    
-    .login-category {
-        margin-bottom: 15px;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-    }
-    
-    .login-category:last-child {
-        border-bottom: none;
-    }
-    
-    .login-category h4 {
-        color: #dc3545;
-        font-size: 16px;
-        margin-bottom: 10px;
-        font-weight: 600;
-    }
-    
-    .login-category a {
-        display: block;
-        padding: 8px 12px;
-        color: #333;
-        text-decoration: none;
-        border-radius: 5px;
-        transition: background 0.3s;
-    }
-    
-    .login-category a:hover {
-        background: #f0f0f0;
-        color: #dc3545;
-    }
-    
-    .login-category i {
-        width: 20px;
-        margin-right: 10px;
-        color: #6c757d;
-    }
-</style>
+
 {% endblock %}
 
 {% block public_wrapper %}
@@ -143,69 +84,118 @@
     </div>
 </section>
 
-<!-- SOS Section -->
-<section class="sos-section">
-    <button class="sos-button" id="sosButton">
-        <i class="fas fa-location-crosshairs"></i>
-        SOS - Find Nearest Donation Center
-    </button>
-    <div id="sosMessage" style="margin-top: 1rem; color: var(--primary); font-weight: 600;"></div>
-</section>
-
 <!-- Stats Section -->
 <section class="stats">
     <div class="stats-container">
         {% for stat in stats %}
-        <div class="stat-item">
-            <i class="{{ stat.icon_class }}" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
-            <span class="stat-number" data-target="{{ stat.stat_value }}">0</span>
-            <span class="stat-label">{{ stat.stat_name }}</span>
-        </div>
+            {% if stat.stat_name != "Units Available" %}
+            <div class="stat-item">
+                <i class="{{ stat.icon_class }}" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                <span class="stat-number" data-target="{{ stat.stat_value }}">0</span>
+                <span class="stat-label">{{ stat.stat_name }}</span>
+            </div>
+            {% endif %}
         {% endfor %}
     </div>
 </section>
 
-<!-- Features Section -->
+<!-- UPDATED FEATURES SECTION - ENHANCED WITH SYSTEM CAPABILITIES -->
 <section class="features">
     <div class="features-container">
-        <h2 class="section-title">How BloodConnect Works</h2>
-        <p class="section-subtitle">Simple, fast, and reliable blood donation management system</p>
+        <h2 class="section-title">Complete Blood Donation Ecosystem</h2>
+        <p class="section-subtitle">Powerful features for every role in the donation chain</p>
         
         <div class="features-grid">
+            <!-- Donor Features -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
-                    <i class="fas fa-search-location"></i>
+                    <i class="fas fa-hand-holding-heart"></i>
                 </div>
-                <h3>Find Donors Nearby</h3>
-                <p>Search for compatible blood donors in your area based on blood type and distance.</p>
-                <a href="{% url 'nearby-centers' %}" class="btn-secondary">Search Now</a>
+                <h3>Donor Dashboard</h3>
+                <p>Track donations, check eligibility, earn points, and schedule appointments all in one place.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Eligibility Checker</span>
+                    <span class="badge bg-light text-dark me-1">Donation History</span>
+                    <span class="badge bg-light text-dark">Points & Rewards</span>
+                </div>
             </div>
 
             <div class="feature-card fade-in">
                 <div class="feature-icon">
-                    <i class="fas fa-calendar-check"></i>
+                    <i class="fas fa-hospital"></i>
                 </div>
-                <h3>Book Appointments</h3>
-                <p>Schedule appointments with certified nurses at nearby donation centers instantly.</p>
-                <a href="{% url 'hospital:login' %}" class="btn-secondary">Hospital Login</a>
+                <h3>Hospital Portal</h3>
+                <p>Request blood 24/7, track status in real-time, and receive instant dispatch notifications.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Emergency Requests</span>
+                    <span class="badge bg-light text-dark me-1">Real-time Tracking</span>
+                    <span class="badge bg-light text-dark">Dispatch Alerts</span>
+                </div>
             </div>
 
             <div class="feature-card fade-in">
                 <div class="feature-icon">
-                    <i class="fas fa-heartbeat"></i>
+                    <i class="fas fa-user-nurse"></i>
                 </div>
-                <h3>Track Your Impact</h3>
-                <p>Monitor your donation history and see how many lives you've helped save.</p>
-                <a href="{% url 'donor:donorlogin' %}" class="btn-secondary">View Impact</a>
+                <h3>Phlebotomist Tools</h3>
+                <p>Manage appointments, record collections, and monitor center blood levels efficiently.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Appointment Management</span>
+                    <span class="badge bg-light text-dark me-1">Collection Tracking</span>
+                    <span class="badge bg-light text-dark">Stock Visibility</span>
+                </div>
             </div>
 
             <div class="feature-card fade-in">
                 <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
+                    <i class="fas fa-flask"></i>
                 </div>
-                <h3>Safe & Secure</h3>
-                <p>Your health information is protected with industry-standard security measures.</p>
-                <a href="{% url 'about-us' %}" class="btn-secondary">Learn More</a>
+                <h3>Lab Integration</h3>
+                <p>Record test results, verify blood groups permanently, and mark blood as safe/unsafe.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Blood Group Verification</span>
+                    <span class="badge bg-light text-dark me-1">Safety Status</span>
+                    <span class="badge bg-light text-dark">Test History</span>
+                </div>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <h3>Blood Bank Inventory</h3>
+                <p>Real-time stock monitoring with expiry alerts and critical shortage notifications.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Stock by Blood Type</span>
+                    <span class="badge bg-light text-dark me-1">Expiry Alerts</span>
+                    <span class="badge bg-light text-dark">FIFO Tracking</span>
+                </div>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI Assistant</h3>
+                <p>Get instant answers about eligibility, centers, and donation process from our chatbot.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">24/7 Availability</span>
+                    <span class="badge bg-light text-dark me-1">Role-Specific</span>
+                    <span class="badge bg-light text-dark">Quick Actions</span>
+                </div>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">
+                    <i class="fas fa-barcode"></i>
+                </div>
+                <h3>Barcode Tracking</h3>
+                <p>Every blood bag tracked from collection to transfusion with unique barcode system.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Unique Identification</span>
+                    <span class="badge bg-light text-dark me-1">Chain of Custody</span>
+                    <span class="badge bg-light text-dark">Expiry Tracking</span>
+                </div>
             </div>
 
             <div class="feature-card fade-in">
@@ -213,16 +203,12 @@
                     <i class="fas fa-bell"></i>
                 </div>
                 <h3>Real-time Notifications</h3>
-                <p>Get instant alerts when blood is needed or when your donation helps someone.</p>
-            </div>
-
-            <div class="feature-card fade-in">
-                <div class="feature-icon">
-                    <i class="fas fa-chart-line"></i>
+                <p>Instant alerts for appointments, requests, test results, and critical stock levels.</p>
+                <div class="feature-tags">
+                    <span class="badge bg-light text-dark me-1">Email & In-App</span>
+                    <span class="badge bg-light text-dark me-1">Role-Based</span>
+                    <span class="badge bg-light text-dark">Emergency Alerts</span>
                 </div>
-                <h3>Stock Monitoring</h3>
-                <p>Check real-time blood stock levels at donation centers near you.</p>
-                <a href="{% url 'nearby-centers' %}" class="btn-secondary">View Stock</a>
             </div>
         </div>
     </div>
@@ -273,7 +259,7 @@
     <div class="impact-container">
         <h2>How Your Donation Helps Sickle Cell Patients</h2>
         <p>Sickle cell disease causes red blood cells to become misshapen and block blood flow, leading to severe pain and complications. Your blood donation provides healthy red blood cells that improve oxygen delivery, reduce painful crises, and prevent life-threatening complications.</p>
-        <a href="{% url 'sickle_cell' %}" class="btn-primary">
+        <a href="{% url 'donor:donorsignup' %}" class="btn-primary">
             See Your Impact <i class="fas fa-heartbeat"></i>
         </a>
     </div>
@@ -290,56 +276,9 @@
     </div>
 </section>
 
-<!-- CHATBOT UI -->
-<button class="chatbot-button" id="chatbotButton">
-    <i class="fas fa-comments"></i>
-    <span class="chatbot-notification"></span>
-</button>
+<!-- NOTE: Chatbot intentionally NOT included on homepage -->
+<!-- Chatbot only appears for logged-in users in base.html -->
 
-<div class="chatbot-container" id="chatbotContainer">
-    <div class="chatbot-header">
-        <div class="chatbot-header-content">
-            <div class="chatbot-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="chatbot-header-text">
-                <h3>BloodConnect Assistant</h3>
-                <p>Online • Here to help</p>
-            </div>
-        </div>
-        <button class="chatbot-close" id="chatbotClose">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-
-    <div class="chatbot-messages" id="chatbotMessages"></div>
-
-    <div class="chatbot-typing" id="chatbotTyping">
-        <div class="message-avatar bot">
-            <i class="fas fa-robot"></i>
-        </div>
-        <div class="typing-indicator">
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-        </div>
-    </div>
-
-    <div class="chatbot-input-container">
-        <div class="chatbot-input-wrapper">
-            <input 
-                type="text" 
-                class="chatbot-input" 
-                id="chatbotInput" 
-                placeholder="Ask me anything about blood donation..."
-                autocomplete="off"
-            >
-            <button class="chatbot-send-btn" id="chatbotSend">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-</div>
 {% endblock %}
 {% endblock %}
 
@@ -406,281 +345,5 @@
     document.querySelectorAll('.stat-item, .fade-in').forEach(el => {
         observer.observe(el);
     });
-
-    // ========================================
-    // SOS BUTTON FUNCTIONALITY
-    // ========================================
-    const sosButton = document.getElementById('sosButton');
-    const sosMessage = document.getElementById('sosMessage');
-
-    if (sosButton && sosMessage) {
-        sosButton.addEventListener('click', function() {
-            sosMessage.textContent = 'Getting your location...';
-
-            if (!navigator.geolocation) {
-                sosMessage.textContent = "Geolocation is not supported by your browser.";
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                function success(position) {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    const isLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
-
-                    if (isLoggedIn) {
-                        // Save location for logged-in users
-                        fetch("{% url 'save-user-location' %}", {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                                'X-CSRFToken': '{{ csrf_token }}'
-                            },
-                            body: `latitude=${lat}&longitude=${lon}`
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === 'success') {
-                                window.location.href = "{% url 'nearby-centers' %}";
-                            } else {
-                                sosMessage.textContent = data.message || "Failed to save location.";
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error saving location:', error);
-                            sosMessage.textContent = "Error saving location. Please try again.";
-                        });
-                    } else {
-                        // Redirect with query parameters for non-logged-in users
-                        window.location.href = `{% url 'nearby-centers' %}?lat=${lat}&lng=${lon}`;
-                    }
-                },
-                function error(err) {
-                    let errorMessage = "Unable to get location. ";
-                    switch (err.code) {
-                        case err.PERMISSION_DENIED:
-                            errorMessage += "Please allow location access.";
-                            break;
-                        case err.POSITION_UNAVAILABLE:
-                            errorMessage += "Location information unavailable.";
-                            break;
-                        case err.TIMEOUT:
-                            errorMessage += "Location request timed out.";
-                            break;
-                        default:
-                            errorMessage += "An unknown error occurred.";
-                    }
-                    sosMessage.textContent = errorMessage;
-                    console.error('Geolocation error:', err);
-                },
-                { 
-                    timeout: 10000,
-                    enableHighAccuracy: true 
-                }
-            );
-        });
-    }
-
-    // ========================================
-    // CHATBOT FUNCTIONALITY
-    // ========================================
-    const chatbotButton = document.getElementById('chatbotButton');
-    const chatbotContainer = document.getElementById('chatbotContainer');
-    const chatbotClose = document.getElementById('chatbotClose');
-    const chatbotMessages = document.getElementById('chatbotMessages');
-    const chatbotInput = document.getElementById('chatbotInput');
-    const chatbotSend = document.getElementById('chatbotSend');
-    const chatbotTyping = document.getElementById('chatbotTyping');
-
-    // Generate unique session ID
-    function generateSessionId() {
-        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    let sessionId = localStorage.getItem('chatbot_session_id');
-    if (!sessionId) {
-        sessionId = generateSessionId();
-        localStorage.setItem('chatbot_session_id', sessionId);
-    }
-
-    // Add message to chat
-    function addMessage(content, type = 'bot') {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chatbot-message ${type}`;
-
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = `message-avatar ${type}`;
-        avatarDiv.innerHTML = type === 'bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
-
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-
-        // Convert markdown-style formatting to HTML
-        let formattedContent = content
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            .replace(/\n/g, '<br>');
-
-        contentDiv.innerHTML = formattedContent;
-
-        messageDiv.appendChild(avatarDiv);
-        messageDiv.appendChild(contentDiv);
-
-        chatbotMessages.appendChild(messageDiv);
-        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-    }
-
-    // Show/hide typing indicator
-    function showTyping(show) {
-        if (chatbotTyping) {
-            if (show) {
-                chatbotTyping.classList.add('active');
-            } else {
-                chatbotTyping.classList.remove('active');
-            }
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-    }
-
-    // Send message to chatbot API
-    async function sendMessage(message) {
-        if (!message.trim()) return;
-
-        // Add user message
-        addMessage(message, 'user');
-        chatbotInput.value = '';
-        if (chatbotSend) chatbotSend.disabled = true;
-
-        // Show typing indicator
-        showTyping(true);
-
-        try {
-            const response = await fetch('/chatbot/api/chatbot/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    message: message,
-                    session_id: sessionId
-                })
-            });
-
-            const data = await response.json();
-
-            // Hide typing indicator
-            showTyping(false);
-
-            if (data.error) {
-                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
-            } else {
-                addMessage(data.reply, 'bot');
-            }
-        } catch (error) {
-            console.error('Chatbot error:', error);
-            showTyping(false);
-            addMessage('Sorry, I\'m having trouble connecting. Please try again later.', 'bot');
-        }
-
-        if (chatbotSend) chatbotSend.disabled = false;
-    }
-
-    // Quick action suggestions
-    function addQuickActions() {
-        const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
-        const quickActionsDiv = document.createElement('div');
-        quickActionsDiv.className = 'quick-actions';
-
-        let actions = isAuthenticated ? [
-            'My profile',
-            'Check my eligibility',
-            'Find nearest center',
-            'Help'
-        ] : [
-            'How do I become a donor?',
-            'Find donation centers',
-            'Blood donation eligibility',
-            'What blood types are needed?'
-        ];
-
-        actions.forEach(action => {
-            const btn = document.createElement('button');
-            btn.className = 'quick-action-btn';
-            btn.textContent = action;
-            btn.onclick = () => {
-                sendMessage(action);
-                quickActionsDiv.remove();
-            };
-            quickActionsDiv.appendChild(btn);
-        });
-
-        chatbotMessages.appendChild(quickActionsDiv);
-    }
-
-    // Initialize chatbot
-    function initChatbot() {
-        const welcomeMessage = {{ user.is_authenticated|yesno:"true,false" }} 
-            ? "👋 Hello! I'm your BloodConnect Assistant. How can I help you today?" 
-            : "👋 Welcome to BloodConnect! I'm here to help answer your questions about blood donation. How can I assist you?";
-
-        addMessage(welcomeMessage, 'bot');
-        addQuickActions();
-    }
-
-    // Toggle chatbot
-    if (chatbotButton && chatbotContainer) {
-        chatbotButton.addEventListener('click', () => {
-            chatbotContainer.classList.add('active');
-            chatbotButton.style.display = 'none';
-
-            if (chatbotMessages.children.length === 0) {
-                initChatbot();
-            }
-
-            if (chatbotInput) chatbotInput.focus();
-        });
-    }
-
-    if (chatbotClose && chatbotContainer) {
-        chatbotClose.addEventListener('click', () => {
-            chatbotContainer.classList.remove('active');
-            if (chatbotButton) chatbotButton.style.display = 'flex';
-        });
-    }
-
-    // Send message handlers
-    if (chatbotSend && chatbotInput) {
-        chatbotSend.addEventListener('click', () => {
-            sendMessage(chatbotInput.value);
-        });
-
-        chatbotInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage(chatbotInput.value);
-            }
-        });
-
-        chatbotInput.addEventListener('input', () => {
-            if (chatbotSend) {
-                chatbotSend.disabled = chatbotInput.value.trim() === '';
-            }
-        });
-    }
-
-    // Prevent chatbot from closing when clicking inside
-    if (chatbotContainer) {
-        chatbotContainer.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    // Show notification badge after 5 seconds
-    setTimeout(() => {
-        const notification = document.querySelector('.chatbot-notification');
-        if (notification && chatbotContainer && !chatbotContainer.classList.contains('active')) {
-            notification.style.display = 'block';
-        }
-    }, 5000);
 </script>
 {% endblock %}

@@ -1,5 +1,5 @@
-<!-- templates/blood_bank_technician/profile_detail.html -->
 {% extends 'blood_bank_technician/base.html' %}
+{% load static %}
 
 {% block title %}Blood Bank Technician Profile - {{ profile.user.get_full_name }}{% endblock %}
 
@@ -9,32 +9,47 @@
         <div class="col-md-8 offset-md-2">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Blood Bank Technician Profile</h4>
+                    <h4 class="mb-0">
+                        <i class="fas fa-tint mr-2"></i>Blood Bank Technician Profile
+                    </h4>
                     <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' profile.pk %}" class="btn btn-light btn-sm">
                         <i class="fas fa-edit"></i> Edit Profile
                     </a>
                 </div>
                 <div class="card-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
                     <!-- Profile Picture Section -->
                     <div class="text-center mb-4">
                         {% if profile.profile_pic and profile.profile_pic.url %}
-                            <img src="{{ profile.profile_pic.url }}" alt="Profile Picture" 
+                            <img src="{{ profile.profile_pic.url }}" 
+                                 alt="{{ profile.user.get_full_name }}" 
                                  style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-                                 onerror="this.onerror=null; this.style.display='none'; document.getElementById('avatar-fallback').style.display='flex';">
-                            <div id="avatar-fallback" style="display: none; width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; align-items: center; justify-content: center; font-size: 64px; font-weight: bold; margin: 0 auto; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                                {{ profile.user.first_name|first|default:profile.user.username|first|upper }}
-                            </div>
+                                 onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
                         {% else %}
-                            <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: bold; margin: 0 auto; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                                {{ profile.user.first_name|first|default:profile.user.username|first|upper }}
-                            </div>
+                            <img src="{% static 'images/default-profile.png' %}" 
+                                 alt="Default Profile" 
+                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                         {% endif %}
                         
                         <div class="mt-2">
                             {% if profile.is_active %}
-                                <span class="badge bg-success"><i class="fas fa-check-circle"></i> Active</span>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Active
+                                </span>
                             {% else %}
-                                <span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> Inactive</span>
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-circle"></i> Inactive
+                                </span>
                             {% endif %}
                         </div>
                     </div>
@@ -111,4 +126,5 @@
         </div>
     </div>
 </div>
+
 {% endblock %}

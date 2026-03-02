@@ -48,41 +48,56 @@
           <form method="post" enctype="multipart/form-data" novalidate>
             {% csrf_token %}
             
-            <!-- Profile Picture Section -->
-            <div class="text-center mb-4">
-              <h5 class="mb-3">
-                <i class="fas fa-camera me-2"></i>Profile Picture
-              </h5>
-              <div class="profile-preview mb-3">
-                {% if donor.profile_pic %}
-                  <img src="{{ donor.profile_pic.url }}" 
-                       class="rounded-circle border border-3 border-primary shadow-sm" 
-                       width="150" 
-                       height="150" 
-                       id="previewImg" 
-                       alt="Profile Picture"
-                       style="object-fit: cover;">
-                {% else %}
-                  <div class="avatar-placeholder mx-auto" style="width: 150px; height: 150px; font-size: 4rem;">
-                    {{ user.first_name|first|default:user.username|first|upper }}
-                  </div>
-                {% endif %}
-              </div>
-            </div>
+ <!-- Profile Picture Section -->
+<div class="text-center mb-4">
+  <h5 class="mb-3">
+    <i class="fas fa-camera me-2"></i>Profile Picture
+  </h5>
+  <div class="profile-preview mb-3">
+    {% if donor.profile_pic %}
+      <img src="{{ donor.profile_pic.url }}" 
+           class="rounded-circle border border-3 border-primary shadow-sm" 
+           width="150" 
+           height="150" 
+           id="previewImg" 
+           alt="Profile Picture"
+           style="object-fit: cover;"
+           onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}'">
+    {% else %}
+      <img src="{% static 'images/default-profile.png' %}" 
+           class="rounded-circle border border-3 border-primary shadow-sm" 
+           width="150" 
+           height="150" 
+           id="previewImg" 
+           alt="Default Profile"
+           style="object-fit: cover;">
+    {% endif %}
+  </div>
+</div>
 
-            <!-- Profile Picture Upload -->
-            <div class="mb-4">
-              <label for="{{ profile_form.profile_pic.id_for_label }}" class="form-label">
-                <i class="fas fa-upload me-2"></i>Change Profile Picture
-              </label>
-              {{ profile_form.profile_pic|add_class:"form-control" }}
-              {% if profile_form.profile_pic.errors %}
-                <div class="text-danger small mt-1">{{ profile_form.profile_pic.errors }}</div>
-              {% endif %}
-              <small class="text-muted">
-                <i class="fas fa-info-circle me-1"></i>Accepted formats: JPG, PNG, GIF (Max 5MB)
-              </small>
-            </div>
+<!-- Profile Picture Upload -->
+<div class="mb-4">
+  <label for="{{ profile_form.profile_pic.id_for_label }}" class="form-label">
+    <i class="fas fa-upload me-2"></i>Change Profile Picture
+  </label>
+  {{ profile_form.profile_pic|add_class:"form-control" }}
+  {% if profile_form.profile_pic.errors %}
+    <div class="text-danger small mt-1">{{ profile_form.profile_pic.errors }}</div>
+  {% endif %}
+  
+  {% if donor.profile_pic %}
+  <div class="form-check mt-2">
+    <input class="form-check-input" type="checkbox" name="clear_profile_pic" id="clear_profile_pic">
+    <label class="form-check-label text-danger" for="clear_profile_pic">
+      <i class="fas fa-trash-alt me-1"></i>Remove current picture (will revert to default)
+    </label>
+  </div>
+  {% endif %}
+  
+  <small class="text-muted">
+    <i class="fas fa-info-circle me-1"></i>Accepted formats: JPG, PNG, GIF (Max 5MB)
+  </small>
+</div>
 
             <hr class="my-4">
 

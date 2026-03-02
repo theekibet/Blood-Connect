@@ -95,28 +95,9 @@ def phlebotomist_signup_view(request):
         form = PhlebotomistSignupForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # Extract data from form
-                username = request.POST.get('username') or form.cleaned_data.get('username')
-                email = request.POST.get('email') or form.cleaned_data.get('email')
-                password = request.POST.get('password1') or request.POST.get('password') or form.cleaned_data.get('password1')
-                first_name = request.POST.get('first_name') or form.cleaned_data.get('first_name', '')
-                last_name = request.POST.get('last_name') or form.cleaned_data.get('last_name', '')
-                
-                # Create user - active immediately
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password,
-                    first_name=first_name,
-                    last_name=last_name,
-                    is_active=True
-                )
-                
-                # Save phlebotomist profile (pending admin approval)
-                phlebotomist = form.save(commit=False)
-                phlebotomist.user = user
-                phlebotomist.is_approved = False  # Needs admin approval
-                phlebotomist.save()
+                # Use the form's save method which handles both User and Phlebotomist creation
+                phlebotomist = form.save(commit=True)
+                user = phlebotomist.user
                 
                 # Add to PHLEBOTOMIST group
                 phlebotomist_group, _ = Group.objects.get_or_create(name="PHLEBOTOMIST")
@@ -132,23 +113,17 @@ def phlebotomist_signup_view(request):
                     f"Your account has been created and is pending admin approval. "
                     f"You can login but access will be limited until approved."
                 )
-                
                 return redirect('phlebotomist:phlebotomistlogin')
                 
             except Exception as e:
                 # Log the error for debugging
                 logger.error(f"Phlebotomist registration error: {str(e)}", exc_info=True)
-                
-                # Clean up: delete the user if registration fails
-                if 'user' in locals():
-                    user.delete()
-                
                 messages.error(request, f"⚠️ Registration failed: {str(e)}")
         else:
             messages.error(request, "⚠️ Please correct the errors below.")
     else:
         form = PhlebotomistSignupForm()
-
+    
     return render(request, "phlebotomist/phlebotomistsignup.html", {"form": form})
 
 # ---------------------------

@@ -264,18 +264,62 @@ def dashboard(request):
         safe_count = safe_count.count()
         unsafe_count = unsafe_count.count()
     
+    # Tests completed today
+    today = timezone.now().date()
+    today_tests = BloodTest.objects.filter(
+        tested_by=profile,
+        test_date__date=today
+    ).count()
+    
+    # ===== GENERATE PERSONALIZED GREETING =====
+    try:
+        from blood.utils.greetings import get_lab_tech_greeting
+        
+        greeting_data = get_lab_tech_greeting(
+            lab_tech=profile,
+            pending_tests=pending_tests,
+            completed_today=today_tests,
+            safe_count=safe_count,
+            unsafe_count=unsafe_count
+        )
+    except ImportError:
+        # Fallback greeting if the utility doesn't exist
+        greeting_data = {
+            'greeting': f"👋 Good {get_time_of_day()}, {profile.user.get_full_name() or profile.user.username}!",
+            'context_message': f"Managing lab at {center.name if center else 'your center'}",
+            'user_type': 'lab_tech',
+            'icon': '🔬',
+            'meta_items': [
+                {'icon': 'fas fa-hourglass-half', 'text': f'{pending_tests} pending tests'},
+                {'icon': 'fas fa-check-circle', 'text': f'{today_tests} tests today', 'color': 'text-success'},
+                {'icon': 'fas fa-flask', 'text': f'{total_tests} total tests'},
+            ]
+        }
+    
     context = {
         'profile': profile,
         'center': center,
         'pending_tests': pending_tests,
-        'pending_tests_details': pending_tests_with_barcode,  # Now using the list with barcode info
-        'my_tests': my_tests_with_barcode,  # Now using the list with barcode info
+        'pending_tests_details': pending_tests_with_barcode,
+        'my_tests': my_tests_with_barcode,
         'total_tests': total_tests,
         'safe_count': safe_count,
         'unsafe_count': unsafe_count,
+        'today_tests': today_tests,
         'completion_rate': (safe_count / total_tests * 100) if total_tests > 0 else 0,
+        'greeting_data': greeting_data,  # Add greeting data to context
     }
     return render(request, 'lab_technologist/dashboard.html', context)
+
+def get_time_of_day():
+    """Helper function to get time of day for greeting"""
+    hour = timezone.now().hour
+    if hour < 12:
+        return "morning"
+    elif hour < 17:
+        return "afternoon"
+    else:
+        return "evening"
 @login_required
 def pending_tests(request):
     """List all blood awaiting testing with barcode information"""

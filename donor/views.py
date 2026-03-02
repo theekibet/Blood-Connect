@@ -1656,7 +1656,7 @@ def cancel_donation_request_view(request, donation_id):
 
 
 # -------------------------------
-# profile
+# Profile View
 # -------------------------------
 @login_required(login_url='donorlogin')
 def donor_profile_view(request):
@@ -1669,6 +1669,11 @@ def donor_profile_view(request):
     # Calculate next eligible donation date, days until next donation
     next_donation_date = donor.next_eligible_donation_date()
     days_until_next = donor.days_until_next_donation()
+    
+    # Get profile picture URL with fallback to default
+    profile_pic_url = None
+    if donor.profile_pic and hasattr(donor.profile_pic, 'url') and donor.profile_pic.name:
+        profile_pic_url = donor.profile_pic.url
 
     context = {
         'donor': donor,
@@ -1677,11 +1682,13 @@ def donor_profile_view(request):
         'days_until_next': days_until_next,
         'bloodgroup_verified': donor.bloodgroup_verified,
         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+        'profile_pic_url': profile_pic_url,
     }
     return render(request, 'donor/donor_profile.html', context)
 
+
 # -------------------------------
-# Edit Profile
+# Edit Profile View
 # -------------------------------
 @login_required(login_url='donorlogin')
 def donor_edit_profile_view(request):
@@ -1689,6 +1696,7 @@ def donor_edit_profile_view(request):
     Allow a donor to edit their profile.
     Blood group becomes read-only after phlebotomist verification.
     Email is always read-only.
+    Includes profile picture upload and removal functionality.
     """
     try:
         donor = Donor.objects.get(user=request.user)
@@ -1726,6 +1734,9 @@ def donor_edit_profile_view(request):
             except ValueError:
                 messages.warning(request, "Invalid longitude value.")
         
+        # Handle profile picture removal
+        clear_picture = request.POST.get('clear_profile_pic') == 'on'
+        
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -1737,20 +1748,31 @@ def donor_edit_profile_view(request):
                     user.email = original_email
                     user.save()
                     
-                    # Handle base64 cropped image if provided
+                    # Handle profile picture
+                    donor_instance = form.save(commit=False)
+                    
+                    # If user wants to clear the picture
+                    if clear_picture:
+                        if donor_instance.profile_pic:
+                            # Delete the file from storage
+                            if donor_instance.profile_pic and hasattr(donor_instance.profile_pic, 'path'):
+                                import os
+                                if os.path.isfile(donor_instance.profile_pic.path):
+                                    os.remove(donor_instance.profile_pic.path)
+                            donor_instance.profile_pic = None
+                            messages.info(request, "Profile picture removed. Default image will be used.")
+                    
+                    # Handle base64 cropped image if provided (for crop functionality)
                     cropped_image_data = request.POST.get('cropped_image')
-                    if cropped_image_data:
+                    if cropped_image_data and not clear_picture:
                         try:
                             format, imgstr = cropped_image_data.split(';base64,')
                             ext = format.split('/')[-1]
                             data = ContentFile(base64.b64decode(imgstr), name='profile.' + ext)
-                            donor.profile_pic = data
+                            donor_instance.profile_pic = data
                         except Exception as e:
                             logger.error(f"Error processing cropped image: {e}")
-                            messages.error(request, f"Error processing cropped image: {e}")
-                    
-                    # Save Donor instance with updated data
-                    donor_instance = form.save(commit=False)
+                            messages.warning(request, f"Error processing cropped image: {e}")
                     
                     # SECURITY: Restore original verified blood group and verification status
                     if original_verified_status:
@@ -1777,7 +1799,7 @@ def donor_edit_profile_view(request):
                     
                     logger.info(f"✅ Profile updated successfully for donor {donor.id}")
                     messages.success(request, "✅ Profile updated successfully!")
-                    return redirect('donor-profile')
+                    return redirect('donor:donor-profile')
                     
             except Exception as e:
                 logger.error(f"Error saving profile for donor {donor.id}: {e}", exc_info=True)
@@ -1793,12 +1815,18 @@ def donor_edit_profile_view(request):
             'email': user.email,
         })
     
+    # Get profile picture URL for template
+    profile_pic_url = None
+    if donor.profile_pic and hasattr(donor.profile_pic, 'url') and donor.profile_pic.name:
+        profile_pic_url = donor.profile_pic.url
+    
     context = {
         'profile_form': form,
         'donor': donor,
         'user': user,
         'bloodgroup_verified': donor.bloodgroup_verified,
         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+        'profile_pic_url': profile_pic_url,
     }
     return render(request, 'donor/donor_edit_profile.html', context)
 
@@ -2162,43 +2190,7 @@ def health_tips_view(request):
 @login_required(login_url='donorlogin')
 def faqs_view(request):
     """Frequently asked questions"""
-    context = {
-        'page_title': 'Frequently Asked Questions',
-        'page_icon': 'fa-question-circle',
-        'faq_categories': [
-            {
-                'name': 'Eligibility',
-                'icon': 'fa-check-circle',
-                'questions': [
-                    {'q': 'Who can donate blood?', 'a': 'Generally, healthy adults aged 18-65 weighing at least 50kg can donate.'},
-                    {'q': 'How often can I donate?', 'a': 'Every 56 days (8 weeks) for whole blood donation.'},
-                    {'q': 'Can I donate if I have a cold?', 'a': 'No, you should be feeling healthy on the day of donation.'},
-                    {'q': 'What medications disqualify me?', 'a': 'Some medications may require waiting periods. Check with our staff.'},
-                ]
-            },
-            {
-                'name': 'The Donation Process',
-                'icon': 'fa-syringe',
-                'questions': [
-                    {'q': 'How long does donation take?', 'a': 'The entire process takes about 1 hour, with actual donation 8-10 minutes.'},
-                    {'q': 'Is donating blood safe?', 'a': 'Yes, sterile equipment is used once and discarded.'},
-                    {'q': 'Will it hurt?', 'a': 'You may feel a quick pinch, but most donors feel fine.'},
-                    {'q': 'How much blood is taken?', 'a': 'About 1 pint (450-500ml), which your body quickly replaces.'},
-                ]
-            },
-            {
-                'name': 'After Donation',
-                'icon': 'fa-heart',
-                'questions': [
-                    {'q': 'What should I eat after donating?', 'a': 'Iron-rich foods and plenty of fluids.'},
-                    {'q': 'Can I exercise after donating?', 'a': 'Avoid strenuous exercise for 24 hours.'},
-                    {'q': 'When will I know my blood type?', 'a': 'You\'ll receive notification after your donation is tested.'},
-                    {'q': 'How soon can I donate again?', 'a': '56 days for whole blood, sooner for platelets.'},
-                ]
-            },
-        ]
-    }
-    return render(request, 'donor/resources/faqs.html', context)
+    return render(request, 'donor/resources/faqs.html')
 
 
 @login_required(login_url='donorlogin')

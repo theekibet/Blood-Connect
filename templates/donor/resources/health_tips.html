@@ -1,23 +1,259 @@
 {% extends 'donor/donorbase.html' %}
 {% load static %}
 
-{% block title %}Health Tips - BloodConnect{% endblock %}
+{% block title %}Health Tips for Donors - BloodConnect Kenya{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Health Tips for Donors</h4>
+<div class="container py-5">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-success">
+            <i class="fas fa-heartbeat me-3"></i>Health Tips for Donors
+        </h1>
+        <p class="lead text-muted">Stay healthy and ready to donate with tips tailored for Kenya</p>
+    </div>
+
+    <!-- Categories -->
+    <div class="row g-4 mb-5">
+        <!-- Pre-Donation -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow h-100">
+                <div class="card-header bg-success text-white py-3">
+                    <h4 class="mb-0"><i class="fas fa-clock me-2"></i>Before You Donate</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-wine-bottle text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Drink Plenty of Water</h6>
+                            <p class="text-muted">Drink at least 8 glasses of water the day before and morning of donation. In Kenyan weather, stay extra hydrated!</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-utensils text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Eat Iron-Rich Foods</h6>
+                            <p class="text-muted">Include Kenyan foods like Sukuma wiki, Omena, beef, beans, and ndengu in your meals 2-3 days before donation.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-bed text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Get Good Sleep</h6>
+                            <p class="text-muted">Aim for 7-8 hours of sleep the night before your donation to feel refreshed.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start">
+                        <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-ban text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Avoid Fatty Foods</h6>
+                            <p class="text-muted">Avoid heavy, fatty meals (like nyama choma with lots of fat) 4 hours before donation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Drink plenty of water before donating</li>
-                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Eat a healthy meal rich in iron</li>
-                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Get a good night's sleep</li>
-                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Avoid fatty foods before donation</li>
-                <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> Rest after donation and hydrate</li>
-            </ul>
+
+        <!-- During Donation -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow h-100">
+                <div class="card-header bg-info text-white py-3">
+                    <h4 class="mb-0"><i class="fas fa-syringe me-2"></i>During Donation</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-lungs text-info"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Relax and Breathe</h6>
+                            <p class="text-muted">Take deep breaths and relax. The actual donation takes only 8-10 minutes.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-comment-medical text-info"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Communicate with Staff</h6>
+                            <p class="text-muted">Tell the phlebotomist if you feel dizzy, nauseous, or uncomfortable.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start">
+                        <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-hand-peace text-info"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Keep Arm Still</h6>
+                            <p class="text-muted">Keep your arm still and relaxed during the donation process.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Post-Donation -->
+        <div class="col-lg-6 mt-4">
+            <div class="card border-0 shadow h-100">
+                <div class="card-header bg-warning text-dark py-3">
+                    <h4 class="mb-0"><i class="fas fa-heart me-2"></i>After Donation</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-couch text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Rest for 10-15 Minutes</h6>
+                            <p class="text-muted">Stay at the donation center and enjoy the refreshments provided.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-wine-bottle text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Drink Extra Fluids</h6>
+                            <p class="text-muted">Drink plenty of water, juice, or soft drinks for the next 24-48 hours.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-dumbbell text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Avoid Heavy Exercise</h6>
+                            <p class="text-muted">Skip strenuous activities and heavy lifting for 24 hours.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-apple-alt text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Eat Iron-Rich Foods</h6>
+                            <p class="text-muted">Continue eating iron-rich Kenyan foods for the next few weeks.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kenyan-Specific Tips -->
+        <div class="col-lg-6 mt-4">
+            <div class="card border-0 shadow h-100">
+                <div class="card-header bg-danger text-white py-3">
+                    <h4 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Kenya-Specific Tips</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-shield-alt text-danger"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Malaria Prevention</h6>
+                            <p class="text-muted">If you've had malaria, wait 6 months after recovery and treatment before donating.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-umbrella-beach text-danger"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Travel to Malaria Areas</h6>
+                            <p class="text-muted">If you've traveled to malaria-endemic areas (Coast, Western Kenya), wait 6 months after return.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-bolt text-danger"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Sickle Cell Trait</h6>
+                            <p class="text-muted">Donors with sickle cell trait can donate blood. This is common in Kenya.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-3">
+                            <i class="fas fa-thermometer-half text-danger"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold">Hot Weather Precautions</h6>
+                            <p class="text-muted">In hot Kenyan weather, increase water intake and avoid donating during the hottest part of the day.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Foods to Eat Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-utensils me-2"></i>Iron-Rich Kenyan Foods</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-3 col-6 text-center">
+                            <div class="bg-light p-3 rounded-3">
+                                <i class="fas fa-leaf fa-3x text-success mb-2"></i>
+                                <h6>Sukuma Wiki</h6>
+                                <small class="text-muted">High in iron</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 text-center">
+                            <div class="bg-light p-3 rounded-3">
+                                <i class="fas fa-fish fa-3x text-info mb-2"></i>
+                                <h6>Omena</h6>
+                                <small class="text-muted">Rich in iron</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 text-center">
+                            <div class="bg-light p-3 rounded-3">
+                                <i class="fas fa-seedling fa-3x text-warning mb-2"></i>
+                                <h6>Beans & Ndengu</h6>
+                                <small class="text-muted">Legumes</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 text-center">
+                            <div class="bg-light p-3 rounded-3">
+                                <i class="fas fa-drumstick-bite fa-3x text-danger mb-2"></i>
+                                <h6>Beef/Red Meat</h6>
+                                <small class="text-muted">Heme iron</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center">
+        <a href="{% url 'donor:donor-resources' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Resources
+        </a>
+    </div>
 </div>
+
+<style>
+.dark-mode .bg-light {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0;
+}
+
+.dark-mode .text-muted {
+    color: #a0a0a0 !important;
+}
+</style>
 {% endblock %}

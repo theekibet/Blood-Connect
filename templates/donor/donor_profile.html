@@ -22,15 +22,17 @@
         <!-- Use Bootstrap card-body -->
         <div class="card-body">
           
-          <!-- Profile Picture - Keep inline styles only for specific dimensions -->
+          <!-- Profile Picture - Using default image from static -->
           <div class="text-center mb-4">
-            {% if donor.profile_pic %}
-              <img src="{{ donor.profile_pic.url }}" alt="{{ user.get_full_name }}" 
-                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            {% if donor.profile_pic and donor.profile_pic.url %}
+              <img src="{{ donor.profile_pic.url }}" 
+                   alt="{{ user.get_full_name }}" 
+                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                   onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
             {% else %}
-              <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: bold; margin: 0 auto; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                {{ user.first_name|first|default:user.username|first|upper }}
-              </div>
+              <img src="{% static 'images/default-profile.png' %}" 
+                   alt="Default Profile" 
+                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
             {% endif %}
             
             <!-- Use Bootstrap badges like blood bank -->
@@ -160,4 +162,5 @@
     </div> <!-- end col -->
   </div> <!-- end row -->
 </div> <!-- end container -->
+
 {% endblock %}

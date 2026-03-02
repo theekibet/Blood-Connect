@@ -131,6 +131,7 @@ TEMPLATES = [
 
                 'phlebotomist.context_processors.phlebotomist_unread_notifications',
                 'hospital.context_processors.hospital_user_context',
+                'blood.context_processors.user_role_context', 
                 
             ],
         },

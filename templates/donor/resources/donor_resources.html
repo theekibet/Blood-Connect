@@ -1,43 +1,297 @@
 {% extends 'donor/donorbase.html' %}
 {% load static %}
 
-{% block title %}Resources - BloodConnect{% endblock %}
+{% block title %}Resources - BloodConnect Kenya{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <h2 class="mb-4"><i class="fas fa-book text-primary me-2"></i>Donor Resources</h2>
-    
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'donor:health-tips' %}" class="text-decoration-none">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-heartbeat fa-3x text-primary mb-3"></i>
-                        <h5>Health Tips</h5>
-                    </div>
-                </div>
-            </a>
+<div class="container py-5">
+    <!-- Header with Kenyan theme -->
+    <div class="text-center mb-5">
+        <div class="d-inline-block bg-kenyan-gradient p-4 rounded-circle mb-4" style="background: linear-gradient(135deg, #006233 0%, #FFFFFF 50%, #BB2028 100%);">
+            <i class="fas fa-book-open fa-3x text-white"></i>
         </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'donor:faqs' %}" class="text-decoration-none">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-question-circle fa-3x text-info mb-3"></i>
-                        <h5>FAQs</h5>
-                    </div>
-                </div>
-            </a>
+        <h1 class="display-5 fw-bold mb-3">Donor Resources</h1>
+        <div class="d-flex justify-content-center gap-2 mb-3">
+            <span class="badge bg-success px-3 py-2">🇰🇪 Kenya</span>
+            <span class="badge bg-danger px-3 py-2">Updated 2024</span>
+            <span class="badge bg-warning text-dark px-3 py-2">Donor-Focused</span>
         </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'donor:donor-advice' %}" class="text-decoration-none">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-comments fa-3x text-success mb-3"></i>
-                        <h5>Donor Advice</h5>
+        <p class="lead text-muted">Everything you need to know about blood donation in Kenya</p>
+    </div>
+
+    <!-- Quick Stats for Kenyan Donors -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm bg-light border-start border-danger border-4">
+                <div class="card-body text-center">
+                    <h2 class="text-danger fw-bold mb-1">56</h2>
+                    <small class="text-muted">Days between donations</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm bg-light border-start border-success border-4">
+                <div class="card-body text-center">
+                    <h2 class="text-success fw-bold mb-1">50kg</h2>
+                    <small class="text-muted">Minimum weight</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm bg-light border-start border-info border-4">
+                <div class="card-body text-center">
+                    <h2 class="text-info fw-bold mb-1">16-65</h2>
+                    <small class="text-muted">Age range (years)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm bg-light border-start border-warning border-4">
+                <div class="card-body text-center">
+                    <h2 class="text-warning fw-bold mb-1">3</h2>
+                    <small class="text-muted">Lives saved per donation</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Video Section - Kenyan Awareness -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow overflow-hidden">
+                <div class="row g-0">
+                    <div class="col-md-4 bg-danger text-white p-4 d-flex align-items-center">
+                        <div>
+                            <h3 class="fw-bold mb-3">🇰🇪 Donor Stories</h3>
+                            <p class="mb-4">Watch how Kenyan donors are saving lives in their communities.</p>
+                            <button class="btn btn-light" onclick="alert('Video coming soon! Check back later.'); return false;">
+                                <i class="fas fa-play-circle me-2 text-danger"></i>Watch Now
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-8 bg-dark text-white p-4" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('{% static 'images/kenya-donation.jpg' %}'); background-size: cover; background-position: center;">
+                        <div class="row h-100 align-items-center">
+                            <div class="col-6 text-center">
+                                <h1 class="display-4 fw-bold">15K+</h1>
+                                <p>Kenyan Donors</p>
+                            </div>
+                            <div class="col-6 text-center">
+                                <h1 class="display-4 fw-bold">45K+</h1>
+                                <p>Lives Saved</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Resource Cards -->
+    <div class="row g-4">
+        <!-- Health Tips Card -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-lg hover-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="resource-icon bg-success bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-heartbeat fa-3x text-success"></i>
+                        </div>
+                        <span class="badge bg-success">10+ Articles</span>
+                    </div>
+                    <h4 class="fw-bold mb-3">Health Tips</h4>
+                    <p class="text-muted mb-4">Stay healthy and ready to donate with tips tailored for Kenyan donors, including nutrition, hydration, and malaria prevention.</p>
+                    
+                    <!-- Preview Topics -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Iron-rich Kenyan foods (Sukuma, Omena)</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Hydration in Kenyan climate</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Recovering from malaria</span>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'donor:health-tips' %}" class="btn btn-outline-success w-100 py-2">
+                        Read Health Tips <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQs Card -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-lg hover-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="resource-icon bg-info bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-question-circle fa-3x text-info"></i>
+                        </div>
+                        <span class="badge bg-info">20+ FAQs</span>
+                    </div>
+                    <h4 class="fw-bold mb-3">Frequently Asked Questions</h4>
+                    <p class="text-muted mb-4">Find answers to common questions from Kenyan donors about eligibility, process, and post-donation care.</p>
+                    
+                    <!-- Preview Questions -->
+                    <div class="bg-light p-3 rounded-3 mb-4">
+                        <p class="mb-2"><i class="fas fa-question-circle text-info me-2"></i> <strong>Can I donate with sickle cell trait?</strong></p>
+                        <p class="mb-2"><i class="fas fa-question-circle text-info me-2"></i> <strong>How long after malaria can I donate?</strong></p>
+                        <p class="mb-0"><i class="fas fa-question-circle text-info me-2"></i> <strong>Is it safe to donate during COVID-19?</strong></p>
+                    </div>
+                    
+                    <a href="{% url 'donor:faqs' %}" class="btn btn-outline-info w-100 py-2">
+                        Browse FAQs <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Donor Advice Card (Coming Soon) -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-lg hover-card position-relative">
+                <div class="position-absolute top-0 end-0 m-3 z-index-1">
+                    <span class="badge bg-warning text-dark px-3 py-2">
+                        <i class="fas fa-clock me-1"></i>Coming Soon
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="resource-icon bg-warning bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-comments fa-3x text-warning"></i>
+                        </div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Donor Advice</h4>
+                    <p class="text-muted mb-4">Real stories and advice from experienced Kenyan donors. Coming soon to help first-time donors!</p>
+                    
+                    <!-- Coming Soon Preview -->
+                    <div class="text-center py-4">
+                        <i class="fas fa-tools fa-4x text-muted mb-3 opacity-50"></i>
+                        <p class="text-muted fst-italic">"We're collecting stories from Kenyan donors"</p>
+                        <div class="progress mb-3" style="height: 8px;">
+                            <div class="progress-bar bg-warning progress-bar-striped" style="width: 65%"></div>
+                        </div>
+                        <p class="small text-muted">Launching soon • Q2 2024</p>
+                    </div>
+                    
+                    <button class="btn btn-outline-secondary w-100 py-2" onclick="alert('This section is coming soon! Check back later.'); return false;">
+                        <i class="fas fa-bell me-2"></i>Notify Me
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Resources Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="fas fa-download text-primary me-2"></i>Download Resources</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <a href="#" onclick="alert('PDF coming soon!'); return false;" class="text-decoration-none">
+                                <div class="text-center p-3 bg-white rounded-3 hover-shadow">
+                                    <i class="fas fa-file-pdf text-danger fa-2x mb-2"></i>
+                                    <small class="d-block">Eligibility Guide</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="#" onclick="alert('PDF coming soon!'); return false;" class="text-decoration-none">
+                                <div class="text-center p-3 bg-white rounded-3 hover-shadow">
+                                    <i class="fas fa-file-pdf text-danger fa-2x mb-2"></i>
+                                    <small class="d-block">Pre-Donation Tips</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="#" onclick="alert('Poster coming soon!'); return false;" class="text-decoration-none">
+                                <div class="text-center p-3 bg-white rounded-3 hover-shadow">
+                                    <i class="fas fa-file-image text-success fa-2x mb-2"></i>
+                                    <small class="d-block">Blood Types Poster</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="#" onclick="alert('Swahili version coming soon!'); return false;" class="text-decoration-none">
+                                <div class="text-center p-3 bg-white rounded-3 hover-shadow">
+                                    <i class="fas fa-language text-primary fa-2x mb-2"></i>
+                                    <small class="d-block">Kiswahili Guide</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Contact -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 bg-danger text-white">
+                <div class="card-body p-4 text-center">
+                    <h4 class="mb-3">Need Immediate Help?</h4>
+                    <p class="mb-3">Our donor support team is available 24/7</p>
+                    <a href="tel:+254700123456" class="btn btn-light btn-lg">
+                        <i class="fas fa-phone-alt me-2 text-danger"></i>+254 700 123 456
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+.hover-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+}
+
+.resource-icon {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+.dark-mode .bg-light {
+    background-color: #2d2d2d !important;
+}
+
+.dark-mode .text-muted {
+    color: #a0a0a0 !important;
+}
+
+.dark-mode .card.bg-light {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+}
+
+.bg-kenyan-gradient {
+    background: linear-gradient(135deg, #006233 0%, #FFFFFF 50%, #BB2028 100%);
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+</style>
 {% endblock %}

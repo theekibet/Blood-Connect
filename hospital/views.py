@@ -147,11 +147,49 @@ def hospital_dashboard(request):
     if hospital.serving_centre:
         centre_stock = StockUnit.objects.filter(
             center=hospital.serving_centre,
+            safety_status='safe',
             is_quarantined=False,
+            unit__gt=0,
             expiry_date__gte=timezone.now().date()
         ).values('bloodgroup').annotate(
             total_units=Sum('unit')
         ).order_by('bloodgroup')
+    
+    # ===== GENERATE PERSONALIZED GREETING =====
+    try:
+        from blood.utils.greetings import get_hospital_greeting
+        
+        greeting_data = get_hospital_greeting(
+            hospital_user=hospital_user,
+            pending_requests=pending_requests,
+            approved_requests=approved_requests,
+            dispatched_requests=dispatched_requests,
+            total_requests=total_requests
+        )
+    except ImportError:
+        # Fallback greeting
+        from datetime import datetime
+        hour = datetime.now().hour
+        if hour < 12:
+            time_of_day = "morning"
+        elif hour < 17:
+            time_of_day = "afternoon"
+        else:
+            time_of_day = "evening"
+            
+        name = hospital_user.user.get_full_name().split()[0] if hospital_user.user.get_full_name() else hospital_user.user.username
+        
+        greeting_data = {
+            'greeting': f"Good {time_of_day}, {name}! 🏥",
+            'context_message': f"Managing blood requests at {hospital.name}",
+            'user_type': 'hospital',
+            'icon': '🏥',
+            'meta_items': [
+                {'icon': 'fas fa-building', 'text': hospital.name},
+                {'icon': 'fas fa-clock', 'text': f'{pending_requests} pending', 'color': 'text-warning' if pending_requests > 0 else ''},
+                {'icon': 'fas fa-check-circle', 'text': f'{approved_requests} approved', 'color': 'text-success'},
+            ]
+        }
     
     context = {
         'hospital': hospital,
@@ -164,6 +202,7 @@ def hospital_dashboard(request):
         'delivered_requests': delivered_requests,
         'blood_group_stats': blood_group_stats,
         'centre_stock': centre_stock,
+        'greeting_data': greeting_data,  # Add greeting data to context
     }
     
     return render(request, 'hospital/dashboard.html', context)
@@ -196,16 +235,50 @@ def hospital_dashboard_admin(request):
         'rejected_requests': all_requests.filter(status='rejected').count(),
     }
     
+    # ===== GENERATE PERSONALIZED GREETING FOR ADMIN =====
+    try:
+        from blood.utils.greetings import get_hospital_admin_greeting
+        
+        greeting_data = get_hospital_admin_greeting(
+            hospital_user=hospital_user,
+            stats=stats,
+            user_count=hospital_users.count()
+        )
+    except ImportError:
+        # Fallback greeting
+        from datetime import datetime
+        hour = datetime.now().hour
+        if hour < 12:
+            time_of_day = "morning"
+        elif hour < 17:
+            time_of_day = "afternoon"
+        else:
+            time_of_day = "evening"
+            
+        name = hospital_user.user.get_full_name().split()[0] if hospital_user.user.get_full_name() else hospital_user.user.username
+        
+        greeting_data = {
+            'greeting': f"Good {time_of_day}, {name}! 👨‍💼",
+            'context_message': f"Administrator dashboard for {hospital.name}",
+            'user_type': 'hospital_admin',
+            'icon': '👨‍💼',
+            'meta_items': [
+                {'icon': 'fas fa-building', 'text': hospital.name},
+                {'icon': 'fas fa-users', 'text': f'{hospital_users.count()} users'},
+                {'icon': 'fas fa-clock', 'text': f"{stats['pending_requests']} pending", 'color': 'text-warning' if stats['pending_requests'] > 0 else ''},
+            ]
+        }
+    
     context = {
         'hospital': hospital,
         'hospital_user': hospital_user,
         'hospital_users': hospital_users,
         'all_requests': all_requests,
         'stats': stats,
+        'greeting_data': greeting_data,  # Add greeting data to context
     }
     
     return render(request, 'hospital/dashboard_admin.html', context)
-
 
 @login_required
 def create_blood_request(request):

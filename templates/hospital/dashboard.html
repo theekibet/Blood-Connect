@@ -1,8 +1,14 @@
 {% extends 'hospital/base.html' %}
+{% load static %}
+
 {% block title %}Dashboard - {{ hospital.name }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
+    <!-- Enhanced Greeting Card -->
+    {% include 'shared/greetings_card.html' %}
+    
+    <!-- Hospital Info Banner -->
     <div class="row">
         <div class="col-12">
             <div class="card bg-primary text-white mb-4">
@@ -87,15 +93,34 @@
         </div>
     </div>
 
+    <!-- Quick Actions for Regular Staff -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                        <div>
+                            <a href="{% url 'hospital:create_request' %}" class="btn btn-primary me-2">
+                                <i class="fas fa-plus"></i> New Request
+                            </a>
+                            <a href="{% url 'hospital:request_list' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-list"></i> View All Requests
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Requests -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">Recent Blood Requests</h6>
-                    <a href="{% url 'hospital:create_request' %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-plus"></i> New Request
-                    </a>
+                    <span class="badge bg-primary">{{ recent_requests|length }} Recent</span>
                 </div>
                 <div class="card-body">
                     {% if recent_requests %}
@@ -189,6 +214,7 @@
                                 <div class="card-body text-center">
                                     <h4 class="mb-2">{{ stock.bloodgroup }}</h4>
                                     <h3 class="mb-0">{{ stock.total_units }} ml</h3>
+                                    <small class="text-muted">Available</small>
                                 </div>
                             </div>
                         </div>
@@ -197,6 +223,53 @@
                             <p class="text-center text-muted">No stock information available</p>
                         </div>
                         {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Blood Group Statistics -->
+    {% if blood_group_stats %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-chart-pie"></i> Request Statistics by Blood Group
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Blood Group</th>
+                                    <th>Total Requests</th>
+                                    <th>Pending</th>
+                                    <th>Fulfilled</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in blood_group_stats %}
+                                <tr>
+                                    <td><strong>{{ stat.blood_group }}</strong></td>
+                                    <td>{{ stat.total }}</td>
+                                    <td>{{ stat.pending }}</td>
+                                    <td>{{ stat.fulfilled }}</td>
+                                    <td>
+                                        {% if stat.total > 0 %}
+                                            {{ stat.fulfilled|divisibleby:stat.total|floatformat:0 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

@@ -74,7 +74,7 @@ from blood.utils.validators import check_for_duplicate_profiles,get_user_profile
 from django.http import HttpResponseServerError
 import requests
 from .models import DonationFunFact, UserFactInteraction, DailyFactChallenge
-from .fact_data import FACT_DATABASE, QUICK_FACTS, DONATION_TIPS, ELIGIBILITY_CRITERIA
+
 from django.db.models import Avg
 
 logger = logging.getLogger(__name__)
@@ -1258,118 +1258,13 @@ def delete_phlebotomist_view(request, pk):
     }
     return render(request, 'blood/delete_phlebotomist_confirmation.html', context)
 
-def sickle_cell_view(request):
-    return render(request, 'blood/sickle_cell.html')
+
 
 # Admin user = staff who is NOT a phlebotomist
 def is_admin(user):
     return user.is_staff and (not is_phlebotomist(user))
 
 
-
-
-logger = logging.getLogger(__name__)
-
-def nearby_centers_view(request):
-    """
-    Unified view for finding nearby donation centers.
-    Works for logged-in donors and guests.
-    """
-
-    latitude, longitude = None, None
-
-    # 1️⃣ If logged-in, try pulling location from donor profile
-    if request.user.is_authenticated:
-        user = request.user
-        if hasattr(user, 'donor') and user.donor.latitude and user.donor.longitude:
-            latitude = user.donor.latitude
-            longitude = user.donor.longitude
-            logger.info(f"[Donor] Using location from donor profile: {latitude}, {longitude}")
-
-    # 2️⃣ If guest (or missing), check GET params
-    if latitude is None or longitude is None:
-        lat = request.GET.get('lat')
-        lng = request.GET.get('lng')
-        if lat and lng:
-            try:
-                latitude = float(lat)
-                longitude = float(lng)
-                logger.info(f"[Guest/Public] Using lat={latitude}, lng={longitude}")
-            except ValueError:
-                messages.error(request, "Invalid location coordinates provided.")
-                return render(request, 'shared/nearby_centers.html', {})
-
-    # 3️⃣ Still missing? -> ask user to update profile or allow location
-    if latitude is None or longitude is None:
-        if request.user.is_authenticated:
-            messages.error(
-                request, 
-                "Your location is not set. Please update your profile or allow location detection."
-            )
-            if hasattr(request.user, 'donor'):
-                return redirect('donor:donor-edit-profile')
-            else:
-                return redirect('home')
-        else:
-            messages.error(request, "Location coordinates are required to find nearby centers.")
-            return render(request, 'shared/nearby_centers.html', {})
-
-    # 4️⃣ Fetch nearby centers
-    centers = find_nearby_centers(latitude, longitude)
-    logger.info(f"Found {len(centers)} centers near lat={latitude}, lng={longitude}")
-
-    return render(request, 'shared/nearby_centers.html', {
-        'nearby_centers': centers,
-        'user_latitude': latitude,
-        'user_longitude': longitude,
-    })
-@login_required
-def save_user_location(request):
-    if request.method == 'POST':
-        lat = request.POST.get('latitude')
-        lon = request.POST.get('longitude')
-
-        if lat is None or lon is None:
-            return JsonResponse({'status': 'error', 'message': 'Missing latitude or longitude'}, status=400)
-
-        try:
-            lat = float(lat)
-            lon = float(lon)
-        except ValueError:
-            return JsonResponse({'status': 'error', 'message': 'Invalid latitude or longitude format'}, status=400)
-
-        location_name = None
-
-        try:
-            url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}'
-            response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-            if response.status_code == 200:
-                data = response.json()
-                location_name = data.get('address', {}).get('city') or \
-                                data.get('address', {}).get('town') or \
-                                data.get('address', {}).get('village') or \
-                                data.get('display_name')
-        except Exception as e:
-            location_name = None
-
-        user = request.user
-
-        if hasattr(user, 'donor'):
-            user.donor.latitude = lat
-            user.donor.longitude = lon
-            user.donor.location_name = location_name
-            user.donor.save()
-        elif hasattr(user, 'patient'):
-            user.patient.latitude = lat
-            user.patient.longitude = lon
-            user.patient.location_name = location_name
-            user.patient.save()
-        else:
-            return JsonResponse({'status': 'error', 'message': 'User profile not found'}, status=400)
-
-        return JsonResponse({'status': 'success', 'message': 'Location updated', 'location_name': location_name})
-
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 from blood.models import StockTransaction
 
 def blood_request_stock_transactions(request, blood_request_id):
@@ -1810,3 +1705,132 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
             context['user_type'] = 'user'
         
         return context
+
+
+
+
+@login_required
+def nearby_centers_view(request):
+    """
+    View for finding nearby donation centers.
+    Now only accessible to logged-in users.
+    """
+
+    latitude, longitude = None, None
+
+    # 1️⃣ Try pulling location from user profile (donor or patient)
+    user = request.user
+    if hasattr(user, 'donor') and user.donor.latitude and user.donor.longitude:
+        latitude = user.donor.latitude
+        longitude = user.donor.longitude
+        logger.info(f"[Donor] Using location from donor profile: {latitude}, {longitude}")
+    elif hasattr(user, 'patient') and user.patient.latitude and user.patient.longitude:
+        latitude = user.patient.latitude
+        longitude = user.patient.longitude
+        logger.info(f"[Patient] Using location from patient profile: {latitude}, {longitude}")
+
+    # 2️⃣ If no location in profile, check for location in session (from browser geolocation)
+    if latitude is None or longitude is None:
+        lat = request.GET.get('lat')
+        lng = request.GET.get('lng')
+        if lat and lng:
+            try:
+                latitude = float(lat)
+                longitude = float(lng)
+                logger.info(f"[Logged-in User] Using provided coordinates: lat={latitude}, lng={longitude}")
+            except ValueError:
+                messages.error(request, "Invalid location coordinates provided.")
+                return render(request, 'shared/nearby_centers.html', {})
+
+    # 3️⃣ Still missing? Ask user to update profile or allow location
+    if latitude is None or longitude is None:
+        messages.warning(
+            request, 
+            "Your location is not set. Please update your profile with your location or allow location access to find nearby centers."
+        )
+        if hasattr(user, 'donor'):
+            return redirect('donor:donor-edit-profile')
+        elif hasattr(user, 'patient'):
+            return redirect('patient:edit-profile')
+        else:
+            # For other user types (phlebotomist, lab tech, etc.), redirect to dashboard
+            return redirect('home')
+
+    # 4️⃣ Fetch nearby centers
+    centers = find_nearby_centers(latitude, longitude)
+    logger.info(f"Found {len(centers)} centers near lat={latitude}, lng={longitude}")
+
+    return render(request, 'donor/nearby_centers.html', {
+        'nearby_centers': centers,
+        'user_latitude': latitude,
+        'user_longitude': longitude,
+        'user_location_name': getattr(user, 'donor', getattr(user, 'patient', None)).location_name if hasattr(user, 'donor') or hasattr(user, 'patient') else None,
+    })
+
+
+@login_required
+def save_user_location(request):
+    """Save user location from browser geolocation"""
+    if request.method == 'POST':
+        lat = request.POST.get('latitude')
+        lon = request.POST.get('longitude')
+
+        if lat is None or lon is None:
+            return JsonResponse({'status': 'error', 'message': 'Missing latitude or longitude'}, status=400)
+
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid latitude or longitude format'}, status=400)
+
+        location_name = None
+
+        # Reverse geocoding to get location name
+        try:
+            url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}'
+            response = requests.get(url, headers={'User-Agent': 'BloodConnect/1.0'})
+            if response.status_code == 200:
+                data = response.json()
+                location_name = data.get('address', {}).get('city') or \
+                                data.get('address', {}).get('town') or \
+                                data.get('address', {}).get('village') or \
+                                data.get('display_name')
+        except Exception as e:
+            logger.error(f"Geocoding error: {e}")
+            location_name = None
+
+        user = request.user
+
+        # Save location based on user type
+        if hasattr(user, 'donor'):
+            user.donor.latitude = lat
+            user.donor.longitude = lon
+            user.donor.location_name = location_name
+            user.donor.save()
+            messages.success(request, f"Location updated to {location_name or 'your area'}")
+            
+        elif hasattr(user, 'patient'):
+            user.patient.latitude = lat
+            user.patient.longitude = lon
+            user.patient.location_name = location_name
+            user.patient.save()
+            messages.success(request, f"Location updated to {location_name or 'your area'}")
+            
+        elif hasattr(user, 'phlebotomist') and user.phlebotomist.center:
+            # For phlebotomists, store location in session instead of profile
+            request.session['temp_latitude'] = lat
+            request.session['temp_longitude'] = lon
+            request.session['temp_location_name'] = location_name
+            messages.success(request, f"Temporary location set to {location_name or 'your area'}")
+            
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Unable to save location for this user type'}, status=400)
+
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Location updated', 
+            'location_name': location_name
+        })
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
