@@ -1,3 +1,4 @@
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -25,126 +26,129 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% if not user.is_authenticated %}auth-page{% else %}dashboard-page{% endif %}">
+<body class="{% if not user.is_authenticated %}auth-page{% else %}dashboard-page{% endif %} {% if is_onboarding %}onboarding-mode{% endif %}">
 
 {% if user.is_authenticated %}
-    <!-- Navbar -->
-    <nav class="navbar">
-        <a class="navbar-brand" href="/">
-            <i class="{% block nav_icon %}fas fa-home{% endblock %}"></i>
-            {% block app_name %}BloodConnect{% endblock %}
-        </a>
-        
-        <div class="d-flex align-items-center">
-            <!-- Role-Specific Navbar Icons from Context Processor -->
-            {% for icon in navbar_icons %}
-                <div class="nav-icon mx-2">
-                    <a class="nav-link" href="{{ icon.url }}" title="{{ icon.title }}">
-                        <i class="{{ icon.icon }}"></i>
-                        {% if icon.badge %}
-                            <span class="status-badge eligible"></span>
-                        {% endif %}
-                        {% if icon.badge_count %}
-                            <span class="notification-badge">{{ icon.badge_count }}</span>
+    <!-- Only show Navbar if not in onboarding mode -->
+    {% if not is_onboarding %}
+        <!-- Navbar -->
+        <nav class="navbar">
+            <a class="navbar-brand" href="/">
+                <i class="{% block nav_icon %}fas fa-home{% endblock %}"></i>
+                {% block app_name %}BloodConnect{% endblock %}
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <!-- Role-Specific Navbar Icons from Context Processor -->
+                {% for icon in navbar_icons %}
+                    <div class="nav-icon mx-2">
+                        <a class="nav-link" href="{{ icon.url }}" title="{{ icon.title }}">
+                            <i class="{{ icon.icon }}"></i>
+                            {% if icon.badge %}
+                                <span class="status-badge eligible"></span>
+                            {% endif %}
+                            {% if icon.badge_count %}
+                                <span class="notification-badge">{{ icon.badge_count }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                {% endfor %}
+                
+                <!-- Extra Nav Items Block (for app-specific additions) -->
+                {% block extra_nav_items %}{% endblock %}
+                
+                <!-- Theme Switcher -->
+                {% include 'shared/theme_switcher.html' %}
+                
+                <!-- Notification Bell -->
+                <div class="notification-icon mr-3">
+                    <a href="{% block notifications_url %}#{% endblock %}" class="text-dark">
+                        <i class="fas fa-bell"></i>
+                        {% if notification_count > 0 %}
+                            <span class="notification-badge">{{ notification_count }}</span>
                         {% endif %}
                     </a>
                 </div>
-            {% endfor %}
-            
-            <!-- Extra Nav Items Block (for app-specific additions) -->
-            {% block extra_nav_items %}{% endblock %}
-            
-            <!-- Theme Switcher -->
-            {% include 'shared/theme_switcher.html' %}
-            
-            <!-- Notification Bell -->
-            <div class="notification-icon mr-3">
-                <a href="{% block notifications_url %}#{% endblock %}" class="text-dark">
-                    <i class="fas fa-bell"></i>
-                    {% if notification_count > 0 %}
-                        <span class="notification-badge">{{ notification_count }}</span>
-                    {% endif %}
-                </a>
-            </div>
 
-            <!-- Profile Dropdown - Using Context Processor -->
-            <div class="dropdown">
-                <a class="dropdown-toggle" href="#" id="profileDropdown" role="button" data-toggle="dropdown">
-                    <div class="profile-dropdown">
-                        <!-- Profile Picture Container -->
-                        <div class="profile-image-container" id="profileImageContainer">
-                            {% if profile_pic_url %}
-                                <img src="{{ profile_pic_url }}" 
-                                     alt="{{ user.get_full_name }}" 
-                                     class="profile-image" 
-                                     data-initial="{{ user_initial }}"
-                                     onerror="handleProfileImageError(this)">
-                            {% else %}
-                                <div class="avatar-placeholder">
-                                    {{ user_initial }}
-                                </div>
-                            {% endif %}
+                <!-- Profile Dropdown - Using Context Processor -->
+                <div class="dropdown">
+                    <a class="dropdown-toggle" href="#" id="profileDropdown" role="button" data-toggle="dropdown">
+                        <div class="profile-dropdown">
+                            <!-- Profile Picture Container -->
+                            <div class="profile-image-container" id="profileImageContainer">
+                                {% if profile_pic_url %}
+                                    <img src="{{ profile_pic_url }}" 
+                                         alt="{{ user.get_full_name }}" 
+                                         class="profile-image" 
+                                         data-initial="{{ user_initial }}"
+                                         onerror="handleProfileImageError(this)">
+                                {% else %}
+                                    <div class="avatar-placeholder">
+                                        {{ user_initial }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                            <i class="fas fa-chevron-down ml-1"></i>
                         </div>
-                        <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
-                        <i class="fas fa-chevron-down ml-1"></i>
-                    </div>
-                </a>
-                
-                <!-- Dropdown Menu - From Context Processor -->
-                <div class="dropdown-menu dropdown-menu-right">
-                    <div class="dropdown-item-text">
-                        <strong>{{ user.get_full_name|default:user.username }}</strong><br>
-                        <small class="text-muted">
-                            {% if user_role == 'donor' %}Donor
-                            {% elif user_role == 'phlebotomist' %}Phlebotomist
-                            {% elif user_role == 'lab_tech' %}Lab Technologist
-                            {% elif user_role == 'bb_tech' %}Blood Bank Technician
-                            {% elif user_role == 'hospital' %}Hospital Staff
-                            {% elif user_role == 'admin' %}Administrator
-                            {% endif %}
-                        </small>
-                    </div>
-                    <div class="dropdown-divider"></div>
+                    </a>
                     
-                    <!-- Profile Menu Items from Context Processor -->
-                    {% for item in profile_menu_items %}
-                        {% if item.divider %}
+                    <!-- Dropdown Menu - From Context Processor -->
+                    <div class="dropdown-menu dropdown-menu-right">
+                        <div class="dropdown-item-text">
+                            <strong>{{ user.get_full_name|default:user.username }}</strong><br>
+                            <small class="text-muted">
+                                {% if user_role == 'donor' %}Donor
+                                {% elif user_role == 'phlebotomist' %}Phlebotomist
+                                {% elif user_role == 'lab_tech' %}Lab Technologist
+                                {% elif user_role == 'bb_tech' %}Blood Bank Technician
+                                {% elif user_role == 'hospital' %}Hospital Staff
+                                {% elif user_role == 'admin' %}Administrator
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        
+                        <!-- Profile Menu Items from Context Processor -->
+                        {% for item in profile_menu_items %}
+                            {% if item.divider %}
+                                <div class="dropdown-divider"></div>
+                            {% else %}
+                                <a class="dropdown-item" href="{{ item.url }}">
+                                    <i class="{{ item.icon }}"></i> {{ item.text }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <!-- Change Password (controlled by context processor) -->
+                        {% if show_change_password %}
                             <div class="dropdown-divider"></div>
-                        {% else %}
-                            <a class="dropdown-item" href="{{ item.url }}">
-                                <i class="{{ item.icon }}"></i> {{ item.text }}
+                            <a class="dropdown-item" href="{% url 'password_change' %}">
+                                <i class="fas fa-key"></i> Change Password
                             </a>
                         {% endif %}
-                    {% endfor %}
-                    
-                    <!-- Change Password (controlled by context processor) -->
-                    {% if show_change_password %}
+                        
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="{% url 'password_change' %}">
-                            <i class="fas fa-key"></i> Change Password
+                        <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
-                    {% endif %}
-                    
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    </div>
                 </div>
             </div>
+        </nav>
+
+        <!-- Sidebar (only show if not onboarding) -->
+        <div class="sidebar">
+            <h4><i class="{% block sidebar_icon %}{% endblock %}"></i> {% block sidebar_title %}{% endblock %}</h4>
+            
+            {% block sidebar_menu %}
+            <!-- Sidebar menu will be defined by each app -->
+            {% endblock %}
         </div>
-    </nav>
+    {% endif %}
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h4><i class="{% block sidebar_icon %}{% endblock %}"></i> {% block sidebar_title %}{% endblock %}</h4>
-        
-        {% block sidebar_menu %}
-        <!-- Sidebar menu will be defined by each app -->
-        {% endblock %}
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
+    <!-- Main Content - Adjusts based on onboarding mode -->
+    <div class="main-content {% if is_onboarding %}onboarding-content{% endif %}">
         <!-- Messages -->
         {% if messages %}
             <div class="messages-container">
@@ -160,16 +164,67 @@
             </div>
         {% endif %}
 
+        <!-- Onboarding Progress Bar (shown during onboarding) -->
+        {% if is_onboarding %}
+            <div class="onboarding-progress-container mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">
+                        <i class="fas fa-rocket text-primary me-2"></i>
+                        {{ onboarding_greeting|default:"Complete Your Setup" }}
+                    </h4>
+                    <span class="badge badge-primary px-3 py-2">{{ onboarding_progress }}% Complete</span>
+                </div>
+                
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: {{ onboarding_progress }}%; background: linear-gradient(90deg, #667eea, #764ba2);"
+                         aria-valuenow="{{ onboarding_progress }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-3 small text-muted">
+                    <span class="{% if onboarding_progress >= 0 %}text-success{% endif %}">
+                        <i class="fas {% if onboarding_progress >= 0 %}fa-check-circle{% else %}fa-circle{% endif %} mr-1"></i>
+                        Account
+                    </span>
+                    <span class="{% if onboarding_progress >= 25 %}text-success{% endif %}">
+                        <i class="fas {% if onboarding_progress >= 25 %}fa-check-circle{% else %}fa-circle{% endif %} mr-1"></i>
+                        Username
+                    </span>
+                    <span class="{% if onboarding_progress >= 50 %}text-success{% endif %}">
+                        <i class="fas {% if onboarding_progress >= 50 %}fa-check-circle{% else %}fa-circle{% endif %} mr-1"></i>
+                        Profile
+                    </span>
+                    <span class="{% if onboarding_progress >= 100 %}text-success{% endif %}">
+                        <i class="fas {% if onboarding_progress >= 100 %}fa-check-circle{% else %}fa-circle{% endif %} mr-1"></i>
+                        Dashboard
+                    </span>
+                </div>
+                
+                {% if onboarding_next %}
+                    <div class="mt-3 p-2 bg-light rounded">
+                        <i class="fas fa-arrow-right text-primary mr-2"></i>
+                        <strong>Next:</strong> {{ onboarding_next }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Mobile Menu Toggle -->
-    <div class="mobile-menu-toggle d-lg-none" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </div>
+    <!-- Mobile Menu Toggle - Only show if not onboarding -->
+    {% if not is_onboarding %}
+        <div class="mobile-menu-toggle d-lg-none" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </div>
+    {% endif %}
 
-    <!-- ===== CHATBOT - Only for authenticated users (NOT on homepage) ===== -->
-    {% if request.path != '/' and request.path != '/index/' %}
+    <!-- ===== CHATBOT - Only for authenticated users (NOT on homepage) and NOT during onboarding ===== -->
+    {% if request.path != '/' and request.path != '/index/' and not is_onboarding %}
         <button class="chatbot-button" id="chatbotButton">
             <i class="fas fa-comments"></i>
             <span class="chatbot-notification"></span>
@@ -257,7 +312,6 @@
     <!-- Public Footer -->
     {% include 'shared/public_footer.html' %}
 {% endif %}
-
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>

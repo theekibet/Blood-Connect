@@ -1,246 +1,432 @@
 {% extends 'blood/adminbase.html' %}
 {% load static %}
+
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <style>
-
+    /* Your existing styles remain the same */
 </style>
 
 <div class="container mt-4">
-  <h2 class="text-center mb-4 text-danger">Admin Blood Bank Dashboard</h2>
+    <h2 class="text-center mb-4 text-danger">Admin Blood Bank Dashboard</h2>
 
-  <!-- Low Blood Stock Alerts -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <h4>Low Blood Stock Alerts by Donation Center</h4>
-      {% if low_stock_alerts %}
-      <div class="accordion" id="lowStockAlertsAccordion">
-        {% for alert in low_stock_alerts %}
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="headingLowStock{{ forloop.counter }}">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-              data-bs-target="#collapseLowStock{{ forloop.counter }}" aria-expanded="false"
-              aria-controls="collapseLowStock{{ forloop.counter }}">
-              <strong>{{ alert.center }}</strong> – Blood Group <strong>{{ alert.blood_group }}</strong> is low
-              <span class="badge ms-3
-                {% if alert.percentage < 20 %}
-                  badge-critical
-                {% elif alert.percentage < 40 %}
-                  badge-warning
-                {% else %}
-                  badge-normal
-                {% endif %}">
-                {{ alert.percentage }}%
-              </span>
-            </button>
-          </h2>
-          <div id="collapseLowStock{{ forloop.counter }}" class="accordion-collapse collapse"
-            aria-labelledby="headingLowStock{{ forloop.counter }}" data-bs-parent="#lowStockAlertsAccordion">
-            <div class="accordion-body text-danger">
-              <strong>Available Units:</strong> {{ alert.units }} ml<br>
-              <strong>Stock Level:</strong> {{ alert.percentage }}%<br>
+    <!-- Quick Action Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <a href="/{{ ADMIN_SECRET_URL }}/blood/contact/" class="text-decoration-none">
+                <div class="card bg-info text-white shadow">
+                    <div class="card-body">
+                        <i class="fas fa-envelope fa-2x mb-2"></i>
+                        <h5>View Contacts</h5>
+                        <small>Manage contact submissions</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin-post-notification' %}" class="text-decoration-none">
+                <div class="card bg-success text-white shadow">
+                    <div class="card-body">
+                        <i class="fas fa-bell fa-2x mb-2"></i>
+                        <h5>Send Notification</h5>
+                        <small>Broadcast to users</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="/{{ ADMIN_SECRET_URL }}/blood/donationcenter/" class="text-decoration-none">
+                <div class="card bg-warning text-white shadow">
+                    <div class="card-body">
+                        <i class="fas fa-hospital fa-2x mb-2"></i>
+                        <h5>Donation Centers</h5>
+                        <small>Manage centers</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/" class="text-decoration-none">
+                <div class="card bg-danger text-white shadow">
+                    <div class="card-body">
+                        <i class="fas fa-tint fa-2x mb-2"></i>
+                        <h5>Blood Stock</h5>
+                        <small>Manage inventory</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Low Blood Stock Alerts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4>Low Blood Stock Alerts by Donation Center</h4>
+            {% if low_stock_alerts %}
+            <div class="accordion" id="lowStockAlertsAccordion">
+                {% for alert in low_stock_alerts %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingLowStock{{ forloop.counter }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseLowStock{{ forloop.counter }}" aria-expanded="false"
+                            aria-controls="collapseLowStock{{ forloop.counter }}">
+                            <strong>{{ alert.center }}</strong> – Blood Group <strong>{{ alert.blood_group }}</strong> is low
+                            <span class="badge ms-3
+                                {% if alert.percentage < 20 %}
+                                    bg-danger
+                                {% elif alert.percentage < 40 %}
+                                    bg-warning text-dark
+                                {% else %}
+                                    bg-success
+                                {% endif %}">
+                                {{ alert.percentage }}%
+                            </span>
+                        </button>
+                    </h2>
+                    <div id="collapseLowStock{{ forloop.counter }}" class="accordion-collapse collapse"
+                        aria-labelledby="headingLowStock{{ forloop.counter }}" data-bs-parent="#lowStockAlertsAccordion">
+                        <div class="accordion-body text-danger">
+                            <strong>Available Units:</strong> {{ alert.units }} ml<br>
+                            <strong>Stock Level:</strong> {{ alert.percentage }}%<br>
+                            <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/?center__name__exact={{ alert.center|urlencode }}&bloodgroup__exact={{ alert.blood_group }}" 
+                               class="btn btn-sm btn-primary mt-2">
+                                <i class="fas fa-edit"></i> Manage Stock
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-          </div>
+            {% else %}
+            <p class="text-success">All donation centers have sufficient blood stock levels.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Blood Group Overview Cards -->
+    <div class="row text-center">
+        {% for blood in blood_data %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <i class="fas fa-tint fa-2x text-danger mb-2 pulse"></i>
+                    <h5 class="card-title text-muted">{{ blood.blood_group }}</h5>
+                    <p class="card-text fw-bold">{{ blood.total_stock }} ml</p>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar
+                            {% if blood.percentage < 40 %}
+                                bg-danger
+                            {% elif blood.percentage < 75 %}
+                                bg-warning
+                            {% else %}
+                                bg-success
+                            {% endif %}"
+                            style="width: {{ blood.percentage }}%;"></div>
+                    </div>
+                    <small class="text-muted">{{ blood.percentage }}% Full</small>
+                    <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/?bloodgroup__exact={{ blood.blood_group }}" 
+                       class="btn btn-sm btn-outline-primary mt-2 w-100">
+                        View Details
+                    </a>
+                </div>
+            </div>
         </div>
         {% endfor %}
-      </div>
-      {% else %}
-      <p class="text-success">All donation centers have sufficient blood stock levels.</p>
-      {% endif %}
     </div>
-  </div>
 
-  <!-- Blood Group Overview Cards -->
-  <div class="row text-center">
-    {% for blood in blood_data %}
-    <div class="col-md-3 col-sm-6 mb-4">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <i class="fas fa-tint fa-2x text-danger mb-2 pulse"></i>
-          <h5 class="card-title text-muted">{{ blood.blood_group }}</h5>
-          <p class="card-text fw-bold">{{ blood.total_stock }} ml</p>
-          <div class="progress" style="height: 10px;">
-            <div class="progress-bar
-              {% if blood.percentage < 40 %}
-                progress-bar-low
-              {% elif blood.percentage < 75 %}
-                progress-bar-medium
-              {% else %}
-                progress-bar-high
-              {% endif %}"
-              style="width: {{ blood.percentage }}%;"></div>
-          </div>
-          <small class="text-muted">{{ blood.percentage }}% Full</small>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Stats Cards -->
-  <div class="row mt-4">
-    {% for stat in stats %}
-    <div class="col-md-3 col-sm-6 mb-4">
-      <div class="card bg-light shadow text-center">
-        <div class="card-body">
-          <i class="{{ stat.icon }}" style="color: {{ stat.color }}; font-size: 2rem;"></i><br><br>
-          <strong>{{ stat.label }}</strong><br>
-          {{ stat.value }}
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Total Units -->
-  <div class="row mt-3">
-    <div class="col-md-12">
-      <div class="card bg-light shadow text-center">
-        <div class="card-body">
-          <i class="fas fa-tint pulse" style="font-size: 2rem;"></i><br><br>
-          <strong>Total Blood Unit (in ml)</strong><br>
-          {{ totalbloodunit }}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Blood Group Distribution Pie Chart -->
-  <div class="row mt-5">
-    <div class="col-md-6 mx-auto">
-      <h4 class="text-center mb-4">Blood Group Distribution</h4>
-      <canvas id="bloodDistributionChart" height="250"></canvas>
-    </div>
-  </div>
-
-  <!-- Donation Center-wise Stock Stacked Bar Chart -->
-  <div class="row mt-5">
-    <div class="col-md-10 mx-auto">
-      <h4 class="text-center mb-4">Blood Stock by Donation Center</h4>
-      <canvas id="centerStockChart" height="150"></canvas>
-    </div>
-  </div>
-
-  <!-- Donation Center-wise Stock Table Accordion with Search -->
-  <div class="row mt-5">
-    <div class="col-md-12">
-      <h3 class="text-center mb-4">Blood Stock by Donation Center (Details)</h3>
-      <div class="mb-3">
-        <input type="text" id="centerSearchInput" class="form-control" placeholder="Search Donation Centers...">
-      </div>
-      <div style="max-height: 600px; overflow-y: auto;">
-        <div class="accordion" id="centerStockAccordion">
-          {% for center, bloods in center_stock_map.items %}
-          <div class="accordion-item">
-            <h2 class="accordion-header" id="headingCenter{{ forloop.counter }}">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseCenter{{ forloop.counter }}" aria-expanded="false"
-                aria-controls="collapseCenter{{ forloop.counter }}">
-                {{ center }} Blood Stock
-              </button>
-            </h2>
-            <div id="collapseCenter{{ forloop.counter }}" class="accordion-collapse collapse"
-              aria-labelledby="headingCenter{{ forloop.counter }}" data-bs-parent="#centerStockAccordion">
-              <div class="accordion-body">
-                <table class="table table-bordered table-striped">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Blood Group</th>
-                      <th>Available Units (ml)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for bg, units in bloods.items %}
-                    <tr>
-                      <td>{{ bg }}</td>
-                      <td>{{ units }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
+    <!-- Stats Cards -->
+    <div class="row mt-4">
+        {% for stat in stats %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card bg-light shadow text-center">
+                <div class="card-body">
+                    <i class="{{ stat.icon }}" style="color: {{ stat.color }}; font-size: 2rem;"></i><br><br>
+                    <strong>{{ stat.label }}</strong><br>
+                    <h3>{{ stat.value }}</h3>
+                    {% if stat.label == "Total Donors" %}
+                    <a href="/{{ ADMIN_SECRET_URL }}/donor/donor/" class="btn btn-sm btn-outline-primary mt-2">Manage</a>
+                    {% elif stat.label == "Total Phlebotomists" %}
+                    <a href="/{{ ADMIN_SECRET_URL }}/phlebotomist/phlebotomist/" class="btn btn-sm btn-outline-primary mt-2">Manage</a>
+                    {% elif stat.label == "Total Hospitals" %}
+                    <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospital/" class="btn btn-sm btn-outline-primary mt-2">Manage</a>
+                    {% elif stat.label == "Total Blood Requests" %}
+                    <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospitalbloodrequest/" class="btn btn-sm btn-outline-primary mt-2">Manage</a>
+                    {% endif %}
+                </div>
             </div>
-          </div>
-          {% endfor %}
         </div>
-      </div>
+        {% endfor %}
     </div>
-  </div>
 
-  <div class="text-end text-muted mt-4 mb-3" style="font-size: 0.85rem;">
-    Last Updated: {{ now|date:"M d, Y H:i" }}
-  </div>
+    <!-- Total Units -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="card bg-light shadow text-center">
+                <div class="card-body">
+                    <i class="fas fa-tint pulse" style="font-size: 2rem;"></i><br><br>
+                    <strong>Total Blood Unit (in ml)</strong><br>
+                    <h2>{{ totalbloodunit }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Group Distribution Pie Chart -->
+    <div class="row mt-5">
+        <div class="col-md-6 mx-auto">
+            <h4 class="text-center mb-4">Blood Group Distribution</h4>
+            <canvas id="bloodDistributionChart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Donation Center-wise Stock Stacked Bar Chart -->
+    <div class="row mt-5">
+        <div class="col-md-10 mx-auto">
+            <h4 class="text-center mb-4">Blood Stock by Donation Center</h4>
+            <canvas id="centerStockChart" height="150"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Donations</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Donor</th>
+                                <th>Blood Group</th>
+                                <th>Center</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for donation in recent_donations %}
+                            <tr>
+                                <td>{{ donation.donor.user.get_full_name|default:donation.donor.user.username }}</td>
+                                <td><span class="badge bg-danger">{{ donation.bloodgroup|default:"N/A" }}</span></td>
+                                <td>{{ donation.donation_center.name|truncatechars:15 }}</td>
+                                <td>{{ donation.date|date:"M d, H:i" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if donation.status == 'completed' %}success{% elif donation.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                        {{ donation.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No recent donations</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <a href="/{{ ADMIN_SECRET_URL }}/donor/blooddonate/" class="btn btn-sm btn-primary mt-2">View All Donations</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Recent Blood Requests</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Hospital</th>
+                                <th>Blood Group</th>
+                                <th>Units</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in recent_requests %}
+                            <tr>
+                                <td>{{ request.hospital.name|truncatechars:15 }}</td>
+                                <td><span class="badge bg-danger">{{ request.bloodgroup }}</span></td>
+                                <td>{{ request.unit }} ml</td>
+                                <td>{{ request.created_at|date:"M d, H:i" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if request.status == 'approved' %}success{% elif request.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                        {{ request.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No recent requests</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospitalbloodrequest/" class="btn btn-sm btn-info mt-2">View All Requests</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donation Center-wise Stock Table Accordion with Search -->
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h3 class="text-center mb-4">Blood Stock by Donation Center (Details)</h3>
+            <div class="mb-3">
+                <input type="text" id="centerSearchInput" class="form-control" placeholder="Search Donation Centers...">
+            </div>
+            <div style="max-height: 600px; overflow-y: auto;">
+                <div class="accordion" id="centerStockAccordion">
+                    {% for center, bloods in center_stock_map.items %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingCenter{{ forloop.counter }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapseCenter{{ forloop.counter }}" aria-expanded="false"
+                                aria-controls="collapseCenter{{ forloop.counter }}">
+                                {{ center }} Blood Stock
+                            </button>
+                        </h2>
+                        <div id="collapseCenter{{ forloop.counter }}" class="accordion-collapse collapse"
+                            aria-labelledby="headingCenter{{ forloop.counter }}" data-bs-parent="#centerStockAccordion">
+                            <div class="accordion-body">
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Blood Group</th>
+                                            <th>Available Units (ml)</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for bg, units in bloods.items %}
+                                        <tr>
+                                            <td>{{ bg }}</td>
+                                            <td>{{ units }}</td>
+                                            <td>
+                                                <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/?center__name__exact={{ center|urlencode }}&bloodgroup__exact={{ bg }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/add/?center={{ center|urlencode }}" 
+                                   class="btn btn-sm btn-success mt-2">
+                                    <i class="fas fa-plus"></i> Add Stock
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export and Admin Links -->
+    <div class="row mt-4">
+        <div class="col-md-12 text-center">
+            <a href="{% url 'admin-donation-report' %}" class="btn btn-success me-2">
+                <i class="fas fa-download"></i> Export Donations Report
+            </a>
+            <a href="/{{ ADMIN_SECRET_URL }}/" class="btn btn-primary">
+                <i class="fas fa-cog"></i> Go to Django Admin
+            </a>
+        </div>
+    </div>
+
+    <div class="text-end text-muted mt-4 mb-3" style="font-size: 0.85rem;">
+        Last Updated: {{ now|date:"M d, Y H:i" }}
+    </div>
 </div>
 
 <script>
-  const bloodDistCtx = document.getElementById('bloodDistributionChart').getContext('2d');
-  const bloodDistData = {
-    labels: [{% for blood in blood_data %}'{{ blood.blood_group }}',{% endfor %}],
-    datasets: [{
-      data: [{% for blood in blood_data %}{{ blood.total_stock }},{% endfor %}],
-      backgroundColor: [
-        '#dc3545', '#c82333', '#28a745', '#218838',
-        '#ffc107', '#e0a800', '#17a2b8', '#117a8b'
-      ],
-      borderColor: '#fff',
-      borderWidth: 2
-    }]
-  };
-  new Chart(bloodDistCtx, {
-    type: 'pie',
-    data: bloodDistData,
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom' },
-        tooltip: { enabled: true }
-      }
-    }
-  });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Blood Distribution Pie Chart
+        const bloodDistCtx = document.getElementById('bloodDistributionChart').getContext('2d');
+        const bloodDistData = {
+            labels: [{% for blood in blood_data %}'{{ blood.blood_group }}',{% endfor %}],
+            datasets: [{
+                data: [{% for blood in blood_data %}{{ blood.total_stock }},{% endfor %}],
+                backgroundColor: [
+                    '#dc3545', '#c82333', '#28a745', '#218838',
+                    '#ffc107', '#e0a800', '#17a2b8', '#117a8b'
+                ],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        };
+        new Chart(bloodDistCtx, {
+            type: 'pie',
+            data: bloodDistData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { enabled: true }
+                }
+            }
+        });
 
-  const centerStockCtx = document.getElementById('centerStockChart').getContext('2d');
+        // Center Stock Chart
+        const centerStockCtx = document.getElementById('centerStockChart').getContext('2d');
+        
+        // Parse the center stock map safely
+        let stocks = {};
+        try {
+            stocks = {{ center_stock_map|safe }};
+        } catch(e) {
+            console.error('Error parsing center stock map:', e);
+            stocks = {};
+        }
+        
+        const centers = [{% for center in center_stock_map.keys %}'{{ center|escapejs }}',{% endfor %}];
+        const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+        const colors = {
+            "A+": '#dc3545', "A-": '#c82333', "B+": '#28a745', "B-": '#218838',
+            "AB+": '#ffc107', "AB-": '#e0a800', "O+": '#17a2b8', "O-": '#117a8b'
+        };
 
-  const centers = [{% for center in center_stock_map.keys %}'{{ center }}',{% endfor %}];
-  const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-  const colors = {
-    "A+": '#dc3545', "A-": '#c82333', "B+": '#28a745', "B-": '#218838',
-    "AB+": '#ffc107', "AB-": '#e0a800', "O+": '#17a2b8', "O-": '#117a8b'
-  };
+        const datasets = bloodGroups.map(bg => ({
+            label: bg,
+            data: centers.map(center => stocks[center]?.[bg] || 0),
+            backgroundColor: colors[bg],
+            borderWidth: 1
+        }));
 
-  const stocks = {{ center_stock_map|safe }};
+        new Chart(centerStockCtx, {
+            type: 'bar',
+            data: { labels: centers, datasets: datasets },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
+        });
 
-  const datasets = bloodGroups.map(bg => ({
-    label: bg,
-    data: centers.map(center => stocks[center]?.[bg] || 0),
-    backgroundColor: colors[bg],
-    borderWidth: 1
-  }));
-
-  new Chart(centerStockCtx, {
-    type: 'bar',
-    data: { labels: centers, datasets: datasets },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'top' } },
-      scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true }
-      }
-    }
-  });
-
-  document.getElementById('centerSearchInput').addEventListener('input', function() {
-    const filter = this.value.toLowerCase();
-    const items = document.querySelectorAll('#centerStockAccordion .accordion-item');
-    items.forEach(item => {
-      const btn = item.querySelector('.accordion-button');
-      const text = btn.textContent.toLowerCase();
-      item.style.display = text.includes(filter) ? '' : 'none';
+        // Search functionality for center accordion
+        document.getElementById('centerSearchInput').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            const items = document.querySelectorAll('#centerStockAccordion .accordion-item');
+            items.forEach(item => {
+                const btn = item.querySelector('.accordion-button');
+                const text = btn.textContent.toLowerCase();
+                item.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
     });
-  });
 </script>
 
 {% endblock %}

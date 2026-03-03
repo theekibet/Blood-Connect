@@ -149,40 +149,119 @@ class LabTechnologistSignupForm(forms.Form):  # Changed from ModelForm to Form
             if 'user' in locals():
                 user.delete()
             raise e
+
+
+
 class LabTechnologistProfileForm(forms.ModelForm):
     """Form for Lab Technologist profile"""
     
+    # Read-only display fields for regular users
     first_name = forms.CharField(max_length=30, required=False)
     last_name = forms.CharField(max_length=30, required=False)
-    email = forms.EmailField(required=False)
+    
+    # Email - will be made read-only for regular users
+    email_display = forms.EmailField(
+        required=False,
+        disabled=True,
+        label="Email",
+        help_text="Email cannot be changed. Contact admin for updates."
+    )
+    
+    # Employee ID - read-only for regular users
+    employee_id_display = forms.CharField(
+        max_length=50,
+        required=False,
+        disabled=True,
+        label="Employee ID",
+        help_text="Employee ID cannot be changed"
+    )
+    
+    # License Number - read-only for regular users
+    license_number_display = forms.CharField(
+        max_length=50,
+        required=False,
+        disabled=True,
+        label="License Number",
+        help_text="License number cannot be changed. Contact admin for updates."
+    )
+    
+    # Center - read-only for regular users (using CharField for display)
+    center_display = forms.CharField(
+        required=False,
+        disabled=True,
+        label="Center",
+        help_text="Center assignment can only be changed by administrator"
+    )
+    
+    # Active Status - read-only for regular users
+    is_active_display = forms.BooleanField(
+        required=False,
+        disabled=True,
+        label="Active Status",
+        help_text="Account status can only be changed by administrator"
+    )
     
     class Meta:
         model = LabTechnologistProfile
         fields = ['employee_id', 'center', 'phone', 'qualification', 
-                 'license_number', 'is_active', 'profile_pic']
+                 'license_number', 'is_active', 'profile_pic', 'specialization',
+                 'years_of_experience', 'certification_date', 'certification_expiry']
         widgets = {
             'qualification': forms.Textarea(attrs={'rows': 3}),
             'profile_pic': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': 'image/*'
             }),
+            'certification_date': forms.DateInput(attrs={'type': 'date'}),
+            'certification_expiry': forms.DateInput(attrs={'type': 'date'}),
         }
     
     def __init__(self, *args, **kwargs):
+        # Check if user is superuser (you'll pass this from the view)
+        self.user = kwargs.pop('user', None)
+        self.is_superuser = kwargs.pop('is_superuser', False)
+        
         super().__init__(*args, **kwargs)
         
         # Add Bootstrap classes
         for field_name, field in self.fields.items():
-            if field_name != 'is_active':
-                field.widget.attrs['class'] = 'form-control'
-            else:
+            if field_name not in ['is_active', 'is_active_display', 'employee_id_display', 
+                                 'license_number_display', 'center_display', 'email_display']:
+                if field_name != 'is_active':
+                    field.widget.attrs['class'] = 'form-control'
+            elif field_name == 'is_active':
                 field.widget.attrs['class'] = 'form-check-input'
         
         # Add user fields if instance exists
         if self.instance and self.instance.pk:
             self.fields['first_name'].initial = self.instance.user.first_name
             self.fields['last_name'].initial = self.instance.user.last_name
-            self.fields['email'].initial = self.instance.user.email
+            
+            # Set display field values
+            self.fields['email_display'].initial = self.instance.user.email
+            self.fields['employee_id_display'].initial = self.instance.employee_id
+            self.fields['license_number_display'].initial = self.instance.license_number
+            self.fields['center_display'].initial = str(self.instance.center) if self.instance.center else "Not Assigned"
+            self.fields['is_active_display'].initial = self.instance.is_active
+        
+        # Configure field permissions based on user role
+        if not self.is_superuser:
+            # Make all sensitive fields read-only for regular users
+            sensitive_fields = ['employee_id', 'license_number', 'is_active', 'center', 
+                              'email', 'specialization', 'years_of_experience', 
+                              'certification_date', 'certification_expiry']
+            
+            for field in sensitive_fields:
+                if field in self.fields:
+                    self.fields[field].disabled = True
+                    self.fields[field].widget = forms.HiddenInput()
+                    # Make center field optional since it's hidden
+                    if field == 'center':
+                        self.fields[field].required = False
+            
+            # Also hide the email field from the form (we'll show display version)
+            if 'email' in self.fields:
+                self.fields['email'].widget = forms.HiddenInput()
     
     def clean_profile_pic(self):
         profile_pic = self.cleaned_data.get('profile_pic')
@@ -198,6 +277,38 @@ class LabTechnologistProfileForm(forms.ModelForm):
                 raise forms.ValidationError("Unsupported file extension. Allowed: .jpg, .jpeg, .png, .gif")
         
         return profile_pic
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # For regular users, ensure sensitive fields aren't being changed
+        if not self.is_superuser and self.instance and self.instance.pk:
+            # Restore original values if someone tries to bypass disabled fields
+            # For center, we need to set the actual DonationCenter instance
+            if 'center' in cleaned_data:
+                # Always use the original center instance for regular users
+                cleaned_data['center'] = self.instance.center
+            
+            # For other fields, restore original values
+            sensitive_fields = {
+                'employee_id': self.instance.employee_id,
+                'license_number': self.instance.license_number,
+                'is_active': self.instance.is_active,
+                'specialization': self.instance.specialization,
+                'years_of_experience': self.instance.years_of_experience,
+                'certification_date': self.instance.certification_date,
+                'certification_expiry': self.instance.certification_expiry,
+            }
+            
+            for field, original_value in sensitive_fields.items():
+                if field in cleaned_data and cleaned_data.get(field) != original_value:
+                    cleaned_data[field] = original_value
+            
+            # Also restore email for the user
+            if self.instance.user.email != cleaned_data.get('email'):
+                cleaned_data['email'] = self.instance.user.email
+        
+        return cleaned_data
     
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -218,11 +329,15 @@ class LabTechnologistProfileForm(forms.ModelForm):
                     print(f"⚠️ Error deleting old picture: {e}")
         
         if commit:
-            # Update user information
+            # Update user information (only non-sensitive fields)
             user = instance.user
             user.first_name = self.cleaned_data['first_name']
             user.last_name = self.cleaned_data['last_name']
-            user.email = self.cleaned_data['email']
+            
+            # Only update email if user is superuser
+            if self.is_superuser and 'email' in self.cleaned_data:
+                user.email = self.cleaned_data['email']
+            
             user.save()
             
             instance.save()

@@ -5,12 +5,27 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 import uuid
 from django.contrib.auth.models import User
-# from phlebotomist.models import Appointment  # Commented out to break circular import
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db.models import Sum
 from django.conf import settings
+
+class HoneypotAttempt(models.Model):
+    """Track fake admin login attempts"""
+    ip = models.GenericIPAddressField()
+    username = models.CharField(max_length=100)
+    password = models.CharField(max_length=100)  
+    user_agent = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Honeypot Attempt"
+        verbose_name_plural = "Honeypot Attempts"
+    
+    def __str__(self):
+        return f"Attack from {self.ip} at {self.timestamp}"
 
 # ------------------------
 # Donation Center Model

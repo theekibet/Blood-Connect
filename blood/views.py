@@ -1,9 +1,11 @@
+# blood/views.py - CLEANED VERSION (Only keep public and analytics views)
+
 from django.shortcuts import render, redirect, reverse
 from . import forms, models
 from django.db.models import Sum, Q
 from django.contrib.auth.models import Group
 from django.http import HttpResponseRedirect
-from django.contrib.auth.decorators import login_required, user_passes_test,permission_required
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.conf import settings
 from datetime import date, timedelta
 from django.core.mail import send_mail
@@ -25,6 +27,8 @@ from hospital.models import HospitalUser, Hospital
 from donor.models import DonorEligibility, BloodDonate
 from django.db.models import Max
 from donor.models import Donor 
+from django.contrib.auth.views import PasswordChangeView
+from django.urls import reverse_lazy
 from .models import QuizAttempt
 from utils.models import Notification
 from django.contrib.contenttypes.models import ContentType
@@ -73,11 +77,19 @@ import re
 from blood.utils.validators import check_for_duplicate_profiles,get_user_profile_type
 from django.http import HttpResponseServerError
 import requests
-from .models import DonationFunFact, UserFactInteraction, DailyFactChallenge
+from django.contrib.auth.mixins import LoginRequiredMixin
+import time
+from django_ratelimit.decorators import ratelimit
+from .models import HoneypotAttempt
+
 
 from django.db.models import Avg
 
 logger = logging.getLogger(__name__)
+
+# ==========================================
+# PUBLIC VIEWS (Keep these)
+# ==========================================
 
 def home_view(request):
     try:
@@ -186,8 +198,6 @@ def home_view(request):
         # ==========================================
         # DYNAMIC CONTENT FROM ADMIN
         # ==========================================
-
-        
         # Get featured testimonials
         testimonials = Testimonial.objects.filter(
             is_active=True,
@@ -226,7 +236,6 @@ def blood_drive_detail(request, pk):
     except BloodDriveEvent.DoesNotExist:
         return redirect('home')
 
-
 def blood_drives_list(request):
     """List all upcoming blood drive events"""
     try:
@@ -243,21 +252,274 @@ def blood_drives_list(request):
         ).order_by('-event_date')[:10]
         
         context = {
-            'upcoming_drives': blood_drives,  # Changed from 'blood_drives'
+            'upcoming_drives': blood_drives,
             'past_drives': past_drives,
         }
-        return render(request, 'blood/blood_drives_list.html', context)  # Removed the extra 's'
+        return render(request, 'blood/blood_drives_list.html', context)
     except Exception as e:
         logger.error(f"Error in blood_drives_list: {e}", exc_info=True)
         return redirect('home')
-def is_donor(user):
-    return user.groups.filter(name='DONOR').exists()
 
-def is_patient(user):
-    return user.groups.filter(name='PATIENT').exists()
+def contact_view(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('contact_success')
+    else:
+        form = ContactForm()
+    return render(request, 'shared/contact_us.html', {'form': form})
 
-def is_phlebotomist(user):
-    return user.groups.filter(name='NURSE').exists()
+def contact_success(request):
+    return render(request, 'shared/contact_success.html')
+
+def learn_more_view(request):
+    return render(request, 'shared/learn_more.html')
+
+def about_us_view(request):
+    donor_count = Donor.objects.count()
+    lives_saved = BloodDonate.objects.filter(status='completed').count()
+
+    try:
+        from hospital.models import Hospital
+        hospital_count = Hospital.objects.count()
+    except ImportError:
+        hospital_count = 125
+
+    last_30_days = timezone.now().date() - timedelta(days=30)
+    recent_donations = BloodDonate.objects.filter(date__gte=last_30_days).count()
+    pending_donations = BloodDonate.objects.filter(status='pending').count()
+
+    # 🔥 Determine image source
+    profile_image = request.session.get('profile_image')
+    profile_image_url = request.session.get('profile_image_url')
+
+    if profile_image_url:
+        image_url = profile_image_url
+        use_static = False
+    elif profile_image:
+        image_url = profile_image
+        use_static = True
+    else:
+        image_url = "images/allan_kibet.jpg"  # default static image
+        use_static = True
+
+    context = {
+        'page_title': 'About Us - BloodConnect',
+        'current_year': timezone.now().year,
+        'creator': {
+            'name': 'Allan Kibet',
+            'role': 'Founder & Lead Developer',
+            'bio': 'Passionate developer on a mission to save lives through technology.',
+            'location': 'Nairobi, Kenya',
+            'email': 'allankibet1820@gmail.com',
+            'phone': '+254 781 024 762',
+            'quote': "I built BloodConnect to unite donors, phlebotomists, and hospitals in one life-saving network.",
+            'image_url': image_url,
+            'use_static': use_static,
+        },
+        'impact': [
+            {'number': f'{donor_count:,}+', 'label': 'Active Donors'},
+            {'number': f'{lives_saved:,}+', 'label': 'Lives Saved'},
+            {'number': f'{hospital_count:,}+', 'label': 'Partner Hospitals'},
+        ],
+        'stats': {
+            'donors': donor_count,
+            'lives_saved': lives_saved,
+            'hospitals': hospital_count,
+            'recent_donations': recent_donations,
+            'pending_donations': pending_donations,
+            'total_donations': BloodDonate.objects.count(),
+        }
+    }
+
+    return render(request, 'shared/about_us.html', context)
+
+@staff_member_required
+def update_profile_image(request):
+    if request.method == 'POST':
+        # FILE UPLOAD
+        if request.FILES.get('profile_image'):
+            image = request.FILES['profile_image']
+            allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg']
+            if image.content_type not in allowed_types:
+                messages.error(request, 'Invalid file type.')
+                return redirect('about-us')
+            if image.size > 5 * 1024 * 1024:
+                messages.error(request, 'File too large (max 5MB).')
+                return redirect('about-us')
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            ext = os.path.splitext(image.name)[1]
+            filename = f'allan_kibet_{timestamp}{ext}'
+
+            static_dir = os.path.join(settings.BASE_DIR, 'static', 'images')
+            os.makedirs(static_dir, exist_ok=True)
+
+            filepath = os.path.join(static_dir, filename)
+            with open(filepath, 'wb+') as destination:
+                for chunk in image.chunks():
+                    destination.write(chunk)
+
+            request.session['profile_image'] = f'images/{filename}'
+            request.session.pop('profile_image_url', None)
+            messages.success(request, 'Profile image updated.')
+
+        # URL UPLOAD
+        elif request.POST.get('image_url'):
+            url = request.POST['image_url']
+            if not url.startswith(('http://', 'https://')):
+                messages.error(request, 'Enter a valid URL.')
+                return redirect('about-us')
+            request.session['profile_image_url'] = url
+            request.session.pop('profile_image', None)
+            messages.success(request, 'Profile image URL updated.')
+
+        # REMOVE IMAGE
+        elif request.POST.get('remove_image'):
+            request.session.pop('profile_image', None)
+            request.session.pop('profile_image_url', None)
+            messages.success(request, 'Profile image removed.')
+
+    return redirect('about-us')
+
+# ==========================================
+# AUTHENTICATION VIEWS 
+# ==========================================
+
+
+@ratelimit(key='ip', rate='3/m', method='POST', block=True)
+def fake_admin_login_view(request):
+    """
+    Honeypot login - captures attacker information
+    Real admin is at a different, secret URL
+    Rate limited to 3 attempts per minute per IP
+    """
+    # Get the rate limit info to check if they've been blocked
+    was_limited = getattr(request, 'limited', False)
+    
+    if request.method == 'POST':
+        username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
+        ip = request.META.get('REMOTE_ADDR', 'Unknown')
+        user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+        
+        # Check if they've been rate limited
+        if was_limited:
+            logger.warning(f"🔴 RATE LIMITED HONEYPOT ATTEMPT - IP: {ip}, Username: {username}")
+            messages.error(request, "Too many attempts. Please try again later.")
+            return render(request, 'blood/fake_admin_login.html')
+        
+        # Log the attack attempt with more details
+        logger.warning(f"🔴 HONEYPOT ATTACK DETECTED - IP: {ip}, Username: {username}, Password: {password}, UA: {user_agent}")
+        
+        # Save to database (if you created the model)
+        try:
+            HoneypotAttempt.objects.create(
+                ip=ip,
+                username=username,
+                password=password,
+                user_agent=user_agent
+            )
+            logger.info(f"✅ Honeypot attempt saved to database for IP: {ip}")
+        except Exception as e:
+            logger.error(f"Failed to save honeypot attempt to database: {e}")
+        
+        # Send email alert for suspicious attempts
+        suspicious_keywords = ['admin', 'root', 'administrator', 'super', 'manager', 'sysadmin']
+        if any(keyword in username.lower() for keyword in suspicious_keywords):
+            try:
+                send_mail(
+                    '⚠️ Admin Honeypot Triggered',
+                    f'🚨 SUSPICIOUS ADMIN LOGIN ATTEMPT DETECTED 🚨\n\n'
+                    f'Time: {time.strftime("%Y-%m-%d %H:%M:%S")}\n'
+                    f'IP Address: {ip}\n'
+                    f'Username tried: {username}\n'
+                    f'Password used: {password}\n'
+                    f'User Agent: {user_agent}\n\n'
+                    f'This attempt has been logged and rate limited.',
+                    'noreply@bloodconnect.com',
+                    ['allankibet1820@gmail.com'],
+                    fail_silently=True,
+                )
+                logger.info(f"📧 Email alert sent for suspicious attempt from IP: {ip}")
+            except Exception as e:
+                logger.error(f"Failed to send email alert: {e}")
+        
+        # Track attempt count for this IP in session
+        if 'honeypot_attempts' not in request.session:
+            request.session['honeypot_attempts'] = {}
+        
+        ip_attempts = request.session['honeypot_attempts'].get(ip, 0)
+        request.session['honeypot_attempts'][ip] = ip_attempts + 1
+        request.session.modified = True
+        
+        # Progressive delay - gets longer with more attempts
+        base_delay = 3
+        if ip_attempts > 5:
+            delay = base_delay * 3  # 9 seconds after 5 attempts
+        elif ip_attempts > 3:
+            delay = base_delay * 2  # 6 seconds after 3 attempts
+        else:
+            delay = base_delay  # 3 seconds normally
+        
+        time.sleep(delay)
+        
+        # Always show error message
+        messages.error(request, "Invalid username or password.")
+        
+        # Add a funny message for repeat offenders
+        if ip_attempts > 10:
+            messages.warning(request, "You really like trying to hack us, don't you? 😉")
+        elif ip_attempts > 5:
+            messages.warning(request, "Persistent, aren't you? Still not working though. 🤔")
+        
+    # Add attempt count to context for the template
+    attempt_count = request.session.get('honeypot_attempts', {}).get(
+        request.META.get('REMOTE_ADDR', 'Unknown'), 0
+    )
+    
+    return render(request, 'blood/fake_admin_login.html', {
+        'attempt_count': attempt_count,
+        'show_counter': attempt_count > 2,  # Show counter after 2 attempts
+    })
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def honeypot_monitor_view(request):
+    """View to monitor honeypot attempts (superusers only)"""
+    from django.db.models import Count
+    from datetime import timedelta
+    from django.utils import timezone
+    
+    # Get last 24 hours
+    last_24h = timezone.now() - timedelta(hours=24)
+    
+    # Get statistics
+    total_attempts = HoneypotAttempt.objects.count()
+    attempts_24h = HoneypotAttempt.objects.filter(timestamp__gte=last_24h).count()
+    
+    # Top attacking IPs
+    top_ips = HoneypotAttempt.objects.values('ip').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    # Most common usernames tried
+    top_usernames = HoneypotAttempt.objects.values('username').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    # Recent attempts
+    recent_attempts = HoneypotAttempt.objects.all()[:50]
+    
+    context = {
+        'total_attempts': total_attempts,
+        'attempts_24h': attempts_24h,
+        'top_ips': top_ips,
+        'top_usernames': top_usernames,
+        'recent_attempts': recent_attempts,
+    }
+    return render(request, 'blood/honeypot_monitor.html', context)
+
 def adminlogin_view(request):
     """
     Custom admin login view that redirects to afterlogin
@@ -280,7 +542,6 @@ def adminlogin_view(request):
             messages.error(request, "Invalid username or password.")
 
     return render(request, 'blood/adminlogin.html', {"form": form})
-
 
 def afterlogin_view(request):
     """
@@ -325,15 +586,24 @@ def afterlogin_view(request):
             # No profile found
             logger.warning(f"User {user.username} has no profile")
             messages.info(request, "Please complete your registration to get started.")
-            return redirect('role_selection')  # or your registration page
+            return redirect('role_selection')
             
     except Exception as e:
         logger.error(f"Error in afterlogin_view: {str(e)}", exc_info=True)
         messages.error(request, "An error occurred during login. Please try again.")
         return redirect('home')
+
+# ==========================================
+# ADMIN DASHBOARD (ANALYTICS ONLY - KEEP THIS)
+# ==========================================
+
 @login_required(login_url='adminlogin')
 @user_passes_test(lambda u: u.is_staff, login_url='adminlogin')
 def admin_dashboard_view(request):
+    """
+    Admin analytics dashboard - ONLY view kept for data visualization
+    All CRUD operations are handled by Django Admin
+    """
     # Aggregate total units by blood group and center
     all_stocks = blood_models.Stock.objects.select_related('center').values(
         'bloodgroup', 'center__name'
@@ -375,7 +645,7 @@ def admin_dashboard_view(request):
         totalbloodunit += total_stock
 
     # Prepare low stock alerts per center and blood group
-    LOW_STOCK_THRESHOLD_PERCENT = 25  # Customize alert threshold
+    LOW_STOCK_THRESHOLD_PERCENT = 25
     low_stock_alerts = []
     for center, stocks in center_stock_map_norm.items():
         for bg in blood_groups:
@@ -435,848 +705,36 @@ def admin_dashboard_view(request):
         },
     ]
 
+    # Recent activity (last 10 donations)
+    recent_donations = BloodDonate.objects.select_related(
+        'donor__user', 'donation_center'
+    ).order_by('-date')[:10]
+
+    # Recent blood requests
+    recent_requests = HospitalBloodRequest.objects.select_related(
+        'hospital'
+    ).order_by('-created_at')[:10]
+
     context = {
         "center_stock_map": center_stock_map_norm,
         "blood_data": blood_data,
         "totalbloodunit": totalbloodunit,
         "low_stock_alerts": low_stock_alerts,
         "stats": stats,
+        "recent_donations": recent_donations,
+        "recent_requests": recent_requests,
         "now": now(),
     }
 
     return render(request, "blood/admin_dashboard.html", context)
-def add_stock(center, bloodgroup, units, expiry_date):
-    if units <= 0:
-        raise ValidationError("Units must be positive.")
-    if expiry_date < timezone.now().date():
-        raise ValidationError("Expiry date cannot be in the past.")
 
-    stock_unit = StockUnit(
-        center=center,
-        bloodgroup=bloodgroup,
-        unit=units,
-        expiry_date=expiry_date,
-    )
-    stock_unit.save()
-
-
-@login_required(login_url='adminlogin')
-@user_passes_test(lambda u: u.is_staff, login_url='adminlogin')
-def admin_blood_view(request):
-    centers = DonationCenter.objects.all()
-    blood_groups = [bg for bg, _ in StockUnit.BLOOD_GROUP_CHOICES]
-
-    stockForm = StockUnitForm()
-    donation_center_form = DonationCenterForm()
-
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                if 'submit_stockunit' in request.POST:
-                    stockForm = StockUnitForm(request.POST)
-                    donation_center_form = DonationCenterForm()
-                    
-                    if stockForm.is_valid():
-                        cd = stockForm.cleaned_data
-                        
-                        # Create StockUnit directly instead of using add_stock
-                        stock_unit = StockUnit.objects.create(
-                            center=cd['center'],
-                            bloodgroup=cd['bloodgroup'],
-                            unit=cd['unit'],
-                            expiry_date=cd['expiry_date'],
-                            barcode=cd['barcode'],
-                        )
-                        
-                        logger.info(f"✅ Admin added stock unit: {stock_unit.barcode} - {stock_unit.unit}ml {stock_unit.bloodgroup}")
-                        messages.success(request, f"Blood stock unit added successfully! Barcode: {stock_unit.barcode}")
-                        return redirect('admin-blood')
-                    else:
-                        for field, errors in stockForm.errors.items():
-                            for error in errors:
-                                messages.error(request, f"{field}: {error}")
-                        
-                elif 'submit_donation_center' in request.POST:
-                    if not request.user.has_perm('blood.add_donationcenter'):
-                        messages.error(request, "You do not have permission to add a donation center.")
-                        return redirect('admin-blood')
-                    
-                    donation_center_form = DonationCenterForm(request.POST)
-                    stockForm = StockUnitForm()
-                    
-                    if donation_center_form.is_valid():
-                        center = donation_center_form.save()
-                        logger.info(f"✅ Admin added donation center: {center.name}")
-                        messages.success(request, f"Donation center '{center.name}' added successfully.")
-                        return redirect('admin-blood')
-                    else:
-                        for field, errors in donation_center_form.errors.items():
-                            for error in errors:
-                                messages.error(request, f"{field}: {error}")
-                        
-        except Exception as e:
-            logger.error(f"❌ Error adding data: {str(e)}", exc_info=True)
-            messages.error(request, f"Error adding data: {str(e)}")
-    else:
-        stockForm = StockUnitForm()
-        donation_center_form = DonationCenterForm()
-
-    # === SEARCH AND FILTER FUNCTIONALITY ===
-    search_query = request.GET.get('q', '').strip()
-    selected_center_id = request.GET.get('center_id', 'all')
-    selected_bloodgroup = request.GET.get('bloodgroup', 'all')
-
-    # Aggregated stock per center
-    aggregated_stock = StockUnit.objects.filter(
-        unit__gt=0,
-        expiry_date__gte=timezone.now().date()
-    ).values(
-        'center__id', 'center__name', 'bloodgroup'
-    ).annotate(total_units=Sum('unit'))
-
-    center_stock_map = {}
-    for entry in aggregated_stock:
-        center_id = entry['center__id']
-        center_name = entry['center__name']
-        bloodgroup = entry['bloodgroup']
-        total_units = entry['total_units']
-        if center_id not in center_stock_map:
-            center_stock_map[center_id] = {'name': center_name, 'stock': {}}
-        center_stock_map[center_id]['stock'][bloodgroup] = total_units or 0
-
-    chart_data = [{
-        'center': data['name'],
-        'center_id': center_id,
-        'stock': data['stock']
-    } for center_id, data in center_stock_map.items()]
-
-    # Detailed stock units with filters
-    stock_units = StockUnit.objects.all().select_related('center').order_by('-added_on')
-    
-    # Apply search filter
-    if search_query:
-        stock_units = stock_units.filter(
-            Q(barcode__icontains=search_query) |
-            Q(bloodgroup__icontains=search_query) |
-            Q(center__name__icontains=search_query)
-        )
-    
-    # Apply center filter
-    if selected_center_id != 'all':
-        try:
-            stock_units = stock_units.filter(center__id=selected_center_id)
-        except (ValueError, TypeError):
-            pass
-    
-    # Apply blood group filter
-    if selected_bloodgroup != 'all':
-        stock_units = stock_units.filter(bloodgroup=selected_bloodgroup)
-
-    selected_center = None
-    if selected_center_id != 'all':
-        try:
-            selected_center = DonationCenter.objects.get(id=int(selected_center_id))
-        except (DonationCenter.DoesNotExist, ValueError, TypeError):
-            selected_center = None
-
-    # Calculate statistics
-    total_units = stock_units.aggregate(total=Sum('unit'))['total'] or 0
-    total_batches = stock_units.count()
-    
-    # Expiring soon (within 7 days)
-    expiring_threshold = timezone.now().date() + timedelta(days=7)
-    expiring_soon = stock_units.filter(
-        expiry_date__lte=expiring_threshold,
-        expiry_date__gte=timezone.now().date()
-    ).count()
-    
-    # Expired
-    expired_count = StockUnit.objects.filter(
-        expiry_date__lt=timezone.now().date(),
-        unit__gt=0
-    ).count()
-
-    context = {
-        'stockForm': stockForm,
-        'donation_center_form': donation_center_form,
-        'centers': centers,
-        'blood_groups': blood_groups,
-        'center_stock_map': center_stock_map,
-        'chart_data_json': json.dumps(chart_data),
-        'stock_units': stock_units,
-        'selected_center': selected_center,
-        'selected_center_id': selected_center_id,
-        'selected_bloodgroup': selected_bloodgroup,
-        'search_query': search_query,
-        'today_date': timezone.now().date(),
-        'expiring_threshold': timezone.now().date() + timedelta(days=7),
-        'stats': {
-            'total_units': total_units,
-            'total_batches': total_batches,
-            'expiring_soon': expiring_soon,
-            'expired': expired_count,
-        }
-    }
-    return render(request, 'blood/admin_blood.html', context)
-@login_required(login_url='adminlogin')
-def admin_donor_view(request):
-    query = request.GET.get('q', '').strip()
-
-    donors = Donor.objects.select_related('user').all()
-    eligibilities = DonorEligibility.objects.select_related('donor').all()
-
-    # Optional search filter
-    if query:
-        donors = donors.filter(
-            Q(user__first_name__icontains=query) |
-            Q(user__last_name__icontains=query) |
-            Q(bloodgroup__icontains=query) |
-            Q(user__email__icontains=query) |
-            Q(national_id__icontains=query)
-        )
-
-    # Build a dictionary of donor_id -> eligibility
-    eligibility_dict = {e.donor_id: e for e in eligibilities}
-
-    return render(request, 'blood/admin_donor.html', {
-        'donors': donors,
-        'eligibility_dict': eligibility_dict,
-        'request': request,
-    })
-@login_required(login_url='adminlogin')
-def update_donor_view(request, pk):
-    try:
-        donor = dmodels.Donor.objects.get(id=pk)
-        user = dmodels.User.objects.get(id=donor.user_id)
-    except dmodels.Donor.DoesNotExist:
-        raise Http404("Donor not found")
-    except dmodels.User.DoesNotExist:
-        raise Http404("User not found")
-
-    userForm = dforms.DonorUserForm(instance=user)
-    donorForm = dforms.DonorForm(request.FILES, instance=donor)
-
-    mydict = {'userForm': userForm, 'donorForm': donorForm}
-
-    if request.method == 'POST':
-        userForm = dforms.DonorUserForm(request.POST, instance=user)
-        donorForm = dforms.DonorForm(request.POST, request.FILES, instance=donor)
-        if userForm.is_valid() and donorForm.is_valid():
-            user = userForm.save()
-            user.set_password(user.password)
-            user.save()
-            donor = donorForm.save(commit=False)
-            donor.user = user
-            donor.bloodgroup = donorForm.cleaned_data['bloodgroup']
-            donor.save()
-            return redirect('admin-donor')
-
-    return render(request, 'blood/update_donor.html', context=mydict)
-
-@login_required(login_url='adminlogin')
-def delete_donor_view(request, pk):
-    try:
-       
-        donor = Donor.objects.get(id=pk)
-    except Donor.DoesNotExist:
-        raise Http404("Donor not found")  # Raise 404 if donor doesn't exist
-
-    try:
-        # Try to fetch the User object associated with the donor
-        user = User.objects.get(id=donor.user_id)
-        user.delete()  # Delete the User if found
-    except User.DoesNotExist:
-        pass 
-
-   
-    donor.delete()
-
-  
-    messages.success(request, "Donor and associated user (if any) deleted successfully.")
-    return redirect('admin-donor')
-
-
-
-
-@login_required(login_url='adminlogin')
-def admin_request_view(request):
-    # Get content type for hospital blood request model
-    from django.contrib.contenttypes.models import ContentType
-    from hospital.models import HospitalBloodRequest
-    
-    hospital_request_ct = ContentType.objects.get_for_model(HospitalBloodRequest)
-
-    # Query appointments linked to hospital blood requests
-    appointments = Appointment.objects.filter(
-        request_content_type=hospital_request_ct
-    ).select_related(
-        'donor__user',
-        'request_content_type'
-    ).order_by('-date')
-
-    # Get all hospital blood requests
-    blood_requests = HospitalBloodRequest.objects.all().order_by('-created_at')
-    
-    # Count pending requests
-    pending_requests_count = HospitalBloodRequest.objects.filter(status='pending').count()
-
-    context = {
-        'appointments': appointments,
-        'blood_requests': blood_requests,
-        'pending_requests_count': pending_requests_count,
-    }
-    return render(request, 'blood/admin_request.html', context)
-logger = logging.getLogger(__name__)
-
-
-@login_required(login_url='adminlogin')
-@user_passes_test(lambda u: u.is_staff, login_url='adminlogin')
-def admin_donation_view(request):
-    """
-    Admin dashboard view for all blood donations with linked appointments.
-    Efficiently loads related data using select_related and prefetch_related.
-    Marks unseen donations as seen.
-    """
-    # Mark all unseen donations as seen
-    BloodDonate.objects.filter(is_seen=False).update(is_seen=True)
-
-    # Prefetch related appointments with their phlebotomist and user data
-    donations = (
-        BloodDonate.objects
-        .select_related('donor__user', 'donation_center')
-        .prefetch_related(
-            Prefetch(
-                'appointments',
-                queryset=Appointment.objects.select_related('phlebotomist', 'phlebotomist__user'),
-                to_attr='prefetched_appointments'  # Access via donation.prefetched_appointments
-            )
-        )
-        .order_by('-date')  # recent first, optional
-    )
-
-    # Get blood group choices from model field
-    blood_group_choices = BloodDonate._meta.get_field('bloodgroup').choices
-
-    context = {
-        'donations': donations,
-        'blood_group_choices': blood_group_choices,
-    }
-    return render(request, 'blood/admin_donation.html', context)
-from blood.models import (
-
-    Stock,
-    StockUnit,
-    StockTransaction,
-)
-from blood.utils.stock_utils import deduct_stock_fifo
-from hospital.models import HospitalBloodRequest
-from phlebotomist.models import Appointment
-logger = logging.getLogger(__name__)
-def serialize_deductions(deductions):
-    """
-    Convert stock deduction objects into JSON-serializable format.
-    """
-    serialized = []
-    for d in deductions:
-        serialized.append({
-            'barcode': d['barcode'],
-            'quantity': d['quantity'],
-            'expiry_date': d['expiry_date'].isoformat() if d['expiry_date'] else None,
-        })
-    return serialized
-
-
-
-def contact_view(request):
-    if request.method == 'POST':
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('contact_success')  # Redirect to contact_success
-    else:
-        form = ContactForm()
-    return render(request, 'shared/contact_us.html', {'form': form})
-
-def contact_success(request):
-    return render(request, 'shared/contact_success.html')
-
-
-
-def learn_more_view(request):
-    return render(request, 'shared/learn_more.html')
-
-
-from donor.models import BloodDonate
-
-
-def about_us_view(request):
-
-    donor_count = Donor.objects.count()
-    lives_saved = BloodDonate.objects.filter(status='completed').count()
-
-    try:
-        from hospital.models import Hospital
-        hospital_count = Hospital.objects.count()
-    except ImportError:
-        hospital_count = 125
-
-    last_30_days = timezone.now().date() - timedelta(days=30)
-    recent_donations = BloodDonate.objects.filter(date__gte=last_30_days).count()
-    pending_donations = BloodDonate.objects.filter(status='pending').count()
-
-    # 🔥 Determine image source
-    profile_image = request.session.get('profile_image')
-    profile_image_url = request.session.get('profile_image_url')
-
-    if profile_image_url:
-        image_url = profile_image_url
-        use_static = False
-    elif profile_image:
-        image_url = profile_image
-        use_static = True
-    else:
-        image_url = "images/allan_kibet.jpg"  # default static image
-        use_static = True
-
-    context = {
-        'page_title': 'About Us - BloodConnect',
-        'current_year': timezone.now().year,
-        'creator': {
-            'name': 'Allan Kibet',
-            'role': 'Founder & Lead Developer',
-            'bio': 'Passionate developer on a mission to save lives through technology.',
-            'location': 'Nairobi, Kenya',
-            'email': 'allankibet1820@gmail.com',
-            'phone': '+254 781 024 762',
-            'quote': "I built BloodConnect to unite donors, phlebotomists, and hospitals in one life-saving network.",
-            'image_url': image_url,
-            'use_static': use_static,
-        },
-        'impact': [
-            {'number': f'{donor_count:,}+', 'label': 'Active Donors'},
-            {'number': f'{lives_saved:,}+', 'label': 'Lives Saved'},
-            {'number': f'{hospital_count:,}+', 'label': 'Partner Hospitals'},
-        ],
-        'stats': {
-            'donors': donor_count,
-            'lives_saved': lives_saved,
-            'hospitals': hospital_count,
-            'recent_donations': recent_donations,
-            'pending_donations': pending_donations,
-            'total_donations': BloodDonate.objects.count(),
-        }
-    }
-
-    return render(request, 'shared/about_us.html', context)
-
-
-@staff_member_required
-def update_profile_image(request):
-
-    if request.method == 'POST':
-
-        # FILE UPLOAD
-        if request.FILES.get('profile_image'):
-            image = request.FILES['profile_image']
-
-            allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg']
-            if image.content_type not in allowed_types:
-                messages.error(request, 'Invalid file type.')
-                return redirect('about-us')
-
-            if image.size > 5 * 1024 * 1024:
-                messages.error(request, 'File too large (max 5MB).')
-                return redirect('about-us')
-
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            ext = os.path.splitext(image.name)[1]
-            filename = f'allan_kibet_{timestamp}{ext}'
-
-            static_dir = os.path.join(settings.BASE_DIR, 'static', 'images')
-            os.makedirs(static_dir, exist_ok=True)
-
-            filepath = os.path.join(static_dir, filename)
-
-            with open(filepath, 'wb+') as destination:
-                for chunk in image.chunks():
-                    destination.write(chunk)
-
-            request.session['profile_image'] = f'images/{filename}'
-            request.session.pop('profile_image_url', None)
-
-            messages.success(request, 'Profile image updated.')
-
-        # URL UPLOAD
-        elif request.POST.get('image_url'):
-            url = request.POST['image_url']
-
-            if not url.startswith(('http://', 'https://')):
-                messages.error(request, 'Enter a valid URL.')
-                return redirect('about-us')
-
-            request.session['profile_image_url'] = url
-            request.session.pop('profile_image', None)
-
-            messages.success(request, 'Profile image URL updated.')
-
-        # REMOVE IMAGE
-        elif request.POST.get('remove_image'):
-            request.session.pop('profile_image', None)
-            request.session.pop('profile_image_url', None)
-            messages.success(request, 'Profile image removed.')
-
-    return redirect('about-us')
-
-
-
-@login_required(login_url='adminlogin')
-def admin_contacts_view(request):
-    
-    Contact.objects.filter(is_read=False).update(is_read=True)
-
-    
-    contact_list = Contact.objects.all().order_by('-created_at')
-
-    
-    paginator = Paginator(contact_list, 10)  
-    page_number = request.GET.get('page')
-    contacts = paginator.get_page(page_number)
-
-    return render(request, 'blood/admin_contacts.html', {'contacts': contacts})
-
-
-
-
-@login_required(login_url='adminlogin')
-def admin_post_notification(request):
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        message_text = request.POST.get('message')
-        recipient_ids = request.POST.getlist('recipient_id')  # list of individual user ids
-        selected_groups = request.POST.getlist('recipient_group')  # list of groups chosen
-         
-        # Validate inputs
-        if not title or not message_text:
-            messages.error(request, "Please provide both title and message.")
-            return redirect('admin-post-notification')
-
-        if not selected_groups and not recipient_ids:
-            messages.error(request, "Please select at least one group or individual recipient.")
-            return redirect('admin-post-notification')
-
-        try:
-            notifications = []
-
-            # Map group names to models and content types
-            group_model_map = {
-                'hospital': Hospital,
-                'hospital_user': HospitalUser,
-                'donor': Donor,
-                'phlebotomist': Phlebotomist
-            }
-
-            for group in selected_groups:
-                model = group_model_map.get(group)
-                if model:
-                    content_type = ContentType.objects.get_for_model(model)
-                    recipients = model.objects.all()
-                    for recipient in recipients:
-                        # For HospitalUser, we want to notify the user
-                        if group == 'hospital_user':
-                            recipient_obj = recipient.user
-                            recipient_content_type = ContentType.objects.get_for_model(recipient.user.__class__)
-                            recipient_object_id = recipient.user.id
-                        else:
-                            recipient_obj = recipient
-                            recipient_content_type = content_type
-                            recipient_object_id = recipient.id
-                            
-                        notifications.append(Notification(
-                            title=title,
-                            message=message_text,
-                            recipient_content_type=recipient_content_type,
-                            recipient_object_id=recipient_object_id,
-                            sender_content_type=ContentType.objects.get_for_model(request.user.__class__),
-                            sender_object_id=request.user.id,
-                        ))
-
-            # Add notifications for individually selected users if any
-            if recipient_ids:
-                # Gather users from all models
-                user_id_map = {}
-
-                # Check HospitalUsers
-                hospital_users = HospitalUser.objects.filter(user__id__in=recipient_ids).select_related('user')
-                for hu in hospital_users:
-                    user_id_map[hu.user.id] = (
-                        ContentType.objects.get_for_model(hu.user.__class__),
-                        hu.user.id
-                    )
-
-                # Check Donors
-                donors = Donor.objects.filter(user__id__in=recipient_ids).select_related('user')
-                for donor in donors:
-                    user_id_map[donor.user.id] = (
-                        ContentType.objects.get_for_model(donor.user.__class__),
-                        donor.user.id
-                    )
-
-                # Check Phlebotomists
-                phlebotomists = Phlebotomist.objects.filter(user__id__in=recipient_ids).select_related('user')
-                for phlebotomist in phlebotomists:
-                    user_id_map[phlebotomist.user.id] = (
-                        ContentType.objects.get_for_model(phlebotomist.user.__class__),
-                        phlebotomist.user.id
-                    )
-
-                for user_id in recipient_ids:
-                    if user_id in user_id_map:
-                        content_type, obj_id = user_id_map[user_id]
-                        notifications.append(Notification(
-                            title=title,
-                            message=message_text,
-                            recipient_content_type=content_type,
-                            recipient_object_id=obj_id,
-                            sender_content_type=ContentType.objects.get_for_model(request.user.__class__),
-                            sender_object_id=request.user.id,
-                        ))
-
-            if not notifications:
-                messages.error(request, "No valid recipients found to send notification.")
-                return redirect('admin-post-notification')
-
-            Notification.objects.bulk_create(notifications)
-            messages.success(request, f"{len(notifications)} notifications posted successfully!")
-
-        except Exception as e:
-            messages.error(request, f"Error posting notifications: {str(e)}")
-        return redirect('admin-post-notification')
-
-    # GET request - show the form with recipient lists
-    hospitals = Hospital.objects.all()
-    hospital_users = HospitalUser.objects.select_related('user', 'hospital').all()
-    donors = Donor.objects.select_related('user').all()
-    phlebotomists = Phlebotomist.objects.select_related('user').all()
-
-    context = {
-        'hospitals': hospitals,
-        'hospital_users': hospital_users,
-        'donors': donors,
-        'phlebotomists': phlebotomists,
-    }
-    return render(request, 'blood/admin_post_notification.html', context)
-# ---------------------------
-# Admin Phlebotomist Management View
-# ---------------------------
-@login_required(login_url='adminlogin')
-def admin_phlebotomist_view(request):
-    """
-    Display all phlebotomists with filtering and search
-    """
-    # Get filter parameters
-    status_filter = request.GET.get('status', 'all')
-    query = request.GET.get('q', '').strip()
-    
-    # Base queryset - Fixed: changed 'donation_center' to 'center' based on your error message
-    phlebotomists = Phlebotomist.objects.select_related('user', 'center', 'approved_by').all()
-    
-    # Apply status filter - without rejection_reason field
-    if status_filter == 'pending':
-        phlebotomists = phlebotomists.filter(is_approved=False)  # Pending = not approved
-    elif status_filter == 'approved':
-        phlebotomists = phlebotomists.filter(is_approved=True)
-    elif status_filter == 'rejected':
-        # Since we don't have rejection_reason, we might consider rejected as:
-        # Option 1: Show only phlebotomists that were ever approved then something? 
-        # For now, showing none as we can't differentiate
-        phlebotomists = phlebotomists.filter(is_approved=False)  # Same as pending for now
-    
-    # Apply search - Removed first_name/last_name as they might not be direct fields
-    # Assuming user model has first_name and last_name
-    if query:
-        phlebotomists = phlebotomists.filter(
-            Q(user__first_name__icontains=query) |
-            Q(user__last_name__icontains=query) |
-            Q(user__email__icontains=query) |
-            Q(phone__icontains=query) |
-            Q(license_number__icontains=query) |  # Changed from registration_number to license_number
-            Q(user__username__icontains=query)
-        )
-    
-    # Calculate statistics - without rejection_reason
-    total_count = Phlebotomist.objects.count()
-    pending_count = Phlebotomist.objects.filter(is_approved=False).count()
-    approved_count = Phlebotomist.objects.filter(is_approved=True).count()
-    # For rejected count, we can't differentiate without rejection_reason
-    rejected_count = 0  # Or set to 0 since we can't identify rejected ones
-    
-    context = {
-        'phlebotomists': phlebotomists,
-        'status_filter': status_filter,
-        'query': query,
-        'total_count': total_count,
-        'pending_count': pending_count,
-        'approved_count': approved_count,
-        'rejected_count': rejected_count,
-    }
-    
-    return render(request, 'blood/admin_phlebotomist.html', context)
-
-
-
-@login_required(login_url='adminlogin')
-def update_phlebotomist_view(request, pk):
-    """
-    Update phlebotomist profile information
-    """
-    # Fetch the phlebotomist instance and related user
-    phlebotomist = get_object_or_404(Phlebotomist, id=pk)
-    user = phlebotomist.user
-
-    if request.method == 'POST':
-        # Bind POST data to forms
-        user_form = phlebotomist_forms.PhlebotomistUserForm(request.POST, instance=user)
-        phlebotomist_form = phlebotomist_forms.PhlebotomistForm(request.POST, request.FILES, instance=phlebotomist)
-
-        # Handle profile picture removal if admin checked it
-        if 'clear_profile_pic' in request.POST and phlebotomist.profile_pic:
-            phlebotomist.profile_pic.delete(save=False)
-            phlebotomist.profile_pic = None
-
-        # Validate both forms
-        if user_form.is_valid() and phlebotomist_form.is_valid():
-            user_form.save()
-            phlebotomist_form.save()
-            messages.success(request, "✅ Phlebotomist profile updated successfully.")
-            # Use the correct URL name
-            return redirect('admin-phlebotomist-view')
-        else:
-            messages.error(request, "❌ Please fix the errors below.")
-    else:
-        # Prefill forms with current data
-        user_form = phlebotomist_forms.PhlebotomistUserForm(instance=user)
-        phlebotomist_form = phlebotomist_forms.PhlebotomistForm(instance=phlebotomist)
-
-    context = {
-        'userForm': user_form,   # match these variable names to template
-        'phlebotomistForm': phlebotomist_form,
-        'phlebotomist': phlebotomist,
-    }
-    return render(request, 'blood/update_phlebotomist.html', context)
-# ✅ ADD THIS NEW FUNCTION - Unified action view
-@login_required(login_url='adminlogin')
-def admin_phlebotomist_action_view(request, pk, action):
-    """
-    Unified view to handle approve, reject, and revoke actions for phlebotomists
-    """
-    phlebotomist = get_object_or_404(Phlebotomist, pk=pk)
-    
-    # Get full name for messages
-    full_name = f"{phlebotomist.user.first_name} {phlebotomist.user.last_name}".strip()
-    if not full_name:
-        full_name = phlebotomist.user.username
-    
-    # Only POST requests for security
-    if request.method != 'POST':
-        messages.error(request, "Invalid request method.")
-        return redirect('admin-phlebotomist-view')
-    
-    # Handle different actions
-    if action == 'approve':
-        # Approve logic
-        phlebotomist.is_approved = True
-        phlebotomist.approved_at = timezone.now()
-        phlebotomist.approved_by = request.user
-        # phlebotomist.status = 'approved'  # Uncomment if you add status field
-        phlebotomist.save()
-        
-        messages.success(request, f"✅ Phlebotomist {full_name} has been approved successfully!")
-        
-    elif action == 'reject':
-        # Reject logic
-        reason = request.POST.get('reason', '').strip()
-        if not reason:
-            messages.error(request, "❌ Please provide a reason for rejection.")
-            return redirect('admin-phlebotomist-view')
-        
-        phlebotomist.is_approved = False
-        # Store reason if you have field
-        # phlebotomist.rejection_reason = reason
-        # phlebotomist.rejected_at = timezone.now()
-        # phlebotomist.rejected_by = request.user
-        # phlebotomist.status = 'rejected'
-        phlebotomist.save()
-        
-        messages.success(request, f"✅ Phlebotomist {full_name} has been rejected.")
-        
-    elif action == 'revoke':
-        # Revoke logic
-        reason = request.POST.get('reason', '').strip()
-        if not reason:
-            messages.error(request, "❌ Please provide a reason for revocation.")
-            return redirect('admin-phlebotomist-view')
-        
-        phlebotomist.is_approved = False
-        # Store reason if you have field
-        # phlebotomist.revocation_reason = reason
-        # phlebotomist.revoked_at = timezone.now()
-        # phlebotomist.revoked_by = request.user
-        # phlebotomist.status = 'revoked'
-        phlebotomist.save()
-        
-        messages.success(request, f"✅ Access revoked for {full_name}.")
-        
-    else:
-        messages.error(request, "❌ Invalid action.")
-    
-    return redirect('admin-phlebotomist-view')
-
-@login_required(login_url='adminlogin')
-def delete_phlebotomist_view(request, pk):
-    """
-    Delete a phlebotomist and optionally their associated user account
-    """
-    phlebotomist = get_object_or_404(Phlebotomist, id=pk)
-    
-    # Store information for success message
-    full_name = f"{phlebotomist.user.first_name} {phlebotomist.user.last_name}".strip()
-    if not full_name:
-        full_name = phlebotomist.user.username
-
-    if request.method == 'POST':
-        # Delete only the phlebotomist profile, keep the user account
-        phlebotomist.delete()
-        messages.success(request, f"✅ Phlebotomist profile for {full_name} has been deleted.")
-        
-        # IMPORTANT: Use the correct URL name
-        return redirect('admin-phlebotomist-view')  # Make sure this matches your URL name
-    
-    # If GET request, show confirmation page
-    context = {
-        'phlebotomist': phlebotomist,
-        'full_name': full_name
-    }
-    return render(request, 'blood/delete_phlebotomist_confirmation.html', context)
-
-
-
-# Admin user = staff who is NOT a phlebotomist
-def is_admin(user):
-    return user.is_staff and (not is_phlebotomist(user))
-
-
-from blood.models import StockTransaction
-
-def blood_request_stock_transactions(request, blood_request_id):
-    transactions = StockTransaction.objects.filter(blood_request_id=blood_request_id).select_related('stockunit').order_by('-transaction_at')
-    context = {
-        'transactions': transactions,
-    }
-    return render(request, 'blood/stock_transactions.html', context)
+# ==========================================
+# REPORT GENERATION (Keep these - Django Admin doesn't do reports)
+# ==========================================
 
 @login_required(login_url='adminlogin')
 def admin_donation_report(request):
-    # Prepare response for CSV download
+    """Generate CSV report of all donations"""
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="donations_report_full.csv"'
     response.write(u'\ufeff'.encode('utf8'))  # BOM for Excel compatibility
@@ -1311,12 +769,8 @@ def admin_donation_report(request):
 
         # Build activity log
         activity_log = []
-        if d.approved_by_admin:
-            activity_log.append(f"App(Admin) {d.approved_at_admin.strftime('%b %d, %H:%M')}")
         if d.approved_by_phlebotomist:
             activity_log.append(f"App(Phlebotomist) {d.approved_at_phlebotomist.strftime('%b %d, %H:%M')}")
-        if d.completed_by_admin:
-            activity_log.append(f"Cmp(Admin) {d.completed_at_admin.strftime('%b %d, %H:%M')}")
         if d.completed_by_phlebotomist:
             activity_log.append(f"Cmp(Phlebotomist) {d.completed_at_phlebotomist.strftime('%b %d, %H:%M')}")
         if d.status == 'cancelled':
@@ -1325,7 +779,6 @@ def admin_donation_report(request):
             activity_log.append(f"Rjct({d.rejected_by or '?'}) {d.rejected_at.strftime('%b %d, %H:%M') if d.rejected_at else ''}")
         activity_log_text = " | ".join(activity_log) if activity_log else "No activity yet"
 
-        # Linked appointments
         if not d.appointments.exists():
             writer.writerow([
                 f"{donor_name} ({donor_age})" if donor_age else donor_name,
@@ -1334,9 +787,9 @@ def admin_donation_report(request):
                 blood_group,
                 unit,
                 donation_center,
-                "N/A",  # Phlebotomist
-                "N/A",  # Appointment Date
-                "N/A",  # Appointment Status
+                "N/A",
+                "N/A",
+                "N/A",
                 main_status,
                 activity_log_text
             ])
@@ -1361,6 +814,387 @@ def admin_donation_report(request):
 
     return response
 
+def blood_request_stock_transactions(request, blood_request_id):
+    """View stock transactions for a specific blood request"""
+    transactions = StockTransaction.objects.filter(
+        blood_request_id=blood_request_id
+    ).select_related('stockunit').order_by('-transaction_at')
+    
+    context = {
+        'transactions': transactions,
+    }
+    return render(request, 'blood/stock_transactions.html', context)
+
+# ==========================================
+# AJAX VALIDATION ENDPOINTS (Keep these)
+# ==========================================
+
+def check_username_ajax(request):
+    """System-wide username validation"""
+    username = request.GET.get('username', '').strip()
+    
+    if not username:
+        return JsonResponse({
+            'exists': False,
+            'message': 'Username cannot be empty',
+        })
+    
+    user_exists = User.objects.filter(username__iexact=username).exists()
+    
+    if user_exists:
+        suggestions = generate_username_suggestions(username)
+        return JsonResponse({
+            'exists': True,
+            'message': 'This username is already taken',
+            'suggestions': suggestions
+        })
+    
+    return JsonResponse({
+        'exists': False,
+        'message': 'Username is available',
+    })
+
+def validate_username_ajax(request):
+    """Alternative endpoint for username validation"""
+    username = request.GET.get('username', '').strip()
+    if not username:
+        return JsonResponse({'is_taken': False})
+    is_taken = User.objects.filter(username__iexact=username).exists()
+    return JsonResponse({'is_taken': is_taken})
+
+def check_email_ajax(request):
+    """System-wide email validation"""
+    email = request.GET.get('email', '').strip()
+    
+    if not email:
+        return JsonResponse({
+            'valid': False,
+            'message': 'Email cannot be empty',
+        })
+    
+    # Basic email format validation
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, email):
+        return JsonResponse({
+            'valid': False,
+            'message': 'Please enter a valid email address',
+        })
+    
+    email_exists = User.objects.filter(email__iexact=email).exists()
+    
+    if email_exists:
+        return JsonResponse({
+            'valid': False,
+            'message': 'This email is already registered',
+        })
+    
+    return JsonResponse({
+        'valid': True,
+        'message': 'Email is available',
+    })
+
+def check_national_id_ajax(request):
+    """System-wide national ID validation"""
+    national_id = request.GET.get('national_id', '').strip()
+    
+    if not national_id:
+        return JsonResponse({
+            'valid': False,
+            'message': 'National ID cannot be empty',
+        })
+    
+    if not national_id.isdigit() or len(national_id) != 8:
+        return JsonResponse({
+            'valid': False,
+            'message': 'National ID must be exactly 8 digits',
+        })
+    
+    donor_exists = Donor.objects.filter(national_id=national_id).exists()
+    
+    if donor_exists:
+        return JsonResponse({
+            'valid': False,
+            'message': 'This National ID is already registered',
+        })
+    
+    return JsonResponse({
+        'valid': True,
+        'message': 'National ID is available',
+    })
+
+def check_mobile_ajax(request):
+    """System-wide mobile number validation"""
+    mobile = request.GET.get('mobile', '').strip()
+    
+    if not mobile:
+        return JsonResponse({
+            'valid': False,
+            'message': 'Mobile number cannot be empty',
+        })
+    
+    # Validate Kenyan mobile format (+254...)
+    if mobile.startswith('+254'):
+        if len(mobile) != 13:
+            return JsonResponse({
+                'valid': False,
+                'message': 'Invalid mobile format. Should be +254XXXXXXXXX',
+            })
+    elif mobile.startswith('254'):
+        if len(mobile) != 12:
+            return JsonResponse({
+                'valid': False,
+                'message': 'Invalid mobile format. Should be 254XXXXXXXXX',
+            })
+    elif mobile.startswith('0'):
+        if len(mobile) != 10:
+            return JsonResponse({
+                'valid': False,
+                'message': 'Invalid mobile format. Should be 07XXXXXXXX or 01XXXXXXXX',
+            })
+    else:
+        return JsonResponse({
+            'valid': False,
+            'message': 'Mobile number should start with +254, 254, or 0',
+        })
+    
+    # Normalize to +254 format for comparison
+    if mobile.startswith('0'):
+        normalized = '+254' + mobile[1:]
+    elif mobile.startswith('254'):
+        normalized = '+' + mobile
+    else:
+        normalized = mobile
+    
+    donor_exists = Donor.objects.filter(mobile=normalized).exists()
+    phlebotomist_exists = Phlebotomist.objects.filter(phone=normalized).exists()
+    
+    if donor_exists or phlebotomist_exists:
+        return JsonResponse({
+            'valid': False,
+            'message': 'This mobile number is already registered',
+        })
+    
+    return JsonResponse({
+        'valid': True,
+        'message': 'Mobile number is available',
+    })
+
+def ajax_check_phlebotomist_registration(request):
+    """Check if phlebotomist registration number is available."""
+    registration_number = request.GET.get('registration_number', '').strip().upper()
+    
+    if not registration_number:
+        return JsonResponse({
+            'valid': False,
+            'message': 'Registration number is required'
+        })
+    
+    if not re.match(r'^[A-Z0-9]{5,30}$', registration_number):
+        return JsonResponse({
+            'valid': False,
+            'message': 'Registration number must be 5-30 uppercase letters and numbers only'
+        })
+    
+    exists = Phlebotomist.objects.filter(license_number=registration_number).exists()
+    
+    if exists:
+        return JsonResponse({
+            'valid': False,
+            'message': f"Registration number '{registration_number}' is already in use"
+        })
+    
+    return JsonResponse({
+        'valid': True,
+        'message': 'Registration number is available'
+    })
+
+def ajax_check_phlebotomist_phone(request):
+    """Check if phlebotomist phone number is available."""
+    phone = request.GET.get('phone', '').strip()
+    
+    if not phone:
+        return JsonResponse({
+            'valid': False,
+            'message': 'Phone number is required'
+        })
+    
+    phone_clean = phone.replace(' ', '').replace('-', '')
+    
+    if not re.match(r'^\+?1?\d{9,15}$', phone_clean):
+        return JsonResponse({
+            'valid': False,
+            'message': 'Invalid format. Use +999999999 (9-15 digits)'
+        })
+    
+    exists = Phlebotomist.objects.filter(phone=phone_clean).exists()
+    
+    if exists:
+        return JsonResponse({
+            'valid': False,
+            'message': 'This phone number is already registered'
+        })
+    
+    return JsonResponse({
+        'valid': True,
+        'message': 'Phone number is available'
+    })
+
+# ==========================================
+# LOCATION & NEARBY CENTERS (Keep these)
+# ==========================================
+
+@login_required
+def nearby_centers_view(request):
+    """View for finding nearby donation centers."""
+    latitude, longitude = None, None
+
+    # Try pulling location from user profile
+    user = request.user
+    if hasattr(user, 'donor') and user.donor.latitude and user.donor.longitude:
+        latitude = user.donor.latitude
+        longitude = user.donor.longitude
+        logger.info(f"[Donor] Using location from donor profile: {latitude}, {longitude}")
+    elif hasattr(user, 'patient') and user.patient.latitude and user.patient.longitude:
+        latitude = user.patient.latitude
+        longitude = user.patient.longitude
+        logger.info(f"[Patient] Using location from patient profile: {latitude}, {longitude}")
+
+    # If no location in profile, check for location in session
+    if latitude is None or longitude is None:
+        lat = request.GET.get('lat')
+        lng = request.GET.get('lng')
+        if lat and lng:
+            try:
+                latitude = float(lat)
+                longitude = float(lng)
+                logger.info(f"[Logged-in User] Using provided coordinates: lat={latitude}, lng={longitude}")
+            except ValueError:
+                messages.error(request, "Invalid location coordinates provided.")
+                return render(request, 'shared/nearby_centers.html', {})
+
+    if latitude is None or longitude is None:
+        messages.warning(
+            request, 
+            "Your location is not set. Please update your profile with your location."
+        )
+        if hasattr(user, 'donor'):
+            return redirect('donor:donor-edit-profile')
+        elif hasattr(user, 'patient'):
+            return redirect('patient:edit-profile')
+        else:
+            return redirect('home')
+
+    centers = find_nearby_centers(latitude, longitude)
+    logger.info(f"Found {len(centers)} centers near lat={latitude}, lng={longitude}")
+
+    return render(request, 'donor/nearby_centers.html', {
+        'nearby_centers': centers,
+        'user_latitude': latitude,
+        'user_longitude': longitude,
+        'user_location_name': getattr(user, 'donor', getattr(user, 'patient', None)).location_name if hasattr(user, 'donor') or hasattr(user, 'patient') else None,
+    })
+
+@login_required
+def save_user_location(request):
+    """Save user location from browser geolocation"""
+    if request.method == 'POST':
+        lat = request.POST.get('latitude')
+        lon = request.POST.get('longitude')
+
+        if lat is None or lon is None:
+            return JsonResponse({'status': 'error', 'message': 'Missing latitude or longitude'}, status=400)
+
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid latitude or longitude format'}, status=400)
+
+        location_name = None
+
+        # Reverse geocoding to get location name
+        try:
+            url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}'
+            response = requests.get(url, headers={'User-Agent': 'BloodConnect/1.0'})
+            if response.status_code == 200:
+                data = response.json()
+                location_name = data.get('address', {}).get('city') or \
+                                data.get('address', {}).get('town') or \
+                                data.get('address', {}).get('village') or \
+                                data.get('display_name')
+        except Exception as e:
+            logger.error(f"Geocoding error: {e}")
+            location_name = None
+
+        user = request.user
+
+        if hasattr(user, 'donor'):
+            user.donor.latitude = lat
+            user.donor.longitude = lon
+            user.donor.location_name = location_name
+            user.donor.save()
+            messages.success(request, f"Location updated to {location_name or 'your area'}")
+            
+        elif hasattr(user, 'patient'):
+            user.patient.latitude = lat
+            user.patient.longitude = lon
+            user.patient.location_name = location_name
+            user.patient.save()
+            messages.success(request, f"Location updated to {location_name or 'your area'}")
+            
+        elif hasattr(user, 'phlebotomist') and user.phlebotomist.center:
+            request.session['temp_latitude'] = lat
+            request.session['temp_longitude'] = lon
+            request.session['temp_location_name'] = location_name
+            messages.success(request, f"Temporary location set to {location_name or 'your area'}")
+            
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Unable to save location for this user type'}, status=400)
+
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Location updated', 
+            'location_name': location_name
+        })
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    """
+    Password change view for all authenticated users.
+    Used by donors, phlebotomists, hospital staff, etc.
+    """
+    template_name = 'shared/change_password.html'
+    success_url = reverse_lazy('password-change-success')
+    
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            "Your password has been changed successfully! "
+            "Please log in again with your new password."
+        )
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add user type for potential customization
+        if hasattr(self.request.user, 'patient'):
+            context['user_type'] = 'patient'
+        elif hasattr(self.request.user, 'donor'):
+            context['user_type'] = 'donor'
+        elif hasattr(self.request.user, 'phlebotomist'):
+            context['user_type'] = 'phlebotomist'
+        elif hasattr(self.request.user, 'hospitaluser'):
+            context['user_type'] = 'hospital'
+        elif self.request.user.is_staff:
+            context['user_type'] = 'admin'
+        else:
+            context['user_type'] = 'user'
+        
+        return context
+
+# ==========================================
+# UTILITY FUNCTIONS
+# ==========================================
 
 def generate_username_suggestions(base_username, count=5):
     """Generate unique username suggestions based on the provided username."""
@@ -1404,433 +1238,142 @@ def generate_username_suggestions(base_username, count=5):
                 suggestions.append(suggestion)
 
     return suggestions[:count]
-def check_username_ajax(request):
+# blood/views.py - Keep these custom admin views
+
+@login_required(login_url='adminlogin')
+def admin_contacts_view(request):
     """
-    System-wide username validation
-    Checks if username exists across all user types
+    Custom view to display contact form submissions.
+    Django Admin can show contacts but this provides a cleaner interface.
     """
-    username = request.GET.get('username', '').strip()
+    # Mark unread as read
+    Contact.objects.filter(is_read=False).update(is_read=True)
     
-    if not username:
-        return JsonResponse({
-            'exists': False,
-            'message': 'Username cannot be empty',
-        })
+    # Get all contacts
+    contact_list = Contact.objects.all().order_by('-created_at')
     
-    # Check if username exists
-    user_exists = User.objects.filter(username__iexact=username).exists()
-    
-    if user_exists:
-        # Generate suggestions based on the username
-        suggestions = []
-        base_username = username.lower()
-        
-        # Generate 5 unique suggestions
-        attempts = 0
-        max_attempts = 20
-        
-        while len(suggestions) < 5 and attempts < max_attempts:
-            attempts += 1
-            # Different suggestion strategies
-            if attempts % 4 == 0:
-                suggestion = f"{base_username}{random.randint(100, 999)}"
-            elif attempts % 4 == 1:
-                suggestion = f"{base_username}_{random.randint(10, 99)}"
-            elif attempts % 4 == 2:
-                suggestion = f"{base_username}{random.randint(10, 99)}"
-            else:
-                suggestion = f"{base_username}{random.choice(['_x', '_pro', '_'])}{random.randint(1, 99)}"
-            
-            # Check if suggestion is available
-            if not User.objects.filter(username__iexact=suggestion).exists():
-                suggestions.append(suggestion)
-        
-        return JsonResponse({
-            'exists': True,
-            'message': 'This username is already taken',
-            'suggestions': suggestions
-        })
-    
-    return JsonResponse({
-        'exists': False,
-        'message': 'Username is available',
-    })
+    # Paginate
+    paginator = Paginator(contact_list, 10)
+    page_number = request.GET.get('page')
+    contacts = paginator.get_page(page_number)
+
+    return render(request, 'blood/admin_contacts.html', {'contacts': contacts})
 
 
-def validate_username_ajax(request):
+@login_required(login_url='adminlogin')
+def admin_post_notification(request):
     """
-    Alternative endpoint for username validation (for patient signup compatibility)
+    Custom view to send bulk notifications to users.
+    Django Admin cannot send notifications to multiple users at once.
     """
-    username = request.GET.get('username', '').strip()
-    
-    if not username:
-        return JsonResponse({'is_taken': False})
-    
-    is_taken = User.objects.filter(username__iexact=username).exists()
-    
-    return JsonResponse({'is_taken': is_taken})
-
-
-def check_email_ajax(request):
-    """
-    System-wide email validation
-    Checks if email exists across all user types
-    """
-    email = request.GET.get('email', '').strip()
-    
-    if not email:
-        return JsonResponse({
-            'valid': False,
-            'message': 'Email cannot be empty',
-        })
-    
-    # Basic email format validation
-    import re
-    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    if not re.match(email_regex, email):
-        return JsonResponse({
-            'valid': False,
-            'message': 'Please enter a valid email address',
-        })
-    
-    # Check if email exists
-    email_exists = User.objects.filter(email__iexact=email).exists()
-    
-    if email_exists:
-        return JsonResponse({
-            'valid': False,
-            'message': 'This email is already registered',
-        })
-    
-    return JsonResponse({
-        'valid': True,
-        'message': 'Email is available',
-    })
-
-
-def check_national_id_ajax(request):
-    """
-    System-wide national ID validation
-    Checks if national ID exists in Donor or Patient records
-    """
-    national_id = request.GET.get('national_id', '').strip()
-    
-    if not national_id:
-        return JsonResponse({
-            'valid': False,
-            'message': 'National ID cannot be empty',
-        })
-    
-    # Validate format (8 digits)
-    if not national_id.isdigit() or len(national_id) != 8:
-        return JsonResponse({
-            'valid': False,
-            'message': 'National ID must be exactly 8 digits',
-        })
-    
-    # Check if national ID exists in donor or patient records
-    donor_exists = Donor.objects.filter(national_id=national_id).exists()
-  
-    
-    if donor_exists :
-        return JsonResponse({
-            'valid': False,
-            'message': 'This National ID is already registered',
-        })
-    
-    return JsonResponse({
-        'valid': True,
-        'message': 'National ID is available',
-    })
-
-
-def check_mobile_ajax(request):
-    """
-    System-wide mobile number validation
-    Checks if mobile number exists across Donor, Patient, and Phlebotomist records
-    """
-    mobile = request.GET.get('mobile', '').strip()
-    
-    if not mobile:
-        return JsonResponse({
-            'valid': False,
-            'message': 'Mobile number cannot be empty',
-        })
-    
-    # Validate Kenyan mobile format (+254...)
-    import re
-    # Accept formats: +254..., 254..., 07..., 01...
-    if mobile.startswith('+254'):
-        if len(mobile) != 13:
-            return JsonResponse({
-                'valid': False,
-                'message': 'Invalid mobile format. Should be +254XXXXXXXXX',
-            })
-    elif mobile.startswith('254'):
-        if len(mobile) != 12:
-            return JsonResponse({
-                'valid': False,
-                'message': 'Invalid mobile format. Should be 254XXXXXXXXX',
-            })
-    elif mobile.startswith('0'):
-        if len(mobile) != 10:
-            return JsonResponse({
-                'valid': False,
-                'message': 'Invalid mobile format. Should be 07XXXXXXXX or 01XXXXXXXX',
-            })
-    else:
-        return JsonResponse({
-            'valid': False,
-            'message': 'Mobile number should start with +254, 254, or 0',
-        })
-    
-    # Normalize to +254 format for comparison
-    if mobile.startswith('0'):
-        normalized = '+254' + mobile[1:]
-    elif mobile.startswith('254'):
-        normalized = '+' + mobile
-    else:
-        normalized = mobile
-    
-    # Check if mobile exists in any table
-    donor_exists = Donor.objects.filter(mobile=normalized).exists()
-    phlebotomist_exists = Phlebotomist.objects.filter(phone=normalized).exists()
-    
-    if donor_exists or phlebotomist_exists:
-        return JsonResponse({
-            'valid': False,
-            'message': 'This mobile number is already registered',
-        })
-    
-    return JsonResponse({
-        'valid': True,
-        'message': 'Mobile number is available',
-    })
-
-def ajax_check_phlebotomist_registration(request):
-    """Check if phlebotomist registration number is available."""
-    registration_number = request.GET.get('registration_number', '').strip().upper()
-    
-    if not registration_number:
-        return JsonResponse({
-            'valid': False,
-            'message': 'Registration number is required'
-        })
-    
-    # Check format (5-30 uppercase alphanumeric)
-    if not re.match(r'^[A-Z0-9]{5,30}$', registration_number):
-        return JsonResponse({
-            'valid': False,
-            'message': 'Registration number must be 5-30 uppercase letters and numbers only'
-        })
-    
-    # Check if exists
-    exists = Phlebotomist.objects.filter(registration_number=registration_number).exists()
-    
-    if exists:
-        return JsonResponse({
-            'valid': False,
-            'message': f"Registration number '{registration_number}' is already in use"
-        })
-    
-    return JsonResponse({
-        'valid': True,
-        'message': 'Registration number is available'
-    })
-
-
-
-def ajax_check_phlebotomist_phone(request):
-    """Check if phlebotomist phone number is available."""
-    phone = request.GET.get('phone', '').strip()
-    
-    if not phone:
-        return JsonResponse({
-            'valid': False,
-            'message': 'Phone number is required'
-        })
-    
-    # Remove spaces and dashes
-    phone_clean = phone.replace(' ', '').replace('-', '')
-    
-    # Check format
-    if not re.match(r'^\+?1?\d{9,15}$', phone_clean):
-        return JsonResponse({
-            'valid': False,
-            'message': 'Invalid format. Use +999999999 (9-15 digits)'
-        })
-    
-    # Check if exists
-    exists = Phlebotomist.objects.filter(phone=phone_clean).exists()
-    
-    if exists:
-        return JsonResponse({
-            'valid': False,
-            'message': 'This phone number is already registered'
-        })
-    
-    return JsonResponse({
-        'valid': True,
-        'message': 'Phone number is available'
-    })
-
-
-from django.contrib.auth.views import PasswordChangeView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
-    template_name = 'shared/change_password.html'
-    success_url = reverse_lazy('password-change-success')
-    
-    def form_valid(self, form):
-        messages.success(
-            self.request,
-            "Your password has been changed successfully! "
-            "Please log in again with your new password."
-        )
-        return super().form_valid(form)
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Add user type for potential customization
-        if hasattr(self.request.user, 'patient'):
-            context['user_type'] = 'patient'
-        elif hasattr(self.request.user, 'donor'):
-            context['user_type'] = 'donor'
-        elif hasattr(self.request.user, 'phlebotomist'):
-            context['user_type'] = 'phlebotomist'
-        elif self.request.user.is_staff:
-            context['user_type'] = 'admin'
-        else:
-            context['user_type'] = 'user'
-        
-        return context
-
-
-
-
-@login_required
-def nearby_centers_view(request):
-    """
-    View for finding nearby donation centers.
-    Now only accessible to logged-in users.
-    """
-
-    latitude, longitude = None, None
-
-    # 1️⃣ Try pulling location from user profile (donor or patient)
-    user = request.user
-    if hasattr(user, 'donor') and user.donor.latitude and user.donor.longitude:
-        latitude = user.donor.latitude
-        longitude = user.donor.longitude
-        logger.info(f"[Donor] Using location from donor profile: {latitude}, {longitude}")
-    elif hasattr(user, 'patient') and user.patient.latitude and user.patient.longitude:
-        latitude = user.patient.latitude
-        longitude = user.patient.longitude
-        logger.info(f"[Patient] Using location from patient profile: {latitude}, {longitude}")
-
-    # 2️⃣ If no location in profile, check for location in session (from browser geolocation)
-    if latitude is None or longitude is None:
-        lat = request.GET.get('lat')
-        lng = request.GET.get('lng')
-        if lat and lng:
-            try:
-                latitude = float(lat)
-                longitude = float(lng)
-                logger.info(f"[Logged-in User] Using provided coordinates: lat={latitude}, lng={longitude}")
-            except ValueError:
-                messages.error(request, "Invalid location coordinates provided.")
-                return render(request, 'shared/nearby_centers.html', {})
-
-    # 3️⃣ Still missing? Ask user to update profile or allow location
-    if latitude is None or longitude is None:
-        messages.warning(
-            request, 
-            "Your location is not set. Please update your profile with your location or allow location access to find nearby centers."
-        )
-        if hasattr(user, 'donor'):
-            return redirect('donor:donor-edit-profile')
-        elif hasattr(user, 'patient'):
-            return redirect('patient:edit-profile')
-        else:
-            # For other user types (phlebotomist, lab tech, etc.), redirect to dashboard
-            return redirect('home')
-
-    # 4️⃣ Fetch nearby centers
-    centers = find_nearby_centers(latitude, longitude)
-    logger.info(f"Found {len(centers)} centers near lat={latitude}, lng={longitude}")
-
-    return render(request, 'donor/nearby_centers.html', {
-        'nearby_centers': centers,
-        'user_latitude': latitude,
-        'user_longitude': longitude,
-        'user_location_name': getattr(user, 'donor', getattr(user, 'patient', None)).location_name if hasattr(user, 'donor') or hasattr(user, 'patient') else None,
-    })
-
-
-@login_required
-def save_user_location(request):
-    """Save user location from browser geolocation"""
     if request.method == 'POST':
-        lat = request.POST.get('latitude')
-        lon = request.POST.get('longitude')
+        title = request.POST.get('title')
+        message_text = request.POST.get('message')
+        recipient_ids = request.POST.getlist('recipient_id')
+        selected_groups = request.POST.getlist('recipient_group')
+         
+        if not title or not message_text:
+            messages.error(request, "Please provide both title and message.")
+            return redirect('admin-post-notification')
 
-        if lat is None or lon is None:
-            return JsonResponse({'status': 'error', 'message': 'Missing latitude or longitude'}, status=400)
+        if not selected_groups and not recipient_ids:
+            messages.error(request, "Please select at least one group or individual recipient.")
+            return redirect('admin-post-notification')
 
         try:
-            lat = float(lat)
-            lon = float(lon)
-        except ValueError:
-            return JsonResponse({'status': 'error', 'message': 'Invalid latitude or longitude format'}, status=400)
+            notifications = []
 
-        location_name = None
+            # Map group names to models
+            group_model_map = {
+                'hospital': Hospital,
+                'hospital_user': HospitalUser,
+                'donor': Donor,
+                'phlebotomist': Phlebotomist
+            }
 
-        # Reverse geocoding to get location name
-        try:
-            url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}'
-            response = requests.get(url, headers={'User-Agent': 'BloodConnect/1.0'})
-            if response.status_code == 200:
-                data = response.json()
-                location_name = data.get('address', {}).get('city') or \
-                                data.get('address', {}).get('town') or \
-                                data.get('address', {}).get('village') or \
-                                data.get('display_name')
+            for group in selected_groups:
+                model = group_model_map.get(group)
+                if model:
+                    content_type = ContentType.objects.get_for_model(model)
+                    recipients = model.objects.all()
+                    for recipient in recipients:
+                        if group == 'hospital_user':
+                            recipient_obj = recipient.user
+                            recipient_content_type = ContentType.objects.get_for_model(recipient.user.__class__)
+                            recipient_object_id = recipient.user.id
+                        else:
+                            recipient_obj = recipient
+                            recipient_content_type = content_type
+                            recipient_object_id = recipient.id
+                            
+                        notifications.append(Notification(
+                            title=title,
+                            message=message_text,
+                            recipient_content_type=recipient_content_type,
+                            recipient_object_id=recipient_object_id,
+                            sender_content_type=ContentType.objects.get_for_model(request.user.__class__),
+                            sender_object_id=request.user.id,
+                        ))
+
+            # Add notifications for individually selected users
+            if recipient_ids:
+                user_id_map = {}
+
+                # Check all user types
+                hospital_users = HospitalUser.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for hu in hospital_users:
+                    user_id_map[hu.user.id] = (
+                        ContentType.objects.get_for_model(hu.user.__class__),
+                        hu.user.id
+                    )
+
+                donors = Donor.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for donor in donors:
+                    user_id_map[donor.user.id] = (
+                        ContentType.objects.get_for_model(donor.user.__class__),
+                        donor.user.id
+                    )
+
+                phlebotomists = Phlebotomist.objects.filter(user__id__in=recipient_ids).select_related('user')
+                for phlebotomist in phlebotomists:
+                    user_id_map[phlebotomist.user.id] = (
+                        ContentType.objects.get_for_model(phlebotomist.user.__class__),
+                        phlebotomist.user.id
+                    )
+
+                for user_id in recipient_ids:
+                    if int(user_id) in user_id_map:
+                        content_type, obj_id = user_id_map[int(user_id)]
+                        notifications.append(Notification(
+                            title=title,
+                            message=message_text,
+                            recipient_content_type=content_type,
+                            recipient_object_id=obj_id,
+                            sender_content_type=ContentType.objects.get_for_model(request.user.__class__),
+                            sender_object_id=request.user.id,
+                        ))
+
+            if not notifications:
+                messages.error(request, "No valid recipients found to send notification.")
+                return redirect('admin-post-notification')
+
+            Notification.objects.bulk_create(notifications)
+            messages.success(request, f"{len(notifications)} notifications posted successfully!")
+
         except Exception as e:
-            logger.error(f"Geocoding error: {e}")
-            location_name = None
+            messages.error(request, f"Error posting notifications: {str(e)}")
+        return redirect('admin-post-notification')
 
-        user = request.user
+    # GET request - show the form
+    hospitals = Hospital.objects.all()
+    hospital_users = HospitalUser.objects.select_related('user', 'hospital').all()
+    donors = Donor.objects.select_related('user').all()
+    phlebotomists = Phlebotomist.objects.select_related('user').all()
 
-        # Save location based on user type
-        if hasattr(user, 'donor'):
-            user.donor.latitude = lat
-            user.donor.longitude = lon
-            user.donor.location_name = location_name
-            user.donor.save()
-            messages.success(request, f"Location updated to {location_name or 'your area'}")
-            
-        elif hasattr(user, 'patient'):
-            user.patient.latitude = lat
-            user.patient.longitude = lon
-            user.patient.location_name = location_name
-            user.patient.save()
-            messages.success(request, f"Location updated to {location_name or 'your area'}")
-            
-        elif hasattr(user, 'phlebotomist') and user.phlebotomist.center:
-            # For phlebotomists, store location in session instead of profile
-            request.session['temp_latitude'] = lat
-            request.session['temp_longitude'] = lon
-            request.session['temp_location_name'] = location_name
-            messages.success(request, f"Temporary location set to {location_name or 'your area'}")
-            
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Unable to save location for this user type'}, status=400)
-
-        return JsonResponse({
-            'status': 'success', 
-            'message': 'Location updated', 
-            'location_name': location_name
-        })
-
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+    context = {
+        'hospitals': hospitals,
+        'hospital_users': hospital_users,
+        'donors': donors,
+        'phlebotomists': phlebotomists,
+    }
+    return render(request, 'blood/admin_post_notification.html', context)

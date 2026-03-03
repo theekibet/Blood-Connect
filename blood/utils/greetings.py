@@ -90,8 +90,13 @@ def get_phlebotomist_greeting(phlebotomist, appointment_count=0, next_appointmen
 
 
 def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):
-    """Generate personalized greeting for donors"""
-    greeting = get_time_based_greeting(donor.user.first_name)
+    """Generate personalized greeting for donors using their username"""
+    
+    # Use username instead of first name
+    username = donor.user.username if donor.user else "Donor"
+    
+    # Get time-based greeting with username
+    greeting = get_time_based_greeting(username)
     day_message = get_day_specific_message()
     
     messages = []
@@ -137,6 +142,13 @@ def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):
     
     # Prepare metadata
     meta_items = []
+    
+    # Add username to metadata
+    meta_items.append({
+        'icon': 'fas fa-user',
+        'text': f"@{username}"
+    })
+    
     if hasattr(donor, 'bloodgroup') and donor.bloodgroup:
         meta_items.append({
             'icon': 'fas fa-tint',
@@ -162,6 +174,14 @@ def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):
     except ImportError:
         total_donations = 0
     
+    # Add member since
+    if donor.user and donor.user.date_joined:
+        join_year = donor.user.date_joined.year
+        meta_items.append({
+            'icon': 'fas fa-calendar-alt',
+            'text': f"Member since {join_year}"
+        })
+    
     return {
         'greeting': greeting,
         'context_message': " ".join(messages),
@@ -170,8 +190,9 @@ def get_donor_greeting(donor, last_donation=None, upcoming_appointments=None):
         'icon': '🦸',
         'is_hero': is_hero,
         'meta_items': meta_items,
-        'profile_pic': donor.profile_pic if hasattr(donor, 'profile_pic') else None,
-        'show_quick_actions': True
+        'profile_pic': donor.profile_pic.url if donor.profile_pic and hasattr(donor.profile_pic, 'url') else None,
+        'show_quick_actions': True,
+        'username': username  # Pass username separately for template use
     }
 
 

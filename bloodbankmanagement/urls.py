@@ -11,40 +11,41 @@ from django.views.generic import TemplateView
 from blood.views import CustomPasswordChangeView  
 
 urlpatterns = [
-    # ===================================
-    # CUSTOM ADMIN APPROVAL VIEWS (MUST COME BEFORE Django admin!)
-    # ===================================
-    # Phlebotomist Management URLs - CONSISTENT NAMING
-    path('admin-phlebotomist-management/', 
-         blood_views.admin_phlebotomist_view,  # Fixed: changed views to blood_views
-         name='admin-phlebotomist-view'),
-    
-    # UNIFIED ACTION VIEW - Replaces approve/reject/revoke
-    path('admin-phlebotomist-management/<int:pk>/<str:action>/', 
-         blood_views.admin_phlebotomist_action_view, 
-         name='admin-phlebotomist-action'),
-    
-    # Update and Delete views (keep these separate as they're more complex)
-    path('admin-phlebotomist-management/<int:pk>/update/', 
-         blood_views.update_phlebotomist_view,  # Fixed: changed views to blood_views
-         name='admin-phlebotomist-update'),
-    
-    path('admin-phlebotomist-management/<int:pk>/delete/', 
-         blood_views.delete_phlebotomist_view,  # Fixed: changed views to blood_views
-         name='admin-phlebotomist-delete'),
-    
-    # ===================================
-    # DJANGO DEFAULT ADMIN
-    # ===================================
-    path('admin/', admin.site.urls),
 
+    # ===================================
+    # REAL ADMIN - SECRET URL (CHANGE THIS!)
+    # ===================================
+    path(f'{settings.ADMIN_SECRET_URL}/', admin.site.urls),
+
+    # ===================================
+    # HONEYPOT / FAKE ADMIN ROUTES
+    # ===================================
+    # Public button leads here - captures attacker information
+    path('admin-login/', blood_views.fake_admin_login_view, name='fake_admin_login'),
+    
+    # Additional honeypot paths that bots commonly scan for
+    path('wp-admin/', blood_views.fake_admin_login_view),        # WordPress honeypot
+    path('administrator/', blood_views.fake_admin_login_view),   # Common admin path
+    path('admin-area/', blood_views.fake_admin_login_view),      # Another common path
+    path('backend/', blood_views.fake_admin_login_view),         # Backend honeypot
+    path('cpanel/', blood_views.fake_admin_login_view),          # cPanel honeypot
+    path('admin-panel/', blood_views.fake_admin_login_view),     # Admin panel honeypot
+    path('admin-console/', blood_views.fake_admin_login_view),   # Admin console honeypot
+    path('admin123/', blood_views.fake_admin_login_view),        # Common brute force path
+    path('admin2024/', blood_views.fake_admin_login_view),       # Year-based path
+
+    # ===================================
+    # REMOVED / COMMENTED OUT - OLD ADMIN LOGIN
+    # ===================================
+    # Legacy admin login - REMOVED for security
+    # path('adminlogin/', blood_views.adminlogin_view, name='adminlogin'),
+    
     # ===================================
     # CENTRALIZED AUTHENTICATION FOR ALL USERS
     # ===================================
     path('logout/', LogoutView.as_view(template_name='blood/logout.html'), name='logout'),
     
-    # Legacy admin login (keep for backward compatibility)
-    path('adminlogin/', blood_views.adminlogin_view, name='adminlogin'),
+    # Keep afterlogin for redirects (this is safe)
     path('afterlogin/', blood_views.afterlogin_view, name='afterlogin'),
 
     # Password Change URLs
@@ -52,7 +53,7 @@ urlpatterns = [
          CustomPasswordChangeView.as_view(), 
          name='password_change'),
     
-    # Also add the success URL
+    # Password change success URL
     path('password-change/success/', 
          TemplateView.as_view(template_name='shared/password_change_success.html'), 
          name='password-change-success'),
@@ -67,7 +68,6 @@ urlpatterns = [
     path('contact/', blood_views.contact_view, name='contact'),
     path('contact/success/', blood_views.contact_success, name='contact_success'),
 
-
     # ===================================
     # APP-SPECIFIC URLS
     # ===================================
@@ -77,15 +77,17 @@ urlpatterns = [
     path('hospital/', include('hospital.urls')),
     
     # ===================================
-    # ADMIN PANEL ROUTES
+    # ADMIN PANEL ROUTES (Custom Admin Views)
     # ===================================
     path('admin-dashboard/', blood_views.admin_dashboard_view, name='admin-dashboard'),
-    path('admin-blood/', blood_views.admin_blood_view, name='admin-blood'),
-    path('admin-donor/', blood_views.admin_donor_view, name='admin-donor'),
-    path('admin-request/', blood_views.admin_request_view, name='admin-request'),
-    path('admin-donation/', blood_views.admin_donation_view, name='admin-donation'),
     path('admin-contacts/', blood_views.admin_contacts_view, name='admin_contacts'),
     path('admin-post-notification/', blood_views.admin_post_notification, name='admin-post-notification'),
+
+    # ===================================
+    # HONEYPOT MONITOR (Optional - for superusers only)
+    # ===================================
+    # Uncomment this after creating the honeypot monitor view
+    path('honeypot-monitor/', blood_views.honeypot_monitor_view, name='honeypot_monitor'),
 
     # ===================================
     # AJAX ENDPOINTS
@@ -97,12 +99,6 @@ urlpatterns = [
     # ===================================
     path('nearby-centers/', blood_views.nearby_centers_view, name='nearby-centers'),
 
-    # ===================================
-    # CRUD OPERATIONS (Donor & Patient)
-    # ===================================
-    path('update-donor/<int:pk>/', blood_views.update_donor_view, name='update-donor'),
-    path('delete-donor/<int:pk>/', blood_views.delete_donor_view, name='delete-donor'),
- 
     # ===================================
     # OTHER FUNCTIONALITY
     # ===================================

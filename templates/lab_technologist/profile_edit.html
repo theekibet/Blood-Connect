@@ -13,6 +13,24 @@
                     <h4 class="mb-0">Edit Lab Technologist Profile</h4>
                 </div>
                 <div class="card-body">
+                    <!-- Show admin notice for regular users -->
+                    {% if not is_superuser %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> The following fields are locked for editing:
+                        <ul class="mb-0 mt-2">
+                            <li>Email Address</li>
+                            <li>Employee ID</li>
+                            <li>License Number</li>
+                            <li>Center Assignment</li>
+                            <li>Active Status</li>
+                            <li>Specialization & Certification Details</li>
+                        </ul>
+                        Contact an administrator if you need to update these fields.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         
@@ -90,6 +108,8 @@
                             </div>
                         </div>
                         
+                        <!-- Email - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
                             {{ form.email }}
@@ -97,9 +117,23 @@
                                 <div class="text-danger">{{ form.email.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" value="{{ profile.user.email }}" readonly disabled>
+                            </div>
+                            <small class="text-muted">Email cannot be changed. Contact admin for updates.</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="email" value="{{ profile.user.email }}">
+                        </div>
+                        {% endif %}
                         
                         <h5 class="border-bottom pb-2 mt-4">Professional Information</h5>
                         
+                        <!-- Employee ID - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.employee_id.id_for_label }}" class="form-label">Employee ID</label>
                             {{ form.employee_id }}
@@ -107,7 +141,21 @@
                                 <div class="text-danger">{{ form.employee_id.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Employee ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                                <input type="text" class="form-control" value="{{ profile.employee_id }}" readonly disabled>
+                            </div>
+                            <small class="text-muted">Employee ID cannot be changed. Contact admin for updates.</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="employee_id" value="{{ profile.employee_id }}">
+                        </div>
+                        {% endif %}
                         
+                        <!-- Center - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.center.id_for_label }}" class="form-label">Center</label>
                             {{ form.center }}
@@ -115,10 +163,27 @@
                                 <div class="text-danger">{{ form.center.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Center</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-hospital"></i></span>
+                                <input type="text" class="form-control" 
+                                       value="{% if profile.center %}{{ profile.center }}{% else %}Not Assigned{% endif %}" 
+                                       readonly disabled>
+                            </div>
+                            <small class="text-muted">Center assignment can only be changed by administrator</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="center" value="{{ profile.center_id|default:'' }}">
+                        </div>
+                        {% endif %}
                         
                         <div class="mb-3">
                             <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
-                            {{ form.phone }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                {{ form.phone }}
+                            </div>
                             {% if form.phone.errors %}
                                 <div class="text-danger">{{ form.phone.errors }}</div>
                             {% endif %}
@@ -126,12 +191,17 @@
                         
                         <div class="mb-3">
                             <label for="{{ form.qualification.id_for_label }}" class="form-label">Qualification</label>
-                            {{ form.qualification }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                                {{ form.qualification }}
+                            </div>
                             {% if form.qualification.errors %}
                                 <div class="text-danger">{{ form.qualification.errors }}</div>
                             {% endif %}
                         </div>
                         
+                        <!-- License Number - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.license_number.id_for_label }}" class="form-label">License Number</label>
                             {{ form.license_number }}
@@ -139,7 +209,21 @@
                                 <div class="text-danger">{{ form.license_number.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">License Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-certificate"></i></span>
+                                <input type="text" class="form-control" value="{{ profile.license_number|default:'Not Provided' }}" readonly disabled>
+                            </div>
+                            <small class="text-muted">License number cannot be changed. Contact admin for updates.</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="license_number" value="{{ profile.license_number }}">
+                        </div>
+                        {% endif %}
                         
+                        <!-- Active Status - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3 form-check">
                             {{ form.is_active }}
                             <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
@@ -149,13 +233,178 @@
                                 <div class="text-danger">{{ form.is_active.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Active Status</label>
+                            <div>
+                                {% if profile.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Account status can only be changed by administrator</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="is_active" value="{% if profile.is_active %}on{% endif %}">
+                        </div>
+                        {% endif %}
                         
-                        <div class="d-flex justify-content-between">
+                        <!-- Specialization & Certification Section - Read-only for regular users -->
+                        <h5 class="border-bottom pb-2 mt-4">Specialization & Certification</h5>
+                        
+                        {% if is_superuser %}
+                            <div class="mb-3">
+                                <label for="{{ form.specialization.id_for_label }}" class="form-label">Specialization</label>
+                                {{ form.specialization }}
+                                {% if form.specialization.errors %}
+                                    <div class="text-danger">{{ form.specialization.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">E.g., Hematology, Microbiology, Immunology</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.years_of_experience.id_for_label }}" class="form-label">Years of Experience</label>
+                                {{ form.years_of_experience }}
+                                {% if form.years_of_experience.errors %}
+                                    <div class="text-danger">{{ form.years_of_experience.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.certification_date.id_for_label }}" class="form-label">Certification Date</label>
+                                        {{ form.certification_date }}
+                                        {% if form.certification_date.errors %}
+                                            <div class="text-danger">{{ form.certification_date.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.certification_expiry.id_for_label }}" class="form-label">Certification Expiry</label>
+                                        {{ form.certification_expiry }}
+                                        {% if form.certification_expiry.errors %}
+                                            <div class="text-danger">{{ form.certification_expiry.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="mb-3">
+                                <label class="form-label">Specialization</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-flask"></i></span>
+                                    <input type="text" class="form-control" value="{{ profile.specialization|default:'Not Specified' }}" readonly disabled>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Years of Experience</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+                                    <input type="text" class="form-control" value="{{ profile.years_of_experience }}" readonly disabled>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Certification Date</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                            <input type="text" class="form-control" value="{{ profile.certification_date|date:'Y-m-d'|default:'Not Set' }}" readonly disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Certification Expiry</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-calendar-times"></i></span>
+                                            <input type="text" class="form-control" value="{{ profile.certification_expiry|date:'Y-m-d'|default:'Not Set' }}" readonly disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Certification Status</label>
+                                <div>
+                                    {% if profile.certification_valid %}
+                                        <span class="badge bg-success">Valid</span>
+                                        {% if profile.days_until_certification_expiry %}
+                                            <small class="text-muted ms-2">({{ profile.days_until_certification_expiry }} days remaining)</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger">Expired</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden fields for certification data -->
+                            <input type="hidden" name="specialization" value="{{ profile.specialization }}">
+                            <input type="hidden" name="years_of_experience" value="{{ profile.years_of_experience }}">
+                            <input type="hidden" name="certification_date" value="{{ profile.certification_date|date:'Y-m-d' }}">
+                            <input type="hidden" name="certification_expiry" value="{{ profile.certification_expiry|date:'Y-m-d' }}">
+                        {% endif %}
+                        
+                        <!-- System Fields (Always Read-only) -->
+                        <h5 class="border-bottom pb-2 mt-4">System Information</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Created At</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                        <input type="text" class="form-control" value="{{ profile.created_at|date:'Y-m-d H:i' }}" readonly disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Updated</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-sync-alt"></i></span>
+                                        <input type="text" class="form-control" value="{{ profile.updated_at|date:'Y-m-d H:i' }}" readonly disabled>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Section (View Only) -->
+                        {% if not is_superuser %}
+                        <h5 class="border-bottom pb-2 mt-4">Performance Statistics</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Tests Pending</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-hourglass-half"></i></span>
+                                        <input type="text" class="form-control" value="{{ profile.get_tests_pending }}" readonly disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Completed Tests Today</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
+                                        <input type="text" class="form-control" value="{{ profile.get_completed_tests_today }}" readonly disabled>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between mt-4">
                             <a href="{% url 'lab_technologist:lab_tech_profile_detail' profile.pk %}" class="btn btn-secondary">
-                                Cancel
+                                <i class="fas fa-times"></i> Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                Save Changes
+                                <i class="fas fa-save"></i> Save Changes
                             </button>
                         </div>
                     </form>
@@ -165,13 +414,16 @@
     </div>
 </div>
 
-<!-- JavaScript for picture deletion -->
+<!-- JavaScript for picture deletion and form validation -->
 <script>
     function confirmDeletePicture() {
         if (confirm('Are you sure you want to delete your profile picture? This will revert to the default image.')) {
             document.getElementById('delete_picture').value = 'true';
             // Optionally hide the current picture
-            document.getElementById('current-profile-pic').style.opacity = '0.5';
+            const currentPic = document.getElementById('current-profile-pic');
+            if (currentPic) {
+                currentPic.style.opacity = '0.5';
+            }
             alert('Picture will be deleted when you save changes.');
         }
     }
@@ -199,6 +451,21 @@
             profilePicInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
+                    // Validate file size
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('File is too large. Maximum size is 5MB.');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Validate file type
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                    if (!validTypes.includes(file.type)) {
+                        alert('Invalid file type. Please upload JPG, PNG, or GIF.');
+                        this.value = '';
+                        return;
+                    }
+                    
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         // Show preview of new image
@@ -218,6 +485,29 @@
                 }
             });
         }
+        
+        // Warn users before leaving with unsaved changes
+        const form = document.querySelector('form');
+        let formChanged = false;
+        
+        form.addEventListener('input', function() {
+            formChanged = true;
+        });
+        
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+        
+        form.addEventListener('submit', function() {
+            formChanged = false;
+        });
     });
 </script>
+
+<!-- Add Font Awesome if not already included -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
 {% endblock %}

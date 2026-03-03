@@ -109,7 +109,8 @@ def lab_tech_profile_edit(request, pk):
     profile = get_object_or_404(LabTechnologistProfile, pk=pk)
     
     # Check permission
-    if not request.user.is_superuser and profile.user != request.user:
+    is_owner = profile.user == request.user
+    if not request.user.is_superuser and not is_owner:
         raise PermissionDenied("You don't have permission to edit this profile.")
     
     if request.method == 'POST':
@@ -125,7 +126,15 @@ def lab_tech_profile_edit(request, pk):
                 messages.info(request, 'Profile picture removed.')
                 return redirect('lab_technologist:lab_tech_profile_edit', pk=profile.pk)
         
-        form = LabTechnologistProfileForm(request.POST, request.FILES, instance=profile)
+        # Pass user role information to the form
+        form = LabTechnologistProfileForm(
+            request.POST, 
+            request.FILES, 
+            instance=profile,
+            user=request.user,
+            is_superuser=request.user.is_superuser
+        )
+        
         if form.is_valid():
             try:
                 saved_profile = form.save()
@@ -139,11 +148,18 @@ def lab_tech_profile_edit(request, pk):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = LabTechnologistProfileForm(instance=profile)
+        # Pass user role information to the form
+        form = LabTechnologistProfileForm(
+            instance=profile,
+            user=request.user,
+            is_superuser=request.user.is_superuser
+        )
     
     context = {
         'form': form,
         'profile': profile,
+        'is_superuser': request.user.is_superuser,
+        'is_owner': is_owner,
     }
     return render(request, 'lab_technologist/profile_edit.html', context)
 

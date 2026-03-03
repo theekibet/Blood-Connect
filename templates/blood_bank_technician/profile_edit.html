@@ -13,6 +13,22 @@
                     <h4 class="mb-0">Edit Blood Bank Technician Profile</h4>
                 </div>
                 <div class="card-body">
+                    <!-- Show admin notice for regular users -->
+                    {% if not is_superuser %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> The following fields are locked for editing:
+                        <ul class="mb-0 mt-2">
+                            <li>Email Address</li>
+                            <li>Employee ID</li>
+                            <li>Center Assignment</li>
+                            <li>Active Status</li>
+                        </ul>
+                        Contact an administrator if you need to update these fields.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         
@@ -90,6 +106,8 @@
                             </div>
                         </div>
                         
+                        <!-- Email - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
                             {{ form.email }}
@@ -97,9 +115,23 @@
                                 <div class="text-danger">{{ form.email.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" value="{{ profile.user.email }}" readonly disabled>
+                            </div>
+                            <small class="text-muted">Email cannot be changed. Contact admin for updates.</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="email" value="{{ profile.user.email }}">
+                        </div>
+                        {% endif %}
                         
                         <h5 class="border-bottom pb-2 mt-4">Professional Information</h5>
                         
+                        <!-- Employee ID - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.employee_id.id_for_label }}" class="form-label">Employee ID</label>
                             {{ form.employee_id }}
@@ -107,7 +139,21 @@
                                 <div class="text-danger">{{ form.employee_id.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Employee ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                                <input type="text" class="form-control" value="{{ profile.employee_id }}" readonly disabled>
+                            </div>
+                            <small class="text-muted">Employee ID cannot be changed. Contact admin for updates.</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="employee_id" value="{{ profile.employee_id }}">
+                        </div>
+                        {% endif %}
                         
+                        <!-- Center - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3">
                             <label for="{{ form.center.id_for_label }}" class="form-label">Center</label>
                             {{ form.center }}
@@ -115,15 +161,35 @@
                                 <div class="text-danger">{{ form.center.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Center</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-hospital"></i></span>
+                                <input type="text" class="form-control" 
+                                       value="{% if profile.center %}{{ profile.center }}{% else %}Not Assigned{% endif %}" 
+                                       readonly disabled>
+                            </div>
+                            <small class="text-muted">Center assignment can only be changed by administrator</small>
+                            <!-- Hidden field to maintain form submission - Using center_id -->
+                            <input type="hidden" name="center" value="{{ profile.center_id|default:'' }}">
+                        </div>
+                        {% endif %}
                         
+                        <!-- Phone - Always editable -->
                         <div class="mb-3">
                             <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
-                            {{ form.phone }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                {{ form.phone }}
+                            </div>
                             {% if form.phone.errors %}
                                 <div class="text-danger">{{ form.phone.errors }}</div>
                             {% endif %}
                         </div>
                         
+                        <!-- Active Status - Display differently based on user role -->
+                        {% if is_superuser %}
                         <div class="mb-3 form-check">
                             {{ form.is_active }}
                             <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
@@ -133,13 +199,52 @@
                                 <div class="text-danger">{{ form.is_active.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Active Status</label>
+                            <div>
+                                {% if profile.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Account status can only be changed by administrator</small>
+                            <!-- Hidden field to maintain form submission -->
+                            <input type="hidden" name="is_active" value="{% if profile.is_active %}on{% endif %}">
+                        </div>
+                        {% endif %}
                         
-                        <div class="d-flex justify-content-between">
+                        <!-- System Information (Always Read-only) -->
+                        <h5 class="border-bottom pb-2 mt-4">System Information</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Created At</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                        <input type="text" class="form-control" value="{{ profile.created_at|date:'Y-m-d H:i'|default:'Not available' }}" readonly disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Updated</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-sync-alt"></i></span>
+                                        <input type="text" class="form-control" value="{{ profile.updated_at|date:'Y-m-d H:i'|default:'Not available' }}" readonly disabled>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
                             <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_detail' profile.pk %}" class="btn btn-secondary">
-                                Cancel
+                                <i class="fas fa-times"></i> Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                Save Changes
+                                <i class="fas fa-save"></i> Save Changes
                             </button>
                         </div>
                     </form>
@@ -220,6 +325,30 @@
                 }
             });
         }
+
+        // Warn users before leaving with unsaved changes
+        const form = document.querySelector('form');
+        let formChanged = false;
+        
+        form.addEventListener('input', function() {
+            formChanged = true;
+        });
+        
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+        
+        form.addEventListener('submit', function() {
+            formChanged = false;
+        });
     });
 </script>
+
+<!-- Add Font Awesome if not already included -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+
 {% endblock %}

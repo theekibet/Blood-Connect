@@ -110,7 +110,7 @@ class Donor(models.Model):
     bloodgroup_verified_at = models.DateTimeField(null=True, blank=True)
     total_donations = models.PositiveIntegerField(default=0, help_text="Total number of successful donations")
     county = models.CharField(max_length=50, choices=KENYAN_COUNTIES, null=True, blank=True)
-    mobile = models.CharField(max_length=20, unique=True)
+    mobile = models.CharField(max_length=20, unique=True, null=True, blank=True)
     national_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     dob = models.DateField(null=True, blank=True)
     location_name = models.CharField(max_length=255, null=True, blank=True)

@@ -1,587 +1,268 @@
 {% extends 'donor/donorbase.html' %}
-{% load widget_tweaks %}
 {% load static %}
 
-{% block title %}Edit Profile - BloodConnect{% endblock %}
+{% block title %}Edit Donor Profile{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-
-      <!-- Display Django messages -->
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
-            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-
-      <!-- Main Card -->
-      <div class="card">
-        <div class="card-header bg-primary text-white py-3">
-          <h4 class="mb-0 text-center">
-            <i class="fas fa-user-edit me-2"></i>Edit Your Profile
-          </h4>
-        </div>
-        
-        <div class="card-body p-4">
-          
-          <!-- Blood Group Verification Status -->
-          {% if donor.bloodgroup_verified %}
-          <div class="alert alert-success d-flex align-items-center mb-4">
-            <i class="fas fa-shield-alt fa-2x me-3"></i>
-            <div>
-              <strong><i class="fas fa-check-circle me-1"></i> Blood Group Verified: {{ donor.bloodgroup }}</strong>
-              <br>
-              <small class="text-muted">
-                Verified by {{ donor.bloodgroup_verified_by.get_full_name }} 
-                on {{ donor.bloodgroup_verified_at|date:"F d, Y" }}
-              </small>
-            </div>
-          </div>
-          {% endif %}
-
-          <form method="post" enctype="multipart/form-data" novalidate>
-            {% csrf_token %}
-            
- <!-- Profile Picture Section -->
-<div class="text-center mb-4">
-  <h5 class="mb-3">
-    <i class="fas fa-camera me-2"></i>Profile Picture
-  </h5>
-  <div class="profile-preview mb-3">
-    {% if donor.profile_pic %}
-      <img src="{{ donor.profile_pic.url }}" 
-           class="rounded-circle border border-3 border-primary shadow-sm" 
-           width="150" 
-           height="150" 
-           id="previewImg" 
-           alt="Profile Picture"
-           style="object-fit: cover;"
-           onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}'">
-    {% else %}
-      <img src="{% static 'images/default-profile.png' %}" 
-           class="rounded-circle border border-3 border-primary shadow-sm" 
-           width="150" 
-           height="150" 
-           id="previewImg" 
-           alt="Default Profile"
-           style="object-fit: cover;">
-    {% endif %}
-  </div>
-</div>
-
-<!-- Profile Picture Upload -->
-<div class="mb-4">
-  <label for="{{ profile_form.profile_pic.id_for_label }}" class="form-label">
-    <i class="fas fa-upload me-2"></i>Change Profile Picture
-  </label>
-  {{ profile_form.profile_pic|add_class:"form-control" }}
-  {% if profile_form.profile_pic.errors %}
-    <div class="text-danger small mt-1">{{ profile_form.profile_pic.errors }}</div>
-  {% endif %}
-  
-  {% if donor.profile_pic %}
-  <div class="form-check mt-2">
-    <input class="form-check-input" type="checkbox" name="clear_profile_pic" id="clear_profile_pic">
-    <label class="form-check-label text-danger" for="clear_profile_pic">
-      <i class="fas fa-trash-alt me-1"></i>Remove current picture (will revert to default)
-    </label>
-  </div>
-  {% endif %}
-  
-  <small class="text-muted">
-    <i class="fas fa-info-circle me-1"></i>Accepted formats: JPG, PNG, GIF (Max 5MB)
-  </small>
-</div>
-
-            <hr class="my-4">
-
-            <!-- Editable Information -->
-            <h5 class="border-bottom pb-2 mb-3">
-              <i class="fas fa-edit text-primary me-2"></i>Editable Information
-            </h5>
-
-            <div class="row g-3">
-              <!-- First Name -->
-              <div class="col-md-6">
-                <label for="{{ profile_form.first_name.id_for_label }}" class="form-label">
-                  <i class="fas fa-user me-2"></i>{{ profile_form.first_name.label }} <span class="text-danger">*</span>
-                </label>
-                {{ profile_form.first_name|add_class:"form-control" }}
-                {% if profile_form.first_name.errors %}
-                  <div class="text-danger small mt-1">{{ profile_form.first_name.errors }}</div>
-                {% endif %}
-              </div>
-
-              <!-- Last Name -->
-              <div class="col-md-6">
-                <label for="{{ profile_form.last_name.id_for_label }}" class="form-label">
-                  <i class="fas fa-user me-2"></i>{{ profile_form.last_name.label }} <span class="text-danger">*</span>
-                </label>
-                {{ profile_form.last_name|add_class:"form-control" }}
-                {% if profile_form.last_name.errors %}
-                  <div class="text-danger small mt-1">{{ profile_form.last_name.errors }}</div>
-                {% endif %}
-              </div>
-            </div>
-
-            <!-- Blood Group -->
-            <div class="mt-3">
-              <label for="{{ profile_form.bloodgroup.id_for_label }}" class="form-label">
-                <i class="fas fa-tint me-2"></i>{{ profile_form.bloodgroup.label }}
-                {% if donor.bloodgroup_verified %}
-                  <span class="badge bg-success ms-2">
-                    <i class="fas fa-check-circle me-1"></i>Verified
-                  </span>
-                {% else %}
-                  <span class="badge bg-warning text-dark ms-2">
-                    <i class="fas fa-clock me-1"></i>Pending
-                  </span>
-                {% endif %}
-              </label>
-              
-              {% if donor.bloodgroup_verified %}
-                <input type="text" 
-                       class="form-control bg-light" 
-                       value="{{ donor.bloodgroup }}" 
-                       readonly>
-                <input type="hidden" name="bloodgroup" value="{{ donor.bloodgroup }}">
-                <small class="text-muted">
-                  <i class="fas fa-lock me-1"></i>Verified blood group cannot be changed
-                </small>
-              {% else %}
-                {{ profile_form.bloodgroup|add_class:"form-select" }}
-                <small class="text-muted">
-                  <i class="fas fa-info-circle me-1"></i>Blood group will be verified at your first donation
-                </small>
-              {% endif %}
-              {% if profile_form.bloodgroup.errors %}
-                <div class="text-danger small mt-1">{{ profile_form.bloodgroup.errors }}</div>
-              {% endif %}
-            </div>
-
-            <!-- County -->
-            <div class="mt-3">
-              <label for="{{ profile_form.county.id_for_label }}" class="form-label">
-                <i class="fas fa-map-marker-alt me-2"></i>{{ profile_form.county.label|default:"County of Residence" }}
-              </label>
-              {{ profile_form.county|add_class:"form-select" }}
-              {% if profile_form.county.errors %}
-                <div class="text-danger small mt-1">{{ profile_form.county.errors }}</div>
-              {% endif %}
-            </div>
-
-            <!-- Mobile -->
-            <div class="mt-3">
-              <label for="{{ profile_form.mobile.id_for_label }}" class="form-label">
-                <i class="fas fa-phone me-2"></i>{{ profile_form.mobile.label }} <span class="text-danger">*</span>
-              </label>
-              {{ profile_form.mobile|add_class:"form-control" }}
-              {% if profile_form.mobile.errors %}
-                <div class="text-danger small mt-1">{{ profile_form.mobile.errors }}</div>
-              {% endif %}
-            </div>
-
-            <!-- Read-Only Information -->
-            <h5 class="border-bottom pb-2 mb-3 mt-4">
-              <i class="fas fa-lock text-primary me-2"></i>Read-Only Information
-            </h5>
-            
-            <div class="alert alert-info">
-              <i class="fas fa-info-circle me-2"></i>
-              The following fields cannot be changed for security and integrity purposes. 
-              Contact support if you need to update these details.
-            </div>
-
-            <!-- Email (Read-only) -->
-            <div class="mt-3">
-              <label class="form-label">
-                <i class="fas fa-envelope me-2"></i>Email
-                <span class="badge bg-warning text-dark ms-2">
-                  <i class="fas fa-lock me-1"></i>Read Only
-                </span>
-              </label>
-              <input type="text" 
-                     class="form-control bg-light" 
-                     value="{{ user.email }}" 
-                     readonly>
-            </div>
-
-            <!-- National ID (Read-only) -->
-            <div class="mt-3">
-              <label class="form-label">
-                <i class="fas fa-id-card me-2"></i>National ID
-                <span class="badge bg-warning text-dark ms-2">
-                  <i class="fas fa-lock me-1"></i>Read Only
-                </span>
-              </label>
-              <input type="text" 
-                     class="form-control bg-light" 
-                     value="{{ donor.national_id|default:'Not Provided' }}" 
-                     readonly>
-              <small class="text-muted">
-                <i class="fas fa-shield-alt me-1"></i>National ID is locked for security
-              </small>
-            </div>
-
-            <!-- Date of Birth (Read-only) -->
-            <div class="mt-3">
-              <label class="form-label">
-                <i class="fas fa-birthday-cake me-2"></i>Date of Birth
-                <span class="badge bg-warning text-dark ms-2">
-                  <i class="fas fa-lock me-1"></i>Read Only
-                </span>
-              </label>
-              <input type="text" 
-                     class="form-control bg-light" 
-                     value="{% if donor.dob %}{{ donor.dob|date:'F d, Y' }}{% if donor.age %} ({{ donor.age }} years){% endif %}{% else %}Not Provided{% endif %}" 
-                     readonly>
-            </div>
-
-            <!-- Hidden location fields -->
-            {{ profile_form.latitude }}
-            {{ profile_form.longitude }}
-
-            <!-- Location Update -->
-            <h5 class="border-bottom pb-2 mb-3 mt-4">
-              <i class="fas fa-map-marker-alt text-primary me-2"></i>Location Information
-            </h5>
-
-            <div class="card bg-light border-0">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                  <div>
-                    <h6 class="mb-2">
-                      <i class="fas fa-location-arrow text-primary me-2"></i>Current Location
-                    </h6>
-                    <p class="mb-0">
-                      {% if donor.location_name %}
-                        <i class="fas fa-map-pin text-muted me-1"></i>{{ donor.location_name }}
-                      {% else %}
-                        <span class="text-muted">Not set</span>
-                      {% endif %}
-                    </p>
-                  </div>
-                  <button type="button" id="update-location-btn" class="btn btn-outline-primary">
-                    <i class="fas fa-sync-alt me-2"></i>Update Location
-                  </button>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-edit mr-2"></i>Edit Donor Profile
+                    </h4>
                 </div>
-                <small class="text-muted d-block mt-3">
-                  <i class="fas fa-info-circle me-1"></i>
-                  Your location helps us find nearby blood donation centers and match you with patients in need.
-                </small>
-              </div>
-            </div>
+                <div class="card-body">
+                    <!-- Welcome message for first-time users -->
+                    {% if is_first_time %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Welcome!</strong> Complete your profile to start your donation journey.
+                        Don't worry if you don't know your blood type - you can leave it blank and we'll verify it during your first donation.
+                    </div>
+                    {% endif %}
 
-            <!-- Form Actions -->
-            <div class="d-flex gap-3 justify-content-center mt-4">
-              <a href="{% url 'donor:donor-profile' %}" class="btn btn-secondary px-4">
-                <i class="fas fa-times me-2"></i>Cancel
-              </a>
-              <button type="submit" class="btn btn-primary px-5">
-                <i class="fas fa-save me-2"></i>Save Changes
-              </button>
-            </div>
+                    <!-- Verification Status Alert -->
+                    {% if bloodgroup_verified %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            <strong>Blood Group Verified:</strong> {{ verified_bloodgroup }}
+                            {% if verified_by %}
+                                <br><small>Verified by {{ verified_by }} on {{ verified_at|date:"F j, Y" }}</small>
+                            {% endif %}
+                        </div>
+                    {% endif %}
 
-          </form>
+                    <!-- Profile Completion Progress (during onboarding) -->
+                    {% if is_first_time %}
+                    <div class="mb-4">
+                        <h6>Profile Completion</h6>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ completion_percentage }}%;" 
+                                 aria-valuenow="{{ completion_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ completed_fields }}/4 fields completed (Blood group optional)</small>
+                    </div>
+                    {% endif %}
+
+                    <!-- Form Errors -->
+                    {% if profile_form.errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            <strong>Please correct the following errors:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field, errors in profile_form.errors.items %}
+                                    {% for error in errors %}
+                                        <li>
+                                            {% if field == 'bloodgroup' %}
+                                                Blood Group: {{ error }}
+                                            {% else %}
+                                                {{ field|title }}: {{ error }}
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Hidden fields for user data -->
+                        <input type="hidden" name="first_name" value="{{ user.first_name }}">
+                        <input type="hidden" name="last_name" value="{{ user.last_name }}">
+                        <input type="hidden" name="email" value="{{ user.email }}">
+                        
+                        <!-- Personal Information (Read-only) -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user text-primary mr-2"></i>Personal Information
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" class="form-control bg-light" value="{{ user.first_name }}" readonly>
+                                <small class="text-muted"><i class="fas fa-lock"></i> Cannot be changed</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" class="form-control bg-light" value="{{ user.last_name }}" readonly>
+                                <small class="text-muted"><i class="fas fa-lock"></i> Cannot be changed</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Donor Details -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-heartbeat text-primary mr-2"></i>Donor Details
+                        </h5>
+                        
+                        <!-- Blood Group - Optional & Conditionally Editable -->
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">
+                                Blood Group
+                                {% if bloodgroup_verified %}
+                                    <span class="badge badge-success ml-2">Verified</span>
+                                {% else %}
+                                    <span class="badge badge-info ml-2">Optional</span>
+                                {% endif %}
+                            </label>
+                            
+                            {% if bloodgroup_verified %}
+                                <!-- Verified - Read-only display -->
+                                <input type="text" class="form-control bg-light" 
+                                       value="{{ verified_bloodgroup }}" readonly>
+                                <small class="text-muted">
+                                    <i class="fas fa-lock text-warning"></i> 
+                                    Verified blood group cannot be changed. Contact lab if incorrect.
+                                </small>
+                            {% else %}
+                                <!-- Not verified - Editable (optional) -->
+                                {{ profile_form.bloodgroup }}
+                                {% if profile_form.bloodgroup.errors %}
+                                    <div class="text-danger mt-1">{{ profile_form.bloodgroup.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Don't know your blood type? Leave this blank - we'll verify it during your first donation.
+                                </small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Mobile - Always Editable & Required -->
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Mobile Number <span class="text-danger">*</span></label>
+                            {{ profile_form.mobile }}
+                            {% if profile_form.mobile.errors %}
+                                <div class="text-danger mt-1">{{ profile_form.mobile.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Format: +254712345678 (required for appointment reminders)</small>
+                        </div>
+                        
+                        <!-- National ID - Read-only after set, Required during onboarding -->
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">
+                                National ID 
+                                {% if not donor.national_id %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            {% if donor.national_id %}
+                                <input type="text" class="form-control bg-light" 
+                                       value="{{ donor.national_id }}" readonly>
+                                <small class="text-muted">
+                                    <i class="fas fa-lock"></i> National ID cannot be changed after registration
+                                </small>
+                            {% else %}
+                                {{ profile_form.national_id }}
+                                {% if profile_form.national_id.errors %}
+                                    <div class="text-danger mt-1">{{ profile_form.national_id.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">8 digits (required for identity verification)</small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Date of Birth - Read-only after set, Required during onboarding -->
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">
+                                Date of Birth
+                                {% if not donor.dob %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            {% if donor.dob %}
+                                <input type="text" class="form-control bg-light" 
+                                       value="{{ donor.dob|date:'Y-m-d' }}" readonly>
+                                <small class="text-muted">
+                                    <i class="fas fa-lock"></i> Date of birth cannot be changed
+                                </small>
+                            {% else %}
+                                {{ profile_form.dob }}
+                                {% if profile_form.dob.errors %}
+                                    <div class="text-danger mt-1">{{ profile_form.dob.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Required to verify age (must be 18+)</small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- County - Always Editable & Required -->
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">
+                                County 
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ profile_form.county }}
+                            {% if profile_form.county.errors %}
+                                <div class="text-danger mt-1">{{ profile_form.county.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Required to find donation centers near you</small>
+                        </div>
+
+                        <!-- Location Fields (Hidden) -->
+                        <input type="hidden" name="latitude" id="latitude">
+                        <input type="hidden" name="longitude" id="longitude">
+                        
+                        <hr>
+                        
+                        <!-- Help text for required fields -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Note:</strong> Fields marked with <span class="text-danger">*</span> are required.
+                            Blood group is optional - you can leave it blank if you're unsure.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'donor:donor-profile' %}" class="btn btn-secondary">
+                                <i class="fas fa-times mr-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save mr-2"></i>
+                                {% if is_first_time %}
+                                    Complete Profile & Continue
+                                {% else %}
+                                    Save Changes
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-      </div>
-
     </div>
-  </div>
 </div>
-{% endblock %}
-{% block extra_js %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // ========================================
-  // PROFILE PICTURE PREVIEW & VALIDATION
-  // ========================================
-  const previewImg = document.getElementById("previewImg");
-  const fileInput = document.querySelector("input[name='profile_pic']");
-  
-  if (fileInput && previewImg) {
-    fileInput.addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        showNotification("File size must be less than 5MB", "danger");
-        fileInput.value = "";
-        return;
-      }
-      
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-      if (!validTypes.includes(file.type)) {
-        showNotification("Please select a valid image file (JPG, PNG, or GIF)", "danger");
-        fileInput.value = "";
-        return;
-      }
-      
-      // Show preview
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        previewImg.src = event.target.result;
-        previewImg.classList.add('border', 'border-primary', 'border-3');
-        showNotification("Profile picture updated! Don't forget to save your changes.", "success");
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // ========================================
-  // LOCATION UPDATE FUNCTIONALITY
-  // ========================================
-  const updateLocationBtn = document.getElementById("update-location-btn");
-  
-  if (updateLocationBtn) {
-    updateLocationBtn.addEventListener("click", function() {
-      if (!navigator.geolocation) {
-        showNotification("Geolocation is not supported by your browser", "warning");
-        return;
-      }
-
-      // Add loading state
-      const btn = this;
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Getting location...';
-      btn.disabled = true;
-
-      navigator.geolocation.getCurrentPosition(
-        function(position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          // Update hidden inputs
-          const latInput = document.getElementById("id_latitude");
-          const lngInput = document.getElementById("id_longitude");
-          
-          if (latInput) latInput.value = lat;
-          if (lngInput) lngInput.value = lng;
-
-          // Create or update coordinates display
-          let coordDisplay = document.getElementById("location-coordinates");
-          if (!coordDisplay) {
-            coordDisplay = document.createElement('div');
-            coordDisplay.id = 'location-coordinates';
-            coordDisplay.className = 'mt-2 small text-success';
-            btn.closest('.card-body')?.appendChild(coordDisplay);
-          }
-          coordDisplay.innerHTML = `<i class="fas fa-map-pin me-1"></i>Coordinates: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-
-          // Success state
-          btn.innerHTML = '<i class="fas fa-check me-2"></i> Location Updated!';
-          btn.classList.remove('btn-outline-primary');
-          btn.classList.add('btn-success');
-          
-          showNotification("Location captured! Please save the form to persist changes.", "success");
-          
-          setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-outline-primary');
-            btn.disabled = false;
-          }, 3000);
-        }, 
-        function(error) {
-          let errorMessage = "Unable to retrieve your location. ";
-          switch(error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage += "Please enable location access in your browser settings.";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage += "Location information is unavailable.";
-              break;
-            case error.TIMEOUT:
-              errorMessage += "Location request timed out. Please try again.";
-              break;
-            default:
-              errorMessage += "An unknown error occurred.";
-          }
-          
-          showNotification(errorMessage, "warning");
-          btn.innerHTML = originalText;
-          btn.disabled = false;
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
-    });
-  }
-
-  // ========================================
-  // READ-ONLY FIELDS HANDLING
-  // ========================================
-  document.querySelectorAll('input[readonly], input[disabled], .readonly-field, .bg-light[readonly]').forEach(input => {
-    // Prevent Enter key submission
-    input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-      }
-    });
-    
-    // Visual feedback on click
-    input.addEventListener('click', function() {
-      showNotification("This field is read-only and cannot be modified.", "info");
-      this.style.border = '2px solid var(--warning)';
-      this.style.transition = 'border 0.3s ease';
-      setTimeout(() => {
-        this.style.border = '';
-      }, 1000);
-    });
-  });
-
-  // ========================================
-  // FORM VALIDATION
-  // ========================================
-  const form = document.querySelector('form');
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      const requiredFields = ['first_name', 'last_name', 'mobile'];
-      let hasError = false;
-      
-      // Clear previous validation states
-      document.querySelectorAll('.is-invalid').forEach(el => {
-        el.classList.remove('is-invalid');
-      });
-      document.querySelectorAll('.invalid-feedback').forEach(el => {
-        el.remove();
-      });
-      
-      requiredFields.forEach(fieldName => {
-        const field = document.querySelector(`[name="${fieldName}"]`);
-        if (field && !field.value.trim()) {
-          hasError = true;
-          field.classList.add('is-invalid');
-          
-          // Add error message
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'invalid-feedback';
-          errorDiv.textContent = `${fieldName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} is required.`;
-          field.parentNode.appendChild(errorDiv);
-        }
-      });
-      
-      // Mobile number validation (basic)
-      const mobileField = document.querySelector('[name="mobile"]');
-      if (mobileField && mobileField.value.trim()) {
-        const mobileRegex = /^[0-9+\-\s()]{10,15}$/;
-        if (!mobileRegex.test(mobileField.value.trim())) {
-          hasError = true;
-          mobileField.classList.add('is-invalid');
-          
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'invalid-feedback';
-          errorDiv.textContent = 'Please enter a valid phone number.';
-          mobileField.parentNode.appendChild(errorDiv);
-        }
-      }
-      
-      if (hasError) {
-        e.preventDefault();
-        showNotification("Please fix the validation errors before saving.", "danger");
-        
-        // Scroll to first error
-        const firstError = document.querySelector('.is-invalid');
-        if (firstError) {
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          firstError.focus();
-        }
-      } else {
-        // Show saving state
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Saving...';
-          submitBtn.disabled = true;
-        }
-      }
-    });
-  }
-
-  // ========================================
-  // NOTIFICATION HELPER
-  // ========================================
-  function showNotification(message, type = 'info') {
-    // Create notification container if it doesn't exist
-    let container = document.querySelector('.notification-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'notification-container position-fixed top-0 end-0 p-3';
-      container.style.zIndex = '9999';
-      document.body.appendChild(container);
-    }
-    
-    const id = 'notification-' + Date.now();
-    const icon = type === 'success' ? 'fa-check-circle' : 
-                 type === 'danger' ? 'fa-exclamation-circle' : 
-                 type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
-    
-    const notification = document.createElement('div');
-    notification.id = id;
-    notification.className = `alert alert-${type} alert-dismissible fade show shadow`;
-    notification.innerHTML = `
-      <i class="fas ${icon} me-2"></i>
-      ${message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    container.appendChild(notification);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      const notif = document.getElementById(id);
-      if (notif) {
-        notif.classList.remove('show');
-        setTimeout(() => notif.remove(), 300);
-      }
-    }, 5000);
-  }
-
-  // ========================================
-  // CANCEL BUTTON CONFIRMATION
-  // ========================================
-  const cancelBtn = document.querySelector('a[href*="profile"]:not([href*="edit"])');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', function(e) {
-      if (form && form.querySelectorAll('input[type="text"], input[type="file"], select').length > 0) {
-        const hasChanges = Array.from(form.querySelectorAll('input[type="text"], select')).some(
-          input => input.defaultValue !== input.value
+    // Geolocation
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                document.getElementById('latitude').value = position.coords.latitude;
+                document.getElementById('longitude').value = position.coords.longitude;
+                console.log('📍 Location captured for better center matching');
+            },
+            function(error) {
+                console.log('Geolocation error:', error.message);
+            }
         );
-        
-        if (hasChanges) {
-          e.preventDefault();
-          if (confirm("You have unsaved changes. Are you sure you want to leave?")) {
-            window.location.href = this.href;
-          }
-        }
-      }
-    });
-  }
+    }
 
-  // ========================================
-  // DEBUG INFO
-  // ========================================
-  {% if debug %}
-  console.log('Donor edit profile loaded:', {
-    bloodGroupVerified: {{ donor.bloodgroup_verified|yesno:"true,false" }},
-    {% if donor.bloodgroup_verified %}
-    verifiedBloodGroup: '{{ donor.bloodgroup }}',
-    {% endif %}
-    userId: {{ user.id }},
-    donorId: {{ donor.id }}
-  });
-  {% endif %}
+    // Add helpful tooltips for blood group field
+    const bloodGroupField = document.querySelector('[name="bloodgroup"]');
+    if (bloodGroupField) {
+        // Add a visual indicator that it's optional
+        const parent = bloodGroupField.closest('.form-group');
+        if (parent) {
+            const optionalBadge = document.createElement('span');
+            optionalBadge.className = 'badge badge-info ml-2';
+            optionalBadge.textContent = 'Optional';
+            parent.querySelector('label').appendChild(optionalBadge);
+        }
+    }
 });
 </script>
-{% endblock %}
 
+{% endblock %}

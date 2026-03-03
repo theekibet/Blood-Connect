@@ -8,184 +8,187 @@ from blood.models import DonationCenter
 from .models import Donor, DonorEligibility, BloodDonate
 from phlebotomist.models import Phlebotomist
 from datetime import date
+import re
 from datetime import datetime,timedelta
 from donor.models import BLOODGROUP_CHOICES
 from donor.models import KENYAN_COUNTIES
 from datetime import datetime, timedelta, time as datetime_time
-# -------------------------------
-# DonorUserForm
-# -------------------------------
-class DonorUserForm(forms.ModelForm):
-    confirm_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'placeholder': 'Confirm Password'}),
-        label="Confirm Password",
+# ADD THIS NEW FORM (replace the deleted ones)
+GENDER_CHOICES = [
+    ('', '--------- Select Gender ---------'),
+    ('Male', 'Male'),
+    ('Female', 'Female'),
+    ('Other', 'Other'),
+]
+BOOLEAN_CHOICES = [
+    (True, 'Yes'),
+    (False, 'No'),
+]
+class DonorSignupForm(forms.Form):
+    """
+    Simplified signup form - only collects essential information.
+    Username is temporarily set to email and changed during onboarding.
+    """
+    first_name = forms.CharField(
+        max_length=30,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your first name'
+        }),
         required=True,
-        help_text="Must match the password above."
+        label="First Name"
     )
+    
+    last_name = forms.CharField(
+        max_length=30,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your last name'
+        }),
+        required=True,
+        label="Last Name"
+    )
+    
     email = forms.EmailField(
-        validators=[EmailValidator(message="Invalid Email Address")],
-        widget=forms.EmailInput(attrs={'placeholder': 'Enter your email'}),
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your email'
+        }),
+        required=True,
+        label="Email Address",
+        help_text="You'll choose your username after signup"
+    )
+    
+    password1 = forms.CharField(
+        label='Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Create a strong password'
+        }),
+        required=True,
+        help_text="At least 8 characters with letters and numbers"
+    )
+    
+    password2 = forms.CharField(
+        label='Confirm Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm your password'
+        }),
         required=True
     )
-
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'username', 'password', 'email']
-        widgets = {
-            'password': forms.PasswordInput(attrs={'placeholder': 'Enter Password'}),
-            'first_name': forms.TextInput(attrs={'placeholder': 'Enter first name'}),
-            'last_name': forms.TextInput(attrs={'placeholder': 'Enter last name'}),
-            'username': forms.TextInput(attrs={'placeholder': 'Choose a username'}),
-        }
-        help_texts = {
-            'password': "Password must be at least 8 characters long and include at least one letter and one number.",
-        }
-
-    def clean_username(self):
-        username = self.cleaned_data.get('username')
-        if username:
-            # Check if username already exists
-            if User.objects.filter(username__iexact=username).exists():
-                raise ValidationError(
-                    f"Username '{username}' is already taken. Please choose a different one."
-                )
-        return username
+    
+    terms_agreed = forms.BooleanField(
+        required=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="I agree to the terms and conditions",
+        error_messages={'required': 'You must agree to the terms and conditions.'}
+    )
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if email:
-            # Check if email already exists
-            if User.objects.filter(email__iexact=email).exists():
-                raise ValidationError(
-                    "This email address is already registered. Please use a different email or login."
-                )
-        return email.lower()
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password = cleaned_data.get("password")
-        confirm_password = cleaned_data.get("confirm_password")
-
-        # Validate password requirements
-        if password:
-            if len(password) < 8:
-                self.add_error('password', "Password must be at least 8 characters long.")
-            if not any(char.isdigit() for char in password):
-                self.add_error('password', "Password must include at least one numeric character.")
-            if not any(char.isalpha() for char in password):
-                self.add_error('password', "Password must include at least one letter.")
-
-        # Validate password match
-        if password and confirm_password and password != confirm_password:
-            self.add_error('confirm_password', "Passwords do not match.")
-
-        return cleaned_data
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        password = self.cleaned_data.get('password')
-        user.set_password(password)
-        user.email = self.cleaned_data.get('email').lower()
-        if commit:
-            user.save()
-        return user
-
-# -------------------------------
-# DonorForm
-# -------------------------------
-class DonorForm(forms.ModelForm):
-    BLOOD_GROUPS = [
-        ('', '---------'),
-        ('O+', 'O+'), ('O-', 'O-'),
-        ('A+', 'A+'), ('A-', 'A-'),
-        ('B+', 'B+'), ('B-', 'B-'),
-        ('AB+', 'AB+'), ('AB-', 'AB-'),
-    ]
-
-    bloodgroup = forms.ChoiceField(
-        choices=BLOOD_GROUPS,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        required=False
-    )
-    national_id = forms.CharField(
-        validators=[RegexValidator(r'^\d{8}$', message="National ID must be exactly 8 digits.")],
-        widget=forms.TextInput(attrs={'placeholder': 'Enter 8 digits (e.g., 12345678)'}),
-        required=True
-    )
-    mobile = forms.CharField(
-        validators=[RegexValidator(r'^\+254\d{9}$', message="Mobile number must be in +254 format (e.g., +254712345678).")],
-        widget=forms.TextInput(attrs={'placeholder': 'Enter (e.g +254712345678)'}),
-        required=True
-    )
-    dob = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-        required=True,
-        label="Date of Birth",
-        help_text="Enter your date of birth"
-    )
-    latitude = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    longitude = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    profile_pic = forms.ImageField(required=False)
-
-    class Meta:
-        model = Donor
-        fields = [
-            'bloodgroup', 'national_id', 'mobile', 'county',
-            'dob', 'latitude', 'longitude', 'profile_pic'
-        ]
-        widgets = {
-            'county': forms.Select(attrs={'class': 'form-control'}),
-        }
-        labels={
-            'county':'Select Your County'
-        }
-
-    def clean_national_id(self):
-        national_id = self.cleaned_data.get('national_id')
-        if national_id:
-            # Check if national ID already exists
-            if Donor.objects.filter(national_id=national_id).exists():
-                raise ValidationError(
-                    f"National ID '{national_id}' is already registered. Each person can only register once."
-                )
-        return national_id
-
-    def clean_mobile(self):
-        mobile = self.cleaned_data.get('mobile')
-        if mobile:
-            # Check if mobile number already exists
-            if Donor.objects.filter(mobile=mobile).exists():
-                raise ValidationError(
-                    f"Mobile number '{mobile}' is already registered. Please use a different number."
-                )
-        return mobile
-
-    def clean_dob(self):
-        dob = self.cleaned_data.get('dob')
-        if dob:
-            today = date.today()
-            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-            
-            if age < 18:
-                raise ValidationError("You must be at least 18 years old to register as a donor.")
-            if age > 120:
-                raise ValidationError("Please enter a valid date of birth.")
-            
-            # Check if date is in the future
-            if dob > today:
-                raise ValidationError("Date of birth cannot be in the future.")
+        """Validate email uniqueness (case-insensitive)"""
+        email = self.cleaned_data.get('email', '').strip().lower()
         
-        return dob
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError("This email is already registered. Please login instead.")
+        
+        if User.objects.filter(username__iexact=email).exists():
+            raise ValidationError("This email cannot be used. Please use a different email.")
+        
+        return email
 
+    def clean_password1(self):
+        """Validate password strength"""
+        password = self.cleaned_data.get('password1')
+        
+        if len(password) < 8:
+            raise ValidationError("Password must be at least 8 characters long.")
+        
+        if not any(char.isdigit() for char in password):
+            raise ValidationError("Password must contain at least one number.")
+        
+        if not any(char.isalpha() for char in password):
+            raise ValidationError("Password must contain at least one letter.")
+        
+        return password
+
+    def clean_password2(self):
+        """Validate passwords match"""
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("Passwords do not match.")
+        
+        return password2
+
+
+class UsernameSelectionForm(forms.Form):
+    """
+    Form for choosing permanent username after first signup/login.
+    Only shown when user's username is still their email.
+    """
+    username = forms.CharField(
+        max_length=150,
+        min_length=3,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Choose your username',
+            'autocomplete': 'off'
+        }),
+        required=True,
+        label="Choose Your Username",
+        help_text="3-150 characters. Letters, numbers, and @/./+/-/_ only."
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean_username(self):
+        """Validate username format and uniqueness"""
+        username = self.cleaned_data.get('username', '').strip()
+        
+        if len(username) < 3:
+            raise ValidationError("Username must be at least 3 characters long.")
+        
+        if not re.match(r'^[a-zA-Z0-9@.+-_]+$', username):
+            raise ValidationError("Username can only contain letters, numbers, and @/./+/-/_ characters.")
+        
+        if self.user:
+            if User.objects.filter(username__iexact=username).exclude(pk=self.user.pk).exists():
+                raise ValidationError("This username is already taken. Please try another.")
+        else:
+            if User.objects.filter(username__iexact=username).exists():
+                raise ValidationError("This username is already taken. Please try another.")
+        
+        return username
 # -------------------------------
 # DonorLogin
 # -------------------------------
-class DonorLoginForm(AuthenticationForm):
+class DonorLoginForm(forms.Form):
+    """
+    Login form that accepts BOTH username and email.
+    Works with EmailOrUsernameBackend authentication backend.
+    """
     username = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'input--style-5', 'placeholder': 'Enter Username'})
+        label='Username or Email',
+        max_length=254,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your username or email',
+            'autocomplete': 'username'
+        }),
+        help_text="You can login with either your username or email"
     )
+    
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'input--style-5', 'placeholder': 'Enter Password'})
+        label='Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your password',
+            'autocomplete': 'current-password'
+        })
     )
 
 # -------------------------------
@@ -194,159 +197,271 @@ class DonorLoginForm(AuthenticationForm):
 class DonorProfileForm(forms.ModelForm):
     """
     Form for editing donor profile.
-    Blood group becomes read-only after phlebotomist verification.
-    Email is always read-only for security.
+    Blood group is OPTIONAL - not required for onboarding completion.
+    Required fields: mobile, national_id, county, dob
     """
     
+    # Read-only user fields (for display only)
     first_name = forms.CharField(
         max_length=100,
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter your first name'
+            'class': 'form-control bg-light',
+            'readonly': 'readonly',
+            'disabled': 'disabled'
         }),
         label="First Name"
     )
 
     last_name = forms.CharField(
         max_length=100,
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter your last name'
+            'class': 'form-control bg-light',
+            'readonly': 'readonly',
+            'disabled': 'disabled'
         }),
         label="Last Name"
     )
 
-    # Email - Always read-only
     email = forms.EmailField(
         required=False,
         widget=forms.EmailInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control bg-light',
             'readonly': 'readonly',
-            'style': 'background-color: #e9ecef; cursor: not-allowed;',
-            'title': 'Email cannot be changed. Contact support if needed.'
+            'disabled': 'disabled'
         }),
-        label="Email Address",
-        help_text="<i class='fas fa-lock text-warning'></i> Cannot be changed. Contact support if you need to update your email."
+        label="Email Address"
     )
 
-    # Blood group - Conditionally read-only
+    # Blood group - OPTIONAL (can be unknown initially)
     bloodgroup = forms.ChoiceField(
-        choices=[('', '---------')] + list(BLOODGROUP_CHOICES),
+        choices=[('', "I don't know yet")] + list(BLOODGROUP_CHOICES),
         widget=forms.Select(attrs={'class': 'form-select'}),
         label="Blood Group",
-        required=False
+        required=False,  # OPTIONAL - not required for onboarding
+        help_text="Don't know your blood type? Leave this blank - it will be verified during your first donation."
     )
 
-    # Address
-    county = forms.ChoiceField(
-        choices=[('', '---------')] + list(KENYAN_COUNTIES),
+    # Gender - Optional
+    gender = forms.ChoiceField(
+        choices=GENDER_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'}),
         required=False,
-        label="Select Your County"
-    )   
+        label="Gender"
+    )
 
+    # National ID - REQUIRED
+    national_id = forms.CharField(
+        max_length=20,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your national ID number'
+        }),
+        label="National ID Number",
+        help_text="8 digits (required for identity verification)",
+        error_messages={'required': 'National ID is required for verification.'}
+    )
 
-    # Mobile
+    # Date of Birth - REQUIRED
+    dob = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+        }),
+        label="Date of Birth",
+        help_text="Required to verify age (must be 18+)",
+        error_messages={'required': 'Date of birth is required to verify eligibility.'}
+    )
+
+    # County - REQUIRED
+    county = forms.ChoiceField(
+        choices=[('', 'Select your county')] + list(KENYAN_COUNTIES),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True,
+        label="County",
+        help_text="Required to find donation centers near you",
+        error_messages={'required': 'Please select your county.'}
+    )
+
+    # Sub-County - Optional
+    sub_county = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your sub-county (optional)'
+        }),
+        label="Sub-County (Optional)"
+    )
+
+    # Mobile - REQUIRED
     mobile = forms.CharField(
         max_length=20,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your mobile number'
+            'placeholder': '+254712345678'
         }),
-        label="Mobile Number"
+        label="Mobile Number",
+        help_text="Required for appointment reminders (Format: +254712345678)",
+        error_messages={'required': 'Mobile number is required for appointment communication.'}
     )
 
-    # Profile picture
+    # Profile Picture - Optional
     profile_pic = forms.ImageField(
         required=False,
-        widget=forms.ClearableFileInput(attrs={
+        widget=forms.FileInput(attrs={
             'class': 'form-control',
             'accept': 'image/*'
         }),
-        label="Profile Picture"
+        label="Profile Picture (Optional)",
+        help_text="Upload a profile photo (optional)"
     )
 
     class Meta:
         model = Donor
-        fields = ['bloodgroup', 'county', 'mobile', 'profile_pic']
+        fields = [
+            'bloodgroup', 'gender', 'national_id', 'dob', 
+            'county', 'sub_county', 'mobile', 'profile_pic'
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Make email field truly disabled
         if self.instance and self.instance.pk:
-            self.fields['email'].disabled = True
+            # Set initial values for user fields
+            if hasattr(self.instance, 'user') and self.instance.user:
+                self.fields['first_name'].initial = self.instance.user.first_name
+                self.fields['last_name'].initial = self.instance.user.last_name
+                self.fields['email'].initial = self.instance.user.email
             
-            # ==========================================
-            # BLOOD GROUP VERIFICATION LOGIC
-            # ==========================================
+            # Blood group verification - make read-only if verified
             if self.instance.bloodgroup_verified:
-                # Blood group is verified - make it read-only
                 self.fields['bloodgroup'].widget = forms.TextInput(attrs={
                     'readonly': 'readonly',
                     'disabled': 'disabled',
-                    'class': 'form-control',
-                    'style': 'background-color: #d4edda; cursor: not-allowed; font-weight: bold; font-size: 1.1rem; color: #155724; border: 2px solid #28a745;',
-                    'title': f'Verified blood group: {self.instance.bloodgroup}'
+                    'class': 'form-control bg-success text-white',
+                    'style': 'font-weight: bold;',
                 })
-                self.fields['bloodgroup'].choices = [(self.instance.bloodgroup, self.instance.bloodgroup)]
+                self.fields['bloodgroup'].initial = self.instance.bloodgroup
+                self.fields['bloodgroup'].help_text = f"✅ Verified: {self.instance.bloodgroup} (cannot be changed)"
+                self.fields['bloodgroup'].required = False
+            
+            # Make certain fields read-only after initial entry
+            if self.instance.national_id:
+                self.fields['national_id'].widget.attrs.update({
+                    'readonly': 'readonly',
+                    'class': 'form-control bg-light'
+                })
+                self.fields['national_id'].help_text = "Cannot be changed after initial entry"
+                self.fields['national_id'].required = False
                 
-                # Add verification info to help text
-                verified_by = self.instance.bloodgroup_verified_by.get_full_name() if self.instance.bloodgroup_verified_by else 'phlebotomist'
-                verified_date = self.instance.bloodgroup_verified_at.strftime('%B %d, %Y') if self.instance.bloodgroup_verified_at else 'first donation'
-                
-                self.fields['bloodgroup'].help_text = (
-                    f"<div class='alert alert-success mt-2 mb-0 p-2'>"
-                    f"<i class='fas fa-check-circle'></i> "
-                    f"<strong>Verified by {verified_by}</strong> on {verified_date}. "
-                    f"<br><small class='text-muted'>"
-                    f"<i class='fas fa-lock'></i> Blood group cannot be changed after verification for safety and integrity."
-                    f"</small></div>"
-                )
-            else:
-                # Blood group not yet verified - can be changed but with warning
-                self.fields['bloodgroup'].help_text = (
-                    "<div class='alert alert-warning mt-2 mb-0 p-2'>"
-                    "<i class='fas fa-exclamation-triangle'></i> "
-                    "<strong>Not yet verified.</strong> Your blood group will be verified by a lab technologist during your first donation. "
-                    "You can update it here for now, but the lab test's verification will be final and automatically updated and unchangeable after."
-                    "</div>"
-                )
+            if self.instance.dob:
+                self.fields['dob'].widget.attrs.update({
+                    'readonly': 'readonly',
+                    'class': 'form-control bg-light'
+                })
+                self.fields['dob'].help_text = "Cannot be changed after initial entry"
+                self.fields['dob'].required = False
+
+    def clean_national_id(self):
+        """Validate national ID"""
+        national_id = self.cleaned_data.get('national_id')
+        
+        # Skip validation if already has value
+        if self.instance and self.instance.national_id:
+            return self.instance.national_id
+        
+        if not national_id:
+            raise ValidationError("National ID is required.")
+        
+        national_id = national_id.strip()
+        
+        # Check uniqueness
+        if Donor.objects.filter(national_id=national_id).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("This National ID is already registered.")
+        
+        # Validate format (8 digits)
+        if not re.match(r'^\d{8}$', national_id):
+            raise ValidationError("National ID must be exactly 8 digits.")
+        
+        return national_id
+
+    def clean_mobile(self):
+        """Validate mobile number"""
+        mobile = self.cleaned_data.get('mobile')
+        
+        if not mobile:
+            raise ValidationError("Mobile number is required.")
+        
+        mobile = mobile.strip()
+        
+        # Check uniqueness
+        if Donor.objects.filter(mobile=mobile).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("This mobile number is already registered.")
+        
+        # Validate format (+254XXXXXXXXX)
+        if not re.match(r'^\+254\d{9}$', mobile):
+            raise ValidationError("Mobile number must be in format: +254712345678")
+        
+        return mobile
+
+    def clean_dob(self):
+        """Validate date of birth"""
+        dob = self.cleaned_data.get('dob')
+        
+        # Skip validation if already has value
+        if self.instance and self.instance.dob:
+            return self.instance.dob
+        
+        if not dob:
+            raise ValidationError("Date of birth is required.")
+        
+        today = date.today()
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        
+        if age < 18:
+            raise ValidationError("You must be at least 18 years old to donate blood.")
+        
+        if age > 120:
+            raise ValidationError("Please enter a valid date of birth.")
+        
+        if dob > today:
+            raise ValidationError("Date of birth cannot be in the future.")
+        
+        return dob
+
+    def clean_county(self):
+        """Validate county"""
+        county = self.cleaned_data.get('county')
+        
+        if not county:
+            raise ValidationError("Please select your county.")
+        
+        return county
 
     def clean_bloodgroup(self):
-        """
-        Prevent changing verified blood group.
-        Always return the original verified blood group if it exists.
-        """
+        """Blood group is optional"""
         bloodgroup = self.cleaned_data.get('bloodgroup')
         
+        # If verified, can't be changed
         if self.instance and self.instance.bloodgroup_verified:
-            # Return original verified blood group, ignore any attempted changes
             return self.instance.bloodgroup
         
-        return bloodgroup
+        # Return None if empty
+        return bloodgroup if bloodgroup else None
 
-    def clean_email(self):
-        """Prevent email changes"""
-        if self.instance and self.instance.pk:
-            return self.instance.user.email
-        return self.cleaned_data.get('email')
-
-# Constants for Choices
-GENDER_CHOICES = [
-    ('Male', 'Male'),
-    ('Female', 'Female'),
-    ('Other', 'Other'),
-]
-
-BOOLEAN_CHOICES = [
-    (True, 'Yes'),
-    (False, 'No'),
-]
-
+    def save(self, commit=True):
+        """Save donor profile"""
+        instance = super().save(commit=False)
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
 # Validator functions
 def validate_age(value):

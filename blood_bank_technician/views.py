@@ -131,7 +131,8 @@ def blood_bank_tech_profile_edit(request, pk):
     profile = get_object_or_404(BloodBankTechProfile, pk=pk)
     
     # Check permission
-    if not request.user.is_superuser and profile.user != request.user:
+    is_owner = profile.user == request.user
+    if not request.user.is_superuser and not is_owner:
         raise PermissionDenied("You don't have permission to edit this profile.")
     
     if request.method == 'POST':
@@ -163,7 +164,15 @@ def blood_bank_tech_profile_edit(request, pk):
                 
                 return redirect('blood_bank_technician:blood_bank_tech_profile_edit', pk=profile.pk)
         
-        form = BloodBankTechProfileForm(request.POST, request.FILES, instance=profile)
+        # Pass user role information to the form
+        form = BloodBankTechProfileForm(
+            request.POST, 
+            request.FILES, 
+            instance=profile,
+            user=request.user,
+            is_superuser=request.user.is_superuser
+        )
+        
         if form.is_valid():
             try:
                 saved_profile = form.save()
@@ -179,11 +188,18 @@ def blood_bank_tech_profile_edit(request, pk):
             print("❌ Form errors:", form.errors)
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = BloodBankTechProfileForm(instance=profile)
+        # Pass user role information to the form
+        form = BloodBankTechProfileForm(
+            instance=profile,
+            user=request.user,
+            is_superuser=request.user.is_superuser
+        )
     
     context = {
         'form': form,
         'profile': profile,
+        'is_superuser': request.user.is_superuser,
+        'is_owner': is_owner,
     }
     return render(request, 'blood_bank_technician/profile_edit.html', context)
 # ======================

@@ -3,10 +3,150 @@
 
 {% block title %}Donor Dashboard - BloodConnect{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* Progress Circle Styles */
+  .progress-circle-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+  }
+  
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  
+  .progress-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+    color: var(--bs-primary);
+  }
+  
+  .progress-label {
+    font-size: 0.9rem;
+    color: var(--bs-secondary);
+  }
+  
+  :root {
+    --light-gray: #e9ecef;
+    --success: #28a745;
+  }
+  
+  /* Animation for celebration */
+  @keyframes celebration {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  .celebration-banner {
+    animation: celebration 0.5s ease 2;
+    border-left: 5px solid #28a745;
+  }
+  
+  /* Dashboard Card Styles */
+  .dashboard-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  }
+  
+  .dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  }
+  
+  .dashboard-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .card-count {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .card-label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+  }
+  
+  /* Milestone Card */
+  .milestone-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 15px;
+  }
+  
+  .milestone-card .text-primary {
+    color: white !important;
+  }
+  
+  /* Quick Action Buttons */
+  .btn-quick-action {
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .btn-quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .card-count {
+      font-size: 1.5rem;
+    }
+    
+    .dashboard-icon-wrapper {
+      width: 50px;
+      height: 50px;
+    }
+    
+    .dashboard-icon-wrapper i {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4">
   <!-- Enhanced Greeting Card -->
   {% include 'shared/greetings_card.html' %}
+  
+  <!-- Welcome Celebration for New Users -->
+  {% if just_completed_onboarding %}
+  <div class="alert alert-success alert-dismissible fade show celebration-banner mb-4" role="alert">
+    <div class="d-flex align-items-center">
+      <div class="celebration-icon me-3">
+        <i class="fas fa-check-circle fa-3x text-success"></i>
+      </div>
+      <div>
+        <h4 class="alert-heading mb-1">🎉 Welcome to Your Dashboard!</h4>
+        <p class="mb-0">Your profile is complete. You're now ready to schedule your first donation and start saving lives.</p>
+      </div>
+      <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  </div>
+  {% endif %}
   
   <!-- Pre-Eligibility Awareness Modal -->
   {% if show_eligibility_modal %}
@@ -88,7 +228,7 @@
           </p>
           
           <div class="row g-4">
-            {% for option in donor_support_options|slice:":6" %}
+            {% for option in volunteer_suggestions|slice:":6" %}
             <div class="col-md-6">
               <div class="card h-100">
                 <div class="card-body">
@@ -161,7 +301,7 @@
   <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
     <i class="fas fa-quote-left fa-2x me-3 text-primary"></i>
     <div>
-      <strong class="fs-5">{{ donor_motivational_message|default:"Everyone has a role in saving lives." }}</strong>
+      <strong class="fs-5">{{ motivational_message|default:"Everyone has a role in saving lives." }}</strong>
     </div>
   </div>
 
@@ -171,7 +311,7 @@
       {% if action.show %}
       <a href="javascript:void(0);" 
          onclick="alert('This feature is coming soon! Thank you for your interest.'); return false;" 
-         class="btn btn-{{ action.color }}">
+         class="btn btn-{{ action.color }} btn-quick-action">
         <i class="fas {{ action.icon }} me-2"></i>{{ action.text }}
       </a>
       {% endif %}
@@ -194,89 +334,87 @@
 
   <!-- Dashboard Stats Cards -->
   <div class="row g-4 mb-4">
-    {% if donor_dashboard_stats %}
-      <div class="col-xl-3 col-md-6">
-        <div class="card dashboard-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3">
-                  <i class="fas fa-tint fa-2x text-primary"></i>
-                </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3">
+                <i class="fas fa-tint fa-2x text-primary"></i>
               </div>
-              <div class="flex-grow-1 ms-3">
-                <div class="card-count">{{ donor_dashboard_stats.total_safe_donations }}</div>
-                <div class="card-label">Safe Donations</div>
-                <div class="card-description small text-muted">Lives impacted: {{ donor_dashboard_stats.total_safe_donations|add:"0" }}</div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <div class="card-count">{{ total_safe_donations }}</div>
+              <div class="card-label">Safe Donations</div>
+              <div class="card-description small text-muted">Lives impacted: {{ total_safe_donations|add:"0" }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="dashboard-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3">
+                <i class="fas fa-star fa-2x text-warning"></i>
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <div class="card-count">{{ points }}</div>
+              <div class="card-label">Points Earned</div>
+              <div class="card-description small text-muted">{{ hero_level }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="dashboard-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3">
+                <i class="fas fa-tint fa-2x text-danger"></i>
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <div class="card-count">{{ donor.bloodgroup|default:"—" }}</div>
+              <div class="card-label">Blood Group</div>
+              <div class="card-description small text-muted">
+                {% if donor.bloodgroup_verified %}
+                  <span class="text-success"><i class="fas fa-check-circle"></i> Verified</span>
+                {% else %}
+                  <span class="text-warning"><i class="fas fa-clock"></i> Pending</span>
+                {% endif %}
               </div>
             </div>
           </div>
         </div>
       </div>
-      
-      <div class="col-xl-3 col-md-6">
-        <div class="card dashboard-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="dashboard-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3">
-                  <i class="fas fa-star fa-2x text-warning"></i>
-                </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3">
+                <i class="fas fa-calendar-check fa-2x text-info"></i>
               </div>
-              <div class="flex-grow-1 ms-3">
-                <div class="card-count">{{ donor_dashboard_stats.total_points }}</div>
-                <div class="card-label">Points Earned</div>
-                <div class="card-description small text-muted">{{ donor_dashboard_stats.hero_level }}</div>
-              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <div class="card-count">{{ pending_tests }}</div>
+              <div class="card-label">Pending Tests</div>
+              <div class="card-description small text-muted">Awaiting lab results</div>
             </div>
           </div>
         </div>
       </div>
-      
-      <div class="col-xl-3 col-md-6">
-        <div class="card dashboard-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="dashboard-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3">
-                  <i class="fas fa-tint fa-2x text-danger"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <div class="card-count">{{ donor_dashboard_stats.blood_group|default:"—" }}</div>
-                <div class="card-label">Blood Group</div>
-                <div class="card-description small text-muted">
-                  {% if donor_dashboard_stats.blood_group_verified %}
-                    <span class="text-success"><i class="fas fa-check-circle"></i> Verified</span>
-                  {% else %}
-                    <span class="text-warning"><i class="fas fa-clock"></i> Pending</span>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-xl-3 col-md-6">
-        <div class="card dashboard-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3">
-                  <i class="fas fa-calendar-check fa-2x text-info"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <div class="card-count">{{ pending_tests }}</div>
-                <div class="card-label">Pending Tests</div>
-                <div class="card-description small text-muted">Awaiting lab results</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    {% endif %}
+    </div>
   </div>
 
   <!-- Points & Next Donation Row -->
@@ -365,9 +503,7 @@
               </div>
             {% endif %}
             
-            <a href="{% url 'sickle_cell' %}" class="btn btn-outline-primary">
-              <i class="fas fa-heart me-2"></i>See Your Impact
-            </a>
+
           {% else %}
             <p class="text-muted mb-3">No previous donations recorded</p>
             <div class="alert alert-success py-2 mb-3">
@@ -396,7 +532,7 @@
       <p class="lead mb-4">{{ support_options_message }}</p>
       
       <div class="row g-3">
-        {% for option in donor_support_options|slice:":4" %}
+        {% for option in volunteer_suggestions|slice:":4" %}
         <div class="col-md-6">
           <div class="d-flex align-items-start">
             <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
@@ -422,7 +558,6 @@
     </div>
   </div>
   {% endif %}
-
 
   <!-- Progress Circle & Milestone Row -->
   <div class="row g-4 mb-4">
@@ -464,9 +599,9 @@
       <div class="card milestone-card h-100">
         <div class="card-body text-center">
           <i class="fas fa-medal fa-3x text-warning mb-3"></i>
-          <h6 class="text-uppercase text-muted small fw-bold">Next Milestone</h6>
-          <div class="display-4 fw-bold text-primary mb-2">{{ next_milestone }}</div>
-          <p class="mb-0">
+          <h6 class="text-uppercase text-white text-opacity-75 small fw-bold">Next Milestone</h6>
+          <div class="display-4 fw-bold text-white mb-2">{{ next_milestone }}</div>
+          <p class="mb-0 text-white">
             Only <strong>{{ donations_to_milestone }}</strong> more 
             donation{{ donations_to_milestone|pluralize }} to reach your next milestone!
           </p>
@@ -475,8 +610,6 @@
     </div>
     {% endif %}
   </div>
-
-
 
   <!-- Recent Donations Section -->
   {% if recent_donations %}

@@ -84,15 +84,15 @@
                     <div class="countdown-label">Days</div>
                   </div>
                   <div class="col-3">
-                    <div class="countdown-number" id="hours">{{ hours_until_next }}</div>
+                    <div class="countdown-number" id="hours">{{ hours_until_next|default:"0" }}</div>
                     <div class="countdown-label">Hours</div>
                   </div>
                   <div class="col-3">
-                    <div class="countdown-number" id="minutes">{{ minutes_until_next }}</div>
+                    <div class="countdown-number" id="minutes">{{ minutes_until_next|default:"0" }}</div>
                     <div class="countdown-label">Minutes</div>
                   </div>
                   <div class="col-3">
-                    <div class="countdown-number" id="seconds">{{ seconds_until_next }}</div>
+                    <div class="countdown-number" id="seconds">{{ seconds_until_next|default:"0" }}</div>
                     <div class="countdown-label">Seconds</div>
                   </div>
                 </div>
@@ -315,12 +315,15 @@
               
               <div class="col-md-6 mb-3">
                 <label for="{{ donation_form.phlebotomist.id_for_label }}" class="form-label">
-                  <i class="fas fa-user-phlebotomist"></i> Preferred Nurse
+                  <i class="fas fa-user-nurse"></i> Preferred Nurse
                 </label>
                 {{ donation_form.phlebotomist|add_class:"form-select" }}
                 {% if donation_form.phlebotomist.errors %}
                   <div class="text-danger">{{ donation_form.phlebotomist.errors }}</div>
                 {% endif %}
+                <small class="form-text text-muted" id="phlebotomistHelp">
+                  Select a nurse to see available times
+                </small>
               </div>
             </div>
             
@@ -329,7 +332,7 @@
                 <label for="{{ donation_form.appointment_date.id_for_label }}" class="form-label">
                   <i class="fas fa-calendar-day"></i> Appointment Date
                 </label>
-                {{ donation_form.appointment_date|add_class:"form-control"|attr:"type:date"|attr:"min:today" }}
+                {{ donation_form.appointment_date|add_class:"form-control"|attr:"type:date" }}
                 {% if donation_form.appointment_date.errors %}
                   <div class="text-danger">{{ donation_form.appointment_date.errors }}</div>
                 {% endif %}
@@ -339,10 +342,49 @@
                 <label for="{{ donation_form.appointment_time.id_for_label }}" class="form-label">
                   <i class="fas fa-clock"></i> Appointment Time
                 </label>
-                {{ donation_form.appointment_time|add_class:"form-select" }}
+                
+                <!-- Enhanced Time Slot Selector with Visual Indicators -->
+                <div class="time-slot-wrapper">
+                  <select name="{{ donation_form.appointment_time.name }}" 
+                          id="{{ donation_form.appointment_time.id_for_label }}" 
+                          class="form-select time-slot-selector">
+                    <option value="" class="time-slot-option default-option">⏰ Select date and nurse first</option>
+                  </select>
+                  
+                  <!-- Availability Status Badge -->
+                  <div class="availability-status mt-2" id="availabilityStatus">
+                    <span class="badge bg-secondary">
+                      <i class="fas fa-info-circle"></i> Waiting for selection...
+                    </span>
+                  </div>
+                  
+                  <!-- Time Slot Legend -->
+                  <div class="time-slot-legend mt-3 d-flex flex-wrap gap-3">
+                    <div class="legend-item">
+                      <span class="legend-color available"></span>
+                      <span class="legend-text">Available</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-color selected"></span>
+                      <span class="legend-text">Selected</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-color peak"></span>
+                      <span class="legend-text">Peak Hours</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-color lunch"></span>
+                      <span class="legend-text">Lunch Time</span>
+                    </div>
+                  </div>
+                </div>
+                
                 {% if donation_form.appointment_time.errors %}
-                  <div class="text-danger">{{ donation_form.appointment_time.errors }}</div>
+                  <div class="text-danger mt-2">{{ donation_form.appointment_time.errors }}</div>
                 {% endif %}
+                <small class="form-text text-muted" id="timeHelp">
+                  <i class="fas fa-clock"></i> Only available times are shown
+                </small>
               </div>
             </div>
             
@@ -442,12 +484,14 @@
     </div>
   </div>
 </div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
-    // AJAX ENDPOINT URL
+    // AJAX ENDPOINT URLS
     // ==========================================
     const getPhlebotomistsUrl = "{% url 'ajax_get_phlebotomists' %}";
+    const getAvailableTimesUrl = "{% url 'donor:ajax_get_available_times' %}";
     
     // ==========================================
     // COUNTDOWN TIMER FUNCTIONALITY
@@ -458,19 +502,14 @@
     
     // Update the count down every 1 second
     const countdownTimer = setInterval(function() {
-      // Get today's date and time
       const now = new Date().getTime();
-      
-      // Find the distance between now and the count down date
       const distance = nextDonationDate - now;
       
-      // Time calculations for days, hours, minutes and seconds
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
       
-      // Update the HTML elements
       const daysEl = document.getElementById("days");
       const hoursEl = document.getElementById("hours");
       const minutesEl = document.getElementById("minutes");
@@ -481,7 +520,6 @@
       if (minutesEl) minutesEl.innerHTML = minutes;
       if (secondsEl) secondsEl.innerHTML = seconds;
       
-      // If the count down is finished, reload the page to show eligible message
       if (distance < 0) {
         clearInterval(countdownTimer);
         location.reload();
@@ -493,17 +531,7 @@
     // FORM HANDLING (Only for eligible donors)
     // ==========================================
     {% if not is_unsafe and not has_unsafe_donation %}
-    // ==========================================
-    // DEBUG: LOG ALL FORM ELEMENT IDs
-    // ==========================================
-    console.log('🔍 Form Element IDs from Django:');
-    console.log('  - donation_center id:', '{{ donation_form.donation_center.id_for_label }}');
-    console.log('  - phlebotomist id:', '{{ donation_form.phlebotomist.id_for_label }}');
-    console.log('  - appointment_date id:', '{{ donation_form.appointment_date.id_for_label }}');
-    console.log('  - appointment_time id:', '{{ donation_form.appointment_time.id_for_label }}');
-    console.log('  - unit id:', '{{ donation_form.unit.id_for_label }}');
-    
-    // Get form elements with error checking
+    // Get form elements
     const donationCenter = document.getElementById('{{ donation_form.donation_center.id_for_label }}');
     const phlebotomistSelect = document.getElementById('{{ donation_form.phlebotomist.id_for_label }}');
     const appointmentDate = document.getElementById('{{ donation_form.appointment_date.id_for_label }}');
@@ -511,196 +539,246 @@
     const unitSelect = document.getElementById('{{ donation_form.unit.id_for_label }}');
     const summarySection = document.getElementById('summarySection');
     const summaryContent = document.getElementById('summaryContent');
+    const availabilityStatus = document.getElementById('availabilityStatus');
     
-    // ==========================================
-    // DEBUG: CHECK IF ELEMENTS WERE FOUND
-    // ==========================================
-    console.log('🔍 Elements found in DOM:');
-    console.log('  - donationCenter:', donationCenter ? '✅ FOUND' : '❌ NOT FOUND');
-    console.log('  - phlebotomistSelect:', phlebotomistSelect ? '✅ FOUND' : '❌ NOT FOUND');
-    console.log('  - appointmentDate:', appointmentDate ? '✅ FOUND' : '❌ NOT FOUND');
-    console.log('  - appointmentTime:', appointmentTime ? '✅ FOUND' : '❌ NOT FOUND');
-    console.log('  - unitSelect:', unitSelect ? '✅ FOUND' : '❌ NOT FOUND');
-    
-    // If phlebotomistSelect exists, log its current state
-    if (phlebotomistSelect) {
-      console.log('  - phlebotomistSelect initial options:', phlebotomistSelect.options.length);
-      console.log('  - phlebotomistSelect HTML:', phlebotomistSelect.outerHTML);
-    }
-    
-    // Blood group verification status
-    const bloodgroupVerified = {{ bloodgroup_verified|yesno:"true,false" }};
-    const verifiedBloodgroup = '{{ verified_bloodgroup|default:"" }}';
+    // Store loaded options for later use
+    let timeSlotOptions = [];
     
     console.log('✅ Donation form loaded');
-    console.log('📍 AJAX URL:', getPhlebotomistsUrl);
-    console.log('🩸 Blood group verified:', bloodgroupVerified);
-    console.log('👤 First time donor:', {{ is_first_time_donor|yesno:"true,false" }});
+    console.log('📍 AJAX URLs:', {
+      phlebotomists: getPhlebotomistsUrl,
+      availableTimes: getAvailableTimesUrl
+    });
     
-    if (bloodgroupVerified) {
-      console.log('🔒 Verified blood group:', verifiedBloodgroup);
+    // ==========================================
+    // FUNCTION TO UPDATE AVAILABLE TIME SLOTS WITH ENHANCED VISUALS
+    // ==========================================
+    function updateAvailableTimes() {
+      const phlebotomistId = phlebotomistSelect.value;
+      const selectedDate = appointmentDate.value;
+      
+      console.log('⏰ Checking available times - Phlebotomist:', phlebotomistId, 'Date:', selectedDate);
+      
+      // Clear current time options and show loading
+      appointmentTime.innerHTML = '<option value="" class="time-slot-option loading-option">⏳ <span class="loading-spinner"></span> Loading available times...</option>';
+      appointmentTime.disabled = true;
+      
+      // Update availability status
+      availabilityStatus.innerHTML = '<span class="badge bg-info"><i class="fas fa-spinner fa-spin"></i> Checking availability...</span>';
+      
+      if (!phlebotomistId || !selectedDate) {
+        appointmentTime.innerHTML = '<option value="" class="time-slot-option default-option">👆 Select nurse and date first</option>';
+        appointmentTime.disabled = true;
+        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select nurse and date to see available times</span>';
+        updateSummary();
+        return;
+      }
+      
+      // Fetch available times from server
+      const url = `${getAvailableTimesUrl}?phlebotomist_id=${phlebotomistId}&date=${selectedDate}`;
+      console.log(`🔍 Fetching available times from: ${url}`);
+      
+      fetch(url)
+        .then(response => {
+          console.log(`📡 Response status: ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('📦 Available times response:', data);
+          
+          // Clear current options
+          appointmentTime.innerHTML = '';
+          
+          if (data.available_times && data.available_times.length > 0) {
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '-- Select Available Time --';
+            defaultOption.className = 'time-slot-option default-option';
+            appointmentTime.appendChild(defaultOption);
+            
+            // Store options for later use
+            timeSlotOptions = data.available_times;
+            
+            // Add available time slots with enhanced styling
+            data.available_times.forEach(slot => {
+              const option = document.createElement('option');
+              option.value = slot.value;  // 24-hour format for form submission
+              
+              // Add icons based on time of day
+              const hour = parseInt(slot.value.split(':')[0]);
+              let timeIcon = '🕐';
+              let additionalClass = '';
+              
+              if (hour < 10) {
+                timeIcon = '🌅'; // Morning
+              } else if (hour >= 12 && hour < 14) {
+                timeIcon = '🍽️'; // Lunch time
+                additionalClass = 'lunch-time';
+              } else if (hour >= 15) {
+                timeIcon = '🌆'; // Afternoon/Evening
+              } else {
+                timeIcon = '☀️'; // Mid-day
+              }
+              
+              // Add peak hour indicator (9-11 AM and 2-4 PM are usually busy)
+              if ((hour >= 9 && hour <= 11) || (hour >= 14 && hour <= 16)) {
+                additionalClass += ' peak-hour';
+              }
+              
+              option.textContent = `${timeIcon} ${slot.display}`;
+              option.className = `time-slot-option ${additionalClass}`;
+              option.setAttribute('data-hour', hour);
+              
+              appointmentTime.appendChild(option);
+            });
+            
+            appointmentTime.disabled = false;
+            
+            // Update availability status with count
+            availabilityStatus.innerHTML = `<span class="badge bg-success"><i class="fas fa-check-circle"></i> ${data.available_times.length} available time slots found</span>`;
+            
+            // Add animation to show update
+            appointmentTime.classList.add('availability-update');
+            setTimeout(() => {
+              appointmentTime.classList.remove('availability-update');
+            }, 500);
+            
+            console.log(`✅ Added ${data.available_times.length} available time slots`);
+          } else {
+            // No available slots
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '😕 No available times for this date';
+            option.className = 'time-slot-option no-slots-option';
+            appointmentTime.appendChild(option);
+            appointmentTime.disabled = true;
+            availabilityStatus.innerHTML = '<span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> No available times for this date. Try another date.</span>';
+            console.log('⚠️ No available time slots found');
+          }
+          
+          updateSummary();
+        })
+        .catch(error => {
+          console.error('❌ Error fetching available times:', error);
+          appointmentTime.innerHTML = '<option value="" class="time-slot-option error-option">❌ Error loading times</option>';
+          appointmentTime.disabled = true;
+          availabilityStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> Error loading available times</span>';
+          updateSummary();
+        });
     }
     
     // ==========================================
-    // AJAX FUNCTION TO LOAD PHLEBOTOMISTS BY CENTER
+    // FUNCTION TO UPDATE PHLEBOTOMISTS BY CENTER
     // ==========================================
-    function updateNurses() {
+    function updatePhlebotomists() {
       const centerId = donationCenter.value;
       
-      console.log('🏥 Center selected - ID:', centerId, 'Text:', donationCenter.options[donationCenter.selectedIndex]?.text);
+      console.log('🏥 Center selected - ID:', centerId);
       
       if (centerId) {
         // Show loading state
-        phlebotomistSelect.innerHTML = '<option value="">⏳ Loading nurses...</option>';
+        phlebotomistSelect.innerHTML = '<option value="" class="time-slot-option loading-option">⏳ <span class="loading-spinner"></span> Loading nurses...</option>';
         phlebotomistSelect.disabled = true;
         
-        const url = `${getPhlebotomistsUrl}?center_id=${centerId}`;
-        console.log(`🔍 Fetching nurses from URL: ${url}`);
+        // Clear time slots when center changes
+        appointmentTime.innerHTML = '<option value="" class="time-slot-option default-option">👆 Select nurse and date first</option>';
+        appointmentTime.disabled = true;
+        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select nurse and date to see available times</span>';
         
-        // Make AJAX call to fetch phlebotomists for this center
+        const url = `${getPhlebotomistsUrl}?center_id=${centerId}`;
+        console.log(`🔍 Fetching nurses from: ${url}`);
+        
         fetch(url)
           .then(response => {
-            console.log(`📡 Response status: ${response.status} ${response.statusText}`);
-            console.log('📡 Response headers:', response.headers);
-            
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
             return response.json();
           })
           .then(data => {
-            console.log('📦 Raw response data:', data);
-            console.log('📦 Data type:', typeof data);
-            console.log('📦 Has phlebotomists property:', data.hasOwnProperty('phlebotomists'));
-            console.log('📦 phlebotomists is array:', Array.isArray(data.phlebotomists));
+            console.log('📦 Nurses response:', data);
             
             // Clear current options
-            phlebotomistSelect.innerHTML = '<option value="">Select Nurse</option>';
+            phlebotomistSelect.innerHTML = '<option value="">-- Select Nurse --</option>';
             
-            // Check if data has phlebotomists array
-            if (data && data.phlebotomists && Array.isArray(data.phlebotomists)) {
-              console.log(`📊 phlebotomists length: ${data.phlebotomists.length}`);
+            if (data.phlebotomists && data.phlebotomists.length > 0) {
+              // Add each phlebotomist as an option
+              data.phlebotomists.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                
+                let displayText = p.name || 'Unknown Name';
+                if (p.specialization && p.specialization !== 'General Phlebotomist') {
+                  displayText += ` - ${p.specialization}`;
+                }
+                
+                option.textContent = displayText;
+                phlebotomistSelect.appendChild(option);
+              });
               
-              if (data.phlebotomists.length > 0) {
-                console.log(`✅ Found ${data.phlebotomists.length} nurses`);
-                
-                // Add each phlebotomist as an option
-                data.phlebotomists.forEach((p, index) => {
-                  console.log(`  Nurse ${index + 1}:`, p);
-                  console.log(`    - id: ${p.id}, name: ${p.name}, license: ${p.license}`);
-                  
-                  const option = document.createElement('option');
-                  option.value = p.id;
-                  
-                  // Format the display text with proper fallbacks
-                  let displayText = p.name || 'Unknown Name';
-                  
-                  // Add specialization if available and not default
-                  if (p.specialization && 
-                      p.specialization !== 'General Phlebotomist' && 
-                      p.specialization !== 'None' && 
-                      p.specialization !== '') {
-                    displayText += ` - ${p.specialization}`;
-                  }
-                  
-                  // Add license if available
-                  if (p.license && p.license !== '') {
-                    displayText += ` (${p.license})`;
-                  }
-                  
-                  option.textContent = displayText;
-                  console.log(`    - option text: "${displayText}"`);
-                  
-                  // Store additional data as attributes
-                  if (p.phone) option.setAttribute('data-phone', p.phone);
-                  if (p.email) option.setAttribute('data-email', p.email);
-                  
-                  phlebotomistSelect.appendChild(option);
-                });
-                
-                phlebotomistSelect.disabled = false;
-                console.log(`✅ Successfully loaded ${data.phlebotomists.length} nurses`);
-                console.log(`📋 phlebotomistSelect now has ${phlebotomistSelect.options.length} options`);
-              } else {
-                // No phlebotomists found
-                console.log('⚠️ No nurses found for this center');
-                phlebotomistSelect.innerHTML = '<option value="">😕 No nurses available at this center</option>';
-                phlebotomistSelect.disabled = true;
-              }
+              phlebotomistSelect.disabled = false;
+              document.getElementById('phlebotomistHelp').innerHTML = '<i class="fas fa-check-circle text-success"></i> ' + 
+                data.phlebotomists.length + ' nurses available';
+              console.log(`✅ Added ${data.phlebotomists.length} nurses`);
             } else {
-              console.error('❌ Invalid data format received:', data);
-              phlebotomistSelect.innerHTML = '<option value="">❌ Invalid data format</option>';
+              // No phlebotomists found
+              phlebotomistSelect.innerHTML = '<option value="">😕 No nurses available at this center</option>';
               phlebotomistSelect.disabled = true;
+              document.getElementById('phlebotomistHelp').innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i> No nurses at this center';
+              console.log('⚠️ No nurses found for this center');
             }
             
-            // Update summary after loading nurses
             updateSummary();
           })
           .catch(error => {
-            console.error('❌ Error fetching phlebotomists:', error);
-            console.error('❌ Error stack:', error.stack);
+            console.error('❌ Error fetching nurses:', error);
             phlebotomistSelect.innerHTML = '<option value="">❌ Error loading nurses</option>';
             phlebotomistSelect.disabled = true;
+            document.getElementById('phlebotomistHelp').innerHTML = '<i class="fas fa-exclamation-circle text-danger"></i> Error loading nurses';
             updateSummary();
           });
       } else {
         // No center selected
-        console.log('⚠️ No center selected');
         phlebotomistSelect.innerHTML = '<option value="">👆 Select a center first</option>';
         phlebotomistSelect.disabled = true;
+        appointmentTime.innerHTML = '<option value="">👆 Select nurse and date first</option>';
+        appointmentTime.disabled = true;
+        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a center first</span>';
+        document.getElementById('phlebotomistHelp').innerHTML = 'Select a center first';
         updateSummary();
       }
     }
     
     // ==========================================
-    // FUNCTION TO UPDATE SUMMARY - FIXED VERSION
+    // FUNCTION TO UPDATE SUMMARY
     // ==========================================
     function updateSummary() {
-      // Check if all elements exist
       if (!donationCenter || !phlebotomistSelect || !appointmentDate || !appointmentTime || !unitSelect) {
-        console.warn('⚠️ Cannot update summary - missing elements');
         return;
       }
       
-      // SAFELY get center text
-      let center = '';
-      if (donationCenter.options && donationCenter.options.length > 0 && donationCenter.selectedIndex >= 0) {
-        center = donationCenter.options[donationCenter.selectedIndex]?.text || '';
-      }
-      
-      // SAFELY get phlebotomist text
-      let phlebotomist = '';
-      if (phlebotomistSelect.options && phlebotomistSelect.options.length > 0 && phlebotomistSelect.selectedIndex >= 0) {
-        phlebotomist = phlebotomistSelect.options[phlebotomistSelect.selectedIndex]?.text || '';
-      }
-      
-      // Get date value
+      // Get selected values safely
+      const center = donationCenter.options[donationCenter.selectedIndex]?.text || '';
+      const phlebotomist = phlebotomistSelect.options[phlebotomistSelect.selectedIndex]?.text || '';
       const date = appointmentDate.value || '';
-      
-      // SAFELY get time text
-      let time = '';
-      if (appointmentTime && appointmentTime.options && appointmentTime.options.length > 0 && appointmentTime.selectedIndex >= 0) {
-        time = appointmentTime.options[appointmentTime.selectedIndex]?.text || '';
-      } else {
-        console.log('⏰ Appointment time options not ready yet or empty');
-      }
-      
-      // SAFELY get unit text
-      let unit = '';
-      if (unitSelect && unitSelect.options && unitSelect.options.length > 0 && unitSelect.selectedIndex >= 0) {
-        unit = unitSelect.options[unitSelect.selectedIndex]?.text || '';
-      } else {
-        console.log('💉 Unit options not ready yet or empty');
-      }
+      const time = appointmentTime.options[appointmentTime.selectedIndex]?.text || '';
+      const unit = unitSelect.options[unitSelect.selectedIndex]?.text || '';
       
       console.log('📝 Summary values:', { center, phlebotomist, date, time, unit });
       
       // Check if all required fields are selected
-      if (center && phlebotomistSelect.value && date && time && unit && phlebotomistSelect.value !== '') {
+      if (center && phlebotomistSelect.value && date && appointmentTime.value && unit && 
+          phlebotomistSelect.value !== '' && appointmentTime.value !== '') {
+        
         // Format date nicely
         let formattedDate = date;
         try {
-          formattedDate = new Date(date).toLocaleDateString('en-US', {
+          const dateObj = new Date(date);
+          formattedDate = dateObj.toLocaleDateString('en-US', {
             year: 'numeric', 
             month: 'long', 
             day: 'numeric'
@@ -709,6 +787,9 @@
           console.warn('Date formatting error:', e);
         }
         
+        const bloodGroupText = {{ bloodgroup_verified|yesno:"true,false" }} ? 
+          '{{ verified_bloodgroup }} ✓' : 'To be verified at center';
+        
         let summaryHtml = `
           <div class="row">
             <div class="col-sm-6"><strong>🏥 Center:</strong> ${center}</div>
@@ -716,21 +797,15 @@
             <div class="col-sm-6 mt-2"><strong>📅 Date:</strong> ${formattedDate}</div>
             <div class="col-sm-6 mt-2"><strong>⏰ Time:</strong> ${time}</div>
             <div class="col-sm-6 mt-2"><strong>💉 Volume:</strong> ${unit}</div>
-            <div class="col-sm-6 mt-2"><strong>🩸 Blood Group:</strong> ${bloodgroupVerified ? verifiedBloodgroup + ' ✓' : 'To be verified at center'}</div>
+            <div class="col-sm-6 mt-2"><strong>🩸 Blood Group:</strong> ${bloodGroupText}</div>
           </div>
         `;
         
-        if (summaryContent) {
-          summaryContent.innerHTML = summaryHtml;
-        }
-        if (summarySection) {
-          summarySection.style.display = 'block';
-        }
+        summaryContent.innerHTML = summaryHtml;
+        summarySection.style.display = 'block';
         console.log('✅ Summary updated and displayed');
       } else {
-        if (summarySection) {
-          summarySection.style.display = 'none';
-        }
+        summarySection.style.display = 'none';
         console.log('📝 Summary hidden - missing required fields');
       }
     }
@@ -739,26 +814,38 @@
     // ADD EVENT LISTENERS
     // ==========================================
     if (donationCenter) {
-      donationCenter.addEventListener('change', function() {
-        console.log('🏥 Donation center changed to:', this.value);
-        updateNurses(); // This will trigger AJAX call
-      });
-      console.log('✅ Event listener added to donationCenter');
-    } else {
-      console.error('❌ Cannot add event listener - donationCenter not found');
+      donationCenter.addEventListener('change', updatePhlebotomists);
     }
     
     if (phlebotomistSelect) {
       phlebotomistSelect.addEventListener('change', function() {
         console.log('👨‍⚕️ Nurse selected:', this.value);
+        // Clear time selection when phlebotomist changes
+        appointmentTime.value = '';
+        updateAvailableTimes(); // Check times when phlebotomist changes
         updateSummary();
       });
-      console.log('✅ Event listener added to phlebotomistSelect');
     }
     
     if (appointmentDate) {
       appointmentDate.addEventListener('change', function() {
         console.log('📅 Date selected:', this.value);
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        this.setAttribute('min', today);
+        
+        // Clear time selection when date changes
+        appointmentTime.value = '';
+        
+        // Check times when date changes (if phlebotomist is already selected)
+        if (phlebotomistSelect && phlebotomistSelect.value) {
+          updateAvailableTimes();
+        } else {
+          // If no phlebotomist selected, just show message
+          appointmentTime.innerHTML = '<option value="">👆 Select a nurse first</option>';
+          appointmentTime.disabled = true;
+          availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a nurse to see available times</span>';
+        }
         updateSummary();
       });
       
@@ -766,27 +853,28 @@
       const today = new Date().toISOString().split('T')[0];
       appointmentDate.setAttribute('min', today);
       
-      // Optional: Set max date to 3 months from now
+      // Set max date to 3 months from now
       const maxDate = new Date();
       maxDate.setMonth(maxDate.getMonth() + 3);
       appointmentDate.setAttribute('max', maxDate.toISOString().split('T')[0]);
-      console.log('✅ Event listener added to appointmentDate');
     }
     
     if (appointmentTime) {
       appointmentTime.addEventListener('change', function() {
-        console.log('⏰ Time selected:', this.value);
+        // Add selected class to the chosen option
+        const options = appointmentTime.options;
+        for (let i = 0; i < options.length; i++) {
+          options[i].classList.remove('selected-option');
+        }
+        if (appointmentTime.selectedIndex > 0) {
+          options[appointmentTime.selectedIndex].classList.add('selected-option');
+        }
         updateSummary();
       });
-      console.log('✅ Event listener added to appointmentTime');
     }
     
     if (unitSelect) {
-      unitSelect.addEventListener('change', function() {
-        console.log('💉 Unit selected:', this.value);
-        updateSummary();
-      });
-      console.log('✅ Event listener added to unitSelect');
+      unitSelect.addEventListener('change', updateSummary);
     }
     
     // ==========================================
@@ -797,7 +885,7 @@
       form.addEventListener('submit', function(e) {
         console.log('📝 Form submission triggered');
         
-        // Check if all required fields are filled
+        // Check all required fields
         if (!donationCenter || !donationCenter.value) {
           e.preventDefault();
           alert('❌ Please select a donation center');
@@ -805,10 +893,10 @@
           return false;
         }
         
-        if (!phlebotomistSelect || !phlebotomistSelect.value || phlebotomistSelect.disabled) {
+        if (!phlebotomistSelect || !phlebotomistSelect.value) {
           e.preventDefault();
           alert('❌ Please select a nurse');
-          if (donationCenter) donationCenter.focus();
+          if (phlebotomistSelect) phlebotomistSelect.focus();
           return false;
         }
         
@@ -826,7 +914,7 @@
           return false;
         }
         
-        // Add date validation (can't be in the past)
+        // Validate date is not in the past
         const selectedDate = new Date(appointmentDate.value);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -838,41 +926,30 @@
           return false;
         }
         
+        // Validate selected time is actually available (double-check)
+        const selectedTimeValue = appointmentTime.value;
+        const isTimeAvailable = timeSlotOptions.some(slot => slot.value === selectedTimeValue);
+        
+        if (!isTimeAvailable && timeSlotOptions.length > 0) {
+          e.preventDefault();
+          alert('❌ The selected time is no longer available. Please select another time.');
+          updateAvailableTimes(); // Refresh available times
+          return false;
+        }
+        
         // Confirm submission
-        return confirm('✅ Confirm your donation appointment?');
+        return confirm('✅ Confirm your donation appointment?\n\nPlease ensure all details are correct before confirming.');
       });
-      console.log('✅ Event listener added to form');
     }
     
-    // Initialize: Disable phlebotomist select until a center is chosen
-    if (phlebotomistSelect) {
-      phlebotomistSelect.innerHTML = '<option value="">👆 Select a center first</option>';
-      phlebotomistSelect.disabled = true;
-      console.log('✅ phlebotomistSelect initialized');
-    }
+    // Initialize: Disable selects until choices are made
+    phlebotomistSelect.innerHTML = '<option value="">👆 Select a center first</option>';
+    phlebotomistSelect.disabled = true;
+    appointmentTime.innerHTML = '<option value="">👆 Select nurse and date first</option>';
+    appointmentTime.disabled = true;
+    availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a center to begin</span>';
     
     {% endif %}
-    
-    // ==========================================
-    // LOGGING FOR DEBUGGING
-    // ==========================================
-    {% if donation_form.errors %}
-    console.log('⚠️ Form errors:', {{ donation_form.errors.as_json|safe }});
-    {% endif %}
-    
-    console.log('📊 Donor unsafe: {{ is_unsafe|default:"false" }}');
-    console.log('📊 Has unsafe donation: {{ has_unsafe_donation|default:"false" }}');
-    console.log('📊 Has safe donation: {{ has_safe_donation|default:"false" }}');
-    console.log('📊 First time donor: {{ is_first_time_donor|default:"false" }}');
-    
-    // Log all form elements for debugging
-    console.log('📋 Final form elements check:', {
-      donationCenter: donationCenter ? donationCenter.id : 'not found',
-      phlebotomistSelect: phlebotomistSelect ? phlebotomistSelect.id : 'not found',
-      appointmentDate: appointmentDate ? appointmentDate.id : 'not found',
-      appointmentTime: appointmentTime ? appointmentTime.id : 'not found',
-      unitSelect: unitSelect ? unitSelect.id : 'not found'
-    });
   });
-  </script>
-  {% endblock %}
+</script>
+{% endblock %}

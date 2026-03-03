@@ -32,7 +32,7 @@
 
                     <!-- Right: Mark as Read -->
                     {% if not note.read %}
-                        <a href="{% url 'mark-notification-read' note.id %}" 
+                        <a href="{% url 'donor:mark-notification-read' note.id %}" 
                            class="btn btn-sm btn-outline-primary">
                             Mark as read
                         </a>

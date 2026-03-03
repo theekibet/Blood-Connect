@@ -1,8 +1,8 @@
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 import json
 import base64
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import Group, User
@@ -18,15 +18,16 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_GET
 from phlebotomist.models import Phlebotomist, Appointment
 from .models import Donor, DonorEligibility, BloodDonate
-from blood.models import BloodDriveEvent
+from blood.models import BloodDriveEvent, DonationCenter
 from .forms import (
-    DonorUserForm, DonorForm, DonorProfileForm, DonorEligibilityForm,
+    DonorSignupForm, UsernameSelectionForm, DonorProfileForm, DonorEligibilityForm,
     BloodDonateForm, DonorLoginForm
 )
+from .decorators import username_required, onboarding_complete_required
 from django.core.exceptions import PermissionDenied
 from utils.models import Notification
 from phlebotomist.forms import AppointmentForm
-from datetime import date
+from datetime import date, time,time as datetime_time
 import logging
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -36,13 +37,56 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.html import strip_tags
 from django.utils.encoding import force_bytes
 from django.template.loader import render_to_string
-from django.core.mail import send_mail
 from django.conf import settings
-from blood.models import DonationCenter
-from datetime import time
 import re
 import random
 from blood.utils.notifications import create_notification
+
+logger = logging.getLogger(__name__)
+
+def get_available_time_slots(phlebotomist_id, appointment_date, duration_minutes=30):
+    """
+    Generate available time slots for a phlebotomist on a given date.
+    
+    Args:
+        phlebotomist_id: ID of the phlebotomist
+        appointment_date: Date object for the appointment
+        duration_minutes: Slot duration (default 30 minutes)
+    
+    Returns:
+        List of available time slots in format "HH:MM"
+    """
+    # Define working hours (8 AM to 5 PM)
+    WORK_START = 8  # 8:00 AM
+    WORK_END = 17   # 5:00 PM
+    
+    # Generate all possible slots
+    all_slots = []
+    current_time = datetime.combine(appointment_date, datetime_time(WORK_START, 0))
+    end_time = datetime.combine(appointment_date, datetime_time(WORK_END, 0))
+    
+    while current_time < end_time:
+        all_slots.append(current_time.strftime('%H:%M'))
+        current_time += timedelta(minutes=duration_minutes)
+    
+    # Get booked slots
+    booked_slots = Appointment.objects.filter(
+        phlebotomist_id=phlebotomist_id,
+        date__date=appointment_date,
+    ).exclude(
+        status__in=['cancelled', 'rejected']
+    ).values_list('date', flat=True)
+    
+    # Convert booked datetimes to time strings
+    booked_times = [dt.strftime('%H:%M') for dt in booked_slots]
+    
+    # Filter available slots
+    available_slots = [slot for slot in all_slots if slot not in booked_times]
+    
+    logger.info(f"🔍 Phlebotomist {phlebotomist_id} on {appointment_date}:")
+    logger.info(f"   Total slots: {len(all_slots)}, Booked: {len(booked_times)}, Available: {len(available_slots)}")
+    
+    return available_slots
 def generate_username_suggestions(base_username, count=5):
     """
     Generate unique username suggestions based on the provided username.
@@ -87,211 +131,359 @@ def generate_username_suggestions(base_username, count=5):
 
     return suggestions[:count]
 
+
+def check_profile_completion(donor):
+    """
+    Check if donor has completed required profile fields for donation.
+    Blood group is now optional - not required for profile completion.
+    Returns (is_complete, missing_fields)
+    """
+    missing_fields = []
+    
+    if not donor.mobile:
+        missing_fields.append("Mobile Number")
+    if not donor.national_id:
+        missing_fields.append("National ID")
+    if not donor.county:
+        missing_fields.append("County")
+    if not donor.dob:
+        missing_fields.append("Date of Birth")
+    
+    is_complete = len(missing_fields) == 0
+    return is_complete, missing_fields
+
+
+def get_time_based_greeting(name):
+    """Return greeting based on time of day"""
+    from datetime import datetime
+    current_hour = datetime.now().hour
+    
+    if current_hour < 12:
+        return f"Good morning, {name}!"
+    elif current_hour < 17:
+        return f"Good afternoon, {name}!"
+    elif current_hour < 21:
+        return f"Good evening, {name}!"
+    else:
+        return f"Good night, {name}!"
+    
+    
+def redirect_based_on_onboarding_status(request):
+    """
+    Helper function to redirect user based on their onboarding completion status.
+    Returns appropriate redirect based on what step they're on.
+    """
+    user = request.user
+    
+    # Check if has donor profile
+    if not hasattr(user, 'donor'):
+        logout(request)
+        messages.error(request, "Donor profile not found. Please sign up.")
+        return redirect('donor:donorsignup')
+    
+    donor = user.donor
+    
+    # STEP 1: Check if username needs to be set
+    if user.username == user.email:
+        request.session['needs_username'] = True
+        request.session['onboarding_step'] = 'username'
+        request.session['onboarding_progress'] = 0
+        messages.info(request, f"Welcome back! Please choose your username to continue.")
+        return redirect('donor:choose-username')
+    
+    # STEP 2: Check if profile is complete
+    is_complete, missing_fields = check_profile_completion(donor)
+    
+    if not is_complete:
+        request.session['onboarding_step'] = 'profile'
+        request.session['onboarding_progress'] = 50
+        messages.warning(
+            request,
+            f"Please complete your profile. Missing: {', '.join(missing_fields)}"
+        )
+        return redirect('donor:donor-edit-profile')
+    
+    # STEP 3: Onboarding complete - go to dashboard
+    # Clear any onboarding session variables
+    for key in ['needs_username', 'onboarding_step', 'onboarding_progress']:
+        if key in request.session:
+            del request.session[key]
+    
+    messages.success(request, f"Welcome back, {user.first_name or user.username}!")
+    return redirect('donor:donor-dashboard')
+
+def check_dashboard_access(user):
+    """
+    Helper function to check dashboard access and provide appropriate context.
+    Returns a dict with access info and suggestions.
+    """
+    try:
+        donor = user.donor
+        
+        # Check eligibility
+        try:
+            eligibility = DonorEligibility.objects.get(donor=donor)
+            is_eligible = eligibility.approved
+        except DonorEligibility.DoesNotExist:
+            is_eligible = None
+        
+        # Check if unsafe donor
+        is_unsafe = BloodDonate.objects.filter(donor=donor, status='tested_unsafe').exists()
+        
+        context = {
+            'show_eligibility_modal': is_eligible is None,
+            'show_support_options': is_unsafe or (is_eligible is False),
+            'volunteer_suggestions': [],
+            'motivational_message': ''
+        }
+        
+        # Add volunteer suggestions if can't donate
+        if is_unsafe or (is_eligible is False):
+            context['volunteer_suggestions'] = [
+                {
+                    'icon': 'fa-hands-helping',
+                    'title': 'Volunteer at Blood Drives',
+                    'description': 'Help organize and run blood donation events',
+                    'url': 'donor:volunteer'
+                },
+                {
+                    'icon': 'fa-share-alt',
+                    'title': 'Spread Awareness',
+                    'description': 'Share the importance of blood donation on social media',
+                    'url': 'donor:share-impact'
+                },
+                {
+                    'icon': 'fa-users',
+                    'title': 'Recruit Donors',
+                    'description': 'Encourage friends and family to donate',
+                    'url': 'donor:impact'
+                }
+            ]
+            
+            if is_unsafe:
+                context['motivational_message'] = "Thank you for your past contributions. There are still many ways you can help save lives!"
+            else:
+                context['motivational_message'] = "Everyone has a role in saving lives. Let's find yours!"
+        
+        return context
+        
+    except Exception as e:
+        logger.error(f"Error in check_dashboard_access: {e}")
+        return {
+            'show_eligibility_modal': False,
+            'show_support_options': False,
+            'volunteer_suggestions': [],
+            'motivational_message': ''
+        }
+
+
+
+@login_required(login_url='donor:donorlogin')
+def choose_username_view(request):
+    """
+    First-time donors choose their permanent username.
+    Only accessible if username is still set to email.
+    """
+    user = request.user
+    
+    # Check if user actually needs to set username
+    if user.username != user.email:
+        # Username already set, redirect based on profile completion
+        return redirect_based_on_onboarding_status(request)
+    
+    # Ensure has donor profile
+    if not hasattr(user, 'donor'):
+        messages.error(request, "Donor profile not found.")
+        logout(request)
+        return redirect('donor:donorsignup')
+    
+    # Get user's first name
+    first_name = user.first_name or "there"
+    
+    logger.debug(f"🔍 Username view - User: {user.username}")
+    logger.debug(f"   First name from user: '{user.first_name}'")
+    logger.debug(f"   First name variable: '{first_name}'")
+    
+    # Generate username suggestions
+    base_name = f"{user.first_name}{user.last_name}".lower()
+    suggestions = generate_username_suggestions(base_name, count=8)
+    
+    if request.method == 'POST':
+        form = UsernameSelectionForm(request.POST, user=user)
+        
+        if form.is_valid():
+            new_username = form.cleaned_data['username']
+            
+            # Update username
+            user.username = new_username
+            user.save()
+            
+            logger.info(f"✅ Username updated to: {new_username}")
+            
+            # Clear username flag, update session
+            if 'needs_username' in request.session:
+                del request.session['needs_username']
+            request.session['onboarding_step'] = 'profile'
+            request.session['onboarding_progress'] = 50
+            
+            messages.success(
+                request,
+                f"✨ Great choice, {first_name}! Now let's complete your profile."
+            )
+            
+            return redirect('donor:donor-edit-profile')
+        else:
+            # If username taken, generate new suggestions
+            if 'username' in form.errors:
+                taken_username = form.data.get('username', '')
+                if taken_username:
+                    suggestions = generate_username_suggestions(taken_username, count=8)
+    else:
+        form = UsernameSelectionForm(user=user)
+    
+    context = {
+        'form': form,
+        'suggestions': suggestions,
+        'email': user.email,
+        'first_name': first_name,
+        'time_greeting': get_time_based_greeting(first_name),
+        'user': user,
+    }
+    return render(request, 'donor/choose_username.html', context)
+
+# -------------------------------
+# After Signup - Redirect to Edit Profile
+# -------------------------------
 def donor_signup_view(request):
     """
-    Handles donor registration.
-    Assigns new users to the DONOR group.
+    Donor signup - collects minimal data (name, email, password).
+    Username is set to email temporarily until they choose one.
+    User is auto-logged in after signup and redirected to username selection.
     """
-    username_suggestions = None
+    if request.user.is_authenticated:
+        return redirect_based_on_onboarding_status(request)
     
     if request.method == 'POST':
-        user_form = DonorUserForm(request.POST)
-        donor_form = DonorForm(request.POST, request.FILES)
+        form = DonorSignupForm(request.POST)
         
-        # Check for username conflict specifically to generate suggestions
-        attempted_username = request.POST.get('username', '').strip()
-        if attempted_username and User.objects.filter(username__iexact=attempted_username).exists():
-            username_suggestions = generate_username_suggestions(attempted_username, count=5)
-        
-        # Validate both forms
-        if user_form.is_valid() and donor_form.is_valid():
+        if form.is_valid():
             try:
-                # Use transaction to ensure both user and donor are created together
                 with transaction.atomic():
-                    # Save user as active immediately
-                    user = user_form.save(commit=False)
-                    user.is_active = True
-                    user.save()
+                    # Extract form data
+                    email = form.cleaned_data.get('email').lower()
+                    password = form.cleaned_data.get('password1')
+                    first_name = form.cleaned_data.get('first_name').strip().title()
+                    last_name = form.cleaned_data.get('last_name').strip().title()
                     
-                    # Save donor profile
-                    donor = donor_form.save(commit=False)
-                    donor.user = user
-                    donor.save()
+                    # Create user with email as temporary username
+                    user = User.objects.create_user(
+                        username=email,  # Temporary - will be changed during onboarding
+                        email=email,
+                        password=password,
+                        first_name=first_name,
+                        last_name=last_name,
+                        is_active=True
+                    )
                     
-                    # Add user to DONOR group
+                    logger.info(f"✅ User created: {user.username}")
+                    logger.info(f"   First name: {user.first_name}")
+                    logger.info(f"   Last name: {user.last_name}")
+                    
+                    # Create donor profile with minimal data
+                    donor = Donor.objects.create(
+                        user=user,
+                        # All other fields will be filled during onboarding
+                    )
+                    
+                    logger.info(f"✅ Donor profile created for {user.username}")
+                    
+                    # Add to donor group
                     donor_group, created = Group.objects.get_or_create(name='DONOR')
-                    donor_group.user_set.add(user)
+                    user.groups.add(donor_group)
                 
-                # Log the registration
-                logger.info(f"New donor registration: {user.username} - Account active")
+                # CRITICAL FIX: Move login and session management outside transaction
+                # Clear any existing session data before login
+                request.session.flush()
                 
-                # Success message
+                # Auto-login the user
+                login(request, user, backend='donor.backends.EmailOrUsernameBackend')
+                
+                # Set onboarding flags AFTER login completes
+                request.session['needs_username'] = True
+                request.session['onboarding_step'] = 'username'
+                request.session['onboarding_progress'] = 0
+                request.session.modified = True  # Mark session as modified
+                
                 messages.success(
-                    request, 
-                    f"🎉 Registration successful, {user.first_name}! "
-                    f"Your account has been created. You can now login."
+                    request,
+                    f"🎉 Welcome, {first_name}! Let's set up your account."
                 )
                 
-                # Redirect to donor login
-                return redirect('donor:donorlogin')
-                
+                # Redirect to username selection
+                return redirect('donor:choose-username')
+                    
             except Exception as e:
-                # Log the error for debugging
-                logger.error(f"Donor signup error: {str(e)}", exc_info=True)
-                
-                # Clean up: delete the user if donor creation fails
-                if 'user' in locals():
-                    user.delete()
-                
-                messages.error(
-                    request, 
-                    f"⚠️ An unexpected error occurred during registration. "
-                    f"Please try again or contact support if the issue persists."
-                )
+                logger.error(f"❌ Signup error: {str(e)}", exc_info=True)
+                messages.error(request, "An error occurred during signup. Please try again.")
         else:
-            # Display form validation errors
-            if user_form.errors or donor_form.errors:
-                error_count = len(user_form.errors) + len(donor_form.errors)
-                messages.error(
-                    request, 
-                    f"⚠️ Please correct the {error_count} error(s) highlighted below in red."
-                )
+            # Form has errors
+            logger.error(f"❌ Form errors: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
-        user_form = DonorUserForm()
-        donor_form = DonorForm()
+        form = DonorSignupForm()
     
-    return render(request, 'donor/donorsignup.html', {
-        'user_form': user_form,
-        'donor_form': donor_form,
-        'username_suggestions': username_suggestions,
-    })
-# -------------------------------
-# Login
-# -------------------------------
+    context = {
+        'form': form,
+        'page_title': 'Donor Signup',
+    }
+    return render(request, 'donor/donorsignup.html', context)
+
 def donorlogin_view(request):
     """
-    Handles donor login WITHOUT email verification requirement.
-    Restricts login to users in DONOR group only.
-    Redirects to eligibility form if not completed.
-    Supports redirecting to 'next' url after successful login.
+    Login view - supports login with BOTH username and email.
+    Uses custom authentication backend (EmailOrUsernameBackend).
+    Redirects based on onboarding status.
     """
-    # If user is already authenticated and is a donor, redirect to dashboard
-    if request.user.is_authenticated and request.user.groups.filter(name='DONOR').exists():
-        return redirect('donor:donor-dashboard')
+    if request.user.is_authenticated:
+        return redirect_based_on_onboarding_status(request)
     
-    next_url = request.GET.get('next') or request.POST.get('next') or None
-
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
+        form = DonorLoginForm(request.POST)
+        
         if form.is_valid():
-            username = form.cleaned_data['username']
+            username_or_email = form.cleaned_data['username']
             password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-
+            
+            # Authenticate using custom backend (works with username OR email)
+            user = authenticate(request, username=username_or_email, password=password)
+            
             if user is not None:
-                # CHECK 1: REMOVED EMAIL VERIFICATION CHECK
-                # Users can now login even if email is not verified
-                
-                # CHECK 2: Donor Group Authorization
-                if user.groups.filter(name='DONOR').exists():
-                    # CHECK 3: Donor Profile Exists
-                    if not hasattr(user, 'donor'):
-                        messages.error(
-                            request, 
-                            '❌ Donor profile not found. '
-                            'Please contact support to complete your registration.'
-                        )
-                        return render(request, 'donor/donorlogin.html', {
-                            'form': form,
-                            'next': next_url,
-                        })
-                    
-                    # All checks passed - Login successful
+                # Check if user has donor profile
+                if hasattr(user, 'donor'):
                     login(request, user)
                     
-                    # Check if email is verified
-                    if not user.is_active:
-                        messages.warning(
-                            request,
-                            f'⚠️ Please verify your email to access all features. '
-                            f'Check your inbox for the verification email sent to {user.email}. '
-                            f'<a href="{reverse("resend_verification")}" class="alert-link">'
-                            f'Click here to resend verification email</a>'
-                        )
+                    logger.info(f"✅ User logged in: {user.username}")
+                    logger.info(f"   First name: '{user.first_name}'")
+                    logger.info(f"   Last name: '{user.last_name}'")
                     
-                    # Check eligibility completion
-                    try:
-                        donor = Donor.objects.get(user=user)
-                        eligibility_completed = DonorEligibility.objects.filter(donor=donor).exists()
-                    except Donor.DoesNotExist:
-                        eligibility_completed = False
-                    
-                    # Log successful login
-                    logger.info(f"Donor login successful: {user.username} ({user.email}) - Active: {user.is_active}")
-                    
-                    # Redirect in priority order
-                    if next_url:
-                        return redirect(next_url)
-                    if not eligibility_completed:
-                        messages.info(
-                            request, 
-                            "📋 Welcome! Please complete your eligibility form to start donating blood."
-                        )
-                        return redirect('donor:donor-eligibility')
-                    
-                    messages.success(
-                        request, 
-                        f"👋 Welcome back, {user.first_name or user.username}! "
-                        f"Ready to save lives today?"
-                    )
-                    return redirect('donor:donor-dashboard')
-                    
+                    # Redirect based on onboarding status
+                    return redirect_based_on_onboarding_status(request)
                 else:
-                    # User exists but not in DONOR group
-                    messages.error(
-                        request, 
-                        '❌ You are not authorized to log in as a donor. '
-                        'Please use the appropriate login page for your account type.'
-                    )
-                    
-                    # Suggest correct login based on user's groups
-                    if user.groups.filter(name='PATIENT').exists():
-                        messages.info(
-                            request,
-                            f'Click here to login as a patient</a>'
-                        )
-                    elif user.groups.filter(name='NURSE').exists():
-                        messages.info(
-                            request,
-                            f'It looks like you have a phlebotomist account. '
-                            f'<a href="{reverse("central_login")}?user_type=phlebotomist" class="alert-link">'
-                            f'Click here to login as a phlebotomist</a>'
-                        )
-                    
+                    messages.error(request, "This account is not registered as a donor.")
             else:
-                # Authentication failed
-                messages.error(request, "❌ Invalid username or password.")
-                
-                # Provide helpful suggestions
-                messages.info(
-                    request,
-                    'Forgot your password? '
-                    f'<a href="{reverse("password_reset")}" class="alert-link">'
-                    f'Click here to reset it</a>'
-                )
+                messages.error(request, "Invalid username/email or password.")
         else:
-            # Form validation errors
-            messages.error(request, "⚠️ There was an error in your form. Please correct it.")
+            messages.error(request, "Please correct the errors below.")
     else:
-        form = AuthenticationForm()
-
-    return render(request, 'donor/donorlogin.html', {
+        form = DonorLoginForm()
+    
+    context = {
         'form': form,
-        'next': next_url,
-        'show_central_login_link': True,  # Add this to template context
-    })
-
-logger = logging.getLogger(__name__)
+        'page_title': 'Donor Login',
+    }
+    return render(request, 'donor/donorlogin.html', context)
 
 def get_donor_engagement_path(user):
     """
@@ -337,7 +529,6 @@ def get_donor_engagement_path(user):
             'redirect': None
         }
 
-
 def needs_eligibility_check(user):
     """
     UPDATED: Now returns False for new donors - they can access dashboard with awareness modal.
@@ -354,7 +545,6 @@ def needs_eligibility_check(user):
     # NEW LOGIC: Don't force redirect, just track status for UI
     return False  # Never force redirect - let dashboard handle UX
 
-
 def should_show_eligibility_modal(user):
     """
     Determines if the eligibility awareness modal should be shown.
@@ -368,7 +558,6 @@ def should_show_eligibility_modal(user):
         return not eligibility_exists
     except Donor.DoesNotExist:
         return False
-
 
 def get_donor_eligibility_status(user):
     """
@@ -415,7 +604,6 @@ def get_donor_eligibility_status(user):
     
     return status
 
-# Remove the decorator - this function is called internally
 def get_volunteer_suggestions(user):
     """
     Returns volunteer opportunities based on donor status.
@@ -455,7 +643,7 @@ def get_volunteer_suggestions(user):
     try:
         donor = Donor.objects.get(user=user)
         
-        # Check if eligibility exists (use try/except or hasattr)
+        # Check if eligibility exists
         try:
             eligibility = DonorEligibility.objects.get(donor=donor)
             if eligibility.approved:
@@ -476,58 +664,25 @@ def get_volunteer_suggestions(user):
     
     return suggestions
 
-def check_dashboard_access(user):
-    """
-    Main function to determine dashboard access and display options.
-    Used in donor_dashboard_view to set up the context.
-    """
-    context = {
-        'can_access_full_dashboard': True,  # Always true now
-        'show_eligibility_modal': False,
-        'show_support_options': False,
-        'eligibility_status': None,
-        'volunteer_suggestions': [],
-        'motivational_message': '',
-    }
-    
-    if not user.is_authenticated:
-        return context
-    
-    # Get eligibility status
-    status = get_donor_eligibility_status(user)
-    context['eligibility_status'] = status
-    
-    # Check if we should show eligibility modal (new donors)
-    context['show_eligibility_modal'] = should_show_eligibility_modal(user)
-    
-    # Show support options for non-eligible or new donors
-    if status['show_support_options'] or status['needs_eligibility_form']:
-        context['show_support_options'] = True
-        context['volunteer_suggestions'] = get_volunteer_suggestions(user)
-    
-    # Set motivational message based on status
-    if status['is_eligible']:
-        if status['can_donate']:
-            context['motivational_message'] = "You're eligible to donate! Schedule your appointment today and save lives."
-        else:
-            context['motivational_message'] = "You're eligible! Your next donation date is coming up soon."
-    elif status['has_eligibility']:
-        context['motivational_message'] = "Everyone has a role in saving lives. Explore volunteer opportunities!"
-    else:
-        context['motivational_message'] = "Welcome! Whether you donate or support, you can make a difference."
-    
-    return context
 
 # -------------------------------
 # Eligibility
 # -------------------------------
 @login_required(login_url='donor:donorlogin')
+@username_required
 def donor_eligibility_view(request):
     """
     Enhanced donor eligibility view with REAL-WORLD blood donation criteria.
-    Based on Kenyan and international blood donation standards.
     """
     donor = get_object_or_404(Donor, user=request.user)
+
+    # CRITICAL: Check if donor has DOB
+    if not donor.dob:
+        messages.error(
+            request, 
+            "Please complete your profile with your date of birth before checking eligibility."
+        )
+        return redirect('donor:donor-profile')
 
     # Check if eligibility already exists
     try:
@@ -537,237 +692,115 @@ def donor_eligibility_view(request):
     except DonorEligibility.DoesNotExist:
         eligibility = None
 
-    age = DonorEligibilityForm.calculate_age(donor.dob) if donor.dob else None
+    # Calculate age from donor's DOB
+    age = DonorEligibilityForm.calculate_age(donor.dob)
 
     if request.method == 'POST':
         form = DonorEligibilityForm(request.POST, instance=eligibility, donor=donor)
         if form.is_valid():
-            eligibility_instance = form.save(commit=False)
-            eligibility_instance.donor = donor
-
-            # Get all form data
-            weight = eligibility_instance.weight
-            good_health = bool(eligibility_instance.good_health)
-            travel_history = bool(eligibility_instance.travel_history)
-            pregnant = bool(eligibility_instance.pregnant) if eligibility_instance.pregnant is not None else False
-            
-            # Get additional fields from form
-            recent_surgery = form.cleaned_data.get('recent_surgery', False)
-            recent_tattoo = form.cleaned_data.get('recent_tattoo', False)
-            tattoo_date = form.cleaned_data.get('tattoo_date')
-            recent_childbirth = form.cleaned_data.get('recent_childbirth', False)
-            breastfeeding = form.cleaned_data.get('breastfeeding', False)
-            medications = form.cleaned_data.get('medications', '')
-            medical_conditions = form.cleaned_data.get('medical_conditions', '')
-            
-            # ==========================================
-            # REAL-WORLD ELIGIBILITY CRITERIA
-            # ==========================================
-            
-            reasons = []
-            recommendations = []
-            is_eligible = True  # Start as True, then check each criterion
-            
-            # 1. AGE CHECK (Kenya: 16-65 years)
-            if age is None:
-                reasons.append("• Age could not be determined from your date of birth")
-                is_eligible = False
-            elif age < 16:
-                reasons.append(f"• Minimum age requirement: 16 years (you are {age} years old)")
-                recommendations.append("You can register to donate when you turn 16.")
-                is_eligible = False
-            elif age > 65:
-                if age > 75:
-                    reasons.append(f"• Maximum age for blood donation: 65 years (you are {age} years old)")
-                    recommendations.append("Donors over 65 need physician approval and must be regular donors.")
-                    is_eligible = False
-                else:
-                    # 66-75: Requires physician approval
-                    recommendations.append("Donors over 65 need a physician's approval. Please consult your doctor.")
-                    # Still can be eligible with doctor's note
-            
-            # 2. WEIGHT CHECK (Kenya: Minimum 50kg)
-            if weight < 50:
-                reasons.append(f"• Minimum weight requirement: 50kg (you entered {weight}kg)")
-                recommendations.append("Focus on healthy weight gain through balanced nutrition before donating.")
-                is_eligible = False
-            elif weight < 55 and age < 18:
-                # Additional safety for young donors
-                recommendations.append("Young donors under 18 with lower weight should consult with our phlebotomist.")
-            
-            # 3. HEALTH STATUS
-            if not good_health:
-                reasons.append("• You must be in good health on the day of donation")
-                recommendations.append("Common cold, flu, or any infection requires waiting until fully recovered.")
-                is_eligible = False
-            
-            # 4. TATTOO/PERCING RULE (6-12 month wait in most countries)
-            if recent_tattoo:
-                if tattoo_date:
-                    from datetime import date
-                    today = date.today()
-                    months_since_tattoo = (today.year - tattoo_date.year) * 12 + (today.month - tattoo_date.month)
+            try:
+                with transaction.atomic():
+                    eligibility_instance = form.save(commit=False)
+                    eligibility_instance.donor = donor
                     
-                    if months_since_tattoo < 6:
-                        reasons.append(f"• Tattoo/piercing requires 6-month waiting period (only {months_since_tattoo} months ago)")
-                        recommendations.append("You can donate 6 months after getting a tattoo or piercing in a regulated facility.")
-                        is_eligible = False
-                    elif months_since_tattoo < 12 and tattoo_date.year < 2020:
-                        # Tattoos in unregulated facilities may need 12 months
-                        recommendations.append("If your tattoo was done in an unregulated facility, please wait 12 months.")
-                else:
-                    reasons.append("• Recent tattoo/piercing requires waiting period")
-                    recommendations.append("Please specify when you got the tattoo/piercing.")
-                    is_eligible = False
-            
-            # 5. SURGERY RULE (Varies by procedure)
-            if recent_surgery:
-                reasons.append("• Recent surgery requires waiting period (usually 3-12 months)")
-                recommendations.append("Please consult with our phlebotomist about your specific surgery.")
-                is_eligible = False
-            
-            # 6. TRAVEL HISTORY (Malaria risk areas)
-            if travel_history:
-                travel_destination = form.cleaned_data.get('travel_destination', '')
-                travel_duration = form.cleaned_data.get('travel_duration', 0)
-                
-                malaria_risk_countries = ['Nigeria', 'DRC', 'Mozambique', 'Uganda', 'Tanzania', 
-                                         'Malawi', 'Zambia', 'Zimbabwe', 'Kenya (coastal)']
-                
-                # Check if travel was to malaria-endemic area
-                if any(country.lower() in travel_destination.lower() for country in malaria_risk_countries):
-                    reasons.append("• Travel to malaria-endemic area requires 6-month waiting period")
-                    recommendations.append("You can donate 6 months after returning from a malaria-risk area.")
-                    is_eligible = False
-                else:
-                    # Non-malaria travel - 28 days wait for other risks
-                    recommendations.append("Please wait 28 days after international travel to ensure no illness develops.")
-            
-            # 7. PREGNANCY & CHILDBIRTH
-            if pregnant:
-                reasons.append("• Pregnancy temporarily prevents blood donation")
-                recommendations.append("You can donate 6 weeks after pregnancy ends.")
-                is_eligible = False
-            elif recent_childbirth:
-                reasons.append("• Recent childbirth requires 6-week waiting period")
-                recommendations.append("You can donate 6 weeks after delivery if you're feeling well.")
-                is_eligible = False
-            elif breastfeeding:
-                recommendations.append("Breastfeeding mothers should wait 6 weeks after delivery and ensure adequate nutrition.")
-                # Usually allowed but with caution
-            
-            # 8. MEDICAL CONDITIONS (Common deferrals)
-            serious_conditions = [
-                'hepatitis', 'hiv', 'aids', 'cancer', 'leukemia', 'lymphoma',
-                'heart disease', 'stroke', 'bleeding disorder', 'sickle cell',
-                'diabetes with complications', 'epilepsy', 'tuberculosis'
-            ]
-            
-            if medical_conditions:
-                medical_lower = medical_conditions.lower()
-                for condition in serious_conditions:
-                    if condition in medical_lower:
-                        reasons.append(f"• {condition.title()} may affect eligibility")
-                        recommendations.append("Please discuss your condition with our medical staff.")
-                        is_eligible = False
-                        break
-            
-            # 9. MEDICATIONS (Some require waiting)
-            deferral_medications = [
-                'accutane', 'isotretinoin', 'finasteride', 'propecia',
-                'blood thinners', 'warfarin', 'aspirin', 'heparin',
-                'antibiotics', 'steroids'
-            ]
-            
-            if medications:
-                med_lower = medications.lower()
-                for med in deferral_medications:
-                    if med in med_lower:
-                        if med in ['accutane', 'isotretinoin']:
-                            reasons.append(f"• {med} requires 1-month waiting period after stopping")
-                        elif med in ['blood thinners', 'warfarin']:
-                            reasons.append(f"• {med} requires waiting period (consult doctor)")
-                        else:
-                            reasons.append(f"• {med} may require temporary deferral")
-                        recommendations.append("Please inform our phlebotomist about your medications.")
-                        is_eligible = False
-                        break
-            
-            # 10. BLOOD PRESSURE & OTHER VITALS (from form)
-            high_bp = form.cleaned_data.get('high_blood_pressure', False)
-            if high_bp:
-                reasons.append("• Uncontrolled high blood pressure may affect eligibility")
-                recommendations.append("Blood pressure should be below 180/100 on donation day.")
-                # Not automatically disqualified if controlled
-            
-            # 11. ANEMIA / LOW IRON (from form)
-            anemia = form.cleaned_data.get('anemia', False)
-            if anemia:
-                reasons.append("• Anemia or low iron requires treatment before donating")
-                recommendations.append("Please treat anemia and have hemoglobin checked before donating.")
-                is_eligible = False
-            
-            # Set eligibility based on all criteria
-            eligibility_instance.approved = is_eligible
-            eligibility_instance.save()
-
-            # Build detailed feedback message
-            if is_eligible:
-                messages.success(
-                    request, 
-                    "✅ Great news! Based on your responses, you appear eligible to donate blood. "
-                    "Our phlebotomist will do a final health screening on donation day."
-                )
-                
-                # Create notification
-                try:
-                    from utils.models import Notification
-                    Notification.objects.create(
-                        title="🩸 You're Likely Eligible!",
-                        message="You appear eligible to donate! Schedule your appointment today. Final screening will be done by our phlebotomist.",
-                        recipient=donor.user,
-                        notification_type='success'
-                    )
-                except:
-                    pass
+                    # CRITICAL FIX: Explicitly set the age field
+                    eligibility_instance.age = age
                     
-            else:
-                # Main message with encouraging tone
-                messages.info(
-                    request,
-                    "🌟 You can still be a hero! While you may have temporary deferrals, "
-                    "there are many other ways to support our mission."
-                )
-                
-                # Show specific reasons
-                if reasons:
-                    messages.warning(
-                        request,
-                        "📋 Based on your responses, here's why you may not be eligible right now:\n" + 
-                        "\n".join(reasons[:5])
-                    )
-                
-                # Offer recommendations
-                if recommendations:
-                    messages.info(
-                        request,
-                        "💡 Recommendations:\n" + 
-                        "\n".join(recommendations[:3])
-                    )
-                
-                # Create notification for non-eligible
-                try:
-                    from utils.models import Notification
-                    Notification.objects.create(
-                        title="🌟 Alternative Ways to Help",
-                        message="While you may have temporary deferrals, we'd love your support in other ways! Check out volunteer opportunities.",
-                        recipient=donor.user,
-                        notification_type='info'
-                    )
-                except:
-                    pass
+                    # Get all form data
+                    weight = eligibility_instance.weight
+                    good_health = bool(eligibility_instance.good_health)
+                    travel_history = bool(eligibility_instance.travel_history)
+                    
+                    # Get additional fields from form
+                    recent_surgery = form.cleaned_data.get('recent_surgery', False)
+                    recent_tattoo = form.cleaned_data.get('recent_tattoo', False)
+                    recent_childbirth = form.cleaned_data.get('recent_childbirth', False)
+                    breastfeeding = form.cleaned_data.get('breastfeeding', False)
+                    medications = form.cleaned_data.get('medications', '')
+                    medical_conditions = form.cleaned_data.get('medical_conditions', '')
+                    pregnant = form.cleaned_data.get('pregnant', False)
+                    
+                    # ==========================================
+                    # ELIGIBILITY CRITERIA
+                    # ==========================================
+                    
+                    reasons = []
+                    recommendations = []
+                    is_eligible = True
+                    
+                    # 1. AGE CHECK
+                    if age < 16:
+                        reasons.append(f"• Minimum age requirement: 16 years (you are {age} years old)")
+                        recommendations.append("You can register to donate when you turn 16.")
+                        is_eligible = False
+                    elif age > 65:
+                        reasons.append(f"• Donors over 65 need physician approval (you are {age} years old)")
+                        recommendations.append("Please consult your doctor and bring a medical clearance note.")
+                        is_eligible = False
+                    
+                    # 2. WEIGHT CHECK
+                    if weight < 50:
+                        reasons.append(f"• Minimum weight requirement: 50kg (you entered {weight}kg)")
+                        recommendations.append("Focus on healthy weight gain through balanced nutrition.")
+                        is_eligible = False
+                    
+                    # 3. HEALTH STATUS
+                    if not good_health:
+                        reasons.append("• You must be in good health on the day of donation")
+                        recommendations.append("Wait until you're fully recovered from any illness.")
+                        is_eligible = False
+                    
+                    # 4. TATTOO/PERCING
+                    if recent_tattoo:
+                        reasons.append("• Recent tattoo/piercing requires 6-month waiting period")
+                        recommendations.append("You can donate 6 months after getting a tattoo/piercing.")
+                        is_eligible = False
+                    
+                    # 5. SURGERY
+                    if recent_surgery:
+                        reasons.append("• Recent surgery requires waiting period (usually 3-12 months)")
+                        recommendations.append("Consult with our medical staff about your specific surgery.")
+                        is_eligible = False
+                    
+                    # 6. PREGNANCY
+                    if pregnant:
+                        reasons.append("• Pregnancy temporarily prevents blood donation")
+                        recommendations.append("You can donate 6 weeks after pregnancy ends.")
+                        is_eligible = False
+                    
+                    # Set eligibility
+                    eligibility_instance.approved = is_eligible
+                    eligibility_instance.save()
 
-            return redirect('donor:donor-eligibility-status')
+                    # Messages and notifications
+                    if is_eligible:
+                        messages.success(
+                            request, 
+                            "✅ Great news! Based on your responses, you appear eligible to donate blood."
+                        )
+                    else:
+                        messages.info(
+                            request,
+                            "🌟 You can still be a hero! While you may have temporary deferrals, there are many other ways to support our mission."
+                        )
+                        
+                        if reasons:
+                            messages.warning(
+                                request,
+                                "📋 Reasons for deferral:\n" + "\n".join(reasons[:3])
+                            )
+                        
+                        if recommendations:
+                            messages.info(
+                                request,
+                                "💡 Recommendations:\n" + "\n".join(recommendations[:2])
+                            )
+
+                    return redirect('donor:donor-eligibility-status')
+                    
+            except Exception as e:
+                logger.error(f"Eligibility save error: {str(e)}")
+                messages.error(request, "An error occurred while saving. Please try again.")
         else:
             error_count = len(form.errors)
             messages.error(
@@ -776,11 +809,6 @@ def donor_eligibility_view(request):
             )
     else:
         form = DonorEligibilityForm(instance=eligibility, donor=donor)
-        
-        # Add initial data from donor profile
-        if donor:
-            form.fields['weight'].initial = getattr(donor, 'weight', None)
-            form.fields['gender'].initial = getattr(donor, 'gender', None)
 
     context = {
         'eligibility_form': form,
@@ -790,10 +818,12 @@ def donor_eligibility_view(request):
     }
     
     return render(request, 'donor/donor_eligibility_form.html', context)
- # -------------------------------
+
+# -------------------------------
 # Eligibility status badge
 # -------------------------------   
 @login_required(login_url='donor:donorlogin')
+@username_required
 def donor_eligibility_status_view(request):
     donor = get_object_or_404(Donor, user=request.user)
 
@@ -822,7 +852,7 @@ def donor_eligibility_status_view(request):
     # Get all eligibility details
     is_eligible = eligibility.approved
     
-    # Prepare eligibility details for display - FIX: Use updated_at instead of created_at
+    # Prepare eligibility details for display
     eligibility_details = {
         'age': age,
         'weight': eligibility.weight,
@@ -830,7 +860,6 @@ def donor_eligibility_status_view(request):
         'good_health': 'Yes' if eligibility.good_health else 'No',
         'travel_history': 'Yes' if eligibility.travel_history else 'No',
         'medical_conditions': eligibility.medical_conditions or 'None reported',
-        # FIX: Use updated_at instead of created_at
         'submitted_on': eligibility.updated_at.strftime("%B %d, %Y") if hasattr(eligibility, 'updated_at') else 'N/A',
         'last_updated': eligibility.updated_at.strftime("%B %d, %Y") if hasattr(eligibility, 'updated_at') else 'N/A',
     }
@@ -866,7 +895,7 @@ def donor_eligibility_status_view(request):
             'secondary_action_text': 'View Donation History',
             'secondary_action_url': 'donor:donation-history',
             'eligibility_details': eligibility_details,
-            'show_verification_option': not donor.bloodgroup_verified,  # Show if blood group not verified
+            'show_verification_option': not donor.bloodgroup_verified,
             'show_contact_option': True,
         }
     else:
@@ -913,11 +942,11 @@ def donor_eligibility_status_view(request):
             'secondary_action_text': 'Health Tips',
             'secondary_action_url': 'donor:health-tips',
             'eligibility_details': eligibility_details,
-            'show_verification_option': not donor.bloodgroup_verified and age >= 16,  # Show if blood group not verified
+            'show_verification_option': not donor.bloodgroup_verified and age and age >= 16,
             'show_contact_option': True,
         }
     
-    # Add common context - FIX: Use hasattr checks
+    # Add common context
     context.update({
         'donor': donor,
         'eligibility': eligibility,
@@ -929,50 +958,50 @@ def donor_eligibility_status_view(request):
     })
     
     return render(request, 'donor/donor_eligibility_status.html', context)
+
 # -------------------------------
 # Dashboard
 # -------------------------------
 @login_required(login_url='donor:donorlogin')
+@onboarding_complete_required  # This ensures username AND profile are complete
 def donor_dashboard_view(request):
     """
-    Donor dashboard with updated stats, points, eligibility, milestones, and recent donations.
-    Includes donation status tracking (safe/unsafe) and countdown timers.
-    Now integrates with enhanced context processors for notifications and support options.
+    Main donor dashboard - only accessible after completing onboarding.
+    Blood group is optional and does not block dashboard access.
     """
     user = request.user
     logger.debug(f"Accessing donor dashboard for user '{user.username}'")
 
-    # Get dashboard access context from our helper functions
-    access_context = check_dashboard_access(user)
+    # Get donor profile (onboarding_complete_required ensures this exists)
+    donor = user.donor
     
-    donor = get_object_or_404(Donor, user=user)
+    # Check if user just completed onboarding (for welcome message)
+    just_completed = request.session.pop('just_completed_onboarding', False)
+    
+    # Get dashboard access context from helper function
+    access_context = check_dashboard_access(user)
 
     # ==========================================
     # DETERMINE DONOR SAFETY STATUS
     # ==========================================
-    # Check for unsafe donations
     unsafe_donation = BloodDonate.objects.filter(
         donor=donor,
         status='tested_unsafe'
     ).first()
     
-    # Check for safe donations
     safe_donation = BloodDonate.objects.filter(
         donor=donor,
         status='tested_safe'
     ).first()
     
-    # Get pending tests (collected but not tested)
     pending_tests = BloodDonate.objects.filter(
         donor=donor,
         status='collected'
     ).count()
     
-    # Count safe and unsafe donations
     safe_count = BloodDonate.objects.filter(donor=donor, status='tested_safe').count()
     unsafe_count = BloodDonate.objects.filter(donor=donor, status='tested_unsafe').count()
     
-    # Determine donor status
     is_unsafe_donor = unsafe_donation is not None
     is_safe_donor = safe_donation is not None
     is_first_time_donor = not BloodDonate.objects.filter(donor=donor).exists()
@@ -984,13 +1013,11 @@ def donor_dashboard_view(request):
     # ==========================================
     try:
         from blood.utils.greetings import get_donor_greeting
-        # Get last donation for greeting
         last_donation_for_greeting = BloodDonate.objects.filter(
             donor=donor, 
             status__in=['approved', 'completed', 'tested_safe', 'tested_unsafe']
         ).order_by('-date').first()
         
-        # Get upcoming appointments for greeting
         from phlebotomist.models import Appointment
         upcoming_appointments = Appointment.objects.filter(
             donor=donor,
@@ -1003,9 +1030,19 @@ def donor_dashboard_view(request):
             last_donation=last_donation_for_greeting,
             upcoming_appointments=upcoming_appointments
         )
+        
+        # Add onboarding celebration if just completed
+        if just_completed:
+            greeting_data['celebration'] = True
+            greeting_data['message'] = "🎉 You're all set! Welcome to your dashboard."
+            
     except ImportError:
-        # Fallback greeting with safety status and inclusive messaging
-        if is_unsafe_donor:
+        # Fallback greeting
+        if just_completed:
+            greeting_message = f"Welcome to your dashboard, {donor.user.username}! 🎉"
+            context_message = "Your profile is complete. You're ready to start your donation journey!"
+            icon = "🎉"
+        elif is_unsafe_donor:
             greeting_message = f"Hello {donor.user.first_name or 'donor'}"
             context_message = "We appreciate your past donations. Let's discuss your next steps."
             icon = "🤝"
@@ -1024,11 +1061,12 @@ def donor_dashboard_view(request):
             'user_type': 'donor',
             'icon': icon,
             'is_hero': safe_count >= 1,
-            'profile_pic': donor.profile_pic if hasattr(donor, 'profile_pic') else None
+            'profile_pic': donor.profile_pic.url if donor.profile_pic and hasattr(donor.profile_pic, 'url') else None,
+            'celebration': just_completed
         }
 
     # ==========================================
-    # LAST DONATION & NEXT ELIGIBILITY (FIXED DATE COMPARISON)
+    # LAST DONATION & NEXT ELIGIBILITY
     # ==========================================
     last_donation = BloodDonate.objects.filter(
         donor=donor, 
@@ -1036,10 +1074,8 @@ def donor_dashboard_view(request):
     ).order_by('-date').first()
 
     if last_donation:
-        # Convert datetime to date for comparison if needed
         last_donation_date = last_donation.date.date() if hasattr(last_donation.date, 'date') else last_donation.date
         
-        # Update donor.last_donation_date if outdated
         if not donor.last_donation_date or donor.last_donation_date < last_donation_date:
             donor.last_donation_date = last_donation_date
             donor.save(update_fields=['last_donation_date'])
@@ -1054,7 +1090,7 @@ def donor_dashboard_view(request):
         next_donation_date_iso = None
 
     # ==========================================
-    # TOTAL POINTS & DONATIONS (only safe donations count)
+    # TOTAL POINTS & DONATIONS
     # ==========================================
     total_safe_donations = BloodDonate.objects.filter(
         donor=donor,
@@ -1064,7 +1100,6 @@ def donor_dashboard_view(request):
     points_per_donation = 10
     computed_points = total_safe_donations * points_per_donation
 
-    # Sync points with database
     if donor.points != computed_points:
         donor.points = computed_points
         donor.save(update_fields=['points'])
@@ -1079,7 +1114,7 @@ def donor_dashboard_view(request):
     stroke_dashoffset = circumference * (1 - progress / 100)
 
     # ==========================================
-    # INFO CARDS (Enhanced with volunteer options)
+    # INFO CARDS
     # ==========================================
     info_cards = [
         {'icon': 'fa-heartbeat', 'title': 'Health Tips', 'desc': 'Stay hydrated and eat healthy foods before donating blood.', 'url': 'health-tips', 'color': 'primary'},
@@ -1093,7 +1128,6 @@ def donor_dashboard_view(request):
     # ==========================================
     recent_donations = BloodDonate.objects.filter(donor=donor).select_related('donation_center').order_by('-date')[:5]
     
-    # Annotate each donation with display status
     for donation in recent_donations:
         if donation.status == 'tested_safe':
             donation.display_result = 'safe'
@@ -1122,7 +1156,7 @@ def donor_dashboard_view(request):
     can_donate_now = is_eligible and not is_unsafe_donor and (days_until_next == 0 or is_first_time_donor)
 
     # ==========================================
-    # MILESTONES (only count safe donations)
+    # MILESTONES
     # ==========================================
     milestones = [5, 10, 25, 50, 100]
     next_milestone = next((m for m in milestones if total_safe_donations < m), None)
@@ -1142,7 +1176,7 @@ def donor_dashboard_view(request):
         upcoming_appointments = []
 
     # ==========================================
-    # HERO STATUS & BADGES (based on safe donations only)
+    # HERO STATUS & BADGES
     # ==========================================
     hero_level = "Bronze"
     hero_badge = None
@@ -1157,7 +1191,6 @@ def donor_dashboard_view(request):
         hero_level = "Bronze"
         hero_badge = "🥉"
     
-    # Add hero info to greeting data
     if total_safe_donations >= 1 and 'is_hero' not in greeting_data:
         greeting_data['is_hero'] = True
     if hero_badge and 'hero_badge' not in greeting_data:
@@ -1172,6 +1205,12 @@ def donor_dashboard_view(request):
         meta_items.append({
             'icon': 'fas fa-tint',
             'text': f"Blood Group: {donor.bloodgroup}"
+        })
+    else:
+        meta_items.append({
+            'icon': 'fas fa-question-circle',
+            'text': "Blood Group: Unknown (Optional)",
+            'color': 'text-info'
         })
     
     meta_items.append({
@@ -1191,7 +1230,6 @@ def donor_dashboard_view(request):
             'text': f"{hero_level} Hero"
         })
     
-    # Add metadata to greeting data if not already present
     if 'meta_items' not in greeting_data and meta_items:
         greeting_data['meta_items'] = meta_items
 
@@ -1228,21 +1266,31 @@ def donor_dashboard_view(request):
             'show': True
         },
     ]
+    
+    # Add "Find Blood Type" button only if blood group not set
+    if not donor.bloodgroup:
+        quick_actions.append({
+            'url': '#',  # Replace with actual URL
+            'icon': 'fa-question-circle',
+            'text': 'Learn Your Blood Type',
+            'color': 'info',
+            'show': True
+        })
 
     # ==========================================
     # NOTIFICATION COUNT
     # ==========================================
-    from django.contrib.contenttypes.models import ContentType
-    from utils.models import Notification
-    
     notification_count = 0
     if hasattr(donor, 'id'):
-        donor_content_type = ContentType.objects.get_for_model(Donor)
-        notification_count = Notification.objects.filter(
-            recipient_content_type=donor_content_type,
-            recipient_object_id=donor.id,
-            is_read=False
-        ).count()
+        try:
+            donor_content_type = ContentType.objects.get_for_model(Donor)
+            notification_count = Notification.objects.filter(
+                recipient_content_type=donor_content_type,
+                recipient_object_id=donor.id,
+                is_read=False
+            ).count()
+        except:
+            notification_count = 0
 
     # ==========================================
     # BUILD COMPREHENSIVE CONTEXT
@@ -1276,10 +1324,9 @@ def donor_dashboard_view(request):
         'greeting_data': greeting_data,
         'current_date': timezone.now().date(),
         'unsafe_reason': unsafe_donation.unsafe_reason if unsafe_donation else None,
+        'just_completed_onboarding': just_completed,
         
-        # ==========================================
         # INCLUSIVE MESSAGING FEATURES
-        # ==========================================
         'eligibility_completed': eligibility_completed,
         'show_eligibility_modal': access_context.get('show_eligibility_modal', False),
         'show_support_options': access_context.get('show_support_options', False),
@@ -1289,26 +1336,46 @@ def donor_dashboard_view(request):
         'motivational_message': access_context.get('motivational_message', ''),
         'quick_actions': quick_actions,
         'donor_unread_notification_count': notification_count,
+        'donor_support_options': access_context.get('volunteer_suggestions', []),
+        'donor_dashboard_stats': {
+            'total_safe_donations': total_safe_donations,
+            'total_points': donor.points,
+            'blood_group': donor.bloodgroup,
+            'blood_group_verified': donor.bloodgroup_verified,
+            'hero_level': hero_level,
+        }
     }
 
     logger.debug(f"Rendering donor dashboard for user '{user.username}' with {total_safe_donations} safe donations and {donor.points} points")
     return render(request, 'donor/donor_dashboard.html', context)
 
-# -------------------------------
-# DonateBloodView
-# -------------------------------
 
-
+# -------------------------------
+# DonateBloodView - COMPLETE UPDATED VERSION
+# -------------------------------
 @login_required(login_url='donor:donorlogin')
+@username_required
 def donate_blood_view(request):
     """
     View for donors to schedule blood donation appointments.
-    FIXED: Now properly creates Appointment objects that phlebotomists can see.
+    Now includes double-booking prevention with real-time availability checking.
     """
     try:
         donor = Donor.objects.get(user=request.user)
     except Donor.DoesNotExist:
         messages.error(request, "⚠️ You must complete your donor profile before donating blood.")
+        return redirect('donor:donor-profile')
+
+    # ==========================================
+    # CHECK PROFILE COMPLETION FIRST
+    # ==========================================
+    is_profile_complete, missing_fields = check_profile_completion(donor)
+    
+    if not is_profile_complete:
+        messages.error(
+            request, 
+            f"⚠️ Please complete your donor profile before scheduling a donation. Missing: {', '.join(missing_fields)}"
+        )
         return redirect('donor:donor-profile')
 
     # ==========================================
@@ -1371,11 +1438,23 @@ def donate_blood_view(request):
     # ==========================================
     days_until_next = None
     next_donation_date = None
+    hours_until_next = 0
+    minutes_until_next = 0
+    seconds_until_next = 0
     
     if is_safe_donor and donor.last_donation_date:
         next_donation_date = donor.last_donation_date + timedelta(days=56)
         today = timezone.now().date()
         days_until_next = (next_donation_date - today).days if next_donation_date > today else 0
+        
+        if days_until_next > 0:
+            # Calculate hours, minutes, seconds for countdown
+            next_datetime = datetime.combine(next_donation_date, datetime_time(0, 0))
+            now = timezone.now()
+            time_diff = next_datetime - now
+            hours_until_next = time_diff.seconds // 3600
+            minutes_until_next = (time_diff.seconds % 3600) // 60
+            seconds_until_next = time_diff.seconds % 60
 
     # Check for active donation
     active_donation = BloodDonate.objects.filter(
@@ -1425,6 +1504,15 @@ def donate_blood_view(request):
                         'active_donation': active_donation,
                         'bloodgroup_verified': donor.bloodgroup_verified,
                         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                        'days_until_next': days_until_next,
+                        'hours_until_next': hours_until_next,
+                        'minutes_until_next': minutes_until_next,
+                        'seconds_until_next': seconds_until_next,
+                        'next_donation_date': next_donation_date,
+                        'is_unsafe': False,
+                        'has_unsafe_donation': False,
+                        'has_safe_donation': is_safe_donor,
+                        'is_first_time_donor': is_first_time_donor
                     })
                 
                 if not phlebotomist:
@@ -1436,6 +1524,80 @@ def donate_blood_view(request):
                         'active_donation': active_donation,
                         'bloodgroup_verified': donor.bloodgroup_verified,
                         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                        'days_until_next': days_until_next,
+                        'hours_until_next': hours_until_next,
+                        'minutes_until_next': minutes_until_next,
+                        'seconds_until_next': seconds_until_next,
+                        'next_donation_date': next_donation_date,
+                        'is_unsafe': False,
+                        'has_unsafe_donation': False,
+                        'has_safe_donation': is_safe_donor,
+                        'is_first_time_donor': is_first_time_donor
+                    })
+                
+                # ==========================================
+                # SERVER-SIDE DOUBLE-BOOKING PREVENTION
+                # ==========================================
+                # Check if this phlebotomist is already booked at this time
+                existing_appointment = Appointment.objects.filter(
+                    phlebotomist=phlebotomist,
+                    date=donation_datetime,
+                ).exclude(
+                    status__in=['cancelled', 'rejected']
+                ).exists()
+
+                if existing_appointment:
+                    logger.warning(f"⚠️ Double-booking attempt: Phlebotomist {phlebotomist.id} already booked at {donation_datetime}")
+                    messages.error(
+                        request, 
+                        "❌ This time slot is no longer available. The selected nurse is already booked at this time. Please select another time."
+                    )
+                    return render(request, 'donor/donate_blood.html', {
+                        'donation_form': donate_form,
+                        'donor': donor,
+                        'active_donation': active_donation,
+                        'bloodgroup_verified': donor.bloodgroup_verified,
+                        'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                        'days_until_next': days_until_next,
+                        'hours_until_next': hours_until_next,
+                        'minutes_until_next': minutes_until_next,
+                        'seconds_until_next': seconds_until_next,
+                        'next_donation_date': next_donation_date,
+                        'is_unsafe': False,
+                        'has_unsafe_donation': False,
+                        'has_safe_donation': is_safe_donor,
+                        'is_first_time_donor': is_first_time_donor
+                    })
+
+                # Optional: Check if donor already has an appointment at this time
+                donor_existing = Appointment.objects.filter(
+                    donor=donor,
+                    date=donation_datetime,
+                ).exclude(
+                    status__in=['cancelled', 'rejected']
+                ).exists()
+
+                if donor_existing:
+                    logger.warning(f"⚠️ Donor {donor.id} already has appointment at {donation_datetime}")
+                    messages.error(
+                        request, 
+                        "❌ You already have an appointment scheduled at this time. Please select another time."
+                    )
+                    return render(request, 'donor/donate_blood.html', {
+                        'donation_form': donate_form,
+                        'donor': donor,
+                        'active_donation': active_donation,
+                        'bloodgroup_verified': donor.bloodgroup_verified,
+                        'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+                        'days_until_next': days_until_next,
+                        'hours_until_next': hours_until_next,
+                        'minutes_until_next': minutes_until_next,
+                        'seconds_until_next': seconds_until_next,
+                        'next_donation_date': next_donation_date,
+                        'is_unsafe': False,
+                        'has_unsafe_donation': False,
+                        'has_safe_donation': is_safe_donor,
+                        'is_first_time_donor': is_first_time_donor
                     })
                 
                 # Save the donation first
@@ -1529,6 +1691,9 @@ def donate_blood_view(request):
         'bloodgroup_verified': donor.bloodgroup_verified,
         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
         'days_until_next': days_until_next,
+        'hours_until_next': hours_until_next,
+        'minutes_until_next': minutes_until_next,
+        'seconds_until_next': seconds_until_next,
         'next_donation_date': next_donation_date,
         'is_unsafe': False,
         'has_unsafe_donation': False,
@@ -1537,11 +1702,12 @@ def donate_blood_view(request):
     }
 
     return render(request, 'donor/donate_blood.html', context)
-
 # -------------------------------
 # Donation History
 # -------------------------------
 @login_required(login_url='donorlogin')
+@username_required
+@onboarding_complete_required
 def donation_history_view(request):
     try:
         donor_instance = Donor.objects.get(user=request.user)
@@ -1656,17 +1822,19 @@ def cancel_donation_request_view(request, donation_id):
 
 
 # -------------------------------
-# Profile View
+# Profile View (READ-ONLY - View Only)
 # -------------------------------
-@login_required(login_url='donorlogin')
+@login_required(login_url='donor:donorlogin')
+@onboarding_complete_required
 def donor_profile_view(request):
     """
-    Display donor profile with blood group verification status.
+    READ-ONLY view - displays donor information.
+    For viewing only - no editing here.
     """
     donor = get_object_or_404(Donor, user=request.user)
     user = request.user
 
-    # Calculate next eligible donation date, days until next donation
+    # Calculate next eligible donation date
     next_donation_date = donor.next_eligible_donation_date()
     days_until_next = donor.days_until_next_donation()
     
@@ -1682,151 +1850,141 @@ def donor_profile_view(request):
         'days_until_next': days_until_next,
         'bloodgroup_verified': donor.bloodgroup_verified,
         'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
+        'verified_by': donor.bloodgroup_verified_by.get_full_name() if donor.bloodgroup_verified_by else None,
+        'verified_at': donor.bloodgroup_verified_at,
         'profile_pic_url': profile_pic_url,
     }
     return render(request, 'donor/donor_profile.html', context)
 
 
 # -------------------------------
-# Edit Profile View
+# Edit Profile View (EDITABLE - Profile Completion)
 # -------------------------------
-@login_required(login_url='donorlogin')
+@login_required(login_url='donor:donorlogin')
+@username_required
 def donor_edit_profile_view(request):
     """
-    Allow a donor to edit their profile.
-    Blood group becomes read-only after phlebotomist verification.
-    Email is always read-only.
-    Includes profile picture upload and removal functionality.
+    Edit donor profile. Handles both initial onboarding and later edits.
+    During onboarding, certain fields are required.
+    Blood group is OPTIONAL.
     """
     try:
         donor = Donor.objects.get(user=request.user)
     except Donor.DoesNotExist:
         messages.error(request, "Please create a donor profile first.")
-        return redirect('create-donor-profile')
+        return redirect('donor:donorsignup')
     
     user = request.user
     
-    # Store original read-only values for integrity check
-    original_email = user.email
-    original_bloodgroup = donor.bloodgroup if donor.bloodgroup_verified else None
-    original_verified_status = donor.bloodgroup_verified
-    
-    logger.info(f"Editing profile for donor {donor.id}")
-    logger.info(f"Blood group verified: {donor.bloodgroup_verified}")
-    logger.info(f"Current blood group: {donor.bloodgroup}")
+    # Check if in onboarding mode
+    is_complete, missing_fields = check_profile_completion(donor)
+    is_onboarding = not is_complete
     
     if request.method == 'POST':
-        form = DonorProfileForm(request.POST, request.FILES, instance=donor)
+        # Create a mutable copy of POST data
+        post_data = request.POST.copy()
         
-        # Handle latitude and longitude from POST explicitly
-        lat = request.POST.get('latitude')
-        lon = request.POST.get('longitude')
+        # Ensure first_name and last_name are set
+        post_data['first_name'] = user.first_name
+        post_data['last_name'] = user.last_name
+        post_data['email'] = user.email
         
-        if lat:
-            try:
-                donor.latitude = float(lat)
-            except ValueError:
-                messages.warning(request, "Invalid latitude value.")
-        
-        if lon:
-            try:
-                donor.longitude = float(lon)
-            except ValueError:
-                messages.warning(request, "Invalid longitude value.")
-        
-        # Handle profile picture removal
-        clear_picture = request.POST.get('clear_profile_pic') == 'on'
+        form = DonorProfileForm(post_data, request.FILES, instance=donor)
         
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # Update first and last names on User
-                    user.first_name = form.cleaned_data.get('first_name', user.first_name)
-                    user.last_name = form.cleaned_data.get('last_name', user.last_name)
+                    # Save the donor profile
+                    donor = form.save()
                     
-                    # SECURITY: Restore original email to prevent tampering
-                    user.email = original_email
-                    user.save()
+                    # Handle profile picture removal
+                    if 'remove_profile_pic' in request.POST:
+                        donor.profile_pic = None
+                        donor.save()
                     
-                    # Handle profile picture
-                    donor_instance = form.save(commit=False)
+                    # Check if profile is now complete
+                    is_complete, missing = check_profile_completion(donor)
                     
-                    # If user wants to clear the picture
-                    if clear_picture:
-                        if donor_instance.profile_pic:
-                            # Delete the file from storage
-                            if donor_instance.profile_pic and hasattr(donor_instance.profile_pic, 'path'):
-                                import os
-                                if os.path.isfile(donor_instance.profile_pic.path):
-                                    os.remove(donor_instance.profile_pic.path)
-                            donor_instance.profile_pic = None
-                            messages.info(request, "Profile picture removed. Default image will be used.")
+                    logger.debug(f"🔍 Profile completion check: {is_complete}")
+                    logger.debug(f"   Missing: {missing}")
+                    logger.debug(f"   Blood group: {donor.bloodgroup} (optional)")
                     
-                    # Handle base64 cropped image if provided (for crop functionality)
-                    cropped_image_data = request.POST.get('cropped_image')
-                    if cropped_image_data and not clear_picture:
-                        try:
-                            format, imgstr = cropped_image_data.split(';base64,')
-                            ext = format.split('/')[-1]
-                            data = ContentFile(base64.b64decode(imgstr), name='profile.' + ext)
-                            donor_instance.profile_pic = data
-                        except Exception as e:
-                            logger.error(f"Error processing cropped image: {e}")
-                            messages.warning(request, f"Error processing cropped image: {e}")
-                    
-                    # SECURITY: Restore original verified blood group and verification status
-                    if original_verified_status:
-                        donor_instance.bloodgroup = original_bloodgroup
-                        donor_instance.bloodgroup_verified = True
-                        donor_instance.bloodgroup_verified_by = donor.bloodgroup_verified_by
-                        donor_instance.bloodgroup_verified_at = donor.bloodgroup_verified_at
+                    if is_complete and is_onboarding:
+                        # Onboarding just completed!
+                        # Clear onboarding session
+                        for key in ['onboarding_step', 'onboarding_progress', 'needs_username', 
+                                  'username_completed', 'onboarding_started']:
+                            if key in request.session:
+                                del request.session[key]
                         
-                        logger.info(f"✅ Protected verified blood group: {original_bloodgroup}")
-                    
-                    # Update latitude/longitude if provided
-                    if lat:
-                        try:
-                            donor_instance.latitude = float(lat)
-                        except ValueError:
-                            pass
-                    if lon:
-                        try:
-                            donor_instance.longitude = float(lon)
-                        except ValueError:
-                            pass
-                    
-                    donor_instance.save()
-                    
-                    logger.info(f"✅ Profile updated successfully for donor {donor.id}")
-                    messages.success(request, "✅ Profile updated successfully!")
-                    return redirect('donor:donor-profile')
+                        request.session['just_completed_onboarding'] = True
+                        messages.success(
+                            request, 
+                            f"🎉 All set, {user.first_name}! Welcome to BloodConnect!"
+                        )
+                        return redirect('donor:donor-dashboard')
+                    elif is_complete:
+                        # Profile updated (not onboarding)
+                        messages.success(request, "✅ Profile updated successfully!")
+                        return redirect('donor:donor-profile')
+                    else:
+                        # Still missing fields
+                        messages.warning(
+                            request,
+                            f"Please complete these fields: {', '.join(missing)}"
+                        )
                     
             except Exception as e:
-                logger.error(f"Error saving profile for donor {donor.id}: {e}", exc_info=True)
-                messages.error(request, f"An error occurred while saving: {str(e)}")
+                logger.error(f"Error saving profile: {e}", exc_info=True)
+                messages.error(request, f"Error saving profile: {str(e)}")
         else:
-            messages.error(request, "Please correct the errors in the form.")
-            logger.error(f"Form validation errors: {form.errors}")
+            # Show specific error messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
-        # Initial data for first_name, last_name, and email come from User model
         form = DonorProfileForm(instance=donor, initial={
             'first_name': user.first_name,
             'last_name': user.last_name,
             'email': user.email,
         })
     
-    # Get profile picture URL for template
-    profile_pic_url = None
-    if donor.profile_pic and hasattr(donor.profile_pic, 'url') and donor.profile_pic.name:
-        profile_pic_url = donor.profile_pic.url
+    # Calculate completion - EXCLUDE blood group
+    completed_fields = sum([
+        bool(donor.mobile),
+        bool(donor.national_id),
+        bool(donor.county),
+        bool(donor.dob)
+    ])
+    completion_percentage = (completed_fields / 4) * 100 if completed_fields > 0 else 0
+    
+    missing_fields_list = []
+    if not donor.mobile:
+        missing_fields_list.append("Mobile Number")
+    if not donor.national_id:
+        missing_fields_list.append("National ID")
+    if not donor.county:
+        missing_fields_list.append("County")
+    if not donor.dob:
+        missing_fields_list.append("Date of Birth")
+    
+    # Add optional note about blood group
+    if not donor.bloodgroup:
+        missing_fields_list.append("Blood Group (optional)")
     
     context = {
         'profile_form': form,
         'donor': donor,
         'user': user,
         'bloodgroup_verified': donor.bloodgroup_verified,
-        'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
-        'profile_pic_url': profile_pic_url,
+        'is_first_time': is_onboarding,
+        'is_onboarding': is_onboarding,
+        'completed_fields': completed_fields,
+        'total_required_fields': 4,
+        'completion_percentage': completion_percentage,
+        'missing_fields': missing_fields_list,
+        'profile_pic_url': donor.profile_pic.url if donor.profile_pic and hasattr(donor.profile_pic, 'url') else None,
+        'page_title': 'Complete Your Profile' if is_onboarding else 'Edit Profile',
     }
     return render(request, 'donor/donor_edit_profile.html', context)
 
@@ -1834,6 +1992,7 @@ def donor_edit_profile_view(request):
 # Notifications
 # -------------------------------
 @login_required(login_url='donorlogin')
+@username_required
 def donor_notifications_view(request):
     donor = get_object_or_404(Donor, user=request.user)
     donor_ct = ContentType.objects.get_for_model(donor)
@@ -1883,6 +2042,7 @@ def mark_notification_read(request, pk):
 # ==========================================
 
 @login_required(login_url='donorlogin')
+@username_required
 def volunteer_opportunities_view(request):
     """Show all volunteer opportunities"""
     context = {
@@ -1973,6 +2133,7 @@ def transport_volunteer_view(request):
 # ==========================================
 
 @login_required(login_url='donorlogin')
+@username_required
 def awareness_hub_view(request):
     """Central hub for awareness campaigns"""
     context = {
@@ -2150,6 +2311,7 @@ def donor_resources_view(request):
 
 
 @login_required(login_url='donorlogin')
+@username_required
 def health_tips_view(request):
     """Health tips for donors"""
     context = {
@@ -2188,12 +2350,14 @@ def health_tips_view(request):
 
 
 @login_required(login_url='donorlogin')
+@username_required
 def faqs_view(request):
     """Frequently asked questions"""
     return render(request, 'donor/resources/faqs.html')
 
 
 @login_required(login_url='donorlogin')
+@username_required
 def donor_advice_view(request):
     """Advice from experienced donors"""
     context = {
@@ -2232,6 +2396,7 @@ def donor_advice_view(request):
 
 
 @login_required(login_url='donor:donorlogin')
+@username_required
 def events_view(request):
     """Display upcoming events from BloodDriveEvent model"""
     try:
@@ -2306,6 +2471,7 @@ def events_view(request):
 
 
 @login_required(login_url='donor:donorlogin')
+@username_required
 def event_detail_view(request, event_id):
     """Display details for a specific event"""
     try:
@@ -2335,55 +2501,7 @@ def event_detail_view(request, event_id):
         messages.error(request, "Error loading event details.")
         return redirect('donor:events')
 
-@login_required(login_url='donorlogin')
-def success_stories_view(request):
-    """Success stories from donors and recipients"""
-    stories = [
-        {
-            'id': 1,
-            'type': 'donor',
-            'name': 'Michael Chen',
-            'age': 34,
-            'donations': 25,
-            'story': 'I started donating in college and haven\'t stopped. Knowing I\'ve helped over 70 patients keeps me going.',
-            'image': 'images/stories/michael.jpg',
-            'quote': 'Every donation is a chance to be someone\'s hero.'
-        },
-        {
-            'id': 2,
-            'type': 'recipient',
-            'name': 'Sarah Johnson',
-            'age': 28,
-            'condition': 'Leukemia survivor',
-            'story': 'Blood donors gave me a second chance at life. During my treatment, I received over 50 transfusions.',
-            'image': 'images/stories/sarah.jpg',
-            'quote': 'To every donor: you are my heroes.'
-        },
-        {
-            'id': 3,
-            'type': 'donor',
-            'name': 'Robert Smith',
-            'age': 62,
-            'donations': 100,
-            'story': 'Just reached my 100th donation! It\'s been a wonderful journey helping others.',
-            'image': 'images/stories/robert.jpg',
-            'quote': 'Donating blood is the easiest way to be a hero.'
-        },
-        {
-            'id': 4,
-            'type': 'family',
-            'name': 'The Williams Family',
-            'story': 'When our son needed emergency surgery, blood donors were there for us. Now our whole family donates.',
-            'image': 'images/stories/williams.jpg',
-            'quote': 'We turned our gratitude into action.'
-        },
-    ]
-    context = {
-        'page_title': 'Success Stories',
-        'page_icon': 'fa-star',
-        'stories': stories
-    }
-    return render(request, 'donor/community/success_stories.html', context)
+
 
 
 # ==========================================
@@ -2391,6 +2509,7 @@ def success_stories_view(request):
 # ==========================================
 
 @login_required(login_url='donorlogin')
+@username_required
 def impact_view(request):
     """Show collective impact of donors and supporters"""
     context = {
@@ -2450,3 +2569,69 @@ def share_impact_view(request):
         ]
     }
     return render(request, 'donor/impact/share_impact.html', context)
+
+@login_required(login_url='donor:donorlogin')
+@require_GET
+def ajax_get_available_times(request):
+    """
+    AJAX endpoint to get available time slots for a phlebotomist on a specific date.
+    Returns only unbooked times.
+    """
+    phlebotomist_id = request.GET.get('phlebotomist_id')
+    date_str = request.GET.get('date')
+    
+    logger.info(f"🔍 Checking available times - Phlebotomist: {phlebotomist_id}, Date: {date_str}")
+    
+    if not phlebotomist_id or not date_str:
+        return JsonResponse({
+            'available_times': [],
+            'error': 'Missing parameters'
+        }, status=400)
+    
+    try:
+        # Validate phlebotomist exists
+        phlebotomist = get_object_or_404(Phlebotomist, id=phlebotomist_id, is_approved=True)
+        
+        # Parse date
+        appointment_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Get available slots
+        available_slots = get_available_time_slots(phlebotomist_id, appointment_date)
+        
+        # Format for template (12-hour with AM/PM)
+        formatted_slots = []
+        for slot in available_slots:
+            time_obj = datetime.strptime(slot, '%H:%M')
+            formatted_slots.append({
+                'value': slot,
+                'display': time_obj.strftime('%I:%M %p')
+            })
+        
+        logger.info(f"✅ Found {len(formatted_slots)} available slots")
+        
+        return JsonResponse({
+            'available_times': formatted_slots,
+            'phlebotomist_name': phlebotomist.user.get_full_name() or phlebotomist.user.username,
+            'date': date_str
+        })
+        
+    except Phlebotomist.DoesNotExist:
+        logger.warning(f"⚠️ Phlebotomist not found: {phlebotomist_id}")
+        return JsonResponse({
+            'available_times': [],
+            'error': 'Phlebotomist not found'
+        }, status=404)
+        
+    except ValueError as e:
+        logger.warning(f"⚠️ Invalid date format: {date_str}")
+        return JsonResponse({
+            'available_times': [],
+            'error': 'Invalid date format'
+        }, status=400)
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting available times: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'available_times': [],
+            'error': str(e)
+        }, status=500)

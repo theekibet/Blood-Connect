@@ -136,7 +136,36 @@ class BloodBankTechProfileForm(forms.ModelForm):
     
     first_name = forms.CharField(max_length=30, required=False)
     last_name = forms.CharField(max_length=30, required=False)
-    email = forms.EmailField(required=False)
+    
+    # Read-only display fields for regular users
+    email_display = forms.EmailField(
+        required=False,
+        disabled=True,
+        label="Email",
+        help_text="Email cannot be changed. Contact admin for updates."
+    )
+    
+    employee_id_display = forms.CharField(
+        max_length=50,
+        required=False,
+        disabled=True,
+        label="Employee ID",
+        help_text="Employee ID cannot be changed"
+    )
+    
+    center_display = forms.CharField(
+        required=False,
+        disabled=True,
+        label="Center",
+        help_text="Center assignment can only be changed by administrator"
+    )
+    
+    is_active_display = forms.BooleanField(
+        required=False,
+        disabled=True,
+        label="Active Status",
+        help_text="Account status can only be changed by administrator"
+    )
     
     class Meta:
         model = BloodBankTechProfile
@@ -150,12 +179,19 @@ class BloodBankTechProfileForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        # Check if user is superuser
+        self.user = kwargs.pop('user', None)
+        self.is_superuser = kwargs.pop('is_superuser', False)
+        
         super().__init__(*args, **kwargs)
         
         # Add Bootstrap classes
         for field_name, field in self.fields.items():
-            if field_name != 'is_active' and field_name != 'profile_pic':
+            if field_name not in ['is_active', 'is_active_display', 'employee_id_display', 
+                                 'center_display', 'email_display', 'profile_pic']:
                 field.widget.attrs['class'] = 'form-control'
+            elif field_name == 'is_active':
+                field.widget.attrs['class'] = 'form-check-input'
         
         # Make is_active a checkbox
         self.fields['is_active'].widget.attrs['class'] = 'form-check-input'
@@ -164,7 +200,28 @@ class BloodBankTechProfileForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields['first_name'].initial = self.instance.user.first_name
             self.fields['last_name'].initial = self.instance.user.last_name
-            self.fields['email'].initial = self.instance.user.email
+            
+            # Set display field values
+            self.fields['email_display'].initial = self.instance.user.email
+            self.fields['employee_id_display'].initial = self.instance.employee_id
+            self.fields['center_display'].initial = str(self.instance.center) if self.instance.center else "Not Assigned"
+            self.fields['is_active_display'].initial = self.instance.is_active
+        
+        # Configure field permissions based on user role
+        if not self.is_superuser:
+            # Make all sensitive fields read-only for regular users
+            sensitive_fields = ['employee_id', 'is_active', 'center', 'email']
+            
+            for field in sensitive_fields:
+                if field in self.fields:
+                    self.fields[field].disabled = True
+                    self.fields[field].widget = forms.HiddenInput()
+                    if field == 'center':
+                        self.fields[field].required = False
+            
+            # Also hide the email field from the form
+            if 'email' in self.fields:
+                self.fields['email'].widget = forms.HiddenInput()
     
     def clean_profile_pic(self):
         profile_pic = self.cleaned_data.get('profile_pic')
@@ -180,6 +237,31 @@ class BloodBankTechProfileForm(forms.ModelForm):
                 raise forms.ValidationError("Unsupported file extension. Allowed: .jpg, .jpeg, .png, .gif")
         
         return profile_pic
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # For regular users, ensure sensitive fields aren't being changed
+        if not self.is_superuser and self.instance and self.instance.pk:
+            # For center, use the original instance
+            if 'center' in cleaned_data:
+                cleaned_data['center'] = self.instance.center
+            
+            # Restore other sensitive fields
+            sensitive_fields = {
+                'employee_id': self.instance.employee_id,
+                'is_active': self.instance.is_active,
+            }
+            
+            for field, original_value in sensitive_fields.items():
+                if field in cleaned_data and cleaned_data.get(field) != original_value:
+                    cleaned_data[field] = original_value
+            
+            # Also restore email
+            if self.instance.user.email != cleaned_data.get('email'):
+                cleaned_data['email'] = self.instance.user.email
+        
+        return cleaned_data
     
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -200,14 +282,19 @@ class BloodBankTechProfileForm(forms.ModelForm):
                     print(f"⚠️ Error deleting old picture: {e}")
         
         if commit:
-            # Update user information
+            # Update user information (only non-sensitive fields)
             user = instance.user
             user.first_name = self.cleaned_data['first_name']
             user.last_name = self.cleaned_data['last_name']
-            user.email = self.cleaned_data['email']
+            
+            # Only update email if user is superuser
+            if self.is_superuser and 'email' in self.cleaned_data:
+                user.email = self.cleaned_data['email']
+            
             user.save()
             
             instance.save()
             self.save_m2m()
+            print(f"✅ Profile saved with picture: {instance.profile_pic}")
         
         return instance

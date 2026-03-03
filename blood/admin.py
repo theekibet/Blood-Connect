@@ -9,7 +9,7 @@ from .models import (
     QuizAttempt, FactContribution, BloodBagBarcode
 )
 from phlebotomist.models import Appointment
-
+from .models import HoneypotAttempt
 # Existing admin registrations
 admin.site.register(Stock)
 
@@ -194,3 +194,15 @@ class BloodBagBarcodeAdmin(admin.ModelAdmin):
             f"✅ Generated {len(barcodes)} new barcodes"
         )
     generate_barcodes.short_description = "Generate 10 new barcodes"
+@admin.register(HoneypotAttempt)
+class HoneypotAttemptAdmin(admin.ModelAdmin):
+    list_display = ['ip', 'username', 'timestamp']
+    list_filter = ['timestamp']
+    search_fields = ['ip', 'username']
+    readonly_fields = ['ip', 'username', 'password', 'user_agent', 'timestamp']
+    
+    def has_add_permission(self, request):
+        return False  # Don't allow manual adding
+    
+    def has_change_permission(self, request, obj=None):
+        return False 

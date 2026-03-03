@@ -55,7 +55,9 @@ INSTALLED_APPS = [
     # Third-party
     'widget_tweaks',
     'django_extensions',
-
+    'django_ratelimit',  # For rate limiting honeypot
+    'django_redis',  # <-- ADDED: Redis cache backend
+    
     # Local apps
     'blood',
     'donor',
@@ -156,6 +158,22 @@ DATABASES = {
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# =============================
+# CACHE CONFIGURATION (FOR RATE LIMITING)
+# =============================
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Redis database 1
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Tell django-ratelimit which cache to use
+RATELIMIT_USE_CACHE = 'default'
 
 # =============================
 # PASSWORD VALIDATION
@@ -265,9 +283,8 @@ if not DEBUG:
         logger = logging.getLogger(__name__)
         logger.warning("Email credentials not configured. Email functionality will not work.")
 
-
 # =============================
-# LOGGING
+# ENHANCED LOGGING FOR HONEYPOT
 # =============================
 LOGGING = {
     'version': 1,
@@ -282,6 +299,10 @@ LOGGING = {
             'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
+        'honeypot': {  # Special formatter for honeypot logs
+            'format': '\n🔴 HONEYPOT ATTACK - {asctime}\n   IP: {message}\n   {levelname}',
+            'style': '{',
+        },
     },
 
     'handlers': {
@@ -290,6 +311,17 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'stream': sys.stdout,
             'formatter': 'simple',
+        },
+        'honeypot_file': {  # Separate file for honeypot logs
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'honeypot.log',
+            'formatter': 'honeypot',
+        },
+        'honeypot_email': {  # Email alerts for serious attempts
+            'level': 'WARNING',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'include_html': True,
         },
     },
 
@@ -314,6 +346,11 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': False,
         },
+        'blood.views': {  # Logger for honeypot views
+            'handlers': ['console', 'honeypot_file', 'honeypot_email'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
     },
 }
 
@@ -324,6 +361,15 @@ MAX_DONATIONS_PER_DAY = 50
 BLOOD_REQUEST_EXPIRY_DAYS = 7
 DONOR_MIN_AGE = 18
 DONOR_MAX_AGE = 65
+
+# =============================
+# HONEYPOT SETTINGS
+# =============================
+HONEYPOT_ENABLED = True  # Master switch for honeypot
+HONEYPOT_LOG_ALL_ATTEMPTS = True  # Log all attempts to database
+HONEYPOT_EMAIL_ALERTS = True  # Send email alerts for suspicious attempts
+HONEYPOT_DELAY_ATTEMPTS = True  # Add delay to slow down brute force
+HONEYPOT_MAX_ATTEMPTS_PER_IP = 10  # Max attempts before special messages
 
 # =============================
 # STARTUP VALIDATION
@@ -347,3 +393,26 @@ if DEBUG:
     import mimetypes
     mimetypes.add_type("text/css", ".css", True)
     mimetypes.add_type("text/javascript", ".js", True)
+
+# =============================
+# AUTHENTICATION BACKENDS
+# =============================
+AUTHENTICATION_BACKENDS = [
+    'donor.authentication_backends.EmailOrUsernameBackend',  
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# =============================
+# SESSION SETTINGS
+# =============================
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = True
+
+# =============================
+# LOGIN SETTINGS
+# =============================
+LOGIN_URL = 'donor:donorlogin'
+LOGIN_REDIRECT_URL = 'donor:donor-dashboard'
+LOGOUT_REDIRECT_URL = 'home'
+
+ADMIN_SECRET_URL = os.getenv('ADMIN_SECRET_URL', 'dev-admin-only')
