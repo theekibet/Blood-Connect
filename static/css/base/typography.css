@@ -1,654 +1,132 @@
 /* ========================================
-   Typography Styles - BloodConnect
-   Blood Donation System
+   Typography System
    ======================================== */
 
-/* Base Body Typography */
+/* Base Typography */
 body {
-    font-family: var(--font-family);
-    font-size: var(--font-size-base);
-    line-height: 1.6;
-    color: var(--dark);
-    background-color: var(--light);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
 /* Headings */
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 1rem;
-    color: var(--dark);
+    font-weight: var(--font-bold);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-4);
 }
 
 h1 {
-    font-size: 2.5rem;
+    font-size: var(--text-4xl);
+    font-weight: var(--font-extrabold);
     letter-spacing: -0.02em;
 }
 
 h2 {
-    font-size: 2rem;
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
     letter-spacing: -0.01em;
 }
 
 h3 {
-    font-size: 1.75rem;
+    font-size: var(--text-2xl);
 }
 
 h4 {
-    font-size: 1.5rem;
+    font-size: var(--text-xl);
 }
 
 h5 {
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
 }
 
 h6 {
-    font-size: 1rem;
-}
-
-/* Header Section */
-.header-section h1 {
-    font-size: 2.25rem;
-    font-weight: 800;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.header-section p {
-    font-size: 1.1rem;
-    color: var(--gray);
-    max-width: 600px;
-}
-
-/* Page Header */
-.page-header h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.page-header p {
-    font-size: 1rem;
-    color: var(--gray);
-    margin-bottom: 1.5rem;
-}
-
-/* Hero Section */
-.hero-content h1 {
-    font-size: 3.5rem;
-    font-weight: 800;
-    line-height: 1.2;
-    color: var(--white);
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-    margin-bottom: 1.5rem;
-}
-
-.hero-content p {
-    font-size: 1.25rem;
-    color: rgba(255,255,255,0.9);
-    margin-bottom: 2rem;
-    max-width: 600px;
-}
-
-/* Authentication Pages */
-.auth-header h3 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.auth-header p {
-    font-size: 0.95rem;
-    color: var(--gray);
-    margin-bottom: 1.5rem;
-}
-
-.auth-card .card-header h4 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--primary);
-    margin: 0;
-}
-
-.auth-card .card-body {
-    font-size: 0.95rem;
-    color: var(--gray);
-}
-
-.auth-body {
-    font-size: 1rem;
-    line-height: 1.6;
-}
-
-/* Dashboard Cards */
-.dashboard-card-body {
-    font-size: 0.95rem;
-    color: var(--gray);
-}
-
-.stat-box h3 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 0.25rem;
-}
-
-.stat-box p {
-    font-size: 0.9rem;
-    color: var(--gray);
+    font-size: var(--text-base);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 500;
+    letter-spacing: 0.05em;
 }
 
-.stat-content h4 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.25rem;
+/* Paragraphs */
+p {
+    margin-bottom: var(--spacing-4);
+    color: var(--text-secondary);
 }
 
-.stat-content p {
-    font-size: 0.85rem;
-    color: var(--gray);
+.lead {
+    font-size: var(--text-lg);
+    font-weight: var(--font-light);
+    line-height: var(--leading-relaxed);
+    color: var(--text-primary);
 }
 
-/* Info Cards */
-.info-card-body {
-    font-size: 1rem;
-    color: var(--white);
-}
-
-.info-card.primary .text-muted,
-.info-card.success .text-muted,
-.info-card.info .text-muted,
-.info-card.warning .text-muted {
-    color: rgba(255,255,255,0.8) !important;
-}
-
-/* Profile Section */
-.profile-info h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 0.25rem;
-}
-
-.profile-info p {
-    font-size: 0.95rem;
-    color: var(--gray);
-    margin-bottom: 0.5rem;
-}
-
-/* User Info Display */
-.user-info-display h5 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.info-box h6 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--gray);
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.info-box p {
-    font-size: 1rem;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-/* Forms */
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-    display: block;
-}
-
-.form-step {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* Progress Steps */
-.progress-step {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--gray);
-}
-
-/* Consent Section */
-.consent-text h4 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 1rem;
-}
-
-.consent-text p {
-    font-size: 0.95rem;
-    color: var(--gray);
-    line-height: 1.6;
-}
-
-/* Features Section */
-.feature-card h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.75rem;
-}
-
-.feature-card p {
-    font-size: 0.95rem;
-    color: var(--gray);
-    line-height: 1.6;
-}
-
-/* Impact Section */
-.impact h2 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 1rem;
-}
-
-.impact p {
-    font-size: 1.1rem;
-    color: rgba(255,255,255,0.9);
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-/* Call to Action */
-.cta {
-    text-align: center;
-}
-
-.cta h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 1rem;
-}
-
-.cta p {
-    font-size: 1.1rem;
-    color: var(--gray);
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Banner Slider */
-.banner-slide h3 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 1rem;
-}
-
-.banner-slide p {
-    font-size: 1rem;
-    color: var(--gray);
-    line-height: 1.6;
-}
-
-/* Testimonials */
-.testimonial-info h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.25rem;
-}
-
-.testimonial-info p {
-    font-size: 0.85rem;
-    color: var(--gray);
-}
-
-/* Chatbot */
-.chatbot-title h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--white);
-    margin: 0;
-}
-
-.chatbot-title p {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.8);
-    margin: 0;
-}
-
-.chatbot-header-text h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--white);
-    margin: 0;
-}
-
-.chatbot-header-text p {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.8);
-    margin: 0;
-}
-
-/* Welcome Message */
-.welcome-message h4 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-/* Alerts */
-.alert-content h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.25rem;
-}
-
-.alert-content p {
-    font-size: 0.9rem;
-    color: var(--gray);
-}
-
-/* Empty States */
-.empty-state h4 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.empty-state p {
-    font-size: 0.95rem;
-    color: var(--gray);
-}
-
-/* Footer */
-.footer-section h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--white);
-    margin-bottom: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.footer-section a {
-    font-size: 0.9rem;
-    color: rgba(255,255,255,0.7);
+/* Links */
+a {
+    color: var(--medical-blue);
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: color var(--transition-fast) var(--transition-timing);
 }
 
-.footer-section a:hover {
-    color: var(--white);
+a:hover {
+    color: var(--medical-blue-dark);
+    text-decoration: underline;
 }
 
-/* Navigation */
-.nav-links a {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--dark);
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
+/* Text Utilities */
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-tertiary { color: var(--text-tertiary) !important; }
+.text-inverse { color: var(--text-inverse) !important; }
 
-.nav-links a:hover {
-    color: var(--primary);
-}
+.text-success { color: var(--status-success) !important; }
+.text-warning { color: var(--status-warning) !important; }
+.text-danger { color: var(--status-danger) !important; }
+.text-info { color: var(--status-info) !important; }
 
-/* Sidebar */
-.sidebar h4 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--dark);
-    padding: 1rem;
-    margin: 0;
-    border-bottom: 1px solid var(--light-gray);
-}
+.text-xs { font-size: var(--text-xs) !important; }
+.text-sm { font-size: var(--text-sm) !important; }
+.text-base { font-size: var(--text-base) !important; }
+.text-lg { font-size: var(--text-lg) !important; }
+.text-xl { font-size: var(--text-xl) !important; }
+.text-2xl { font-size: var(--text-2xl) !important; }
+.text-3xl { font-size: var(--text-3xl) !important; }
+.text-4xl { font-size: var(--text-4xl) !important; }
+.text-5xl { font-size: var(--text-5xl) !important; }
 
-.sidebar a {
-    font-size: 0.95rem;
-    color: var(--gray);
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
+.font-light { font-weight: var(--font-light) !important; }
+.font-normal { font-weight: var(--font-normal) !important; }
+.font-medium { font-weight: var(--font-medium) !important; }
+.font-semibold { font-weight: var(--font-semibold) !important; }
+.font-bold { font-weight: var(--font-bold) !important; }
+.font-extrabold { font-weight: var(--font-extrabold) !important; }
 
-.sidebar a:hover {
-    color: var(--primary);
-}
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+.text-justify { text-align: justify !important; }
 
-/* Dropdown Items */
-.dropdown-item.text-danger i,
-.dropdown-item.text-danger:hover {
-    color: var(--danger);
-}
-
-/* Lists */
-.list-group {
-    font-size: 0.95rem;
-    color: var(--dark);
-}
-
-/* Edit Profile */
-.edit-profile-card .text-center {
-    text-align: center;
-}
-
-.readonly-notice p {
-    font-size: 0.9rem;
-    color: var(--gray);
-    font-style: italic;
-}
-
-/* Drive CTA */
-.drive-cta {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--primary);
-}
-
-/* Steps */
-.step {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--gray);
-}
-
-/* Border Top */
-.border-top {
-    border-top: 1px solid var(--light-gray);
-}
-
-/* Text Color Classes */
-.text-center { text-align: center; }
-.text-left { text-align: left; }
-.text-right { text-align: right; }
-
-.text-muted { 
-    color: var(--gray) !important; 
-    font-size: 0.9rem;
-}
-
-.text-muted i,
-.text-muted em {
-    color: inherit;
-}
-
-.text-primary { color: var(--primary) !important; }
-.text-success { color: var(--success) !important; }
-.text-danger { 
-    color: var(--danger) !important;
-    font-weight: 500;
-}
-
-.text-danger:hover {
-    color: var(--primary-dark) !important;
-}
-
-.text-warning { color: var(--warning) !important; }
-.text-gray-300 { color: #d1d5db !important; }
-.text-gray-800 { color: #1f2937 !important; }
-
-/* Special Cases */
-.text-center.p-5 {
-    text-align: center;
-    padding: 3rem;
-}
-
-.text-center.p-5 i {
-    font-size: 3rem;
-    color: var(--gray);
-    margin-bottom: 1rem;
-}
-
-.text-center.p-5 h4 {
-    font-size: 1.2rem;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.text-center.text-muted {
-    text-align: center;
-    color: var(--gray);
-}
-
-/* Input Groups */
-.input-group {
-    position: relative;
-    display: flex;
+/* Blood Type Badge Typography */
+.blood-type-badge {
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
+    font-weight: var(--font-bold);
+    font-size: var(--text-sm);
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--radius-full);
 }
 
-/* Animations */
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.blood-type-badge.large {
+    font-size: var(--text-lg);
+    padding: var(--spacing-2) var(--spacing-4);
 }
 
-/* Blood type special styling */
-.blood-type {
-    font-weight: 700;
-    color: var(--danger);
-    font-size: 1.2rem;
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    background: rgba(220, 38, 38, 0.1);
-    border-radius: var(--border-radius-sm);
-}
-
-/* Urgency levels */
-.urgency-high {
-    color: var(--danger);
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
-}
-
-.urgency-medium {
-    color: var(--warning);
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
-}
-
-.urgency-low {
-    color: var(--success);
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
-}
-
-/* Responsive Typography */
-@media (max-width: 768px) {
-    h1 {
-        font-size: 2rem;
-    }
-    
-    h2 {
-        font-size: 1.75rem;
-    }
-    
-    h3 {
-        font-size: 1.5rem;
-    }
-    
-    .hero-content h1 {
-        font-size: 2.5rem;
-    }
-    
-    .hero-content p {
-        font-size: 1.1rem;
-    }
-    
-    .impact h2 {
-        font-size: 2rem;
-    }
-    
-    .page-header h1 {
-        font-size: 1.75rem;
-    }
-}
-
-@media (max-width: 480px) {
-    body {
-        font-size: 0.95rem;
-    }
-    
-    h1 {
-        font-size: 1.75rem;
-    }
-    
-    h2 {
-        font-size: 1.5rem;
-    }
-    
-    .hero-content h1 {
-        font-size: 2rem;
-    }
-    
-    .hero-content p {
-        font-size: 1rem;
-    }
-    
-    .stat-box h3 {
-        font-size: 1.5rem;
-    }
-}
+/* Blood type specific colors */
+.blood-type-a { background-color: var(--blood-a); color: white; }
+.blood-type-b { background-color: var(--blood-b); color: white; }
+.blood-type-ab { background-color: var(--blood-ab); color: white; }
+.blood-type-o { background-color: var(--blood-o); color: white; }

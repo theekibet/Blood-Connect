@@ -1,63 +1,253 @@
-/* Messages/Alerts Styles */
+/* ========================================
+   Messages & Alerts
+   ======================================== */
+
+/* Messages Container */
 .messages-container {
     position: fixed;
-    top: calc(var(--navbar-height) + var(--spacing-3));
+    top: calc(var(--navbar-height) + var(--spacing-4));
     right: var(--spacing-4);
-    z-index: var(--z-index-tooltip);
+    z-index: var(--z-toast);
     max-width: 400px;
+    width: 100%;
+    pointer-events: none;
 }
 
+.messages-container .alert {
+    pointer-events: auto;
+    margin-bottom: var(--spacing-3);
+    animation: slideInRight var(--transition-base) var(--transition-timing);
+}
+
+/* Alert Base */
 .alert {
-    padding: var(--spacing-3) var(--spacing-4);
-    border: none;
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-2);
-    animation: slideInRight 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
+    position: relative;
+    padding: var(--spacing-4) var(--spacing-6) var(--spacing-4) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
     box-shadow: var(--shadow-lg);
-}
-
-.alert-success {
-    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
-    color: var(--white);
-}
-
-.alert-warning {
-    background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
-    color: var(--dark);
-}
-
-.alert-danger {
-    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
-    color: var(--white);
-}
-
-.alert-info {
-    background: linear-gradient(135deg, var(--info) 0%, var(--info-dark) 100%);
-    color: var(--white);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-3);
 }
 
 .alert i {
-    font-size: var(--font-size-lg);
+    font-size: var(--text-xl);
+    flex-shrink: 0;
 }
 
-.alert .close {
-    margin-left: auto;
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: var(--font-bold);
+    margin-bottom: var(--spacing-1);
+}
+
+.alert-message {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+}
+
+/* Alert Types */
+.alert-success {
+    background: var(--success-green);
+    border-color: var(--success-green-dark);
+    color: white;
+}
+
+.alert-success i {
+    color: white;
+}
+
+.alert-success .alert-message {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.alert-warning {
+    background: var(--warning-yellow);
+    border-color: var(--warning-yellow-dark);
+    color: var(--gray-900);
+}
+
+.alert-warning i {
+    color: var(--gray-900);
+}
+
+.alert-warning .alert-message {
+    color: var(--gray-800);
+}
+
+.alert-danger {
+    background: var(--blood-red);
+    border-color: var(--blood-red-dark);
+    color: white;
+}
+
+.alert-danger i {
+    color: white;
+}
+
+.alert-danger .alert-message {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.alert-info {
+    background: var(--info-blue);
+    border-color: var(--info-blue-dark);
+    color: white;
+}
+
+.alert-info i {
+    color: white;
+}
+
+.alert-info .alert-message {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Alert with Icon */
+.alert.with-icon {
+    padding-left: var(--spacing-4);
+}
+
+/* Dismissible Alert */
+.alert-dismissible {
+    padding-right: var(--spacing-12);
+}
+
+.alert-close {
+    position: absolute;
+    top: var(--spacing-3);
+    right: var(--spacing-3);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
     border: none;
+    border-radius: var(--radius-md);
     color: currentColor;
-    opacity: 0.8;
-    font-size: 1.5rem;
+    opacity: 0.7;
     cursor: pointer;
-    line-height: 1;
+    transition: all var(--transition-fast) var(--transition-timing);
 }
 
-.alert .close:hover {
+.alert-close:hover {
     opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
 }
 
+/* Inline Messages */
+.message-inline {
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    margin-top: var(--spacing-2);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.message-inline i {
+    font-size: var(--text-base);
+}
+
+.message-inline.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-green-dark);
+}
+
+.message-inline.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-yellow-dark);
+}
+
+.message-inline.danger {
+    background: rgba(196, 30, 58, 0.1);
+    color: var(--blood-red-dark);
+}
+
+.message-inline.info {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--info-blue-dark);
+}
+
+/* Form Validation Messages */
+.error-message {
+    color: var(--blood-red);
+    font-size: var(--text-sm);
+    margin-top: var(--spacing-1);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.error-message i {
+    font-size: var(--text-sm);
+}
+
+.success-message {
+    color: var(--success-green);
+    font-size: var(--text-sm);
+    margin-top: var(--spacing-1);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+/* Notification Badge */
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 var(--spacing-1);
+    background: var(--blood-red);
+    color: white;
+    font-size: var(--text-xs);
+    font-weight: var(--font-bold);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: var(--spacing-4);
+    right: var(--spacing-4);
+    min-width: 300px;
+    max-width: 400px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-light);
+    z-index: var(--z-toast);
+    animation: slideInUp var(--transition-base) var(--transition-timing);
+}
+
+.toast-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.toast-body {
+    padding: var(--spacing-4);
+}
+
+/* Animations */
 @keyframes slideInRight {
     from {
         transform: translateX(100%);
@@ -69,11 +259,37 @@
     }
 }
 
-/* For auth pages */
-.auth-wrapper .messages-container {
-    position: relative;
-    top: 0;
-    right: 0;
-    max-width: 100%;
-    margin-bottom: var(--spacing-4);
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .messages-container {
+        left: var(--spacing-4);
+        right: var(--spacing-4);
+        max-width: none;
+    }
+    
+    .toast {
+        left: var(--spacing-4);
+        right: var(--spacing-4);
+        max-width: none;
+    }
 }

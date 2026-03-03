@@ -1,0 +1,612 @@
+/* ========================================
+   Dashboard Pages - All User Types
+   ======================================== */
+
+/* Dashboard Container */
+.dashboard-container {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: var(--spacing-4) 0;
+}
+
+/* Stats Grid (for all dashboards) */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+}
+
+/* Stat Card Variants */
+.stat-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-5);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    transition: all var(--transition-base) var(--transition-timing);
+    border: 1px solid var(--border-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--blood-red), var(--medical-blue));
+    opacity: 0;
+    transition: opacity var(--transition-base) var(--transition-timing);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    transition: all var(--transition-base) var(--transition-timing);
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+/* Stat Icon Variants */
+.stat-icon.appointments {
+    background: linear-gradient(135deg, var(--medical-blue-soft), var(--medical-blue));
+    color: white;
+}
+
+.stat-icon.today {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), var(--success-green));
+    color: white;
+}
+
+.stat-icon.pending {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), var(--warning-yellow));
+    color: white;
+}
+
+.stat-icon.completed {
+    background: linear-gradient(135deg, rgba(196, 30, 58, 0.1), var(--blood-red));
+    color: white;
+}
+
+.stat-icon.total {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.1), var(--gray-600));
+    color: white;
+}
+
+.stat-icon.safe {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), var(--success-green));
+    color: white;
+}
+
+.stat-icon.unsafe {
+    background: linear-gradient(135deg, rgba(196, 30, 58, 0.1), var(--blood-red));
+    color: white;
+}
+
+.stat-icon.urgent {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), var(--warning-yellow));
+    color: white;
+}
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-info h3 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    margin: 0 0 var(--spacing-1);
+    line-height: 1;
+}
+
+.stat-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+.stat-change {
+    font-size: var(--text-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    margin-top: var(--spacing-2);
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    width: fit-content;
+}
+
+.stat-change.positive {
+    color: var(--success-green);
+}
+
+.stat-change.negative {
+    color: var(--blood-red);
+}
+
+.stat-change.neutral {
+    color: var(--text-tertiary);
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-6);
+    margin-bottom: var(--spacing-6);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-base) var(--transition-timing);
+}
+
+.dashboard-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+.card-title i {
+    color: var(--blood-red);
+}
+
+.card-action {
+    color: var(--medical-blue);
+    font-size: var(--text-sm);
+    transition: color var(--transition-fast) var(--transition-timing);
+}
+
+.card-action:hover {
+    color: var(--blood-red);
+    text-decoration: none;
+}
+
+/* Quick Actions Grid */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-4);
+}
+
+.quick-action-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    text-align: center;
+    transition: all var(--transition-base) var(--transition-timing);
+    border: 1px solid var(--border-light);
+}
+
+.quick-action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    background: var(--bg-primary);
+}
+
+.quick-action-card i {
+    font-size: 2.5rem;
+    color: var(--blood-red);
+    margin-bottom: var(--spacing-3);
+}
+
+.quick-action-card h4 {
+    font-size: var(--text-base);
+    margin-bottom: var(--spacing-2);
+}
+
+.quick-action-card p {
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--spacing-3);
+}
+
+.quick-action-card .btn {
+    width: 100%;
+}
+
+/* Recent Items Lists */
+.recent-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3) 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.recent-item:last-child {
+    border-bottom: none;
+}
+
+.recent-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.recent-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--blood-red);
+}
+
+.recent-details h5 {
+    margin: 0 0 var(--spacing-1);
+    font-size: var(--text-sm);
+}
+
+.recent-details p {
+    margin: 0;
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+}
+
+.recent-status {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+}
+
+/* Appointment Items (from phlebotomist) */
+.appointment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-2);
+    transition: all var(--transition-fast) var(--transition-timing);
+    border: 1px solid var(--border-light);
+}
+
+.appointment-item:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+.appointment-item.pending {
+    border-left: 4px solid var(--warning-yellow);
+}
+
+.appointment-item.approved {
+    border-left: 4px solid var(--success-green);
+}
+
+.appointment-item.completed {
+    border-left: 4px solid var(--medical-blue);
+}
+
+.appointment-item.cancelled {
+    border-left: 4px solid var(--blood-red);
+}
+
+.appointment-info {
+    flex: 1;
+}
+
+.appointment-date {
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.appointment-participant {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+.appointment-participant i {
+    color: var(--blood-red);
+    margin-right: var(--spacing-1);
+}
+
+.appointment-status {
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+}
+
+.appointment-status.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-yellow-dark);
+}
+
+.appointment-status.approved {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-green-dark);
+}
+
+.appointment-status.completed {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--medical-blue-dark);
+}
+
+.appointment-status.cancelled {
+    background: rgba(196, 30, 58, 0.1);
+    color: var(--blood-red-dark);
+}
+
+/* Blood Stock Table */
+.stock-table-wrapper {
+    overflow-x: auto;
+}
+
+.stock-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.stock-table th {
+    text-align: left;
+    padding: var(--spacing-2) var(--spacing-3);
+    color: var(--text-tertiary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+}
+
+.stock-table td {
+    padding: var(--spacing-2) var(--spacing-3);
+    border-top: 1px solid var(--border-light);
+}
+
+.blood-group-badge {
+    display: inline-block;
+    padding: var(--spacing-1) var(--spacing-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-full);
+    font-weight: var(--font-bold);
+    font-size: var(--text-sm);
+}
+
+.stock-level {
+    font-weight: var(--font-medium);
+}
+
+.stock-level.stock-danger {
+    color: var(--blood-red);
+}
+
+.stock-level.stock-warning {
+    color: var(--warning-yellow);
+}
+
+.stock-level.stock-ok {
+    color: var(--success-green);
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    margin: var(--spacing-4) 0;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-8);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--text-tertiary);
+    margin-bottom: var(--spacing-4);
+}
+
+.empty-state h4 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-2);
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-4);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Alert Box (from phlebotomist) */
+.alert-box {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-4) var(--spacing-6);
+    background: linear-gradient(135deg, var(--info-blue), var(--info-blue-dark));
+    border-radius: var(--radius-lg);
+    color: white;
+    margin-bottom: var(--spacing-6);
+}
+
+.alert-box i {
+    font-size: 2.5rem;
+}
+
+.alert-content h4 {
+    color: white;
+    margin-bottom: var(--spacing-1);
+}
+
+.alert-content p {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+/* Dashboard-specific cards */
+.points-card {
+    background: linear-gradient(135deg, var(--warning-yellow), var(--warning-yellow-dark));
+}
+
+.next-donation-card {
+    background: linear-gradient(135deg, var(--blood-red), var(--blood-red-dark));
+}
+
+.milestone-card {
+    background: linear-gradient(135deg, var(--success-green), var(--success-green-dark));
+}
+
+/* Progress Circle Container */
+.progress-circle-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-number {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.progress-label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+}
+
+/* Greeting Card */
+.greeting-card {
+    background: linear-gradient(135deg, var(--blood-red), var(--blood-red-dark));
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-6);
+    margin-bottom: var(--spacing-6);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.greeting-card::before {
+    content: '🩸';
+    position: absolute;
+    right: -20px;
+    bottom: -20px;
+    font-size: 10rem;
+    opacity: 0.1;
+    transform: rotate(-15deg);
+}
+
+.greeting-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-4);
+    position: relative;
+    z-index: 2;
+}
+
+.greeting-text h1 {
+    color: white;
+    margin-bottom: var(--spacing-2);
+}
+
+.greeting-text p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.current-date {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .greeting-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .appointment-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-2);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: var(--spacing-4);
+    }
+    
+    .dashboard-card {
+        padding: var(--spacing-4);
+    }
+}

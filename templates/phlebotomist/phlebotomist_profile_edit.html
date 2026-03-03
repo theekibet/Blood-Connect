@@ -2,283 +2,322 @@
 {% load static %}
 {% load widget_tweaks %}
 
+{% block title %}Edit Profile - {{ phlebotomist.user.get_full_name }}{% endblock %}
+
 {% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Profile Card -->
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-header-content">
+                        <div class="profile-avatar">
+                            {% if phlebotomist.profile_pic and phlebotomist.profile_pic.url %}
+                                <img src="{{ phlebotomist.profile_pic.url }}" 
+                                     alt="{{ phlebotomist.user.get_full_name }}"
+                                     id="profilePicPreview">
+                            {% else %}
+                                <div class="avatar-placeholder" id="profilePicPreview">
+                                    {{ phlebotomist.user.first_name|first|default:phlebotomist.user.username|first|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="profile-info">
+                            <h2>{{ phlebotomist.user.get_full_name }}</h2>
+                            <div class="role-badge">
+                                <i class="fas fa-user-nurse"></i> Phlebotomist
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-<div class="container mt-4">
-  <div class="row">
-    <div class="col-md-8 offset-md-2">
-      
-      <!-- Bootstrap card -->
-      <div class="card">
-        
-        <!-- Card header with bg-primary -->
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0">
-            <i class="fas fa-user-edit mr-2"></i> Edit Profile: {{ phlebotomist.user.get_full_name }}
-          </h4>
+                <div class="profile-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="POST" enctype="multipart/form-data" class="profile-edit-form">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Profile Picture Section -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-camera"></i> Profile Picture
+                            </h5>
+                            
+                            <div class="text-center mb-4">
+                                <!-- File Upload -->
+                                <div class="mb-3">
+                                    <label for="{{ phlebotomist_form.profile_pic.id_for_label }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-upload me-2"></i>Choose New Picture
+                                    </label>
+                                    {{ phlebotomist_form.profile_pic|add_class:"d-none" }}
+                                    
+                                    {% if phlebotomist.profile_pic %}
+                                        <div class="form-check mt-2">
+                                            <input type="checkbox" class="form-check-input" id="clear_profile_pic" name="clear_profile_pic">
+                                            <label class="form-check-label text-danger" for="clear_profile_pic">
+                                                <i class="fas fa-trash-alt me-1"></i>Remove current picture
+                                            </label>
+                                        </div>
+                                    {% endif %}
+
+                                    {% for error in phlebotomist_form.profile_pic.errors %}
+                                        <div class="text-danger small mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                    
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>Accepted: JPG, PNG, GIF (Max 5MB)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Editable Account Information -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-edit"></i> Editable Account Information
+                            </h5>
+                            
+                            <div class="row">
+                                {% for field in user_form %}
+                                    {% if field.name in "first_name,last_name" %}
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ field.id_for_label }}" class="form-label">
+                                                <i class="fas fa-user me-2"></i>{{ field.label }}
+                                            </label>
+                                            {{ field|add_class:"form-control" }}
+                                            {% if field.help_text %}
+                                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                                            {% endif %}
+                                            {% for error in field.errors %}
+                                                <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Editable Profile Information -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-edit"></i> Editable Profile Information
+                            </h5>
+                            
+                            {% for field in phlebotomist_form %}
+                                {% if field.name in "phone,specialization,bio" %}
+                                    <div class="mb-3">
+                                        <label for="{{ field.id_for_label }}" class="form-label">
+                                            <i class="fas fa-{% if field.name == 'phone' %}phone{% elif field.name == 'specialization' %}stethoscope{% else %}align-left{% endif %} me-2"></i>
+                                            {{ field.label }}
+                                        </label>
+                                        {% if field.name == "bio" %}
+                                            {{ field|add_class:"form-control"|attr:"rows:4" }}
+                                        {% else %}
+                                            {{ field|add_class:"form-control" }}
+                                        {% endif %}
+                                        {% if field.help_text %}
+                                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                        {% for error in field.errors %}
+                                            <div class="text-danger small">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- Read-Only Information -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-lock"></i> Read-Only Information
+                            </h5>
+                            
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Note:</strong> The following fields are locked for security. Contact admin to update.
+                            </div>
+
+                            <!-- Read-only email -->
+                            {% for field in user_form %}
+                                {% if field.name == "email" %}
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-envelope me-2"></i>{{ field.label }}
+                                            <span class="badge bg-warning text-dark ms-2">Read Only</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                            <input type="email" class="form-control bg-light" 
+                                                   value="{{ phlebotomist.user.email }}" readonly disabled>
+                                        </div>
+                                        <small class="readonly-hint">
+                                            <i class="fas fa-lock"></i> Email cannot be changed
+                                        </small>
+                                        <input type="hidden" name="email" value="{{ phlebotomist.user.email }}">
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Read-only license and center -->
+                            <div class="row">
+                                {% for field in phlebotomist_form %}
+                                    {% if field.name in "license_number,center" %}
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">
+                                                <i class="fas fa-{% if field.name == 'license_number' %}id-card{% else %}hospital{% endif %} me-2"></i>
+                                                {{ field.label }}
+                                                <span class="badge bg-warning text-dark ms-2">Read Only</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-{% if field.name == 'license_number' %}id-card{% else %}hospital{% endif %}"></i>
+                                                </span>
+                                                <input type="text" class="form-control bg-light" 
+                                                       value="{% if field.name == 'license_number' %}{{ phlebotomist.license_number }}{% else %}{{ phlebotomist.center.name|default:'Not Assigned' }}{% endif %}" 
+                                                       readonly disabled>
+                                            </div>
+                                            <small class="readonly-hint">
+                                                <i class="fas fa-lock"></i> 
+                                                {% if field.name == 'license_number' %}License number cannot be changed{% else %}Center assignment can only be changed by administrator{% endif %}
+                                            </small>
+                                            <input type="hidden" name="{{ field.name }}" value="{% if field.name == 'license_number' %}{{ phlebotomist.license_number }}{% else %}{{ phlebotomist.center_id|default:'' }}{% endif %}">
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+
+                            <!-- Hidden fields -->
+                            {{ phlebotomist_form.registration_number.as_hidden }}
+                            {{ phlebotomist_form.donation_center.as_hidden }}
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="form-actions">
+                            <a href="{% url 'phlebotomist:phlebotomist-profile' phlebotomist.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-
-        <!-- Card body -->
-        <div class="card-body">
-          
-          <!-- Messages -->
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-
-          <form method="POST" enctype="multipart/form-data" novalidate>
-            {% csrf_token %}
-
-            <!-- Profile Picture Section -->
-            <div class="text-center mb-4">
-              <h5 class="mb-3">
-                <i class="fas fa-camera me-2"></i>Profile Picture
-              </h5>
-              
-              <div class="profile-preview mb-3">
-                {% if phlebotomist.profile_pic and phlebotomist.profile_pic.url %}
-                  <img src="{{ phlebotomist.profile_pic.url }}" 
-                       id="profilePicPreview" 
-                       alt="Profile Picture Preview" 
-                       style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-                       onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
-                {% else %}
-                  <img src="{% static 'images/default-profile.png' %}" 
-                       id="profilePicPreview" 
-                       alt="Default Profile" 
-                       style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                {% endif %}
-              </div>
-
-              <!-- File Upload -->
-              <div class="mb-3">
-                <label for="{{ phlebotomist_form.profile_pic.id_for_label }}" class="btn btn-outline-primary">
-                  <i class="fas fa-upload me-2"></i>Choose New Picture
-                </label>
-                {{ phlebotomist_form.profile_pic|add_class:"d-none" }}
-                
-                {% if phlebotomist.profile_pic %}
-                  <div class="form-check mt-2">
-                    <input type="checkbox" class="form-check-input" id="clear_profile_pic" name="clear_profile_pic">
-                    <label class="form-check-label text-danger" for="clear_profile_pic">
-                      <i class="fas fa-trash-alt me-1"></i>Remove current picture (will revert to default)
-                    </label>
-                  </div>
-                {% endif %}
-
-                {% for error in phlebotomist_form.profile_pic.errors %}
-                  <div class="text-danger small mt-1">{{ error }}</div>
-                {% endfor %}
-                
-                <small class="text-muted d-block mt-2">
-                  <i class="fas fa-info-circle me-1"></i>Accepted formats: JPG, PNG, GIF (Max 5MB)
-                </small>
-              </div>
-            </div>
-
-            <!-- Editable Account Information -->
-            <h5 class="border-bottom pb-2 mb-3">
-              <i class="fas fa-edit text-primary me-2"></i>Editable Account Information
-            </h5>
-            
-            <div class="row g-3">
-              {% for field in user_form %}
-                {% if field.name in "first_name,last_name" %}
-                  <div class="col-md-6">
-                    <label for="{{ field.id_for_label }}" class="form-label">
-                      <i class="fas fa-user me-2"></i>{{ field.label }}
-                    </label>
-                    {{ field|add_class:"form-control" }}
-                    {% if field.help_text %}
-                      <small class="form-text text-muted">{{ field.help_text }}</small>
-                    {% endif %}
-                    {% for error in field.errors %}
-                      <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-
-            <!-- Editable Profile Information -->
-            <h5 class="border-bottom pb-2 mb-3 mt-4">
-              <i class="fas fa-edit text-primary me-2"></i>Editable Profile Information
-            </h5>
-            
-            {% for field in phlebotomist_form %}
-              {% if field.name in "phone,specialization,bio" %}
-                <div class="mb-3">
-                  <label for="{{ field.id_for_label }}" class="form-label">
-                    <i class="fas fa-{% if field.name == 'phone' %}phone{% elif field.name == 'specialization' %}stethoscope{% else %}align-left{% endif %} me-2"></i>
-                    {{ field.label }}
-                  </label>
-                  {% if field.name == "bio" %}
-                    {{ field|add_class:"form-control"|attr:"rows:4" }}
-                  {% else %}
-                    {{ field|add_class:"form-control" }}
-                  {% endif %}
-                  {% if field.help_text %}
-                    <small class="form-text text-muted">{{ field.help_text }}</small>
-                  {% endif %}
-                  {% for error in field.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            {% endfor %}
-
-            <!-- Read-Only Information -->
-            <h5 class="border-bottom pb-2 mb-3 mt-4">
-              <i class="fas fa-lock text-secondary me-2"></i>Read-Only Information
-            </h5>
-            
-            <div class="alert alert-info mb-3">
-              <i class="fas fa-info-circle me-2"></i>
-              <strong>Note:</strong> The following fields are locked for security and verification purposes. 
-              Contact your system administrator if you need to update these details.
-            </div>
-
-            <!-- Read-only email from user_form -->
-            {% for field in user_form %}
-              {% if field.name == "email" %}
-                <div class="mb-3">
-                  <label for="{{ field.id_for_label }}" class="form-label">
-                    <i class="fas fa-envelope me-2"></i>{{ field.label }}
-                    <span class="badge bg-warning text-dark ms-2">Read Only</span>
-                  </label>
-                  {{ field|add_class:"form-control bg-light"|attr:"readonly" }}
-                  {% if field.help_text %}
-                    <small class="form-text text-muted">{{ field.help_text }}</small>
-                  {% endif %}
-                  {% for error in field.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            {% endfor %}
-
-            <!-- Read-only fields from phlebotomist_form -->
-            <div class="row">
-              {% for field in phlebotomist_form %}
-                {% if field.name in "license_number,center" %}
-                  <div class="col-md-6 mb-3">
-                    <label for="{{ field.id_for_label }}" class="form-label">
-                      <i class="fas fa-{% if field.name == 'license_number' %}id-card{% else %}hospital{% endif %} me-2"></i>{{ field.label }}
-                      <span class="badge bg-warning text-dark ms-2">Read Only</span>
-                    </label>
-                    {{ field|add_class:"form-control bg-light"|attr:"readonly" }}
-                    {% if field.help_text %}
-                      <small class="form-text text-muted">{{ field.help_text }}</small>
-                    {% endif %}
-                    {% for error in field.errors %}
-                      <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-
-            <!-- Hidden fields -->
-            {{ phlebotomist_form.registration_number.as_hidden }}
-            {{ phlebotomist_form.donation_center.as_hidden }}
-
-            <!-- Action Buttons -->
-            <div class="d-flex gap-3 justify-content-center mt-4">
-              <a href="{% url 'phlebotomist:phlebotomist-profile' phlebotomist.pk %}" class="btn btn-secondary px-4">
-                <i class="fas fa-times me-2"></i>Cancel
-              </a>
-              <button type="submit" class="btn btn-primary px-5">
-                <i class="fas fa-save me-2"></i>Save Changes
-              </button>
-            </div>
-            
-          </form>
-        </div> <!-- end card-body -->
-      </div> <!-- end card -->
-    </div> <!-- end col -->
-  </div> <!-- end row -->
-</div> <!-- end container -->
+    </div>
+</div>
 
 <script>
-  // Profile picture live preview
-  document.addEventListener('DOMContentLoaded', function() {
-      const fileInput = document.getElementById('{{ phlebotomist_form.profile_pic.id_for_label }}');
-      const previewImg = document.getElementById('profilePicPreview');
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('{{ phlebotomist_form.profile_pic.id_for_label }}');
+    const previewImg = document.getElementById('profilePicPreview');
+    const removeCheckbox = document.getElementById('clear_profile_pic');
 
-      if(fileInput) {
-          // Hide the default file input
-          fileInput.classList.add('d-none');
-          
-          // Trigger file input when button is clicked
-          const uploadBtn = document.querySelector('label[for="{{ phlebotomist_form.profile_pic.id_for_label }}"]');
-          if (uploadBtn) {
-              uploadBtn.addEventListener('click', function(e) {
-                  e.preventDefault();
-                  fileInput.click();
-              });
-          }
-          
-          fileInput.addEventListener('change', function(){
-              const file = this.files[0];
-              if (file) {
-                  // Validate file size (max 5MB)
-                  if (file.size > 5 * 1024 * 1024) {
-                      alert('File size must be less than 5MB');
-                      this.value = '';
-                      return;
-                  }
-                  
-                  // Validate file type
-                  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-                  if (!allowedTypes.includes(file.type)) {
-                      alert('Only JPG, JPEG, PNG, and GIF files are allowed');
-                      this.value = '';
-                      return;
-                  }
-                  
-                  const reader = new FileReader();
-                  reader.onload = function(e){
-                      previewImg.setAttribute('src', e.target.result);
-                  }
-                  reader.readAsDataURL(file);
-                  
-                  // Uncheck remove picture if user selects new one
-                  const removeCheckbox = document.getElementById('clear_profile_pic');
-                  if (removeCheckbox) {
-                      removeCheckbox.checked = false;
-                  }
-              }
-          });
-      }
+    if(fileInput) {
+        fileInput.classList.add('d-none');
+        
+        const uploadBtn = document.querySelector('label[for="{{ phlebotomist_form.profile_pic.id_for_label }}"]');
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fileInput.click();
+            });
+        }
+        
+        fileInput.addEventListener('change', function(){
+            const file = this.files[0];
+            if (file) {
+                // Validate file size
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    this.value = '';
+                    return;
+                }
+                
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Only JPG, PNG, and GIF files are allowed');
+                    this.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e){
+                    if (previewImg.tagName === 'IMG') {
+                        previewImg.setAttribute('src', e.target.result);
+                    } else {
+                        // Replace avatar placeholder with img
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = 'Profile Picture';
+                        newImg.className = 'profile-avatar-img';
+                        previewImg.parentNode.replaceChild(newImg, previewImg);
+                    }
+                }
+                reader.readAsDataURL(file);
+                
+                if (removeCheckbox) {
+                    removeCheckbox.checked = false;
+                }
+            }
+        });
+    }
 
-      // Prevent form submission on Enter key in read-only fields
-      document.querySelectorAll('input[readonly], select[disabled]').forEach(field => {
-          field.addEventListener('keydown', function(e) {
-              if (e.key === 'Enter') {
-                  e.preventDefault();
-              }
-          });
-      });
+    // Prevent form submission on Enter key in read-only fields
+    document.querySelectorAll('input[readonly], select[disabled]').forEach(field => {
+        field.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+    });
 
-      // Form submission loading state
-      const form = document.querySelector('form');
-      const submitBtn = document.querySelector('.btn-primary');
-      
-      if (form && submitBtn) {
-          form.addEventListener('submit', function() {
-              submitBtn.disabled = true;
-              submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
-          });
-      }
+    // Form submission loading state
+    const form = document.querySelector('form');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        });
+    }
 
-      console.log('✅ Phlebotomist profile edit page loaded');
-  });
+    // Warn before leaving with unsaved changes
+    let formChanged = false;
+    form.addEventListener('input', function() {
+        formChanged = true;
+    });
+    
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+    });
+    
+    form.addEventListener('submit', function() {
+        formChanged = false;
+    });
+});
 </script>
-
 {% endblock %}

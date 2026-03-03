@@ -1,184 +1,182 @@
 {% extends 'donor/donorbase.html' %}
 {% load static %}
 
-{% block title %}Events - BloodConnect{% endblock %}
+{% block title %}Community Events - BloodConnect{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <!-- Header with icon -->
+    <!-- Header -->
     <div class="d-flex align-items-center mb-4">
-        <i class="fas fa-calendar-alt fa-2x text-primary me-3"></i>
-        <h2 class="mb-0">{% if page_title %}{{ page_title }}{% else %}Community Events{% endif %}</h2>
+        <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+            <i class="fas fa-calendar-alt fa-2x text-primary"></i>
+        </div>
+        <div>
+            <h1 class="display-5 fw-bold mb-1">Community Events</h1>
+            <p class="lead text-muted mb-0">Join blood drives and community activities near you</p>
+        </div>
     </div>
 
-    <!-- Error message if any -->
+    <!-- Error Message -->
     {% if error_message %}
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        {{ error_message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            {{ error_message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     {% endif %}
 
-    <!-- Upcoming Events Section -->
+    <!-- Upcoming Events -->
     {% if events %}
-    <div class="row">
-        {% for event in events %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 shadow-sm hover-shadow transition">
-                <!-- Event Image -->
-                {% if event.image %}
-                <img src="{{ event.image }}" class="card-img-top" alt="{{ event.title }}" 
-                     style="height: 200px; object-fit: cover;">
-                {% else %}
-                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                     style="height: 200px;">
-                    <i class="fas fa-calendar-alt fa-4x text-muted"></i>
-                </div>
-                {% endif %}
-
-                <!-- Event Type Badge -->
-                <div class="position-absolute top-0 end-0 m-2">
-                    <span class="badge bg-primary">Upcoming</span>
-                </div>
-
-                <!-- Event Details -->
-                <div class="card-body">
-                    <h5 class="card-title text-primary">{{ event.title }}</h5>
-                    
-                    <div class="mb-3">
-                        <p class="card-text small mb-2">
-                            <i class="fas fa-calendar-day text-success me-2"></i>
-                            <strong>{{ event.date }}</strong>
-                        </p>
-                        <p class="card-text small mb-2">
-                            <i class="fas fa-clock text-info me-2"></i>
-                            {{ event.time }}
-                        </p>
-                        <p class="card-text small mb-2">
-                            <i class="fas fa-map-marker-alt text-danger me-2"></i>
-                            {{ event.location }}
-                        </p>
-                    </div>
-
-                    <p class="card-text">{{ event.description|truncatewords:20 }}</p>
-
-                    <!-- Registration Progress -->
-                    {% if event.capacity %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <small class="text-muted">
-                                <i class="fas fa-users me-1"></i>Registered
-                            </small>
-                            <small class="text-muted">{{ event.registered }}/{{ event.capacity }}</small>
-                        </div>
-                        <div class="progress" style="height: 5px;">
-                            <div class="progress-bar bg-success" 
-                                 style="width: {% widthratio event.registered event.capacity 100 %}%"></div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Organizer -->
-                    {% if event.organizer %}
-                    <p class="card-text">
-                        <small class="text-muted">
-                            <i class="fas fa-user-circle me-1"></i>Organized by: {{ event.organizer }}
-                        </small>
-                    </p>
-                    {% endif %}
-                </div>
-
-                <!-- Card Footer -->
-                <div class="card-footer bg-white border-top-0">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'donor:event-detail' event.id %}" 
-                           class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-info-circle me-2"></i>View Details
-                        </a>
-                        {% if event.registered < event.capacity %}
-                        <button class="btn btn-success btn-sm" onclick="registerForEvent({{ event.id }})">
-                            <i class="fas fa-check-circle me-2"></i>Register Now
-                        </button>
+        <div class="row g-4">
+            {% for event in events %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 event-card">
+                        <!-- Event Image -->
+                        {% if event.image %}
+                            <img src="{{ event.image }}" class="card-img-top" alt="{{ event.title }}" style="height: 200px; object-fit: cover;">
                         {% else %}
-                        <button class="btn btn-secondary btn-sm" disabled>
-                            <i class="fas fa-times-circle me-2"></i>Event Full
-                        </button>
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-calendar-alt fa-4x text-muted"></i>
+                            </div>
                         {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <!-- No Events Message -->
-    <div class="text-center py-5">
-        <div class="mb-4">
-            <i class="fas fa-calendar-times fa-4x text-muted"></i>
-        </div>
-        <h4 class="text-muted mb-3">No Upcoming Events</h4>
-        <p class="text-muted">Check back later for new community events and blood drives.</p>
-    </div>
-    {% endif %}
 
-    <!-- Past Events Section -->
-    {% if past_events %}
-    <div class="mt-5">
-        <h3 class="mb-3">
-            <i class="fas fa-history text-secondary me-2"></i>
-            Past Events
-        </h3>
-        <div class="list-group">
-            {% for event in past_events %}
-            <a href="{% url 'donor:event-detail' event.id %}" 
-               class="list-group-item list-group-item-action">
-                <div class="d-flex w-100 justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-1">{{ event.title }}</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-map-marker-alt me-1"></i>{{ event.location }}
-                        </small>
-                    </div>
-                    <div class="text-end">
-                        <small class="text-muted d-block">{{ event.date }}</small>
-                        <span class="badge bg-secondary mt-1">Past Event</span>
+                        <!-- Event Badge -->
+                        <div class="position-absolute top-0 end-0 m-3">
+                            <span class="badge bg-primary px-3 py-2">
+                                <i class="fas fa-calendar-check me-1"></i>Upcoming
+                            </span>
+                        </div>
+
+                        <div class="card-body">
+                            <h5 class="card-title text-primary fw-bold mb-3">{{ event.title }}</h5>
+                            
+                            <!-- Event Details -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-calendar-day text-success me-2" style="width: 20px;"></i>
+                                    <span><strong>{{ event.date }}</strong></span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-clock text-info me-2" style="width: 20px;"></i>
+                                    <span>{{ event.time }}</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-map-marker-alt text-danger me-2" style="width: 20px;"></i>
+                                    <span>{{ event.location }}</span>
+                                </div>
+                            </div>
+
+                            <p class="card-text text-muted">{{ event.description|truncatewords:20 }}</p>
+
+                            <!-- Registration Progress -->
+                            {% if event.capacity %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="text-muted">
+                                            <i class="fas fa-users me-1"></i>Registered
+                                        </small>
+                                        <small class="text-muted">{{ event.registered }}/{{ event.capacity }}</small>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {% widthratio event.registered event.capacity 100 %}%"></div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Organizer -->
+                            {% if event.organizer %}
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user-circle me-1"></i>
+                                        Organized by: {{ event.organizer }}
+                                    </small>
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="card-footer bg-white border-top-0 pt-0">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'donor:event-detail' event.id %}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-info-circle me-2"></i>View Details
+                                </a>
+                                {% if event.registered < event.capacity %}
+                                    <button class="btn btn-success" onclick="registerForEvent({{ event.id }})">
+                                        <i class="fas fa-check-circle me-2"></i>Register Now
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-secondary" disabled>
+                                        <i class="fas fa-times-circle me-2"></i>Event Full
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </a>
             {% endfor %}
         </div>
-    </div>
+    {% else %}
+        <!-- No Events -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="dashboard-icon-wrapper bg-light rounded-circle mx-auto mb-4" style="width: 100px; height: 100px;">
+                    <i class="fas fa-calendar-times fa-3x text-muted"></i>
+                </div>
+                <h3>No Upcoming Events</h3>
+                <p class="text-muted mb-4">Check back later for new community events and blood drives.</p>
+                <a href="{% url 'donor:donor-dashboard' %}" class="btn btn-primary">
+                    <i class="fas fa-tachometer-alt me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Past Events -->
+    {% if past_events %}
+        <div class="mt-5">
+            <h3 class="mb-3">
+                <i class="fas fa-history text-secondary me-2"></i>
+                Past Events
+            </h3>
+            <div class="list-group">
+                {% for event in past_events %}
+                    <a href="{% url 'donor:event-detail' event.id %}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ event.title }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>{{ event.location }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block">{{ event.date }}</small>
+                                <span class="badge bg-secondary mt-1">Past Event</span>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
     {% endif %}
 </div>
 
-<!-- Optional JavaScript for event registration -->
 <script>
 function registerForEvent(eventId) {
-    // You can implement AJAX registration here
-    // For now, just show an alert
-    alert('Registration feature coming soon!');
-    
-    // Future implementation could be:
-    /*
-    fetch(`/donor/events/${eventId}/register/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message);
-        }
-    });
-    */
+    // Show loading state
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registering...';
+    btn.disabled = true;
+
+    // Simulate API call (replace with actual fetch)
+    setTimeout(() => {
+        alert('Registration feature coming soon!');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 1000);
 }
 </script>
-
-
 {% endblock %}

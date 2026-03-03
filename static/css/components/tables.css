@@ -1,0 +1,417 @@
+/* ========================================
+   Table System - BloodConnect
+   ======================================== */
+
+/* Table Base */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--spacing-4);
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg);
+}
+
+/* Table Header */
+.table thead th {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--spacing-3) var(--spacing-4);
+    white-space: nowrap;
+    border-bottom: 2px solid var(--border-light);
+    text-align: left;
+}
+
+.table thead th i {
+    color: var(--blood-red);
+    margin-right: var(--spacing-2);
+}
+
+/* Table Body */
+.table tbody td {
+    padding: var(--spacing-3) var(--spacing-4);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+}
+
+/* Table Hover */
+.table-hover tbody tr {
+    transition: background var(--transition-fast) var(--transition-timing);
+}
+
+.table-hover tbody tr:hover {
+    background: var(--bg-secondary);
+    cursor: pointer;
+}
+
+/* Table Striped */
+.table-striped tbody tr:nth-child(odd) {
+    background: var(--bg-secondary);
+}
+
+/* Table Bordered */
+.table-bordered {
+    border: 1px solid var(--border-light);
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid var(--border-light);
+}
+
+/* Table Condensed */
+.table-sm th,
+.table-sm td {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--text-sm);
+}
+
+/* Table with Status */
+.table tbody td .status-badge {
+    display: inline-block;
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+}
+
+/* Action Buttons in Table */
+.table tbody td .btn-group {
+    display: flex;
+    gap: var(--spacing-2);
+    flex-wrap: wrap;
+}
+
+.table tbody td .btn-sm {
+    padding: var(--spacing-1) var(--spacing-3);
+    font-size: var(--text-xs);
+}
+
+/* Table with Icons */
+.table tbody td .table-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    color: var(--blood-red);
+    margin-right: var(--spacing-2);
+}
+
+/* Donation History Table */
+.donation-table {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.donation-table thead {
+    background: linear-gradient(135deg, var(--blood-red), var(--blood-red-dark));
+}
+
+.donation-table thead th {
+    color: white;
+    border: none;
+}
+
+.donation-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Blood Stock Table */
+.stock-table {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.stock-table thead {
+    background: var(--bg-secondary);
+}
+
+.stock-level {
+    font-weight: var(--font-bold);
+}
+
+.stock-danger {
+    color: var(--blood-red);
+}
+
+.stock-warning {
+    color: var(--warning-yellow);
+}
+
+.stock-ok {
+    color: var(--success-green);
+}
+
+/* Requests Table (from hospital) */
+.requests-table {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.requests-table .urgency-emergency {
+    background: rgba(196, 30, 58, 0.05);
+}
+
+.requests-table .urgency-urgent {
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.requests-table .urgency-routine {
+    background: transparent;
+}
+
+/* Pending Tests Table */
+.pending-tests-table {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.pending-tests-table .barcode-cell {
+    font-family: var(--font-mono);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+}
+
+/* Test History Table */
+.history-table {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.history-table .test-result-safe {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.history-table .test-result-unsafe {
+    background: rgba(196, 30, 58, 0.1);
+}
+
+/* Inventory Table */
+.inventory-table {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.inventory-table .expiry-warning {
+    color: var(--warning-yellow);
+    font-weight: var(--font-bold);
+}
+
+.inventory-table .expiry-danger {
+    color: var(--blood-red);
+    font-weight: var(--font-bold);
+}
+
+/* Table with Sorting */
+.sortable-header {
+    cursor: pointer;
+    position: relative;
+    padding-right: var(--spacing-6);
+}
+
+.sortable-header::after {
+    content: '↕️';
+    position: absolute;
+    right: var(--spacing-2);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: var(--text-xs);
+    opacity: 0.5;
+}
+
+.sortable-header.asc::after {
+    content: '↑';
+    opacity: 1;
+}
+
+.sortable-header.desc::after {
+    content: '↓';
+    opacity: 1;
+}
+
+/* Table Filters */
+.table-filters {
+    display: flex;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+    flex-wrap: wrap;
+}
+
+.table-filter-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.table-filter-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.table-filter-select {
+    padding: var(--spacing-1) var(--spacing-3);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    font-size: var(--text-sm);
+}
+
+/* Table Search */
+.table-search {
+    position: relative;
+    max-width: 300px;
+}
+
+.table-search i {
+    position: absolute;
+    left: var(--spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+}
+
+.table-search input {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-4) var(--spacing-2) var(--spacing-10);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-full);
+    background: var(--bg-primary);
+    font-size: var(--text-sm);
+}
+
+/* Table Pagination */
+.table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-4);
+}
+
+.pagination-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--spacing-2);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast) var(--transition-timing);
+}
+
+.pagination-item:hover {
+    border-color: var(--blood-red);
+    color: var(--blood-red);
+    text-decoration: none;
+}
+
+.pagination-item.active {
+    background: var(--blood-red);
+    border-color: var(--blood-red);
+    color: white;
+}
+
+.pagination-item.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Mobile Table */
+@media (max-width: 768px) {
+    .table-mobile-card {
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .table-mobile-card .table-row {
+        display: block;
+        padding: var(--spacing-4);
+        border-bottom: 1px solid var(--border-light);
+    }
+    
+    .table-mobile-card .table-row:last-child {
+        border-bottom: none;
+    }
+    
+    .table-mobile-card .table-cell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .table-mobile-card .table-cell:last-child {
+        margin-bottom: 0;
+    }
+    
+    .table-mobile-card .cell-label {
+        font-weight: var(--font-bold);
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+    }
+    
+    .table-mobile-card .cell-value {
+        text-align: right;
+    }
+    
+    /* Hide table headers on mobile */
+    .table thead {
+        display: none;
+    }
+    
+    .table tbody tr {
+        display: block;
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--spacing-4);
+        padding: var(--spacing-4);
+    }
+    
+    .table tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacing-2) 0;
+        border: none;
+    }
+    
+    .table tbody td::before {
+        content: attr(data-label);
+        font-weight: var(--font-bold);
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        margin-right: var(--spacing-4);
+    }
+}

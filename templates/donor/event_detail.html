@@ -14,25 +14,29 @@
     </nav>
 
     <div class="row">
-        <!-- Main Content Column -->
+        <!-- Main Content -->
         <div class="col-lg-8">
             <!-- Event Image -->
             {% if event.image %}
-            <div class="card shadow-sm mb-4">
-                <img src="{{ event.image.url }}" class="card-img-top" alt="{{ event.title }}" 
-                     style="max-height: 400px; object-fit: cover;">
-            </div>
+                <div class="card mb-4">
+                    <img src="{{ event.image.url }}" class="card-img-top" alt="{{ event.title }}" 
+                         style="max-height: 400px; object-fit: cover;">
+                </div>
             {% else %}
-            <div class="card shadow-sm mb-4 bg-light text-center py-5">
-                <i class="fas fa-calendar-alt fa-5x text-muted mb-3"></i>
-                <p class="text-muted">No image available for this event</p>
-            </div>
+                <div class="card mb-4 bg-light text-center py-5">
+                    <i class="fas fa-calendar-alt fa-5x text-muted mb-3"></i>
+                    <p class="text-muted">No image available for this event</p>
+                </div>
             {% endif %}
 
-            <!-- Event Title & Description -->
-            <div class="card shadow-sm mb-4">
+            <!-- Event Description -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-align-left me-2"></i>
+                    <h5 class="mb-0">Event Description</h5>
+                </div>
                 <div class="card-body">
-                    <h2 class="card-title text-primary mb-3">{{ event.title }}</h2>
+                    <h2 class="text-primary mb-3">{{ event.title }}</h2>
                     
                     <!-- Quick Info Badges -->
                     <div class="mb-4">
@@ -40,154 +44,135 @@
                             <i class="fas fa-calendar-check me-1"></i>
                             {% if event.event_date >= now.date %}Upcoming{% else %}Past Event{% endif %}
                         </span>
-                        <span class="badge bg-info me-2 p-2">
+                        <span class="badge bg-info p-2">
                             <i class="fas fa-clock me-1"></i>
                             {{ event.event_time|time:"g:i A" }}
                         </span>
                     </div>
 
-                    <!-- Description -->
-                    <h5 class="mb-3"><i class="fas fa-align-left text-secondary me-2"></i>Description</h5>
                     <p class="card-text">{{ event.description|linebreaks }}</p>
                 </div>
             </div>
 
-            <!-- Map Section (if coordinates available) -->
+            <!-- Map -->
             {% if event.latitude and event.longitude %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-map-marked-alt text-danger me-2"></i>Location Map</h5>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-map-marked-alt text-danger me-2"></i>
+                        <h5 class="mb-0">Location Map</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="event-map" style="height: 300px; width: 100%;"></div>
+                    </div>
                 </div>
-                <div class="card-body p-0">
-                    <div id="event-map" style="height: 300px; width: 100%;"></div>
-                </div>
-            </div>
             {% endif %}
         </div>
 
-        <!-- Sidebar Column -->
+        <!-- Sidebar -->
         <div class="col-lg-4">
             <!-- Event Details Card -->
-            <div class="card shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Event Details</h5>
+                    <i class="fas fa-info-circle me-2"></i>
+                    <h5 class="mb-0">Event Details</h5>
                 </div>
                 <div class="card-body">
-                    <ul class="list-unstyled">
-                        <!-- Date -->
+                    <ul class="list-unstyled mb-0">
                         <li class="mb-3">
                             <div class="d-flex">
-                                <i class="fas fa-calendar-day text-primary me-3 fa-fw"></i>
+                                <i class="fas fa-calendar-day text-primary me-3" style="width: 24px;"></i>
                                 <div>
                                     <strong>Date:</strong><br>
                                     <span>{{ event.event_date|date:"l, F j, Y" }}</span>
                                 </div>
                             </div>
                         </li>
-                        
-                        <!-- Time -->
                         <li class="mb-3">
                             <div class="d-flex">
-                                <i class="fas fa-clock text-info me-3 fa-fw"></i>
+                                <i class="fas fa-clock text-info me-3" style="width: 24px;"></i>
                                 <div>
                                     <strong>Time:</strong><br>
                                     <span>{{ event.event_time|time:"g:i A" }}</span>
                                 </div>
                             </div>
                         </li>
-                        
-                        <!-- Location -->
                         <li class="mb-3">
                             <div class="d-flex">
-                                <i class="fas fa-map-marker-alt text-danger me-3 fa-fw"></i>
+                                <i class="fas fa-map-marker-alt text-danger me-3" style="width: 24px;"></i>
                                 <div>
                                     <strong>Location:</strong><br>
                                     <span>{{ event.location }}</span>
                                 </div>
                             </div>
                         </li>
-                        
-                        <!-- Address -->
                         {% if event.address %}
-                        <li class="mb-3">
-                            <div class="d-flex">
-                                <i class="fas fa-location-dot text-secondary me-3 fa-fw"></i>
-                                <div>
-                                    <strong>Address:</strong><br>
-                                    <span>{{ event.address }}</span>
+                            <li class="mb-3">
+                                <div class="d-flex">
+                                    <i class="fas fa-location-dot text-secondary me-3" style="width: 24px;"></i>
+                                    <div>
+                                        <strong>Address:</strong><br>
+                                        <span>{{ event.address }}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </li>
-                        {% endif %}
-                        
-                        <!-- Coordinates (if available) -->
-                        {% if event.latitude and event.longitude %}
-                        <li class="mb-3">
-                            <div class="d-flex">
-                                <i class="fas fa-globe text-success me-3 fa-fw"></i>
-                                <div>
-                                    <strong>Coordinates:</strong><br>
-                                    <small>Lat: {{ event.latitude|floatformat:6 }}<br>Lng: {{ event.longitude|floatformat:6 }}</small>
-                                </div>
-                            </div>
-                        </li>
+                            </li>
                         {% endif %}
                     </ul>
                 </div>
             </div>
 
             <!-- Registration Card -->
-            <div class="card shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>Registration</h5>
+                    <i class="fas fa-ticket-alt me-2"></i>
+                    <h5 class="mb-0">Registration</h5>
                 </div>
                 <div class="card-body text-center">
-                    <!-- Capacity Info -->
                     {% if event.capacity %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="fas fa-users me-2"></i>Registered:</span>
-                            <strong>{{ event.registered_count|default:0 }}/{{ event.capacity }}</strong>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><i class="fas fa-users me-2"></i>Registered:</span>
+                                <strong>{{ event.registered_count|default:0 }}/{{ event.capacity }}</strong>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" 
+                                     style="width: {% widthratio event.registered_count|default:0 event.capacity 100 %}%"></div>
+                            </div>
                         </div>
-                        <div class="progress" style="height: 10px;">
-                            <div class="progress-bar bg-success" 
-                                 style="width: {% widthratio event.registered_count|default:0 event.capacity 100 %}%"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Available Spots -->
-                    <div class="mb-3">
-                        {% with available=event.capacity|add:"-0" %}
-                        {% if available > 0 %}
-                        <span class="text-success">
-                            <i class="fas fa-check-circle me-1"></i>
-                            {{ available }} spots available
-                        </span>
-                        {% else %}
-                        <span class="text-danger">
-                            <i class="fas fa-times-circle me-1"></i>
-                            Event is full
-                        </span>
-                        {% endif %}
+                        
+                        {% with available=event.capacity|add:event.registered_count|default:0 %}
+                            {% if available > 0 %}
+                                <div class="mb-3">
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        {{ available }} spots available
+                                    </span>
+                                </div>
+                            {% else %}
+                                <div class="mb-3">
+                                    <span class="text-danger">
+                                        <i class="fas fa-times-circle me-1"></i>
+                                        Event is full
+                                    </span>
+                                </div>
+                            {% endif %}
                         {% endwith %}
-                    </div>
                     {% endif %}
 
                     <!-- Registration Buttons -->
                     {% if event.event_date >= now.date %}
                         {% if event.registered_count < event.capacity %}
-                        <button class="btn btn-success w-100 mb-2" onclick="registerForEvent({{ event.id }})">
-                            <i class="fas fa-check-circle me-2"></i>Register for Event
-                        </button>
+                            <button class="btn btn-success w-100 mb-2" onclick="registerForEvent({{ event.id }})">
+                                <i class="fas fa-check-circle me-2"></i>Register for Event
+                            </button>
                         {% else %}
-                        <button class="btn btn-secondary w-100 mb-2" disabled>
-                            <i class="fas fa-times-circle me-2"></i>Event Full
-                        </button>
+                            <button class="btn btn-secondary w-100 mb-2" disabled>
+                                <i class="fas fa-times-circle me-2"></i>Event Full
+                            </button>
                         {% endif %}
                     {% else %}
-                    <button class="btn btn-secondary w-100 mb-2" disabled>
-                        <i class="fas fa-calendar-times me-2"></i>Event Ended
-                    </button>
+                        <button class="btn btn-secondary w-100 mb-2" disabled>
+                            <i class="fas fa-calendar-times me-2"></i>Event Ended
+                        </button>
                     {% endif %}
                     
                     <a href="{% url 'donor:events' %}" class="btn btn-outline-secondary w-100">
@@ -197,25 +182,23 @@
             </div>
 
             <!-- Share Card -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-share-alt me-2"></i>Share This Event</h5>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-share-alt me-2"></i>
+                    <h5 class="mb-0">Share This Event</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-around">
-                        <a href="#" class="text-primary" title="Share on Facebook">
+                        <a href="#" class="text-primary" title="Share on Facebook" onclick="shareOnFacebook()">
                             <i class="fab fa-facebook fa-2x"></i>
                         </a>
-                        <a href="#" class="text-info" title="Share on Twitter">
+                        <a href="#" class="text-info" title="Share on Twitter" onclick="shareOnTwitter()">
                             <i class="fab fa-twitter fa-2x"></i>
                         </a>
-                        <a href="#" class="text-success" title="Share on WhatsApp">
+                        <a href="#" class="text-success" title="Share on WhatsApp" onclick="shareOnWhatsApp()">
                             <i class="fab fa-whatsapp fa-2x"></i>
                         </a>
-                        <a href="#" class="text-primary" title="Share on LinkedIn">
-                            <i class="fab fa-linkedin fa-2x"></i>
-                        </a>
-                        <a href="#" class="text-secondary" title="Copy Link">
+                        <a href="#" class="text-secondary" title="Copy Link" onclick="copyEventLink()">
                             <i class="fas fa-link fa-2x"></i>
                         </a>
                     </div>
@@ -229,20 +212,17 @@
 {% if event.latitude and event.longitude %}
 <script>
     function initMap() {
-        // Event coordinates
         const eventLocation = {
             lat: {{ event.latitude }},
             lng: {{ event.longitude }}
         };
         
-        // Create map
         const map = new google.maps.Map(document.getElementById('event-map'), {
             center: eventLocation,
             zoom: 15,
             mapTypeId: 'roadmap'
         });
         
-        // Add marker
         const marker = new google.maps.Marker({
             position: eventLocation,
             map: map,
@@ -250,7 +230,6 @@
             animation: google.maps.Animation.DROP
         });
         
-        // Add info window
         const infoWindow = new google.maps.InfoWindow({
             content: `
                 <div style="padding: 10px;">
@@ -266,15 +245,17 @@
         });
     }
 </script>
-
-<!-- Load Google Maps API (you'll need an API key) -->
 <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
 {% endif %}
 
-<!-- Registration JavaScript -->
 <script>
 function registerForEvent(eventId) {
-    // You can implement AJAX registration here
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registering...';
+    btn.disabled = true;
+
     fetch(`/donor/events/${eventId}/register/`, {
         method: 'POST',
         headers: {
@@ -290,13 +271,44 @@ function registerForEvent(eventId) {
             location.reload();
         } else {
             alert(data.message || 'Registration failed. Please try again.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     })
     .catch(error => {
         console.error('Error:', error);
         alert('An error occurred. Please try again.');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function shareOnFacebook() {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+}
+
+function shareOnTwitter() {
+    const text = encodeURIComponent('Check out this blood donation event: {{ event.title }}');
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+}
+
+function shareOnWhatsApp() {
+    const text = encodeURIComponent('Check out this blood donation event: {{ event.title }} - {{ event.location }}');
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://wa.me/?text=${text}%20${url}`, '_blank');
+}
+
+function copyEventLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        const btn = event.target.closest('a');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 2000);
     });
 }
 </script>
-
 {% endblock %}

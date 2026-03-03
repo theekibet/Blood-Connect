@@ -1,165 +1,179 @@
 {% extends 'donor/donorbase.html' %}
 {% load static %}
 
-{% block title %}My Donor Profile{% endblock %}
+{% block title %}My Donor Profile - BloodConnect{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-id-card mr-2"></i>My Donor Profile
-                    </h4>
-                    <a href="{% url 'donor:donor-edit-profile' %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-edit mr-2"></i>Edit Profile
-                    </a>
+        <div class="col-lg-8">
+            <div class="profile-card">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-header-content">
+                        <div class="profile-avatar">
+                            {% if profile_pic_url %}
+                                <img src="{{ profile_pic_url }}" alt="{{ user.get_full_name }}">
+                            {% else %}
+                                <div class="avatar-placeholder">
+                                    {{ user.first_name|first|default:user.username|first|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="profile-info">
+                            <h2>{{ user.get_full_name }}</h2>
+                            <div class="role-badge">
+                                <i class="fas fa-hand-holding-heart"></i> Donor
+                            </div>
+                            <div class="profile-meta">
+                                <span class="profile-meta-item">
+                                    <i class="fas fa-envelope"></i> {{ user.email }}
+                                </span>
+                                <span class="profile-meta-item">
+                                    <i class="fas fa-calendar-alt"></i> Joined {{ user.date_joined|date:"M Y" }}
+                                </span>
+                            </div>
+                        </div>
+                        <a href="{% url 'donor:donor-edit-profile' %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </a>
+                    </div>
                 </div>
-                
-                <div class="card-body">
-                    <!-- Profile Picture -->
-                    <div class="text-center mb-4">
-                        {% if profile_pic_url %}
-                            <img src="{{ profile_pic_url }}" alt="Profile Picture" 
-                                 class="rounded-circle img-thumbnail" 
-                                 style="width: 150px; height: 150px; object-fit: cover;">
-                        {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" 
-                                 class="rounded-circle img-thumbnail" 
-                                 style="width: 150px; height: 150px; object-fit: cover;">
-                        {% endif %}
+
+                <!-- Profile Body -->
+                <div class="profile-body">
+                    <!-- Personal Information -->
+                    <div class="profile-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-user"></i> Personal Information
+                        </h5>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-user"></i> Full Name
+                                </div>
+                                <div class="detail-value">{{ user.get_full_name }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-at"></i> Username
+                                </div>
+                                <div class="detail-value">@{{ user.username }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-envelope"></i> Email
+                                </div>
+                                <div class="detail-value">{{ user.email }}</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Personal Information -->
-                    <h5 class="border-bottom pb-2 mb-3">
-                        <i class="fas fa-user text-primary mr-2"></i>Personal Information
-                    </h5>
-                    
-                    <table class="table table-borderless">
-                        <tr>
-                            <th style="width: 150px;">Full Name:</th>
-                            <td>{{ user.get_full_name }}</td>
-                        </tr>
-                        <tr>
-                            <th>Username:</th>
-                            <td>{{ user.username }}</td>
-                        </tr>
-                        <tr>
-                            <th>Email:</th>
-                            <td>{{ user.email }}</td>
-                        </tr>
-                    </table>
-
                     <!-- Donor Details -->
-                    <h5 class="border-bottom pb-2 mb-3 mt-4">
-                        <i class="fas fa-heartbeat text-primary mr-2"></i>Donor Details
-                    </h5>
-                    
-                    <table class="table table-borderless">
-                        <tr>
-                            <th style="width: 150px;">Blood Group:</th>
-                            <td>
-                                {% if donor.bloodgroup %}
-                                    {% if bloodgroup_verified %}
-                                        <span class="badge badge-success p-2">
-                                            <i class="fas fa-check-circle mr-1"></i>{{ donor.bloodgroup }} (Verified)
-                                        </span>
-                                        {% if verified_by %}
-                                            <small class="d-block text-muted mt-1">
-                                                Verified by {{ verified_by }} on {{ verified_at|date:"F j, Y" }}
-                                            </small>
+                    <div class="profile-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-heartbeat"></i> Donor Details
+                        </h5>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-tint"></i> Blood Group
+                                </div>
+                                <div class="detail-value">
+                                    {% if donor.bloodgroup %}
+                                        {% if bloodgroup_verified %}
+                                            <span class="badge badge-success">{{ donor.bloodgroup }} (Verified)</span>
+                                            {% if verified_by %}
+                                                <small class="d-block text-muted mt-1">
+                                                    Verified by {{ verified_by }}
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge badge-warning">{{ donor.bloodgroup }} (Pending)</span>
                                         {% endif %}
                                     {% else %}
-                                        <span class="badge badge-warning p-2">
-                                            <i class="fas fa-clock mr-1"></i>{{ donor.bloodgroup }} (Pending Verification)
-                                        </span>
-                                        <small class="d-block text-muted mt-1">
-                                            Will be verified during your first donation
-                                        </small>
+                                        <span class="text-muted">Not provided</span>
                                     {% endif %}
-                                {% else %}
-                                    <span class="text-muted">Not provided</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Mobile Number:</th>
-                            <td>{{ donor.mobile|default:"Not provided" }}</td>
-                        </tr>
-                        <tr>
-                            <th>National ID:</th>
-                            <td>
-                                {% if donor.national_id %}
-                                    {{ donor.national_id }}
-                                {% else %}
-                                    <span class="text-muted">Not provided</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Date of Birth:</th>
-                            <td>
-                                {% if donor.dob %}
-                                    {{ donor.dob|date:"F j, Y" }} 
-                                    <small class="text-muted">({{ donor.age }} years old)</small>
-                                {% else %}
-                                    <span class="text-muted">Not provided</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>County:</th>
-                            <td>{{ donor.get_county_display|default:donor.county|default:"Not provided" }}</td>
-                        </tr>
-                    </table>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-phone"></i> Mobile Number
+                                </div>
+                                <div class="detail-value">{{ donor.mobile|default:"Not provided" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-id-card"></i> National ID
+                                </div>
+                                <div class="detail-value">{{ donor.national_id|default:"Not provided" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-birthday-cake"></i> Date of Birth
+                                </div>
+                                <div class="detail-value">
+                                    {% if donor.dob %}
+                                        {{ donor.dob|date:"F j, Y" }}
+                                        <small class="text-muted">({{ donor.age }} years)</small>
+                                    {% else %}
+                                        Not provided
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="fas fa-map-marker-alt"></i> County
+                                </div>
+                                <div class="detail-value">{{ donor.get_county_display|default:donor.county|default:"Not provided" }}</div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Donation Statistics -->
-                    <h5 class="border-bottom pb-2 mb-3 mt-4">
-                        <i class="fas fa-chart-line text-primary mr-2"></i>Donation Statistics
-                    </h5>
-                    
-                    <table class="table table-borderless">
-                        <tr>
-                            <th style="width: 150px;">Total Donations:</th>
-                            <td>{{ donor.total_donations }}</td>
-                        </tr>
-                        <tr>
-                            <th>Last Donation:</th>
-                            <td>
-                                {% if donor.last_donation_date %}
-                                    {{ donor.last_donation_date|date:"F j, Y" }}
-                                {% else %}
-                                    No donations yet
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Next Eligible Date:</th>
-                            <td>
-                                {% if next_donation_date %}
-                                    {{ next_donation_date|date:"F j, Y" }}
-                                    {% if days_until_next > 0 %}
-                                        <small class="text-muted">(in {{ days_until_next }} days)</small>
+                    <div class="profile-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-chart-line"></i> Donation Statistics
+                        </h5>
+                        <div class="profile-stats">
+                            <div class="stat-box">
+                                <h3>{{ donor.total_donations }}</h3>
+                                <p>Total Donations</p>
+                            </div>
+                            <div class="stat-box">
+                                <h3>{{ donor.points }}</h3>
+                                <p>Points Earned</p>
+                            </div>
+                            <div class="stat-box">
+                                <h3>
+                                    {% if donor.last_donation_date %}
+                                        {{ donor.last_donation_date|date:"M Y" }}
+                                    {% else %}
+                                        —
                                     {% endif %}
-                                {% else %}
-                                    Eligible now
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Points:</th>
-                            <td>{{ donor.points }} points</td>
-                        </tr>
-                    </table>
+                                </h3>
+                                <p>Last Donation</p>
+                            </div>
+                        </div>
+                        
+                        {% if next_donation_date %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-calendar-check me-2"></i>
+                            <strong>Next eligible donation:</strong> {{ next_donation_date|date:"F j, Y" }}
+                            {% if days_until_next > 0 %}
+                                <span class="text-muted ms-2">(in {{ days_until_next }} days)</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
 
                     <!-- Action Buttons -->
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{% url 'donor:donor-dashboard' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
                         </a>
                         <a href="{% url 'donor:donor-edit-profile' %}" class="btn btn-primary">
-                            <i class="fas fa-edit mr-2"></i>Edit Profile
+                            <i class="fas fa-edit me-2"></i>Edit Profile
                         </a>
                     </div>
                 </div>

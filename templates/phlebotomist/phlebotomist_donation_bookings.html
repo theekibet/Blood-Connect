@@ -1,253 +1,497 @@
 {% extends 'phlebotomist/phlebotomistbase.html' %}
 {% load static %}
+
+{% block title %}Donation Bookings - Phlebotomist{% endblock %}
+
 {% block content %}
-<head>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
-  <style></style>
-</head>
-
-<div class="container">
-  <div class="page-header">
-    <h1><i class="fas fa-user-phlebotomist"></i> My Donation Appointments</h1>
-    <p class="mb-2">Manage donor appointments - collect blood samples for lab testing</p>
-    <div class="stats-row">
-      <div class="stat-card"><div class="number">{{ total_count|default:0 }}</div><div class="label">Total</div></div>
-      <div class="stat-card"><div class="number">{{ pending_count|default:0 }}</div><div class="label">Pending</div></div>
-      <div class="stat-card"><div class="number">{{ approved_count|default:0 }}</div><div class="label">Approved</div></div>
-      <div class="stat-card"><div class="number">{{ collected_count|default:0 }}</div><div class="label">Collected</div></div>
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center mb-4">
+        <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+            <i class="fas fa-calendar-check fa-2x text-primary"></i>
+        </div>
+        <div>
+            <h1 class="display-5 fw-bold mb-1">Donation Bookings</h1>
+            <p class="lead text-muted mb-0">Manage and process blood donation appointments</p>
+        </div>
     </div>
-  </div>
 
-  <div id="phlebotomist-messages" class="message-container"></div>
-
-  <div class="search-section">
-    <input type="search" id="donationSearch" class="form-control" placeholder="Search appointments...">
-  </div>
-
-  {% if donor_donations %}
-  <div class="table-container">
-    <div style="max-height: 700px; overflow-y: auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Barcode</th><th>Donor</th><th>Contact</th><th>Photo</th>
-            <th>Blood</th><th>Center</th><th>Date</th><th>Status</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in donor_donations %}
-          {% with appointment=item.appointment donor_details=item.donor_details bd_details=item.blood_donate_details %}
-          <tr data-appointment-id="{{ appointment.id }}">
-            <td><div style="font-weight:700;">{{ appointment.barcode|default:appointment.id }}</div></td>
-            <td><div class="donor-name">{{ donor_details.full_name|default:"N/A" }}</div></td>
-            <td><div class="info-box"><i class="fas fa-phone"></i> {{ donor_details.mobile|default:"N/A" }}</div></td>
-            <td>
-              {% if donor_details.profile_pic %}
-                <img src="{{ donor_details.profile_pic.url }}" class="profile-img"/>
-              {% else %}
-                <div class="profile-img bg-light"><i class="fas fa-user fa-2x"></i></div>
-              {% endif %}
-            </td>
-            <td>
-              <div class="blood-type">{{ bd_details.bloodgroup|default:"N/A" }}</div>
-              <div>{{ bd_details.unit|default:"N/A" }} ml</div>
-              {% if appointment.status == 'collected' %}
-                <span class="badge bg-info">Awaiting Lab Test</span>
-              {% endif %}
-            </td>
-            <td>{{ bd_details.donation_center_name|default:"N/A" }}</td>
-            <td>{{ appointment.date|date:"M d, Y" }}</td>
-            <td><span class="status-badge status-{{ appointment.status }}">{{ appointment.status|title }}</span></td>
-            
-            <!-- Actions Column - UPDATED with barcode selection and correct URL namespacing -->
-            <td>
-              {% if appointment.status == "completed" or appointment.status == "cancelled" or appointment.status == "rejected" %}
-                <div class="text-muted">
-                  <i class="fas fa-lock"></i>
-                  <em>No actions</em>
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-clock fa-2x text-warning"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ pending_count|default:0 }}</div>
+                            <div class="card-label">Pending</div>
+                            <small class="text-muted">Awaiting approval</small>
+                        </div>
+                    </div>
                 </div>
-              {% else %}
-                <div class="action-buttons">
-                  {% if appointment.status == "pending" %}
-                    <button class="btn btn-success btn-sm update-status-btn"
-                            data-id="{{ appointment.id }}" 
-                            data-action="approve"
-                            data-original-text="Approve">
-                      <i class="fas fa-check"></i> Approve
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ approved_count|default:0 }}</div>
+                            <div class="card-label">Approved</div>
+                            <small class="text-muted">Ready for collection</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-syringe fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ collected_count|default:0 }}</div>
+                            <div class="card-label">Collected</div>
+                            <small class="text-muted">Sent to lab</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-check-double fa-2x text-info"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ completed_count|default:0 }}</div>
+                            <div class="card-label">Completed</div>
+                            <small class="text-muted">Processed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-secondary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-times-circle fa-2x text-secondary"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ cancelled_count|default:0 }}</div>
+                            <div class="card-label">Cancelled</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-ban fa-2x text-danger"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ rejected_count|default:0 }}</div>
+                            <div class="card-label">Rejected</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-purple bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-flask fa-2x text-purple"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ safety_stats.pending_verification|default:0 }}</div>
+                            <div class="card-label">Pending Lab</div>
+                            <small class="text-muted">Awaiting test results</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-tint fa-2x text-info"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ total_count|default:0 }}</div>
+                            <div class="card-label">Total</div>
+                            <small class="text-muted">All appointments</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-filter me-2"></i>
+            <h5 class="mb-0">Filter Bookings</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for value, label in status_options %}
+                            <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="blood_group" class="form-label">Blood Group</label>
+                    <select name="blood_group" id="blood_group" class="form-select">
+                        <option value="">All Blood Groups</option>
+                        {% for code, name in blood_group_choices %}
+                            <option value="{{ code }}" {% if current_filters.blood_group == code %}selected{% endif %}>{{ code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="date" class="form-label">Date</label>
+                    <input type="date" name="date" id="date" class="form-control" value="{{ current_filters.date|default:'' }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Apply Filters
                     </button>
-                    <button class="btn btn-danger btn-sm update-status-btn"
-                            data-id="{{ appointment.id }}" 
-                            data-action="reject"
-                            data-original-text="Reject">
-                      <i class="fas fa-times"></i> Reject
-                    </button>
-                  
-                  {% elif appointment.status == "approved" %}
-                    <!-- UPDATED: Using correct namespace for URL -->
-                    <a href="{% url 'phlebotomist:select_barcode' appointment.id %}" 
-                       class="btn btn-info btn-sm">
-                      <i class="fas fa-barcode"></i> Select Bag & Collect
+                </div>
+            </form>
+            <div class="mt-2 text-end">
+                <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear Filters
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Summary -->
+    {% if metrics.today_appointments > 0 or metrics.tomorrow_appointments > 0 %}
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-calendar-day fa-2x me-3"></i>
+            <div>
+                <strong>Today:</strong> {{ metrics.today_appointments }} appointment(s) | 
+                <strong>Tomorrow:</strong> {{ metrics.tomorrow_appointments }} appointment(s)
+                {% if metrics.first_time_donors > 0 %}
+                    | <span class="badge bg-warning">{{ metrics.first_time_donors }} first-time donor(s)</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Bookings Table -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-list me-2"></i>
+            <h5 class="mb-0">Donation Appointments</h5>
+        </div>
+        <div class="card-body">
+            {% if donor_donations %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Donor</th>
+                                <th>Blood Group</th>
+                                <th>Date & Time</th>
+                                <th>Center</th>
+                                <th>Status</th>
+                                <th>Safety</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in donor_donations %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ item.donor_details.full_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        {% if item.donor_details.bloodgroup_verified %}
+                                            <span class="badge bg-success">Verified</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Unverified</span>
+                                        {% endif %}
+                                        Age: {{ item.donor_details.age|default:"N/A" }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ item.blood_donate_details.bloodgroup|default:"Unknown" }}</span>
+                                    <br>
+                                    <small>{{ item.blood_donate_details.unit }}ml</small>
+                                </td>
+                                <td>
+                                    {{ item.appointment.date|date:"M d, Y" }}
+                                    <br>
+                                    <small class="text-muted">{{ item.appointment.date|date:"H:i" }}</small>
+                                </td>
+                                <td>
+                                    {{ item.blood_donate_details.donation_center_name }}
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if item.appointment.status == 'pending' %}bg-warning
+                                        {% elif item.appointment.status == 'approved' %}bg-success
+                                        {% elif item.appointment.status == 'collected' %}bg-primary
+                                        {% elif item.appointment.status == 'completed' %}bg-info
+                                        {% elif item.appointment.status == 'cancelled' %}bg-secondary
+                                        {% elif item.appointment.status == 'rejected' %}bg-danger
+                                        {% endif %}">
+                                        {{ item.appointment.get_status_display }}
+                                    </span>
+                                    {% if item.time_since_created > 0 %}
+                                        <br>
+                                        <small class="text-muted">{{ item.time_since_created }} days ago</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.stock_unit %}
+                                        {% if item.blood_donate_details.safety_status == 'safe' %}
+                                            <span class="badge bg-success">Safe</span>
+                                        {% elif item.blood_donate_details.safety_status == 'unsafe' %}
+                                            <span class="badge bg-danger">Unsafe</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                        {% if item.blood_donate_details.is_quarantined %}
+                                            <br><span class="badge bg-danger">Quarantined</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not tested</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if item.status_analysis.can_approve %}
+                                            <button type="button" class="btn btn-success" 
+                                                    onclick="updateStatus('{{ item.appointment.id }}', 'approve')"
+                                                    title="Approve">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        {% endif %}
+                                        
+                                        {% if item.status_analysis.can_collect %}
+                                            <a href="{% url 'phlebotomist:select_barcode' item.appointment.id %}" 
+                                               class="btn btn-primary" title="Collect Blood">
+                                                <i class="fas fa-syringe"></i>
+                                            </a>
+                                        {% endif %}
+                                        
+                                        {% if item.status_analysis.can_cancel %}
+                                            <button type="button" class="btn btn-warning" 
+                                                    onclick="updateStatus('{{ item.appointment.id }}', 'cancel')"
+                                                    title="Cancel">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        {% endif %}
+                                        
+                                        {% if item.appointment.status == 'pending' %}
+                                            <button type="button" class="btn btn-danger" 
+                                                    onclick="updateStatus('{{ item.appointment.id }}', 'reject')"
+                                                    title="Reject">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        {% endif %}
+                                        
+                                        <button type="button" class="btn btn-info" 
+                                                onclick="viewDetails('{{ item.appointment.id }}')"
+                                                title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h5>No Bookings Found</h5>
+                    <p class="text-muted">There are no donation appointments matching your criteria.</p>
+                    <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-tachometer-alt me-2"></i>Back to Dashboard
                     </a>
-                    <button class="btn btn-secondary btn-sm update-status-btn"
-                            data-id="{{ appointment.id }}" 
-                            data-action="cancelled"
-                            data-original-text="Cancel">
-                      <i class="fas fa-ban"></i> Cancel
-                    </button>
-                  
-                  {% elif appointment.status == "collected" %}
-                    <span class="badge bg-info">
-                      <i class="fas fa-flask"></i> Sent to Lab
-                    </span>
-                    {% if item.blood_bag_barcode %}
-                      <br><small>Bag: <code>{{ item.blood_bag_barcode.barcode }}</code></small>
-                    {% endif %}
-                  {% endif %}
                 </div>
-              {% endif %}
-            </td>
-          </tr>
-          {% endwith %}
-          {% endfor %}
-        </tbody>
-      </table>
+            {% endif %}
+        </div>
     </div>
-  </div>
 
-  <!-- Collection Modal - REMOVED as we now use barcode selection flow -->
-  <!-- The modal has been replaced by the select_barcode view -->
-
-{% else %}
-  <div class="table-container">
-    <div class="text-center p-5">
-      <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
-      <h4>No Appointments Found</h4>
+    <!-- Blood Group Distribution -->
+    {% if blood_group_stats %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <i class="fas fa-chart-pie me-2"></i>
+            <h5 class="mb-0">Blood Group Distribution</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for bg, count in blood_group_stats.items %}
+                <div class="col-md-3 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-info p-2">{{ bg }}</span>
+                        <span>{{ count }} appointment(s)</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-  </div>
-{% endif %}
+    {% endif %}
+
+    <!-- Safety Stats -->
+    {% if safety_stats %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <i class="fas fa-shield-alt me-2"></i>
+            <h5 class="mb-0">Safety Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <h3 class="text-warning">{{ safety_stats.pending_verification }}</h3>
+                        <small class="text-muted">Pending Verification</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <h3 class="text-success">{{ safety_stats.safe_units }}</h3>
+                        <small class="text-muted">Safe Units</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <h3 class="text-danger">{{ safety_stats.unsafe_units }}</h3>
+                        <small class="text-muted">Unsafe Units</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <h3 class="text-danger">{{ safety_stats.quarantined }}</h3>
+                        <small class="text-muted">Quarantined</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalTitle">Update Appointment Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="statusForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" id="modalAction">
+                    <div id="reasonField" class="mb-3" style="display: none;">
+                        <label for="reason" class="form-label">Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Please provide a reason..."></textarea>
+                    </div>
+                    <p id="confirmMessage">Are you sure you want to update this appointment?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="modalConfirmBtn">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 Phlebotomist donation page initialized - Barcode selection workflow with proper URL namespacing');
-  
-  // Utility functions
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie) {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
+function updateStatus(appointmentId, action) {
+    const modal = new bootstrap.Modal(document.getElementById('statusModal'));
+    const form = document.getElementById('statusForm');
+    const modalTitle = document.getElementById('statusModalTitle');
+    const modalAction = document.getElementById('modalAction');
+    const reasonField = document.getElementById('reasonField');
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+
+    form.action = `/phlebotomist/appointment/${appointmentId}/update-status/`;
+    modalAction.value = action;
+
+    switch(action) {
+        case 'approve':
+            modalTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>Approve Appointment';
+            confirmMessage.innerHTML = 'Are you sure you want to approve this donation appointment?';
+            reasonField.style.display = 'none';
+            confirmBtn.className = 'btn btn-success';
+            confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Approve';
+            break;
+        case 'reject':
+            modalTitle.innerHTML = '<i class="fas fa-ban me-2"></i>Reject Appointment';
+            confirmMessage.innerHTML = 'Are you sure you want to reject this donation appointment?';
+            reasonField.style.display = 'block';
+            confirmBtn.className = 'btn btn-danger';
+            confirmBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Reject';
+            break;
+        case 'cancel':
+            modalTitle.innerHTML = '<i class="fas fa-times-circle me-2"></i>Cancel Appointment';
+            confirmMessage.innerHTML = 'Are you sure you want to cancel this donation appointment?';
+            reasonField.style.display = 'block';
+            confirmBtn.className = 'btn btn-warning';
+            confirmBtn.innerHTML = '<i class="fas fa-times me-2"></i>Cancel';
+            break;
     }
-    return cookieValue;
-  }
 
-  function showMessage(type, message, autoHide = true) {
-    const container = document.getElementById('phlebotomist-messages');
-    if (!container) return;
-    
-    const icons = {
-      'success': 'fa-check-circle', 
-      'danger': 'fa-exclamation-circle', 
-      'warning': 'fa-exclamation-triangle', 
-      'info': 'fa-info-circle'
-    };
-    
-    const alertId = 'alert-' + Date.now();
-    container.innerHTML = `
-      <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show">
-        <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>`;
-    
-    if (autoHide && type === 'success') {
-      setTimeout(() => {
-        const alert = document.getElementById(alertId);
-        if (alert) alert.remove();
-      }, 5000);
-    }
-  }
+    modal.show();
+}
 
-  // Search functionality
-  const searchInput = document.getElementById('donationSearch');
-  if (searchInput) {
-    searchInput.addEventListener('input', function() {
-      const query = this.value.toLowerCase().trim();
-      const rows = document.querySelectorAll('tbody tr');
-      
-      rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = query === '' || text.includes(query) ? '' : 'none';
-      });
-    });
-  }
+function viewDetails(appointmentId) {
+    // You can implement a details modal or redirect to a detail page
+    window.location.href = `/phlebotomist/appointment/${appointmentId}/details/`;
+}
 
-  // Status update buttons (Approve, Reject, Cancel)
-  document.querySelectorAll('.update-status-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      const appointmentId = button.dataset.id;
-      const action = button.dataset.action;
-      const donorRow = button.closest('tr');
-      const donorName = donorRow.querySelector('.donor-name')?.textContent.trim() || 'this donor';
-      const originalText = button.innerHTML;
-      
-      const messages = {
-        'approve': `Approve donation appointment for ${donorName}?`,
-        'reject': `Reject donation appointment for ${donorName}?`,
-        'cancelled': `Cancel this appointment?`
-      };
-      
-      if (!confirm(messages[action])) return;
-
-      // Get reason for reject/cancel
-      let reason = '';
-      if (action === 'reject' || action === 'cancelled') {
-        reason = prompt(`Reason for ${action}:`);
-        if (reason === null) return;
-      }
-
-      button.disabled = true;
-      button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
-
-      const formData = new URLSearchParams();
-      formData.append('action', action);
-      if (reason) formData.append('reason', reason);
-
-      fetch(`/phlebotomist/appointment/${appointmentId}/update_status/`, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': getCookie('csrftoken'),
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          showMessage('success', `✅ ${data.message}`);
-          setTimeout(() => location.reload(), 2000);
-        } else {
-          showMessage('danger', `❌ ${data.error}`, false);
-          button.disabled = false;
-          button.innerHTML = originalText;
-        }
-      })
-      .catch(error => {
-        showMessage('danger', `❌ Network error: ${error.message}`, false);
-        button.disabled = false;
-        button.innerHTML = originalText;
-      });
-    });
-  });
-
-  // REMOVED: Collection modal JavaScript - Now using barcode selection flow
-  // The open-collection-modal buttons and related functions have been removed
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 300);
+        });
+    }, 5000);
 });
 </script>
 {% endblock %}

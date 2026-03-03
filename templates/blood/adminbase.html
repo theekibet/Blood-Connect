@@ -1,7 +1,7 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}Admin Dashboard - BloodConnect{% endblock %}
 
 {% block nav_icon %}fas fa-user-cog{% endblock %}
 {% block app_name %}Admin Portal{% endblock %}
@@ -15,8 +15,9 @@
 {% block auth_icon %}fas fa-user-cog{% endblock %}
 {% block auth_title %}Admin Login{% endblock %}
 
+{% block notifications_url %}#{% endblock %}
+
 {% block profile_menu %}
-    <!-- Admin profile menu items -->
     <a class="dropdown-item" href="/{{ ADMIN_SECRET_URL }}/">
         <i class="fas fa-cog"></i> Django Admin
     </a>
@@ -29,224 +30,235 @@
     </a>
 {% endblock %}
 
-{% block notifications_url %}#{% endblock %}
+{% block extra_nav_items %}
+    <!-- Admin-specific nav items can go here -->
+    {% if total_honeypot_attempts|default:0 > 0 %}
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'honeypot_monitor' %}" title="Honeypot Attacks">
+            <div class="nav-icon">
+                <i class="fas fa-shield-alt"></i>
+                <span class="notification-badge">{{ total_honeypot_attempts }}</span>
+            </div>
+        </a>
+    </li>
+    {% endif %}
+{% endblock %}
 
 {% block sidebar_menu %}
-    <!-- Analytics Dashboard (Custom View) -->
-    <a href="{% url 'admin-dashboard' %}" class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
-        <i class="fas fa-chart-pie"></i> Analytics Dashboard
-    </a>
-    
-    <!-- Django Admin Links - Using dynamic secret URL -->
-    <div class="sidebar-section-title">DATA MANAGEMENT</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/donor/donor/" class="{% if '/donor/donor' in request.path %}active{% endif %}">
-        <i class="fas fa-hand-holding-heart"></i> Donors
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/donor/blooddonate/" class="{% if '/donor/blooddonate' in request.path %}active{% endif %}">
-        <i class="fas fa-hand-holding-medical"></i> Donations
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/donor/donoreligibility/" class="{% if '/donor/donoreligibility' in request.path %}active{% endif %}">
-        <i class="fas fa-check-circle"></i> Donor Eligibility
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/phlebotomist/phlebotomist/" class="{% if '/phlebotomist/phlebotomist' in request.path %}active{% endif %}">
-        <i class="fas fa-user-md"></i> Phlebotomists
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/phlebotomist/appointment/" class="{% if '/phlebotomist/appointment' in request.path %}active{% endif %}">
-        <i class="fas fa-calendar-check"></i> Appointments
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospital/" class="{% if '/hospital/hospital' in request.path %}active{% endif %}">
-        <i class="fas fa-hospital"></i> Hospitals
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospitaluser/" class="{% if '/hospital/hospitaluser' in request.path %}active{% endif %}">
-        <i class="fas fa-user-md"></i> Hospital Staff
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospitalbloodrequest/" class="{% if '/hospital/hospitalbloodrequest' in request.path %}active{% endif %}">
-        <i class="fas fa-spinner"></i> Blood Requests
-    </a>
-    
-    <div class="sidebar-section-title">BLOOD STOCK</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/" class="{% if '/blood/stockunit' in request.path %}active{% endif %}">
-        <i class="fas fa-tint"></i> Blood Stock Units
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/donationcenter/" class="{% if '/blood/donationcenter' in request.path %}active{% endif %}">
-        <i class="fas fa-building"></i> Donation Centers
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/" class="{% if '/blood/bloodbagbarcode' in request.path %}active{% endif %}">
-        <i class="fas fa-barcode"></i> Blood Barcodes
-    </a>
-    
-    <div class="sidebar-section-title">LAB & TESTING</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/lab_technologist/labtechnologistprofile/" class="{% if '/lab_technologist/labtechnologistprofile' in request.path %}active{% endif %}">
-        <i class="fas fa-flask"></i> Lab Technologists
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/lab_technologist/bloodtest/" class="{% if '/lab_technologist/bloodtest' in request.path %}active{% endif %}">
-        <i class="fas fa-vial"></i> Blood Tests
-    </a>
-    
-    <div class="sidebar-section-title">BLOOD BANK TECH</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood_bank_technician/bloodbanktechprofile/" class="{% if '/blood_bank_technician/bloodbanktechprofile' in request.path %}active{% endif %}">
-        <i class="fas fa-thermometer"></i> Blood Bank Techs
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood_bank_technician/blooddispatch/" class="{% if '/blood_bank_technician/blooddispatch' in request.path %}active{% endif %}">
-        <i class="fas fa-truck"></i> Blood Dispatches
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood_bank_technician/inventoryalert/" class="{% if '/blood_bank_technician/inventoryalert' in request.path %}active{% endif %}">
-        <i class="fas fa-exclamation-triangle"></i> Inventory Alerts
-    </a>
-    
-    <div class="sidebar-section-title">CONTENT MANAGEMENT</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/blooddriveevent/" class="{% if '/blood/blooddriveevent' in request.path %}active{% endif %}">
-        <i class="fas fa-calendar-alt"></i> Blood Drives
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/testimonial/" class="{% if '/blood/testimonial' in request.path %}active{% endif %}">
-        <i class="fas fa-quote-right"></i> Testimonials
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/banner/" class="{% if '/blood/banner' in request.path %}active{% endif %}">
-        <i class="fas fa-image"></i> Banners
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/homepagestats/" class="{% if '/blood/homepagestats' in request.path %}active{% endif %}">
-        <i class="fas fa-chart-line"></i> Homepage Stats
-    </a>
-    <!-- Add this in the SYSTEM section or create a new SECURITY section -->
-<div class="sidebar-section-title">SECURITY</div>
+    <!-- Analytics Dashboard -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">DASHBOARD</div>
+        <a href="{% url 'admin-dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-pie"></i>
+            <span>Analytics Dashboard</span>
+        </a>
+    </div>
 
-<a href="{% url 'honeypot_monitor' %}" class="{% if request.resolver_match.url_name == 'honeypot_monitor' %}active{% endif %}">
-    <i class="fas fa-shield-alt"></i> Honeypot Monitor
-    {% if total_honeypot_attempts|default:0 > 0 %}
-        <span class="badge badge-danger ml-2">{{ total_honeypot_attempts }}</span>
-    {% endif %}
-</a>
-    
-    <!-- COMMUNICATIONS -->
-    <div class="sidebar-section-title">COMMUNICATIONS</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/blood/contact/" class="{% if '/blood/contact' in request.path %}active{% endif %}">
-        <i class="fas fa-envelope"></i> Contact Messages
-        {% if unread_contacts_count|default:0 > 0 %}
-            <span class="badge badge-danger ml-2">{{ unread_contacts_count }}</span>
-        {% endif %}
-    </a>
-    
-    <a href="{% url 'admin-post-notification' %}" class="{% if request.resolver_match.url_name == 'admin-post-notification' %}active{% endif %}">
-        <i class="fas fa-bell"></i> Broadcast Notification
-    </a>
-    
-    <div class="sidebar-section-title">REPORTS</div>
-    
-    <a href="{% url 'admin-donation-report' %}" class="{% if request.resolver_match.url_name == 'admin-donation-report' %}active{% endif %}">
-        <i class="fas fa-download"></i> Export Donations CSV
-    </a>
-    
-    <div class="sidebar-section-title">SYSTEM</div>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/" target="_blank">
-        <i class="fas fa-external-link-alt"></i> Django Admin (Full)
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/auth/user/">
-        <i class="fas fa-users"></i> System Users
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/auth/group/">
-        <i class="fas fa-users-cog"></i> User Groups
-    </a>
-    
-    <a href="/{{ ADMIN_SECRET_URL }}/utils/notification/">
-        <i class="fas fa-history"></i> Notification History
-    </a>
-    
+    <!-- Data Management -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">DATA MANAGEMENT</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/donor/donor/" class="sidebar-menu-item {% if '/donor/donor' in request.path %}active{% endif %}">
+            <i class="fas fa-hand-holding-heart"></i>
+            <span>Donors</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/donor/blooddonate/" class="sidebar-menu-item {% if '/donor/blooddonate' in request.path %}active{% endif %}">
+            <i class="fas fa-hand-holding-medical"></i>
+            <span>Donations</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/donor/donoreligibility/" class="sidebar-menu-item {% if '/donor/donoreligibility' in request.path %}active{% endif %}">
+            <i class="fas fa-check-circle"></i>
+            <span>Donor Eligibility</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/phlebotomist/phlebotomist/" class="sidebar-menu-item {% if '/phlebotomist/phlebotomist' in request.path %}active{% endif %}">
+            <i class="fas fa-user-md"></i>
+            <span>Phlebotomists</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/phlebotomist/appointment/" class="sidebar-menu-item {% if '/phlebotomist/appointment' in request.path %}active{% endif %}">
+            <i class="fas fa-calendar-check"></i>
+            <span>Appointments</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospital/" class="sidebar-menu-item {% if '/hospital/hospital' in request.path %}active{% endif %}">
+            <i class="fas fa-hospital"></i>
+            <span>Hospitals</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospitaluser/" class="sidebar-menu-item {% if '/hospital/hospitaluser' in request.path %}active{% endif %}">
+            <i class="fas fa-user-md"></i>
+            <span>Hospital Staff</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/hospital/hospitalbloodrequest/" class="sidebar-menu-item {% if '/hospital/hospitalbloodrequest' in request.path %}active{% endif %}">
+            <i class="fas fa-spinner"></i>
+            <span>Blood Requests</span>
+        </a>
+    </div>
+
+    <!-- Blood Stock -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">BLOOD STOCK</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/stockunit/" class="sidebar-menu-item {% if '/blood/stockunit' in request.path %}active{% endif %}">
+            <i class="fas fa-tint"></i>
+            <span>Blood Stock Units</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/donationcenter/" class="sidebar-menu-item {% if '/blood/donationcenter' in request.path %}active{% endif %}">
+            <i class="fas fa-building"></i>
+            <span>Donation Centers</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/" class="sidebar-menu-item {% if '/blood/bloodbagbarcode' in request.path %}active{% endif %}">
+            <i class="fas fa-barcode"></i>
+            <span>Blood Barcodes</span>
+        </a>
+    </div>
+
+    <!-- Lab & Testing -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">LAB & TESTING</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/lab_technologist/labtechnologistprofile/" class="sidebar-menu-item {% if '/lab_technologist/labtechnologistprofile' in request.path %}active{% endif %}">
+            <i class="fas fa-flask"></i>
+            <span>Lab Technologists</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/lab_technologist/bloodtest/" class="sidebar-menu-item {% if '/lab_technologist/bloodtest' in request.path %}active{% endif %}">
+            <i class="fas fa-vial"></i>
+            <span>Blood Tests</span>
+        </a>
+    </div>
+
+    <!-- Blood Bank Tech -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">BLOOD BANK TECH</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood_bank_technician/bloodbanktechprofile/" class="sidebar-menu-item {% if '/blood_bank_technician/bloodbanktechprofile' in request.path %}active{% endif %}">
+            <i class="fas fa-thermometer"></i>
+            <span>Blood Bank Techs</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood_bank_technician/blooddispatch/" class="sidebar-menu-item {% if '/blood_bank_technician/blooddispatch' in request.path %}active{% endif %}">
+            <i class="fas fa-truck"></i>
+            <span>Blood Dispatches</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood_bank_technician/inventoryalert/" class="sidebar-menu-item {% if '/blood_bank_technician/inventoryalert' in request.path %}active{% endif %}">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Inventory Alerts</span>
+        </a>
+    </div>
+
+    <!-- Content Management -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">CONTENT MANAGEMENT</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/blooddriveevent/" class="sidebar-menu-item {% if '/blood/blooddriveevent' in request.path %}active{% endif %}">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Blood Drives</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/testimonial/" class="sidebar-menu-item {% if '/blood/testimonial' in request.path %}active{% endif %}">
+            <i class="fas fa-quote-right"></i>
+            <span>Testimonials</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/banner/" class="sidebar-menu-item {% if '/blood/banner' in request.path %}active{% endif %}">
+            <i class="fas fa-image"></i>
+            <span>Banners</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/homepagestats/" class="sidebar-menu-item {% if '/blood/homepagestats' in request.path %}active{% endif %}">
+            <i class="fas fa-chart-line"></i>
+            <span>Homepage Stats</span>
+        </a>
+    </div>
+
+    <!-- Security -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">SECURITY</div>
+        <a href="{% url 'honeypot_monitor' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'honeypot_monitor' %}active{% endif %}">
+            <i class="fas fa-shield-alt"></i>
+            <span>Honeypot Monitor</span>
+            {% if total_honeypot_attempts|default:0 > 0 %}
+                <span class="badge badge-danger ms-auto">{{ total_honeypot_attempts }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- Communications -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COMMUNICATIONS</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/blood/contact/" class="sidebar-menu-item {% if '/blood/contact' in request.path %}active{% endif %}">
+            <i class="fas fa-envelope"></i>
+            <span>Contact Messages</span>
+            {% if unread_contacts_count|default:0 > 0 %}
+                <span class="badge badge-danger ms-auto">{{ unread_contacts_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'admin-post-notification' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'admin-post-notification' %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Broadcast Notification</span>
+        </a>
+    </div>
+
+    <!-- Reports -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">REPORTS</div>
+        <a href="{% url 'admin-donation-report' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'admin-donation-report' %}active{% endif %}">
+            <i class="fas fa-download"></i>
+            <span>Export Donations CSV</span>
+        </a>
+    </div>
+
+    <!-- System -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">SYSTEM</div>
+        <a href="/{{ ADMIN_SECRET_URL }}/" target="_blank" class="sidebar-menu-item">
+            <i class="fas fa-external-link-alt"></i>
+            <span>Django Admin (Full)</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/auth/user/" class="sidebar-menu-item">
+            <i class="fas fa-users"></i>
+            <span>System Users</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/auth/group/" class="sidebar-menu-item">
+            <i class="fas fa-users-cog"></i>
+            <span>User Groups</span>
+        </a>
+        <a href="/{{ ADMIN_SECRET_URL }}/utils/notification/" class="sidebar-menu-item">
+            <i class="fas fa-history"></i>
+            <span>Notification History</span>
+        </a>
+    </div>
+
     {% if current_blood_request %}
-        <div class="mt-3 px-3">
-            <a href="{% url 'blood_request_stock_transactions' blood_request_id=current_blood_request.id %}" class="btn btn-primary btn-sm btn-block">
-                <i class="fas fa-exchange-alt"></i> View Stock Units
-            </a>
-        </div>
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">CURRENT REQUEST</div>
+        <a href="{% url 'blood_request_stock_transactions' blood_request_id=current_blood_request.id %}" class="sidebar-menu-item">
+            <i class="fas fa-exchange-alt"></i>
+            <span>View Stock Units</span>
+        </a>
+    </div>
     {% endif %}
 {% endblock %}
 
 {% block extra_css %}
-<style>
-    .sidebar-section-title {
-        padding: 10px 15px 5px 15px;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #6c757d;
-        font-weight: 600;
-        margin-top: 10px;
-    }
-    
-    .sidebar-menu a {
-        display: flex;
-        align-items: center;
-        padding: 10px 15px;
-        color: #333;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        border-left: 3px solid transparent;
-    }
-    
-    .sidebar-menu a:hover {
-        background-color: rgba(0,123,255,0.1);
-        border-left-color: #007bff;
-    }
-    
-    .sidebar-menu a.active {
-        background-color: rgba(0,123,255,0.15);
-        border-left-color: #007bff;
-        font-weight: 600;
-    }
-    
-    .sidebar-menu a i {
-        width: 25px;
-        font-size: 1.1rem;
-        margin-right: 10px;
-        color: #007bff;
-    }
-    
-    .badge {
-        margin-left: auto;
-        padding: 3px 8px;
-        border-radius: 50px;
-        font-size: 0.7rem;
-    }
-    
-    .badge-danger {
-        background-color: #dc3545;
-        color: white;
-    }
-    
-    .badge-warning {
-        background-color: #ffc107;
-        color: #212529;
-    }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Admin base template loaded with dynamic admin URL: {{ ADMIN_SECRET_URL }}');
+        
+        // Update honeypot badge if needed
+        {% if total_honeypot_attempts|default:0 > 0 %}
+        const honeypotBadge = document.querySelector('a[href*="honeypot"] .badge');
+        if (honeypotBadge) {
+            honeypotBadge.textContent = "{{ total_honeypot_attempts }}";
+        }
+        {% endif %}
+
+        // Update unread contacts badge
+        {% if unread_contacts_count|default:0 > 0 %}
+        const contactsBadge = document.querySelector('a[href*="contact"] .badge');
+        if (contactsBadge) {
+            contactsBadge.textContent = "{{ unread_contacts_count }}";
+        }
+        {% endif %}
+
+        // Sidebar active state for mobile
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
+        sidebarLinks.forEach(link => {
+            if (link.classList.contains('active')) {
+                link.setAttribute('aria-current', 'page');
+            }
+        });
     });
 </script>
 {% endblock %}

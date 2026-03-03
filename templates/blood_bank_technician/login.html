@@ -1,8 +1,9 @@
+<!-- Your login template needs a bit of restructuring -->
 {% extends 'shared/base.html' %}
 {% load static %}
 {% load widget_tweaks %}
 
-{% block title %}Blood Bank Technician Login{% endblock %}
+{% block title %}Blood Bank Technician Login - BloodConnect{% endblock %}
 
 {% block auth_card_class %}blood-bank{% endblock %}
 {% block auth_icon %}fas fa-tint{% endblock %}
@@ -10,18 +11,20 @@
 
 {% block auth_content %}
 <div class="auth-card blood-bank">
-
+    <div class="card-header">
+        <i class="fas fa-tint"></i>
+        <h4>Blood Bank Technician Login</h4>
+        <p class="text-muted">Authorized personnel only</p>
+    </div>
     
     <div class="card-body">
         <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                     {{ message|safe }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -32,44 +35,55 @@
             
             <!-- Username Field -->
             <div class="form-group">
-                <label for="username">
-                    <i class="fas fa-user mr-1"></i> Username
+                <label for="username" class="form-label">
+                    <i class="fas fa-user me-1"></i> Username
                 </label>
-                <input type="text" 
-                       name="username" 
-                       id="username"
-                       class="form-control" 
-                       placeholder="Enter your username"
-                       autofocus
-                       required>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <input type="text" 
+                           name="username" 
+                           id="username"
+                           class="form-control" 
+                           placeholder="Enter your username"
+                           autofocus
+                           required>
+                </div>
             </div>
 
             <!-- Password Field -->
-            <div class="form-group position-relative">
-                <label for="password">
-                    <i class="fas fa-lock mr-1"></i> Password
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock me-1"></i> Password
                 </label>
-                <input type="password" 
-                       name="password" 
-                       id="password"
-                       class="form-control" 
-                       placeholder="Enter your password"
-                       required>
-                <span class="show-password-toggle" tabindex="0" aria-label="Show or hide password" onclick="togglePassword()" onkeypress="if(event.key==='Enter'){togglePassword();}">
-                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
-                </span>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input type="password" 
+                           name="password" 
+                           id="password"
+                           class="form-control" 
+                           placeholder="Enter your password"
+                           required>
+                    <button type="button" class="btn btn-outline-secondary password-toggle" onclick="togglePassword()">
+                        <i class="fa fa-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+                <div id="capsWarning" class="capslock-warning mt-1">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+                </div>
             </div>
 
             <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
-                <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i> Login</span>
-                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-            </button>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg btn-block" id="loginBtn">
+                    <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login</span>
+                    <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                </button>
+            </div>
 
             <!-- Forgot Password Link -->
             <div class="text-center mt-3">
-                <a href="javascript:void(0)" class="text-secondary" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
-                    <i class="fas fa-key mr-1"></i> Forgot password?
+                <a href="javascript:void(0)" class="text-muted" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                    <i class="fas fa-key me-1"></i> Forgot password?
                 </a>
             </div>
         </form>
@@ -78,7 +92,7 @@
         <div class="text-center mt-4 pt-3 border-top">
             <p class="mb-2">Don't have an account?</p>
             <a href="{% url 'blood_bank_technician:signup' %}" class="btn btn-outline-primary">
-                <i class="fas fa-user-plus mr-1"></i> Register as Blood Bank Technician
+                <i class="fas fa-user-plus me-2"></i> Register as Blood Bank Technician
             </a>
         </div>
 
@@ -86,7 +100,7 @@
         <div class="text-center mt-4">
             <p class="mb-0">
                 <a href="mailto:support@bloodconnect.com" class="text-muted small">
-                    <i class="fas fa-envelope mr-1"></i> Contact Support
+                    <i class="fas fa-envelope me-1"></i> Contact Support
                 </a>
             </p>
             <p class="mt-2 mb-0">
@@ -97,63 +111,53 @@
 </div>
 
 <script>
-    // Password show/hide toggle
-    function togglePassword() {
-        const passwordField = document.getElementById('password');
-        const icon = document.getElementById('togglePasswordIcon');
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            passwordField.type = "password";
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
+// Password show/hide toggle
+function togglePassword() {
+    const passwordField = document.getElementById('password');
+    const icon = document.getElementById('togglePasswordIcon');
+    if (passwordField.type === "password") {
+        passwordField.type = "text";
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = "password";
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
+}
 
-    // Loading spinner on submit
-    document.querySelector('form').addEventListener('submit', function() {
-        document.getElementById('loginBtnText').classList.add('d-none');
-        document.getElementById('loginSpinner').classList.remove('d-none');
-        document.getElementById('loginBtn').disabled = true;
-    });
-
-    // Auto-focus on username field
-    document.addEventListener('DOMContentLoaded', function() {
-        const usernameField = document.getElementById('username');
-        if (usernameField) {
-            usernameField.focus();
-        }
-    });
-
-    // CAPSLOCK detection
+// Caps lock warning
+document.addEventListener('DOMContentLoaded', function() {
     const passwordInput = document.getElementById('password');
+    const capsWarning = document.getElementById('capsWarning');
+    
     if (passwordInput) {
-        const capsWarning = document.createElement('div');
-        capsWarning.className = 'capslock-warning';
-        capsWarning.id = 'capsWarning';
-        capsWarning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Caps Lock is ON';
-        passwordInput.parentNode.appendChild(capsWarning);
-
         passwordInput.addEventListener('keyup', function(e) {
-            if (e.getModifierState('CapsLock')) {
-                capsWarning.style.display = 'block';
-            } else {
-                capsWarning.style.display = 'none';
-            }
-        });
-
-        passwordInput.addEventListener('blur', function() {
-            capsWarning.style.display = 'none';
+            capsWarning.style.display = e.getModifierState('CapsLock') ? 'block' : 'none';
         });
     }
 
-    // Auto-dismiss alerts after 5 seconds
+    // Form submission
+    const form = document.querySelector('form');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginSpinner = document.getElementById('loginSpinner');
+    
+    if (form) {
+        form.addEventListener('submit', function() {
+            loginBtnText.classList.add('d-none');
+            loginSpinner.classList.remove('d-none');
+            loginBtn.disabled = true;
+        });
+    }
+
+    // Auto-dismiss alerts
     setTimeout(function() {
-        document.querySelectorAll('.alert').forEach(function(alert) {
-            $(alert).alert('close');
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 300);
         });
     }, 5000);
+});
 </script>
 {% endblock %}

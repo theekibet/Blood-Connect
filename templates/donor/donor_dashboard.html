@@ -3,133 +3,9 @@
 
 {% block title %}Donor Dashboard - BloodConnect{% endblock %}
 
-{% block extra_css %}
-<style>
-  /* Progress Circle Styles */
-  .progress-circle-container {
-    position: relative;
-    width: 180px;
-    height: 180px;
-    margin: 0 auto;
-  }
-  
-  .progress-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-  }
-  
-  .progress-number {
-    font-size: 2.5rem;
-    font-weight: bold;
-    line-height: 1;
-    color: var(--bs-primary);
-  }
-  
-  .progress-label {
-    font-size: 0.9rem;
-    color: var(--bs-secondary);
-  }
-  
-  :root {
-    --light-gray: #e9ecef;
-    --success: #28a745;
-  }
-  
-  /* Animation for celebration */
-  @keyframes celebration {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-  }
-  
-  .celebration-banner {
-    animation: celebration 0.5s ease 2;
-    border-left: 5px solid #28a745;
-  }
-  
-  /* Dashboard Card Styles */
-  .dashboard-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-  }
-  
-  .dashboard-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  }
-  
-  .dashboard-icon-wrapper {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .card-count {
-    font-size: 1.8rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-  
-  .card-label {
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #6c757d;
-  }
-  
-  /* Milestone Card */
-  .milestone-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 15px;
-  }
-  
-  .milestone-card .text-primary {
-    color: white !important;
-  }
-  
-  /* Quick Action Buttons */
-  .btn-quick-action {
-    border-radius: 50px;
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
-    transition: all 0.2s;
-  }
-  
-  .btn-quick-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-  }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .card-count {
-      font-size: 1.5rem;
-    }
-    
-    .dashboard-icon-wrapper {
-      width: 50px;
-      height: 50px;
-    }
-    
-    .dashboard-icon-wrapper i {
-      font-size: 1.5rem;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container-fluid px-4">
-  <!-- Enhanced Greeting Card -->
+  <!-- Greeting Card -->
   {% include 'shared/greetings_card.html' %}
   
   <!-- Welcome Celebration for New Users -->
@@ -143,7 +19,7 @@
         <h4 class="alert-heading mb-1">🎉 Welcome to Your Dashboard!</h4>
         <p class="mb-0">Your profile is complete. You're now ready to schedule your first donation and start saving lives.</p>
       </div>
-      <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
   </div>
   {% endif %}
@@ -153,12 +29,12 @@
   <div class="modal fade" id="eligibilityAwarenessModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
+        <div class="modal-header">
           <h5 class="modal-title">
             <i class="fas fa-question-circle me-2"></i>
             Before You Start Your Donation Journey
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body p-4">
           <p class="lead mb-4 text-center">
@@ -502,7 +378,6 @@
                 <strong>{{ days_until_next }} days</strong> remaining
               </div>
             {% endif %}
-            
 
           {% else %}
             <p class="text-muted mb-3">No previous donations recorded</p>
@@ -572,13 +447,12 @@
           <div class="progress-circle-container mx-auto mb-3">
             <svg width="180" height="180" viewBox="0 0 180 180">
               <circle cx="90" cy="90" r="70" fill="none" 
-                      stroke="var(--light-gray)" stroke-width="12"/>
+                      stroke="#e9ecef" stroke-width="12"/>
               <circle cx="90" cy="90" r="70" fill="none" 
-                      stroke="var(--success)" stroke-width="12"
+                      stroke="#28a745" stroke-width="12"
                       stroke-dasharray="440" 
                       stroke-dashoffset="{{ stroke_dashoffset }}"
-                      transform="rotate(-90 90 90)" 
-                      style="transition: stroke-dashoffset 1s ease;" />
+                      transform="rotate(-90 90 90)" />
             </svg>
             <div class="progress-text">
               <div class="progress-number">{{ total_safe_donations }}/{{ goal }}</div>
@@ -769,12 +643,12 @@ document.addEventListener("DOMContentLoaded", function() {
   if (updateBtn) {
     updateBtn.addEventListener('click', function() {
       if (!navigator.geolocation) {
-        showNotification('Geolocation is not supported by your browser.', 'danger');
+        alert('Geolocation is not supported by your browser.');
         return;
       }
 
       updateBtn.disabled = true;
-      updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Updating...';
+      updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Updating...';
 
       navigator.geolocation.getCurrentPosition(
         function(position) {
@@ -844,8 +718,6 @@ document.addEventListener("DOMContentLoaded", function() {
               updateBtn.classList.remove('btn-outline-primary');
               updateBtn.classList.add('btn-success');
               
-              showNotification(data.message || 'Location updated successfully!', 'success');
-              
               setTimeout(() => {
                 updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
                 updateBtn.classList.remove('btn-success');
@@ -858,7 +730,7 @@ document.addEventListener("DOMContentLoaded", function() {
           })
           .catch(error => {
             console.error('Error:', error);
-            showNotification(error.message || 'Failed to update location. Please try again.', 'danger');
+            alert(error.message || 'Failed to update location. Please try again.');
             
             updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
             updateBtn.disabled = false;
@@ -876,88 +748,13 @@ document.addEventListener("DOMContentLoaded", function() {
             case error.TIMEOUT:
               errorMessage += 'Location request timed out.';
               break;
-            default:
-              errorMessage += error.message;
           }
           
-          showNotification(errorMessage, 'warning');
-          
+          alert(errorMessage);
           updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
           updateBtn.disabled = false;
         }
       );
-    });
-  }
-
-  // ========================================
-  // NOTIFICATION HELPER
-  // ========================================
-  function showNotification(message, type = 'info') {
-    let container = document.querySelector('.notification-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'notification-container position-fixed top-0 end-0 p-3';
-      container.style.zIndex = '9999';
-      document.body.appendChild(container);
-    }
-    
-    const id = 'notification-' + Date.now();
-    const icon = type === 'success' ? 'fa-check-circle' : 
-                 type === 'danger' ? 'fa-exclamation-circle' : 
-                 type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
-    
-    const notification = document.createElement('div');
-    notification.id = id;
-    notification.className = `alert alert-${type} alert-dismissible fade show shadow`;
-    notification.innerHTML = `
-      <i class="fas ${icon} me-2"></i>
-      ${message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    container.appendChild(notification);
-    
-    setTimeout(() => {
-      const notif = document.getElementById(id);
-      if (notif) {
-        notif.classList.remove('show');
-        setTimeout(() => notif.remove(), 300);
-      }
-    }, 5000);
-  }
-
-  // ========================================
-  // SCROLL ANIMATIONS
-  // ========================================
-  const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-  };
-
-  const observer = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-        observer.unobserve(entry.target);
-      }
-    });
-  }, observerOptions);
-
-  document.querySelectorAll('.card, .alert, .btn').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
-  });
-
-  // ========================================
-  // TOOLTIP INITIALIZATION
-  // ========================================
-  if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function(tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
     });
   }
 });

@@ -2,34 +2,36 @@
 {% load static %}
 {% load widget_tweaks %}
 
-{% block title %}Phlebotomist Login{% endblock %}
+{% block title %}Phlebotomist Login - BloodConnect{% endblock %}
 
 {% block auth_card_class %}phlebotomist{% endblock %}
-{% block auth_icon %}fas fa-user-phlebotomist{% endblock %}
+{% block auth_icon %}fas fa-user-nurse{% endblock %}
 {% block auth_title %}Phlebotomist Login{% endblock %}
 
 {% block auth_content %}
 <div class="auth-card phlebotomist">
-
+    <div class="card-header">
+        <i class="fas fa-user-nurse"></i>
+        <h4>Phlebotomist Login</h4>
+        <p class="text-muted">For registered phlebotomists and healthcare staff</p>
+    </div>
     
     <div class="card-body">
         <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                     {{ message|safe }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
         {% endif %}
 
-        <!-- Phlebotomist-specific info alert -->
+        <!-- Staff info alert -->
         <div class="alert alert-info mb-4">
             <div class="d-flex align-items-center">
-                <i class="fas fa-stethoscope mr-3 fa-lg"></i>
+                <i class="fas fa-stethoscope fa-lg me-3"></i>
                 <div>
                     <strong>For Nursing Staff Only:</strong> 
                     This login is for registered phlebotomists and healthcare staff.
@@ -37,45 +39,50 @@
             </div>
         </div>
 
-
         <!-- Login Form -->
         <form method="POST" action="{% url 'phlebotomist:phlebotomistlogin' %}">
             {% csrf_token %}
             
             <!-- Username Field -->
             <div class="form-group">
-                <label for="{{ form.username.id_for_label }}">
-                    <i class="fas fa-user-phlebotomist mr-1"></i> Username or Email
+                <label for="{{ form.username.id_for_label }}" class="form-label">
+                    <i class="fas fa-user-nurse me-1"></i> Username or Email
                 </label>
-                {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your phlebotomist username or email"|attr:"autofocus:autofocus" }}
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user-nurse"></i></span>
+                    {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username or email"|attr:"autofocus:autofocus" }}
+                </div>
                 {% if form.username.errors %}
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-circle mr-1"></i> {{ form.username.errors|striptags }}
+                    <div class="invalid-feedback d-block">
+                        <i class="fas fa-exclamation-circle me-1"></i> {{ form.username.errors|striptags }}
                     </div>
                 {% endif %}
             </div>
 
             <!-- Password Field -->
-            <div class="form-group position-relative">
-                <label for="{{ form.password.id_for_label }}">
-                    <i class="fas fa-lock mr-1"></i> Password
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}" class="form-label">
+                    <i class="fas fa-lock me-1"></i> Password
                 </label>
-                {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password"|attr:"type:password" }}
-                <span class="show-password-toggle" tabindex="0" aria-label="Show or hide password" onclick="togglePassword()" onkeypress="if(event.key==='Enter'){togglePassword();}">
-                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
-                </span>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password"|attr:"type:password" }}
+                    <button type="button" class="btn btn-outline-secondary password-toggle" onclick="togglePassword()" tabindex="0">
+                        <i class="fa fa-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+                <div id="capsWarning" class="capslock-warning mt-1"><i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON</div>
                 {% if form.password.errors %}
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-circle mr-1"></i> {{ form.password.errors|striptags }}
+                    <div class="invalid-feedback d-block">
+                        <i class="fas fa-exclamation-circle me-1"></i> {{ form.password.errors|striptags }}
                     </div>
                 {% endif %}
-                <div id="capsWarning" class="capslock-warning small mt-1"><i class="fas fa-exclamation-triangle"></i> Caps Lock is ON</div>
             </div>
 
             <!-- Non-field errors -->
             {% if form.non_field_errors %}
                 <div class="alert alert-danger" role="alert">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <i class="fas fa-exclamation-triangle me-2"></i>
                     {% for error in form.non_field_errors %}
                         {{ error }}
                     {% endfor %}
@@ -83,117 +90,119 @@
             {% endif %}
 
             <!-- Remember Me Checkbox -->
-            <div class="form-group form-check">
+            <div class="form-check mb-4">
                 <input type="checkbox" class="form-check-input" id="remember" name="remember">
                 <label class="form-check-label" for="remember">
-                    <i class="fas fa-remember mr-1"></i> Remember this device
+                    <i class="fas fa-check-circle me-1"></i> Remember this device
                 </label>
             </div>
 
             <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
-                <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i> Login as Phlebotomist</span>
-                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-            </button>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg btn-block" id="loginBtn">
+                    <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login as Phlebotomist</span>
+                    <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+            </div>
 
-            <!-- Help Links -->
-            <div class="text-center mt-4">
-                <div class="row">
-                    <div class="col-6">
-                        <a href="javascript:void(0)" class="text-secondary" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
-                            <i class="fas fa-key mr-1"></i> Forgot password?
-                        </a>
-                    </div>
-
-                </div>
+            <!-- Forgot Password Link -->
+            <div class="text-center mt-3">
+                <a href="javascript:void(0)" class="text-muted" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                    <i class="fas fa-key me-1"></i> Forgot password?
+                </a>
             </div>
         </form>
 
         <!-- Registration Card -->
         <div class="card border-primary mt-4">
-            <div class="card-body text-center p-3">
-                <h6 class="mb-2 text-primary">
-                    <i class="fas fa-user-plus mr-2"></i>New to Our Nursing Team?
-                </h6>
-                <p class="small mb-3">Join our healthcare professionals to manage blood donations and patient requests.</p>
+            <div class="card-body text-center p-4">
+                <i class="fas fa-user-plus fa-2x text-primary mb-3"></i>
+                <h6 class="mb-2">New to Our Nursing Team?</h6>
+                <p class="small text-muted mb-3">Join our healthcare professionals to manage blood donations and patient requests.</p>
                 <a href="{% url 'phlebotomist:phlebotomist_signup' %}" class="btn btn-outline-primary btn-block">
-                    <i class="fas fa-user-phlebotomist mr-2"></i> Register as Phlebotomist
+                    <i class="fas fa-user-nurse me-2"></i> Register as Phlebotomist
                 </a>
             </div>
         </div>
-
-
-
     </div>
 </div>
 
 <script>
-    // Password show/hide toggle
-    function togglePassword() {
-        const passwordField = document.querySelector('input[name="password"]');
-        const icon = document.getElementById('togglePasswordIcon');
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
+document.addEventListener('DOMContentLoaded', function() {
+    // Password visibility toggle
+    window.togglePassword = function() {
+        const passwordField = document.getElementById('{{ form.password.id_for_label }}');
+        const toggleIcon = document.getElementById('togglePasswordIcon');
+        
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
         } else {
-            passwordField.type = "password";
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
+            passwordField.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
         }
-    }
+    };
 
-    // Loading spinner on submit
-    document.querySelector('form').addEventListener('submit', function() {
-        document.getElementById('loginBtnText').classList.add('d-none');
-        document.getElementById('loginSpinner').classList.remove('d-none');
-        document.getElementById('loginBtn').disabled = true;
-    });
-
-    // CAPSLOCK detection
-    const passwordInput = document.querySelector('input[name="password"]');
+    // Caps lock warning
+    const passwordField = document.getElementById('{{ form.password.id_for_label }}');
     const capsWarning = document.getElementById('capsWarning');
-
-    if (passwordInput) {
-        passwordInput.addEventListener('keyup', function(e) {
-            if (e.getModifierState('CapsLock')) {
+    
+    if (passwordField && capsWarning) {
+        passwordField.addEventListener('keyup', function(event) {
+            if (event.getModifierState('CapsLock')) {
                 capsWarning.style.display = 'block';
             } else {
                 capsWarning.style.display = 'none';
             }
         });
 
-        passwordInput.addEventListener('blur', function() {
+        passwordField.addEventListener('blur', function() {
             capsWarning.style.display = 'none';
         });
     }
 
-    // Auto-focus on username field
-    document.addEventListener('DOMContentLoaded', function() {
-        const usernameField = document.querySelector('input[name="username"]');
-        if (usernameField) {
-            usernameField.focus();
-        }
-    });
-
-    // Form validation
+    // Form submission handling
     const form = document.querySelector('form');
-    form.addEventListener('submit', function(e) {
-        const username = document.querySelector('input[name="username"]').value.trim();
-        const password = document.querySelector('input[name="password"]').value.trim();
-        
-        if (!username || !password) {
-            e.preventDefault();
-            alert('Please enter both username and password');
-            return false;
-        }
-    });
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginSpinner = document.getElementById('loginSpinner');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Client-side validation
+            const username = document.getElementById('{{ form.username.id_for_label }}').value.trim();
+            const password = document.getElementById('{{ form.password.id_for_label }}').value.trim();
+            
+            if (!username || !password) {
+                e.preventDefault();
+                alert('Please enter both username and password');
+                return false;
+            }
+            
+            // Show loading state
+            if (loginBtnText && loginSpinner && loginBtn) {
+                loginBtnText.classList.add('d-none');
+                loginSpinner.classList.remove('d-none');
+                loginBtn.disabled = true;
+            }
+        });
+    }
+
+    // Auto-focus on username field
+    const usernameField = document.getElementById('{{ form.username.id_for_label }}');
+    if (usernameField) {
+        usernameField.focus();
+    }
 
     // Auto-dismiss alerts after 5 seconds
     setTimeout(function() {
         document.querySelectorAll('.alert').forEach(function(alert) {
-            $(alert).alert('close');
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 300);
         });
     }, 5000);
+});
 </script>
 {% endblock %}

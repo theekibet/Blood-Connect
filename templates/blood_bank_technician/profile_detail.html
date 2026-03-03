@@ -33,12 +33,12 @@
                         {% if profile.profile_pic and profile.profile_pic.url %}
                             <img src="{{ profile.profile_pic.url }}" 
                                  alt="{{ profile.user.get_full_name }}" 
-                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                                
                                  onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
                         {% else %}
                             <img src="{% static 'images/default-profile.png' %}" 
                                  alt="Default Profile" 
-                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                >
                         {% endif %}
                         
                         <div class="mt-2">

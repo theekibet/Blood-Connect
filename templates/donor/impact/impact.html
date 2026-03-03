@@ -5,37 +5,62 @@
 
 {% block content %}
 <div class="container py-4">
-    <h2 class="mb-4"><i class="fas fa-chart-line text-primary me-2"></i>Collective Impact</h2>
+    <!-- Header -->
+    <div class="d-flex align-items-center mb-4">
+        <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+            <i class="fas fa-chart-line fa-2x text-primary"></i>
+        </div>
+        <div>
+            <h1 class="display-5 fw-bold mb-1">Our Collective Impact</h1>
+            <p class="lead text-muted mb-0">Together, we're saving lives every day</p>
+        </div>
+    </div>
     
-    <div class="row text-center">
-        <div class="col-md-4 mb-3">
-            <div class="card">
+    <!-- Impact Stats -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="dashboard-card text-center h-100">
                 <div class="card-body">
-                    <h1 class="display-4 text-primary">0</h1>
-                    <p>Lives Saved</p>
+                    <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle mx-auto mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-heart fa-3x text-primary"></i>
+                    </div>
+                    <div class="card-count display-4 text-primary">0</div>
+                    <div class="card-label">Lives Saved</div>
+                    <p class="small text-muted mt-2">Through your generous donations</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card">
+        <div class="col-md-4">
+            <div class="dashboard-card text-center h-100">
                 <div class="card-body">
-                    <h1 class="display-4 text-success">0</h1>
-                    <p>Donations Made</p>
+                    <div class="dashboard-icon-wrapper bg-success bg-opacity-10 rounded-circle mx-auto mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-tint fa-3x text-success"></i>
+                    </div>
+                    <div class="card-count display-4 text-success">0</div>
+                    <div class="card-label">Donations Made</div>
+                    <p class="small text-muted mt-2">Blood units collected</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card">
+        <div class="col-md-4">
+            <div class="dashboard-card text-center h-100">
                 <div class="card-body">
-                    <h1 class="display-4 text-info">0</h1>
-                    <p>Active Supporters</p>
+                    <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle mx-auto mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-users fa-3x text-info"></i>
+                    </div>
+                    <div class="card-count display-4 text-info">0</div>
+                    <div class="card-label">Active Supporters</div>
+                    <p class="small text-muted mt-2">Donors, volunteers & partners</p>
                 </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Call to Action -->
     <div class="text-center mt-4">
-        <a href="{% url 'donor:share-impact' %}" class="btn btn-primary">Share Our Impact</a>
+        <a href="javascript:void(0);" class="btn btn-primary btn-lg px-5" onclick="alert('Share feature coming soon! Thank you for your interest.'); return false;">
+            <i class="fas fa-share-alt me-2"></i>Share Our Impact
+        </a>
     </div>
 </div>
 {% endblock %}

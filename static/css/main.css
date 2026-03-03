@@ -1,6 +1,6 @@
 /* ========================================
    BloodConnect Main CSS
-   All styles imported from organized files
+   Modern Blood Donation Theme
    ======================================== */
 
 /* Base Styles */
@@ -8,28 +8,29 @@
 @import 'base/typography.css';
 
 /* Layout - Core Structure */
-@import 'layout/navbar.css';           /* Navbar styles (was header.css) */
-@import 'layout/sidebar.css';           /* Sidebar styles (NEW) */
-@import 'layout/main-content.css';       /* Main content area (NEW) */
-@import 'layout/mobile-menu.css';        /* Mobile toggle button (NEW) */
-@import 'layout/messages.css';           /* Alert messages (NEW) */
-@import 'layout/public.css';             /* Public/auth layouts (NEW) */
-@import 'layout/footer.css';             /* Footer styles */
-@import 'layout/responsive.css';          /* Responsive overrides */
+@import 'layout/navbar.css';              /* Public & authenticated navbars */
+@import 'layout/sidebar.css';              /* Role-based sidebars */
+@import 'layout/main-content.css';         /* Dashboard layouts */
+@import 'layout/mobile-menu.css';          /* Mobile navigation */
+@import 'layout/messages.css';              /* Alert messages & notifications */
+@import 'layout/public.css';                /* Landing page & auth layouts */
+@import 'layout/footer.css';                /* Public footer */
 
 /* Components - Reusable UI Elements */
-@import 'components/buttons.css';
-@import 'components/cards.css';
-@import 'components/forms.css';
-@import 'components/dropdowns.css';       /* Profile dropdown (NEW) */
-@import 'components/notifications.css';    /* Notification bell/badge (NEW) */
-@import 'components/chatbot.css';
+@import 'components/buttons.css';           /* Button system */
+@import 'components/cards.css';              /* Dashboard, profile, feature cards */
+@import 'components/forms.css';              /* Login, signup, profile forms */
+@import 'components/tables.css';              /* Data tables for all apps */
+@import 'components/badges.css';              /* Status, blood type, notification badges */
+@import 'components/progress.css';            /* Progress bars, circles, timelines */
+@import 'components/modals.css';              /* Modal dialogs */
+@import 'components/chatbot.css';             /* Chatbot interface */
 
-/* Page Specific - Content Only */
-@import 'pages/home.css';
-
-@import 'components/dark-mode.css';
-@import 'pages/about.css'; 
+/* Page Specific Styles */
+@import 'pages/home.css';                     /* Landing page */
+@import 'pages/about.css';                     /* About page */
+@import 'pages/dashboard.css';                  /* Dashboard layouts */
+@import 'pages/profile.css';                     /* Profile pages */
 
 /* ========================================
    End of imports

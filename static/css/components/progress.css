@@ -1,0 +1,504 @@
+/* ========================================
+   Progress Components - BloodConnect
+   ======================================== */
+
+/* Progress Bar Base */
+.progress {
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blood-red), var(--medical-blue));
+    border-radius: var(--radius-full);
+    transition: width var(--transition-base) var(--transition-timing);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* Progress Bar Sizes */
+.progress-sm {
+    height: 4px;
+}
+
+.progress-lg {
+    height: 12px;
+}
+
+.progress-xl {
+    height: 20px;
+}
+
+/* Progress Bar Colors */
+.progress-bar-success {
+    background: linear-gradient(90deg, var(--success-green), var(--success-green-dark));
+}
+
+.progress-bar-warning {
+    background: linear-gradient(90deg, var(--warning-yellow), var(--warning-yellow-dark));
+}
+
+.progress-bar-danger {
+    background: linear-gradient(90deg, var(--blood-red), var(--blood-red-dark));
+}
+
+.progress-bar-info {
+    background: linear-gradient(90deg, var(--info-blue), var(--info-blue-dark));
+}
+
+.progress-bar-primary {
+    background: linear-gradient(90deg, var(--medical-blue), var(--medical-blue-dark));
+}
+
+/* Progress with Label */
+.progress-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.progress-value {
+    font-weight: var(--font-bold);
+    color: var(--blood-red);
+}
+
+/* Progress Circle (from donor dashboard) */
+.progress-circle-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+}
+
+.progress-circle {
+    transform: rotate(-90deg);
+    width: 100%;
+    height: 100%;
+}
+
+.progress-circle-bg {
+    fill: none;
+    stroke: var(--bg-tertiary);
+    stroke-width: 8;
+}
+
+.progress-circle-fill {
+    fill: none;
+    stroke: var(--blood-red);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 440;
+    stroke-dashoffset: 440;
+    transition: stroke-dashoffset var(--transition-base) var(--transition-timing);
+}
+
+.progress-circle-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-number {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.progress-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* Timeline Progress (from hospital requests) */
+.timeline {
+    position: relative;
+    padding: var(--spacing-4) 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 16px;
+    height: 100%;
+    width: 2px;
+    background: var(--border-light);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 50px;
+    padding-bottom: var(--spacing-6);
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-full);
+    background: var(--bg-primary);
+    border: 2px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.timeline-item.completed .timeline-marker {
+    background: var(--success-green);
+    border-color: var(--success-green);
+    color: white;
+}
+
+.timeline-item.current .timeline-marker {
+    background: var(--medical-blue);
+    border-color: var(--medical-blue);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.timeline-item.pending .timeline-marker {
+    background: var(--warning-yellow);
+    border-color: var(--warning-yellow);
+    color: var(--gray-900);
+}
+
+.timeline-content {
+    padding-bottom: var(--spacing-2);
+}
+
+.timeline-content h6 {
+    margin-bottom: var(--spacing-1);
+    color: var(--text-primary);
+}
+
+.timeline-content small {
+    color: var(--text-tertiary);
+}
+
+/* Step Progress (from onboarding) */
+.step-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-6);
+    position: relative;
+}
+
+.step-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--border-light);
+    z-index: 1;
+}
+
+.step-item {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    text-align: center;
+}
+
+.step-indicator {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--spacing-2);
+    background: var(--bg-primary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-bold);
+    color: var(--text-secondary);
+    transition: all var(--transition-base) var(--transition-timing);
+}
+
+.step-item.completed .step-indicator {
+    background: var(--success-green);
+    border-color: var(--success-green);
+    color: white;
+}
+
+.step-item.active .step-indicator {
+    background: var(--blood-red);
+    border-color: var(--blood-red);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.step-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.step-item.active .step-label {
+    color: var(--blood-red);
+    font-weight: var(--font-medium);
+}
+
+.step-item.completed .step-label {
+    color: var(--success-green);
+}
+
+/* Donor Goal Progress (from donor dashboard) */
+.goal-progress {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+}
+
+.goal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-3);
+}
+
+.goal-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+}
+
+.goal-value {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--blood-red);
+}
+
+.goal-progress-bar {
+    height: 10px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--spacing-2);
+}
+
+.goal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blood-red), var(--medical-blue));
+    border-radius: var(--radius-full);
+    transition: width var(--transition-base) var(--transition-timing);
+}
+
+.goal-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* Loading Progress */
+.loading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: var(--z-toast);
+}
+
+.loading-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blood-red), var(--medical-blue));
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+/* Stock Level Indicators */
+.stock-level {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.stock-level-bar {
+    width: 60px;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.stock-level-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+}
+
+.stock-level-fill.critical {
+    background: var(--blood-red);
+}
+
+.stock-level-fill.low {
+    background: var(--warning-yellow);
+}
+
+.stock-level-fill.moderate {
+    background: var(--medical-blue);
+}
+
+.stock-level-fill.good {
+    background: var(--success-green);
+}
+
+/* Countdown Timer (from donate_blood) */
+.countdown-timer {
+    display: flex;
+    gap: var(--spacing-4);
+    justify-content: center;
+    margin: var(--spacing-4) 0;
+}
+
+.countdown-item {
+    text-align: center;
+}
+
+.countdown-number {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--blood-red);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-2) var(--spacing-3);
+    min-width: 60px;
+}
+
+.countdown-label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--spacing-1);
+    text-transform: uppercase;
+}
+
+/* Achievement Progress */
+.achievement-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.achievement-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--warning-yellow);
+}
+
+.achievement-info {
+    flex: 1;
+}
+
+.achievement-name {
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.achievement-bar {
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--spacing-1);
+}
+
+.achievement-progress-fill {
+    height: 100%;
+    background: var(--warning-yellow);
+    border-radius: var(--radius-full);
+}
+
+.achievement-value {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+}
+
+/* Animations */
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .progress-circle-container {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .progress-number {
+        font-size: var(--text-2xl);
+    }
+    
+    .countdown-timer {
+        gap: var(--spacing-2);
+    }
+    
+    .countdown-number {
+        font-size: var(--text-lg);
+        min-width: 45px;
+        padding: var(--spacing-1) var(--spacing-2);
+    }
+    
+    .step-indicator {
+        width: 30px;
+        height: 30px;
+        font-size: var(--text-sm);
+    }
+    
+    .step-label {
+        font-size: var(--text-xs);
+    }
+}

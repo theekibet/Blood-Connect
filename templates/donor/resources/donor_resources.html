@@ -7,7 +7,7 @@
 <div class="container py-5">
     <!-- Header with Kenyan theme -->
     <div class="text-center mb-5">
-        <div class="d-inline-block bg-kenyan-gradient p-4 rounded-circle mb-4" style="background: linear-gradient(135deg, #006233 0%, #FFFFFF 50%, #BB2028 100%);">
+        <div class="d-inline-block bg-kenyan-gradient p-4 rounded-circle mb-4">
             <i class="fas fa-book-open fa-3x text-white"></i>
         </div>
         <h1 class="display-5 fw-bold mb-3">Donor Resources</h1>
@@ -69,7 +69,7 @@
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-8 bg-dark text-white p-4" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('{% static 'images/kenya-donation.jpg' %}'); background-size: cover; background-position: center;">
+                    <div class="col-md-8 bg-dark text-white p-4">
                         <div class="row h-100 align-items-center">
                             <div class="col-6 text-center">
                                 <h1 class="display-4 fw-bold">15K+</h1>
@@ -172,8 +172,8 @@
                     <div class="text-center py-4">
                         <i class="fas fa-tools fa-4x text-muted mb-3 opacity-50"></i>
                         <p class="text-muted fst-italic">"We're collecting stories from Kenyan donors"</p>
-                        <div class="progress mb-3" style="height: 8px;">
-                            <div class="progress-bar bg-warning progress-bar-striped" style="width: 65%"></div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-warning progress-bar-striped"></div>
                         </div>
                         <p class="small text-muted">Launching soon • Q2 2024</p>
                     </div>
@@ -247,51 +247,4 @@
     </div>
 </div>
 
-<style>
-.hover-card {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hover-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
-}
-
-.resource-icon {
-    width: 70px;
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.hover-shadow:hover {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
-    transition: all 0.3s ease;
-}
-
-.dark-mode .bg-light {
-    background-color: #2d2d2d !important;
-}
-
-.dark-mode .text-muted {
-    color: #a0a0a0 !important;
-}
-
-.dark-mode .card.bg-light {
-    background-color: #2d2d2d !important;
-    border-color: #404040 !important;
-}
-
-.bg-kenyan-gradient {
-    background: linear-gradient(135deg, #006233 0%, #FFFFFF 50%, #BB2028 100%);
-    width: 80px;
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-}
-</style>
 {% endblock %}

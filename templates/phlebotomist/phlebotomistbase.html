@@ -1,18 +1,18 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Phlebotomist Dashboard{% endblock %}
+{% block title %}Phlebotomist Dashboard - BloodConnect{% endblock %}
 
-{% block nav_icon %}fas fa-user-md{% endblock %}
+{% block nav_icon %}fas fa-user-nurse{% endblock %}
 {% block app_name %}Phlebotomist Portal{% endblock %}
 
-{% block sidebar_icon %}fas fa-user-md{% endblock %}
+{% block sidebar_icon %}fas fa-user-nurse{% endblock %}
 {% block sidebar_title %}Phlebotomist Panel{% endblock %}
 
 {% block user_role_label %}Phlebotomist{% endblock %}
 
 {% block auth_card_class %}phlebotomist{% endblock %}
-{% block auth_icon %}fas fa-user-md{% endblock %}
+{% block auth_icon %}fas fa-user-nurse{% endblock %}
 {% block auth_title %}Phlebotomist Login{% endblock %}
 
 {% block profile_menu %}
@@ -28,28 +28,164 @@
 {% block edit_profile_url %}{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}{% endblock %}
 {% block notifications_url %}{% url 'phlebotomist:phlebotomist-notifications' %}{% endblock %}
 
+{% block extra_nav_items %}
+    <!-- Notification Count Badge (if needed) -->
+    {% if unread_count > 0 %}
+    <li class="nav-item">
+        <a class="nav-link position-relative" href="{% url 'phlebotomist:phlebotomist-notifications' %}" title="Notifications">
+            <div class="nav-icon">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge">{{ unread_count }}</span>
+            </div>
+        </a>
+    </li>
+    {% endif %}
+    
+    <!-- Chatbot Mobile Icon (visible only on mobile) -->
+    <li class="nav-item d-lg-none">
+        <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
+            <div class="nav-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+        </a>
+    </li>
+{% endblock %}
+
 {% block sidebar_menu %}
-    <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="{% if 'dashboard' in request.path %}active{% endif %}">
-        <i class="fas fa-tachometer-alt"></i> Dashboard
-    </a>
-    <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="{% if 'bookings' in request.path %}active{% endif %}">
-        <i class="fas fa-calendar-check"></i> Donation Bookings
-    </a>
+    <!-- Main Dashboard -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">MAIN</div>
+        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="sidebar-menu-item {% if 'dashboard' in request.path %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+    </div>
+
+    <!-- Appointments -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">APPOINTMENTS</div>
+        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="sidebar-menu-item {% if 'bookings' in request.path %}active{% endif %}">
+            <i class="fas fa-calendar-check"></i>
+            <span>Donation Bookings</span>
+            {% if pending_bookings_count > 0 %}
+                <span class="badge badge-warning ms-auto">{{ pending_bookings_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- Collections -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COLLECTIONS</div>
+        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}?status=pending" class="sidebar-menu-item">
+            <i class="fas fa-hourglass-half"></i>
+            <span>Pending Collections</span>
+            {% if pending_collections_count > 0 %}
+                <span class="badge badge-warning ms-auto">{{ pending_collections_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}?status=completed" class="sidebar-menu-item">
+            <i class="fas fa-check-circle"></i>
+            <span>Completed Collections</span>
+        </a>
+    </div>
+
+    <!-- Profile Management -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">PROFILE</div>
+        <a href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}" class="sidebar-menu-item {% if 'profile' in request.path and not 'edit' in request.path %}active{% endif %}">
+            <i class="fas fa-user-circle"></i>
+            <span>View Profile</span>
+        </a>
+        <a href="{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}" class="sidebar-menu-item {% if 'edit' in request.path %}active{% endif %}">
+            <i class="fas fa-edit"></i>
+            <span>Edit Profile</span>
+        </a>
+    </div>
+
+    <!-- Notifications -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">NOTIFICATIONS</div>
+        <a href="{% url 'phlebotomist:phlebotomist-notifications' %}" class="sidebar-menu-item {% if 'notifications' in request.path %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_count > 0 %}
+                <span class="badge badge-danger ms-auto">{{ unread_count }}</span>
+            {% endif %}
+        </a>
+    </div>
 {% endblock %}
 
 {% block extra_css %}
-
+<!-- Any phlebotomist-specific CSS can go here -->
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // ========================================
-    // NURSE-SPECIFIC CHATBOT FUNCTIONALITY
-    // ========================================
-    
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('✅ Phlebotomist base template loaded with master base');
+        console.log('✅ Phlebotomist base template loaded');
         
+        // Update notification badge if needed
+        {% if unread_count > 0 %}
+        const notificationBadge = document.querySelector('.notification-badge');
+        if (notificationBadge) {
+            notificationBadge.textContent = "{{ unread_count }}";
+            notificationBadge.style.display = 'flex';
+        }
+        {% endif %}
+
+        // ========================================
+        // PHLEBOTOMIST-SPECIFIC CHATBOT INTEGRATION
+        // ========================================
+        const chatbotButton = document.getElementById('chatbotButton');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        
+        if (chatbotButton && chatbotContainer) {
+            // Add phlebotomist-specific context to chatbot when opened
+            chatbotButton.addEventListener('click', function() {
+                // You can add custom initialization here if needed
+                console.log('Phlebotomist opened chatbot');
+            });
+        }
+
+        // Sidebar active state for mobile
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
+        sidebarLinks.forEach(link => {
+            if (link.classList.contains('active')) {
+                link.setAttribute('aria-current', 'page');
+            }
+        });
+
+        // Auto-refresh for pending bookings count (optional)
+        function updatePendingCounts() {
+            fetch('/phlebotomist/api/pending-counts/')
+                .then(response => response.json())
+                .then(data => {
+                    // Update pending bookings badge
+                    const bookingsBadge = document.querySelector('a[href*="bookings"] .badge');
+                    if (bookingsBadge && data.pending_bookings > 0) {
+                        bookingsBadge.textContent = data.pending_bookings;
+                        bookingsBadge.style.display = 'inline-block';
+                    }
+                    
+                    // Update collections badge
+                    const collectionsBadge = document.querySelector('a[href*="pending"] .badge');
+                    if (collectionsBadge && data.pending_collections > 0) {
+                        collectionsBadge.textContent = data.pending_collections;
+                        collectionsBadge.style.display = 'inline-block';
+                    }
+                })
+                .catch(error => console.error('Error updating counts:', error));
+        }
+
+        // Uncomment to enable real-time updates every 30 seconds
+        // setInterval(updatePendingCounts, 30000);
+    });
+
+    // ========================================
+    // CHATBOT FUNCTIONALITY (if not in base template)
+    // ========================================
+    // This is a fallback in case the base template doesn't have chatbot JS
+    function initializeChatbot() {
         const chatbotToggle = document.getElementById('chatbotToggle');
         const chatbotContainer = document.getElementById('chatbotContainer');
         const chatbotClose = document.getElementById('chatbotClose');
@@ -117,12 +253,6 @@
             // Clear input
             chatbotInput.value = '';
             
-            // Remove welcome message if it exists
-            const welcomeMsg = chatbotMessages.querySelector('.welcome-message');
-            if (welcomeMsg) {
-                welcomeMsg.remove();
-            }
-            
             // Add user message to chat
             addMessage(message, 'user');
             
@@ -137,7 +267,7 @@
             const csrftoken = getCookie('csrftoken');
             
             // Send to backend
-            fetch('/chatbot/api/chatbot/', {
+            fetch('/chatbot/api/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -145,7 +275,8 @@
                 },
                 body: JSON.stringify({
                     message: message,
-                    session_id: sessionId
+                    session_id: sessionId,
+                    role: 'phlebotomist'  // Add role for context-aware responses
                 })
             })
             .then(response => {
@@ -171,17 +302,7 @@
                 console.error('Fetch Error:', error);
                 hideTypingIndicator();
                 
-                let errorMsg = 'Sorry, I\'m having trouble connecting. ';
-                if (error.message.includes('404')) {
-                    errorMsg += 'API endpoint not found.';
-                } else if (error.message.includes('403')) {
-                    errorMsg += 'Authentication error.';
-                } else if (error.message.includes('500')) {
-                    errorMsg += 'Server error.';
-                } else {
-                    errorMsg += 'Please try again.';
-                }
-                
+                let errorMsg = 'Sorry, I\'m having trouble connecting. Please try again.';
                 addMessage(errorMsg, 'bot');
                 chatbotInput.disabled = false;
                 chatbotSend.disabled = false;
@@ -191,14 +312,14 @@
         // Function to add message to chat
         function addMessage(text, type) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
+            messageDiv.className = `chatbot-message ${type}`;
             
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             
             const avatar = type === 'bot' 
-                ? '<div class="message-avatar"><i class="fas fa-robot"></i></div>'
-                : '<div class="message-avatar"><i class="fas fa-user"></i></div>';
+                ? '<div class="message-avatar bot"><i class="fas fa-robot"></i></div>'
+                : '<div class="message-avatar user"><i class="fas fa-user"></i></div>';
             
             messageDiv.innerHTML = `
                 ${avatar}
@@ -212,7 +333,7 @@
             chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
         }
 
-        // Format message (preserve line breaks and emojis)
+        // Format message
         function formatMessage(text) {
             return text.replace(/\n/g, '<br>');
         }
@@ -220,16 +341,14 @@
         // Show typing indicator
         function showTypingIndicator() {
             const indicator = document.createElement('div');
-            indicator.className = 'message bot';
+            indicator.className = 'chatbot-typing active';
             indicator.id = 'typingIndicator';
             indicator.innerHTML = `
-                <div class="message-avatar"><i class="fas fa-robot"></i></div>
-                <div class="message-content">
-                    <div class="typing-indicator active">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
+                <div class="message-avatar bot"><i class="fas fa-robot"></i></div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
                 </div>
             `;
             chatbotMessages.appendChild(indicator);
@@ -244,7 +363,7 @@
             }
         }
 
-        // Get CSRF token from cookies
+        // Get CSRF token
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -259,12 +378,13 @@
             }
             return cookieValue;
         }
-    });
+    }
 
-    // Phlebotomist-specific notification count
-    {% if unread_count > 0 %}
-    console.log('You have {{ unread_count }} unread notifications');
-    {% endif %}
+    // Initialize chatbot if elements exist and not already initialized
+    if (document.getElementById('chatbotToggle') && !window.chatbotInitialized) {
+        window.chatbotInitialized = true;
+        initializeChatbot();
+    }
 </script>
 {% endblock %}
 

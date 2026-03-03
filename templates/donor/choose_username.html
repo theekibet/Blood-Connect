@@ -3,459 +3,135 @@
 
 {% block title %}Choose Your Username - BloodConnect{% endblock %}
 
-{% block extra_css %}
-<style>
-    .username-container {
-        min-height: 80vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .username-card {
-        max-width: 600px;
-        width: 100%;
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        overflow: hidden;
-        animation: slideUp 0.5s ease-out;
-    }
-    
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .username-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2.5rem 2rem;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .username-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        animation: rotate 20s linear infinite;
-    }
-    
-    @keyframes rotate {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    
-    .username-header h1 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .username-header p {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin: 0;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .step-badge {
-        display: inline-block;
-        background: rgba(255,255,255,0.2);
-        padding: 0.5rem 1.5rem;
-        border-radius: 50px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        letter-spacing: 1px;
-        margin-bottom: 1.5rem;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.3);
-    }
-    
-    .step-badge i {
-        margin-right: 0.5rem;
-    }
-    
-    .greeting-text {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        line-height: 1.2;
-    }
-    
-    .greeting-text span {
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-    
-    .temp-email-card {
-        background: rgba(255,255,255,0.1);
-        border-radius: 12px;
-        padding: 1.2rem;
-        margin: 1.5rem 0;
-        border: 1px solid rgba(255,255,255,0.2);
-        backdrop-filter: blur(5px);
-    }
-    
-    .temp-email-card i {
-        color: #ffd700;
-    }
-    
-    .temp-email-card strong {
-        color: white;
-    }
-    
-    .temp-email-card .email-value {
-        color: #ffd700;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    
-    .username-body {
-        padding: 2.5rem;
-    }
-    
-    .input-wrapper {
-        position: relative;
-        margin-bottom: 1.5rem;
-    }
-    
-    .input-icon {
-        position: absolute;
-        left: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #667eea;
-        font-size: 1.2rem;
-        z-index: 10;
-    }
-    
-    .username-input {
-        padding-left: 45px;
-        height: 60px;
-        font-size: 1.1rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        width: 100%;
-    }
-    
-    .username-input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-        outline: none;
-    }
-    
-    .username-input.is-invalid {
-        border-color: #dc3545;
-    }
-    
-    .requirements-list {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1.2rem;
-        margin-top: 1.5rem;
-        border-left: 4px solid #667eea;
-    }
-    
-    .requirements-list h6 {
-        color: #495057;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-    
-    .requirements-list ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .requirements-list li {
-        margin-bottom: 0.5rem;
-        color: #6c757d;
-        display: flex;
-        align-items: center;
-    }
-    
-    .requirements-list li i {
-        width: 20px;
-        margin-right: 0.5rem;
-        color: #28a745;
-    }
-    
-    .suggestions-container {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1.5rem 0;
-        border-left: 4px solid #ffc107;
-    }
-    
-    .suggestions-container h6 {
-        color: #495057;
-        margin-bottom: 1rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-    }
-    
-    .suggestions-container h6 i {
-        color: #ffc107;
-        margin-right: 0.5rem;
-    }
-    
-    .suggestion-badge {
-        background: white;
-        border: 1px solid #667eea;
-        color: #667eea;
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-block;
-        margin: 0.25rem;
-    }
-    
-    .suggestion-badge:hover {
-        background: #667eea;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-    }
-    
-    .suggestion-badge i {
-        margin-right: 0.3rem;
-        font-size: 0.8rem;
-    }
-    
-    .btn-continue {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        height: 60px;
-        font-size: 1.2rem;
-        font-weight: 600;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        color: white;
-        width: 100%;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .btn-continue:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-    }
-    
-    .btn-continue:active {
-        transform: translateY(0);
-    }
-    
-    .btn-continue i {
-        transition: transform 0.3s ease;
-    }
-    
-    .btn-continue:hover i {
-        transform: translateX(5px);
-    }
-    
-    .next-preview {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1rem 1.5rem;
-        margin-top: 2rem;
-        border-left: 4px solid #28a745;
-        color: #28a745;
-        display: flex;
-        align-items: center;
-    }
-    
-    .next-preview i {
-        font-size: 1.2rem;
-        margin-right: 1rem;
-    }
-    
-    .next-preview strong {
-        color: #495057;
-        margin-right: 0.3rem;
-    }
-    
-    .next-preview span {
-        color: #28a745;
-        font-weight: 600;
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .username-container {
-            padding: 1rem;
-        }
-        
-        .username-header {
-            padding: 2rem 1rem;
-        }
-        
-        .username-header h1 {
-            font-size: 2rem;
-        }
-        
-        .greeting-text {
-            font-size: 1.5rem;
-        }
-        
-        .username-body {
-            padding: 1.5rem;
-        }
-        
-        .btn-continue {
-            height: 50px;
-            font-size: 1rem;
-        }
-    }
-    
-    /* Loading state */
-    .btn-continue.loading {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-    
-    .btn-continue.loading i {
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    
-    /* Character counter */
-    .char-counter {
-        position: absolute;
-        right: 15px;
-        bottom: -25px;
-        font-size: 0.8rem;
-        color: #6c757d;
-    }
-    
-    .char-counter.warning {
-        color: #ffc107;
-    }
-    
-    .char-counter.danger {
-        color: #dc3545;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="username-container">
-    <div class="username-card">
-        <div class="username-header">
-            <div class="step-badge">
-                <i class="fas fa-flag"></i> STEP 1 OF 2
-            </div>
-            <h1>✨ Choose Your Identity</h1>
-            <div class="greeting-text">
-                Hey <span>{{ first_name }}</span>! 👋
-            </div>
-            <p>Let's pick a unique username that represents you</p>
-            
-            <div class="temp-email-card">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>Temporary username:</strong>
-                <span class="email-value">{{ email }}</span>
-            </div>
-        </div>
-        
-        <div class="username-body">
-            <form method="post" id="usernameForm">
-                {% csrf_token %}
-                
-                <div class="input-wrapper">
-                    <i class="fas fa-at input-icon"></i>
-                    <input type="text" 
-                           name="username" 
-                           class="username-input {% if form.username.errors %}is-invalid{% endif %}" 
-                           placeholder="e.g., {{ first_name|lower }}_donor" 
-                           value="{{ form.username.value|default:'' }}"
-                           maxlength="150"
-                           id="usernameInput"
-                           autocomplete="off"
-                           required>
-                    <div class="char-counter" id="charCounter">0/150</div>
-                </div>
-                
-                {% if form.username.errors %}
-                    <div class="alert alert-danger py-2">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        {% for error in form.username.errors %}
-                            {{ error }}
-                        {% endfor %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="auth-card">
+                <div class="card-header">
+                    <div class="step-badge">
+                        <i class="fas fa-flag"></i> STEP 1 OF 2
                     </div>
-                {% endif %}
-                
-                <div class="requirements-list">
-                    <h6><i class="fas fa-shield-alt me-2"></i>Username Requirements:</h6>
-                    <ul>
-                        <li><i class="fas fa-check-circle"></i> 150 characters or fewer</li>
-                        <li><i class="fas fa-check-circle"></i> Letters, numbers, and @/./+/-/_ only</li>
-                        <li><i class="fas fa-check-circle"></i> Will be your permanent identifier</li>
-                        <li><i class="fas fa-check-circle"></i> Used for login and public profile</li>
-                    </ul>
+                    <i class="fas fa-user-circle"></i>
+                    <h4>Choose Your Identity</h4>
+                    <p class="text-muted">Hey <strong>{{ first_name }}</strong>! Let's pick a unique username</p>
                 </div>
                 
-                {% if suggestions %}
-                <div class="suggestions-container">
-                    <h6>
-                        <i class="fas fa-lightbulb"></i>
-                        Available Suggestions
-                    </h6>
-                    <div class="d-flex flex-wrap">
-                        {% for suggestion in suggestions %}
-                        <span class="suggestion-badge" onclick="selectSuggestion('{{ suggestion }}')">
-                            <i class="fas fa-plus-circle"></i>{{ suggestion }}
-                        </span>
-                        {% endfor %}
+                <div class="card-body">
+                    <!-- Temporary Email Card -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                        <i class="fas fa-info-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>Temporary username:</strong>
+                            <span class="badge bg-light text-dark ms-2">{{ email }}</span>
+                        </div>
                     </div>
-                    <small class="text-muted d-block mt-2">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Click any suggestion to use it
-                    </small>
-                </div>
-                {% endif %}
-                
-                <button type="submit" class="btn-continue" id="submitBtn">
-                    <span class="btn-text">Continue to Profile</span>
-                    <i class="fas fa-arrow-right ms-2"></i>
-                </button>
-            </form>
-            
-            <div class="next-preview">
-                <i class="fas fa-arrow-right"></i>
-                <div>
-                    <strong>Next:</strong> <span>Complete your donor profile</span>
-                    <small class="d-block text-muted">Add your details to start saving lives</small>
+
+                    <form method="post" id="usernameForm">
+                        {% csrf_token %}
+                        
+                        <!-- Username Input -->
+                        <div class="form-group mb-4">
+                            <label for="usernameInput" class="form-label">
+                                <i class="fas fa-at me-2"></i>Choose a Username
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" 
+                                       name="username" 
+                                       id="usernameInput"
+                                       class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                       placeholder="e.g., {{ first_name|lower }}_donor" 
+                                       value="{{ form.username.value|default:'' }}"
+                                       maxlength="150"
+                                       autocomplete="off"
+                                       required>
+                                <span class="input-group-text" id="charCounter">0/150</span>
+                            </div>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {% for error in form.username.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Requirements List -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-shield-alt text-primary me-2"></i>
+                                    Username Requirements:
+                                </h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        150 characters or fewer
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Letters, numbers, and @/./+/-/_ only
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Will be your permanent identifier
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Used for login and public profile
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- Suggestions -->
+                        {% if suggestions %}
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                Available Suggestions
+                            </label>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for suggestion in suggestions %}
+                                <span class="badge bg-light text-dark p-3 suggestion-badge" 
+                                      onclick="selectSuggestion('{{ suggestion }}')"
+                                      style="cursor: pointer; font-size: 1rem;">
+                                    <i class="fas fa-plus-circle me-1"></i>{{ suggestion }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Click any suggestion to use it
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Submit Button -->
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
+                                <span class="btn-text">Continue to Profile</span>
+                                <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Next Preview -->
+                    <div class="card bg-light mt-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fas fa-arrow-right text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Next: Complete your donor profile</h6>
+                                    <p class="small text-muted mb-0">Add your details to start saving lives</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -482,13 +158,11 @@ document.addEventListener('DOMContentLoaded', function() {
             charCounter.textContent = length + '/150';
             
             if (length > 140) {
-                charCounter.classList.add('warning');
-                charCounter.classList.remove('danger');
+                charCounter.classList.add('text-warning');
             } else if (length > 145) {
-                charCounter.classList.add('danger');
-                charCounter.classList.remove('warning');
+                charCounter.classList.add('text-danger');
             } else {
-                charCounter.classList.remove('warning', 'danger');
+                charCounter.classList.remove('text-warning', 'text-danger');
             }
         }
     }
@@ -501,28 +175,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Highlight the selected suggestion
         document.querySelectorAll('.suggestion-badge').forEach(badge => {
-            badge.classList.remove('active');
-            if (badge.textContent.trim() === suggestion) {
-                badge.classList.add('active');
-                badge.style.background = '#667eea';
-                badge.style.color = 'white';
+            badge.classList.remove('bg-primary', 'text-white');
+            if (badge.textContent.trim().includes(suggestion)) {
+                badge.classList.add('bg-primary', 'text-white');
             }
         });
     }
     
     // Form submission with loading state
     form.addEventListener('submit', function(e) {
-        submitBtn.classList.add('loading');
         submitBtn.disabled = true;
-        
-        // Change button content to show loading
-        submitBtn.innerHTML = `
-            <span class="btn-text">Processing...</span>
-            <i class="fas fa-spinner ms-2"></i>
-        `;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
     });
     
-    // Real-time validation (optional)
+    // Real-time validation
     if (usernameInput) {
         usernameInput.addEventListener('keyup', function() {
             const username = this.value;

@@ -1,1511 +1,638 @@
 /* ========================================
-   Form Styles - BloodConnect
-   Blood Donation System
+   Form System - BloodConnect
    ======================================== */
 
-/* ========================================
-   Base Form Groups
-   ======================================== */
-
-   .form-group {
-    margin-bottom: 1.5rem;
-    position: relative;
+/* Form Base */
+.form {
+    max-width: 100%;
 }
 
-.form-group-medical {
-    margin-bottom: 1.5rem;
-    position: relative;
+/* Form Groups */
+.form-group {
+    margin-bottom: var(--spacing-4);
 }
 
 .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
 }
 
-.form-section {
-    margin-bottom: 2.5rem;
-    padding-bottom: 2rem;
-    border-bottom: 2px solid var(--light-gray);
+.form-row > * {
+    flex: 1 1 200px;
 }
 
-.form-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.form-section-header {
-    margin-bottom: 1.5rem;
-}
-
-.form-section-title {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.form-section-description {
-    font-size: var(--font-size-sm);
-    color: var(--gray);
-    margin-top: 0.5rem;
-}
-
-/* ========================================
-   Labels
-   ======================================== */
-
-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--dark);
-    transition: var(--transition-all);
-}
-
-label.required::after {
-    content: ' *';
-    color: var(--danger);
-    font-weight: var(--font-weight-bold);
-}
-
+/* Labels */
 .form-label {
     display: block;
-    margin-bottom: 0.5rem;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--dark);
+    margin-bottom: var(--spacing-2);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
 }
 
-.form-label-medical {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    color: var(--dark);
-}
-
-.form-label-medical i {
-    color: var(--primary);
-    font-size: 1rem;
+.form-label i {
+    color: var(--blood-red);
+    margin-right: var(--spacing-2);
     width: 20px;
 }
 
-.info-label {
-    font-size: var(--font-size-xs);
-    color: var(--gray);
-    font-weight: var(--font-weight-normal);
-    margin-top: 0.25rem;
+.form-label .required {
+    color: var(--blood-red);
+    margin-left: var(--spacing-1);
 }
 
-.help-text {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: var(--font-size-xs);
-    color: var(--gray);
-    line-height: 1.5;
-}
-
-.help-text i {
-    margin-right: 0.25rem;
-    color: var(--info);
-}
-
-/* ========================================
-   Form Controls - Base
-   ======================================== */
-
+/* Input Fields */
 .form-control {
     display: block;
     width: 100%;
-    padding: 0.75rem 1rem;
-    font-size: var(--font-size-base);
-    line-height: 1.5;
-    color: var(--dark);
-    background-color: var(--white);
-    background-clip: padding-box;
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius);
-    transition: var(--transition-all);
-    font-family: var(--font-family);
-}
-
-.form-control:hover:not(:disabled):not([readonly]) {
-    border-color: var(--gray);
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast) var(--transition-timing);
 }
 
 .form-control:focus {
-    color: var(--dark);
-    background-color: var(--white);
-    border-color: var(--primary);
-    outline: 0;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    outline: none;
+    border-color: var(--blood-red);
+    box-shadow: 0 0 0 4px rgba(196, 30, 58, 0.1);
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+    background: var(--bg-secondary);
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .form-control::placeholder {
-    color: var(--gray-400);
-    opacity: 0.7;
+    color: var(--text-tertiary);
+    opacity: 1;
 }
 
-.form-control:disabled {
-    background-color: var(--light);
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.form-control[readonly] {
-    background-color: var(--light);
-    opacity: 0.8;
-    cursor: default;
-}
-
-/* Input Sizes */
+/* Form Control Sizes */
 .form-control-sm {
-    padding: 0.5rem 0.75rem;
-    font-size: var(--font-size-sm);
-    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-sm);
 }
 
 .form-control-lg {
-    padding: 1rem 1.25rem;
-    font-size: var(--font-size-lg);
-    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-4) var(--spacing-5);
+    font-size: var(--text-lg);
+    border-radius: var(--radius-lg);
 }
 
-/* ========================================
-   Select Dropdown
-   ======================================== */
-
-select.form-control,
+/* Select Inputs */
 .form-select {
+    display: block;
     width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 1rem;
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-normal);
-    line-height: 1.5;
-    color: var(--dark);
-    background-color: var(--white);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 16px 12px;
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius);
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
     appearance: none;
-    transition: var(--transition-all);
-    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234B5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-3) center;
+    background-size: 16px;
+    padding-right: var(--spacing-10);
 }
 
-select.form-control:hover:not(:disabled),
-.form-select:hover:not(:disabled) {
-    border-color: var(--gray);
-}
-
-select.form-control:focus,
 .form-select:focus {
-    border-color: var(--primary);
-    outline: 0;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    outline: none;
+    border-color: var(--blood-red);
+    box-shadow: 0 0 0 4px rgba(196, 30, 58, 0.1);
 }
 
-select.form-control:disabled,
 .form-select:disabled {
-    background-color: var(--light);
+    background: var(--bg-secondary);
     cursor: not-allowed;
 }
 
-/* ========================================
-   Textarea
-   ======================================== */
-
+/* Textarea */
 textarea.form-control {
     min-height: 100px;
     resize: vertical;
 }
 
-textarea.form-control-lg {
-    min-height: 150px;
-}
-
-textarea.form-control-sm {
-    min-height: 80px;
-}
-
-/* ========================================
-   Medical Form Controls
-   ======================================== */
-
-.input-medical,
-.form-control-medical {
-    display: block;
-    width: 100%;
-    padding: 0.875rem 1rem;
-    font-size: var(--font-size-base);
-    line-height: 1.5;
-    color: var(--dark);
-    background-color: var(--white);
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius-lg);
-    transition: var(--transition-all);
-}
-
-.input-medical:hover:not(:disabled),
-.form-control-medical:hover:not(:disabled) {
-    border-color: var(--gray);
-}
-
-.input-medical:focus,
-.form-control-medical:focus {
-    border-color: var(--primary);
-    outline: 0;
-    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
-}
-
-select.input-medical,
-select.form-control-medical {
-    width: 100%;
-    padding: 0.875rem 2.5rem 0.875rem 1rem;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 16px 12px;
-    cursor: pointer;
-}
-
-/* ========================================
-   Input Groups & Icons
-   ======================================== */
-
+/* Input Groups */
 .input-group {
-    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
-    width: 100%;
+    position: relative;
 }
 
 .input-group .form-control {
-    position: relative;
-    flex: 1 1 auto;
-    width: 1%;
-    min-width: 0;
-}
-
-.input-group .form-control:not(:last-child) {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.input-group .form-control:not(:first-child) {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-.input-group .form-control:focus {
-    z-index: 3;
-}
-
-.input-group .btn {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    margin-left: -1px;
-}
-
-.input-group .btn:hover {
-    transform: translateY(0);
-}
-
-.input-group-prepend,
-.input-group-append {
-    display: flex;
+    flex: 1;
 }
 
 .input-group-text {
     display: flex;
     align-items: center;
-    padding: 0.75rem 1rem;
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-normal);
-    line-height: 1.5;
-    color: var(--gray);
-    text-align: center;
-    white-space: nowrap;
-    background-color: var(--light);
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius);
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--text-base);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
 }
 
-.input-group-prepend .input-group-text {
+.input-group .form-control:first-child,
+.input-group-text:first-child {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    margin-right: -2px;
 }
 
-.input-group-append .input-group-text {
+.input-group .form-control:last-child,
+.input-group-text:last-child {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    margin-left: -2px;
 }
 
-/* Input with Icon */
-.input-wrapper {
-    position: relative;
-    width: 100%;
+.input-group .form-control:not(:first-child):not(:last-child) {
+    border-radius: 0;
 }
 
-.input-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--gray);
-    pointer-events: none;
-    z-index: 4;
-}
-
-.input-icon.input-icon-right {
-    left: auto;
-    right: 1rem;
-}
-
-.input-icon ~ .form-control,
-.input-icon ~ .input-medical,
-.input-icon ~ .form-control-medical {
-    padding-left: 2.5rem;
-}
-
-.input-icon.input-icon-right ~ .form-control {
-    padding-left: 1rem;
-    padding-right: 2.5rem;
-}
-
-.input-group-medical {
-    position: relative;
+/* Checkbox and Radio */
+.form-check {
     display: flex;
     align-items: center;
-    width: 100%;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-2);
+    cursor: pointer;
 }
 
-.input-group-medical i {
+.form-check-input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--blood-red);
+}
+
+.form-check-label {
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    cursor: pointer;
+    line-height: var(--leading-normal);
+}
+
+/* Radio Groups */
+.radio-group {
+    display: flex;
+    gap: var(--spacing-4);
+    flex-wrap: wrap;
+    margin: var(--spacing-2) 0;
+}
+
+.radio-group .form-check {
+    margin-bottom: 0;
+}
+
+/* Validation States */
+.form-control.is-valid {
+    border-color: var(--success-green);
+}
+
+.form-control.is-valid:focus {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.valid-feedback {
+    display: block;
+    margin-top: var(--spacing-2);
+    color: var(--success-green);
+    font-size: var(--text-sm);
+}
+
+.form-control.is-invalid {
+    border-color: var(--blood-red);
+}
+
+.form-control.is-invalid:focus {
+    box-shadow: 0 0 0 4px rgba(196, 30, 58, 0.1);
+}
+
+.invalid-feedback {
+    display: block;
+    margin-top: var(--spacing-2);
+    color: var(--blood-red);
+    font-size: var(--text-sm);
+}
+
+/* Validation Icons */
+.validation-icon {
     position: absolute;
-    left: 1rem;
-    color: var(--primary);
-    font-size: 1.1rem;
-    pointer-events: none;
-    z-index: 4;
+    right: var(--spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
 }
 
-.input-group-medical .form-control-medical {
-    padding-left: 2.5rem;
+.form-control.is-valid ~ .validation-icon.valid {
+    display: block;
+    color: var(--success-green);
+}
+
+.form-control.is-invalid ~ .validation-icon.invalid {
+    display: block;
+    color: var(--blood-red);
+}
+
+/* Password Strength */
+.password-strength {
+    height: 4px;
+    background: var(--border-light);
+    border-radius: var(--radius-full);
+    margin-top: var(--spacing-2);
+    overflow: hidden;
+}
+
+.strength-bar {
+    height: 100%;
+    width: 0;
+    transition: width var(--transition-base) var(--transition-timing);
+}
+
+.strength-weak {
+    background: var(--blood-red);
+    width: 25%;
+}
+
+.strength-fair {
+    background: var(--warning-yellow);
+    width: 50%;
+}
+
+.strength-good {
+    background: var(--medical-blue);
+    width: 75%;
+}
+
+.strength-strong {
+    background: var(--success-green);
+    width: 100%;
 }
 
 /* Password Toggle */
 .password-toggle {
     position: absolute;
-    right: 1rem;
+    right: var(--spacing-3);
     top: 50%;
     transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
     cursor: pointer;
-    color: var(--gray);
-    z-index: 5;
-    transition: var(--transition-all);
+    padding: var(--spacing-1);
+    font-size: var(--text-lg);
 }
 
 .password-toggle:hover {
-    color: var(--primary);
+    color: var(--blood-red);
 }
 
-/* ========================================
-   Form Validation States
-   ======================================== */
-
-.form-control.is-valid,
-.form-control.success {
-    border-color: var(--success);
-    padding-right: calc(1.5em + 0.75rem);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2310b981' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+/* Caps Lock Warning */
+.capslock-warning {
+    display: none;
+    margin-top: var(--spacing-2);
+    color: var(--warning-yellow);
+    font-size: var(--text-sm);
 }
 
-.form-control.is-invalid,
-.form-control.error {
-    border-color: var(--danger);
-    padding-right: calc(1.5em + 0.75rem);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc2626'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc2626' stroke='none'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+.capslock-warning i {
+    margin-right: var(--spacing-1);
 }
 
-.valid-feedback,
-.success-message {
+/* Form Help Text */
+.form-text {
     display: block;
-    margin-top: 0.5rem;
-    font-size: var(--font-size-sm);
-    color: var(--success);
-    font-weight: var(--font-weight-medium);
+    margin-top: var(--spacing-2);
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
 }
 
-.invalid-feedback,
-.error-message {
+.form-text i {
+    color: var(--blood-red);
+    margin-right: var(--spacing-1);
+}
+
+/* File Input */
+.form-file {
     display: block;
-    margin-top: 0.5rem;
-    font-size: var(--font-size-sm);
-    color: var(--danger);
-    font-weight: var(--font-weight-medium);
-}
-
-.warning-message {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: var(--font-size-sm);
-    color: var(--warning);
-    font-weight: var(--font-weight-medium);
-}
-
-/* ========================================
-   Checkboxes and Radio Buttons
-   ======================================== */
-
-.form-check {
-    display: block;
-    min-height: 1.5rem;
-    padding-left: 1.8rem;
-    margin-bottom: 0.75rem;
-}
-
-.form-check-inline {
-    display: inline-block;
-    margin-right: 1rem;
-}
-
-.form-check-input {
-    width: 1.2rem;
-    height: 1.2rem;
-    margin-top: 0.15rem;
-    margin-left: -1.8rem;
-    float: left;
-    background-color: var(--white);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    border: 2px solid var(--light-gray);
-    appearance: none;
-    transition: var(--transition-all);
-    cursor: pointer;
-}
-
-.form-check-input[type="checkbox"] {
-    border-radius: 0.25rem;
-}
-
-.form-check-input[type="radio"] {
-    border-radius: 50%;
-}
-
-.form-check-input:hover:not(:disabled) {
-    border-color: var(--primary);
-}
-
-.form-check-input:focus {
-    border-color: var(--primary);
-    outline: 0;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-}
-
-.form-check-input:checked {
-    background-color: var(--primary);
-    border-color: var(--primary);
-}
-
-.form-check-input:checked[type="checkbox"] {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
-}
-
-.form-check-input:checked[type="radio"] {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='2' fill='%23fff'/%3e%3c/svg%3e");
-}
-
-.form-check-input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.form-check-label {
-    cursor: pointer;
-    user-select: none;
-}
-
-.form-check-label:has(input:disabled) {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-/* Custom Checkbox/Radio Variants */
-.form-check-danger .form-check-input:checked {
-    background-color: var(--danger);
-    border-color: var(--danger);
-}
-
-.form-check-success .form-check-input:checked {
-    background-color: var(--success);
-    border-color: var(--success);
-}
-
-.form-check-warning .form-check-input:checked {
-    background-color: var(--warning);
-    border-color: var(--warning);
-}
-
-/* ========================================
-   Switch Toggle
-   ======================================== */
-
-.form-switch {
-    padding-left: 2.5rem;
-}
-
-.form-switch .form-check-input {
-    width: 2rem;
-    margin-left: -2.5rem;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(0,0,0,0.25)'/%3e%3c/svg%3e");
-    background-position: left center;
-    border-radius: 2rem;
-    transition: background-position 0.15s ease-in-out;
-}
-
-.form-switch .form-check-input:checked {
-    background-position: right center;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-}
-
-/* ========================================
-   Blood Type Selector
-   ======================================== */
-
-.blood-type-selector {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
-}
-
-.blood-type-option {
-    position: relative;
-}
-
-.blood-type-option input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.blood-type-option label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 80px;
-    min-height: 80px;
-    padding: 1rem;
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-bold);
-    color: var(--primary);
-    background: var(--white);
-    border: 2px solid var(--primary);
-    border-radius: var(--border-radius-lg);
-    cursor: pointer;
-    transition: var(--transition-all);
-    text-align: center;
-}
-
-.blood-type-option input[type="radio"]:checked + label {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--white);
-    transform: scale(1.05);
-    box-shadow: var(--shadow-primary);
-}
-
-.blood-type-option label:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-}
-
-.blood-type-option input[type="radio"]:disabled + label {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* ========================================
-   Date & Time Inputs
-   ======================================== */
-
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"] {
-    position: relative;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    filter: invert(0.5);
-}
-
-input[type="date"]:hover::-webkit-calendar-picker-indicator,
-input[type="time"]:hover::-webkit-calendar-picker-indicator {
-    filter: invert(0.3);
-}
-
-/* ========================================
-   File Upload
-   ======================================== */
-
-.form-control[type="file"] {
-    padding: 0.5rem 1rem;
-}
-
-.file-upload-wrapper {
-    position: relative;
-    display: inline-block;
     width: 100%;
-}
-
-.file-upload-input {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
+    padding: var(--spacing-2);
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border-light);
+    border-radius: var(--radius-md);
     cursor: pointer;
+    transition: all var(--transition-fast) var(--transition-timing);
 }
 
-.file-upload-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 2rem;
-    border: 2px dashed var(--light-gray);
-    border-radius: var(--border-radius-lg);
-    background: var(--light);
-    cursor: pointer;
-    transition: var(--transition-all);
-    text-align: center;
+.form-file:hover {
+    border-color: var(--blood-red);
 }
 
-.file-upload-label:hover {
-    border-color: var(--primary);
-    background: rgba(220, 38, 38, 0.05);
-}
-
-.file-upload-label i {
-    font-size: 2rem;
-    color: var(--primary);
-}
-
-.file-upload-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.file-upload-text strong {
-    color: var(--primary);
-}
-
-.file-upload-text small {
-    color: var(--gray);
-    font-size: var(--font-size-xs);
-}
-
-/* File Preview */
-.file-preview {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: var(--light);
-    border-radius: var(--border-radius);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.file-preview-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.file-preview-icon {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--white);
-    border-radius: var(--border-radius);
-    color: var(--primary);
-    font-size: 1.25rem;
-}
-
-.file-preview-name {
-    font-weight: var(--font-weight-medium);
-    color: var(--dark);
-}
-
-.file-preview-size {
-    font-size: var(--font-size-xs);
-    color: var(--gray);
-}
-
-.file-preview-remove {
-    color: var(--danger);
-    cursor: pointer;
-    transition: var(--transition-all);
-}
-
-.file-preview-remove:hover {
-    transform: scale(1.2);
-}
-
-/* ========================================
-   Range Slider
-   ======================================== */
-
-input[type="range"] {
-    width: 100%;
-    height: 0.5rem;
-    background: var(--light-gray);
-    border-radius: 1rem;
-    outline: none;
-    -webkit-appearance: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 1.25rem;
-    height: 1.25rem;
-    background: var(--primary);
-    border-radius: 50%;
-    cursor: pointer;
-    transition: var(--transition-all);
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: var(--shadow);
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 1.25rem;
-    height: 1.25rem;
-    background: var(--primary);
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-}
-
-/* ========================================
-   Multi-Step Form
-   ======================================== */
-
-.form-steps {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-    position: relative;
-}
-
-.form-steps::before {
-    content: '';
-    position: absolute;
-    top: 1.5rem;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--light-gray);
-    z-index: 0;
-}
-
-.form-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    position: relative;
-    z-index: 1;
-    flex: 1;
-}
-
-.form-step-circle {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 50%;
-    background: var(--white);
-    border: 3px solid var(--light-gray);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: var(--font-weight-bold);
-    color: var(--gray);
-    transition: var(--transition-all);
-}
-
-.form-step.active .form-step-circle {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--white);
-    box-shadow: var(--shadow-primary);
-}
-
-.form-step.completed .form-step-circle {
-    background: var(--success);
-    border-color: var(--success);
-    color: var(--white);
-}
-
-.form-step.completed .form-step-circle::before {
-    content: '✓';
-}
-
-.form-step-label {
-    font-size: var(--font-size-sm);
-    color: var(--gray);
-    font-weight: var(--font-weight-medium);
-    text-align: center;
-    transition: var(--transition-all);
-}
-
-.form-step.active .form-step-label {
-    color: var(--primary);
-    font-weight: var(--font-weight-semibold);
-}
-
-.form-step.completed .form-step-label {
-    color: var(--success);
-}
-
-.form-step-content {
+.form-file-input {
     display: none;
 }
 
-.form-step-content.active {
-    display: block;
-    animation: fadeIn 0.3s ease-in;
+.form-file-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    color: var(--text-secondary);
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.form-file-label i {
+    font-size: var(--text-xl);
+    color: var(--blood-red);
 }
 
-/* ========================================
-   Form Grid Layouts
-   ======================================== */
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-}
-
-.form-grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-}
-
-.form-grid-4 {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
-}
-
-.form-grid-medical {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-}
-
-.form-col-span-2 {
-    grid-column: span 2;
-}
-
-.form-col-span-3 {
-    grid-column: span 3;
-}
-
-.form-col-span-4 {
-    grid-column: span 4;
-}
-
-/* ========================================
-   Form Container
-   ======================================== */
-
-.form-container {
-    background: var(--white);
-    padding: 2rem;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow);
-}
-
-.form-container-medical {
-    background: var(--white);
-    padding: 2.5rem;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-lg);
-    border-top: 4px solid var(--primary);
-}
-
-/* ========================================
-   Search Form
-   ======================================== */
-
-.search-form {
-    position: relative;
+/* Range Input */
+.form-range {
     width: 100%;
-    max-width: 600px;
+    height: 6px;
+    background: var(--border-light);
+    border-radius: var(--radius-full);
+    appearance: none;
 }
 
-.search-input {
-    width: 100%;
-    padding: 0.875rem 3rem 0.875rem 1rem;
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius-full);
-    font-size: var(--font-size-base);
-    transition: var(--transition-all);
-}
-
-.search-input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-    outline: none;
-}
-
-.search-button {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--primary);
-    color: var(--white);
-    border: none;
-    border-radius: var(--border-radius-full);
-    padding: 0.5rem 1rem;
+.form-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--blood-red);
+    border-radius: 50%;
     cursor: pointer;
-    transition: var(--transition-all);
+    transition: all var(--transition-fast) var(--transition-timing);
 }
 
-.search-button:hover {
-    background: var(--primary-dark);
+.form-range::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
 }
 
-/* ========================================
-   Filter Form
-   ======================================== */
-
-.filter-form {
-    background: var(--white);
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 1.5rem;
+/* Form Actions */
+.form-actions {
+    display: flex;
+    gap: var(--spacing-4);
+    margin-top: var(--spacing-6);
+    flex-wrap: wrap;
 }
 
-.filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    align-items: end;
+/* Onboarding Progress */
+.onboarding-progress {
+    margin-bottom: var(--spacing-6);
 }
 
-/* ========================================
-   Medical History Form
-   ======================================== */
-
-.medical-question {
+.onboarding-steps {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: var(--light);
-    border-radius: var(--border-radius);
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--spacing-4);
 }
 
-.medical-question-text {
-    font-weight: var(--font-weight-medium);
-    color: var(--dark);
+.onboarding-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    padding: var(--spacing-2);
 }
 
-.medical-question-options {
+.onboarding-step::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--border-light);
+    z-index: 1;
+}
+
+.onboarding-step:first-child::before {
+    left: 50%;
+}
+
+.onboarding-step:last-child::before {
+    right: 50%;
+}
+
+.step-indicator {
+    position: relative;
+    z-index: 2;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--spacing-2);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-light);
+    border-radius: 50%;
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-bold);
+    color: var(--text-secondary);
 }
 
-.medical-option {
+.onboarding-step.completed .step-indicator {
+    background: var(--success-green);
+    border-color: var(--success-green);
+    color: white;
+}
+
+.onboarding-step.active .step-indicator {
+    background: var(--blood-red);
+    border-color: var(--blood-red);
+    color: white;
+}
+
+.step-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.onboarding-step.active .step-label {
+    color: var(--blood-red);
+    font-weight: var(--font-medium);
+}
+
+.onboarding-step.completed .step-label {
+    color: var(--success-green);
+}
+
+/* Location Card (from donor dashboard) */
+.location-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+    border: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-4);
+}
+
+.location-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    flex-wrap: wrap;
+}
+
+.location-info i {
+    color: var(--blood-red);
+}
+
+/* Search Box (from nearby centers) */
+.search-box {
     position: relative;
 }
 
-.medical-option input[type="radio"] {
+.search-box i {
     position: absolute;
-    opacity: 0;
-    pointer-events: none;
+    left: var(--spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
 }
 
-.medical-option label {
-    padding: 0.5rem 1.5rem;
-    background: var(--white);
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: var(--transition-all);
-    margin-bottom: 0;
+.search-box input {
+    padding-left: var(--spacing-10);
 }
 
-.medical-option input[type="radio"]:checked + label {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--white);
+/* Time Slot Selector (from donate_blood) */
+.time-slot-wrapper {
+    position: relative;
 }
 
-.medical-option.option-yes input[type="radio"]:checked + label {
-    background: var(--success);
-    border-color: var(--success);
+.time-slot-selector {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234B5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-3) center;
+    background-size: 16px;
+    padding-right: var(--spacing-10);
 }
 
-.medical-option.option-no input[type="radio"]:checked + label {
-    background: var(--danger);
-    border-color: var(--danger);
+.time-slot-option {
+    padding: var(--spacing-2) var(--spacing-3);
 }
 
-/* ========================================
-   Auth/Signup Form Specific Styles
-   ======================================== */
-
-.auth-card {
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 0;
+.time-slot-option.peak-hour {
+    background-color: rgba(245, 158, 11, 0.1);
 }
 
-.auth-card .form-control,
-.auth-card input[type="text"],
-.auth-card input[type="email"],
-.auth-card input[type="password"],
-.auth-card input[type="tel"],
-.auth-card input[type="date"],
-.auth-card select,
-.auth-card textarea {
-    width: 100% !important;
-    max-width: 100%;
-    padding: 14px 16px !important;
-    font-size: 15px;
-    border: 2px solid var(--light-gray);
-    border-radius: var(--border-radius);
-    background: var(--white);
-    box-sizing: border-box;
-    transition: all 0.3s ease;
+.time-slot-option.lunch-time {
+    background-color: rgba(196, 30, 58, 0.1);
 }
 
-.auth-card .form-control:focus,
-.auth-card input:focus,
-.auth-card select:focus,
-.auth-card textarea:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
-    outline: none;
+.time-slot-option.selected-option {
+    background-color: rgba(37, 99, 235, 0.1);
+    font-weight: var(--font-bold);
 }
 
-.auth-card .row {
-    margin: 0 -10px;
+/* Availability Status */
+.availability-status {
+    margin-top: var(--spacing-2);
 }
 
-.auth-card .col-md-6,
-.auth-card .col-md-4,
-.auth-card .col-md-8,
-.auth-card .col-lg-6,
-.auth-card .col-lg-8 {
-    padding: 0 10px;
-}
-
-.auth-card .mb-3,
-.auth-card .mb-4,
-.auth-card .mt-3,
-.auth-card .mt-4,
-.auth-card .form-group {
-    margin-bottom: 24px !important;
-}
-
-.auth-card .text-muted,
-.auth-card .help-text,
-.auth-card small.text-muted,
-.auth-card .form-text {
-    display: block;
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--gray);
-    line-height: 1.5;
-}
-
-.auth-card #passwordStrength,
-.auth-card #matchFeedback {
-    margin-top: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    min-height: 24px;
-    padding: 2px 0;
-}
-
-.auth-card .text-danger,
-.auth-card .invalid-feedback {
-    font-size: 12px;
-    margin-top: 4px;
-    color: var(--danger);
-    font-weight: 500;
-}
-
-.auth-card h5 {
-    margin: 28px 0 20px 0;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--light-gray);
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--dark);
-}
-
-.auth-card h5:first-of-type {
-    margin-top: 0;
-}
-
-.auth-card .btn-primary {
-    padding: 14px 20px;
-    font-size: 16px;
-    font-weight: 600;
-    width: 100%;
-    margin-top: 16px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    border: none;
-    border-radius: var(--border-radius);
-    transition: all 0.3s ease;
-}
-
-.auth-card .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-primary);
-}
-
-.auth-card .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.auth-card .btn-link {
-    color: var(--primary);
-    text-decoration: none;
-    font-weight: 500;
-    padding: 0;
-}
-
-.auth-card .btn-link:hover {
-    color: var(--primary-dark);
-    text-decoration: underline;
-}
-
-.auth-card .form-check {
-    padding-left: 28px;
-    margin: 16px 0;
-}
-
-.auth-card .form-check-input {
-    width: 18px;
-    height: 18px;
-    margin-top: 2px;
-    margin-left: -28px;
-}
-
-.auth-card .form-check-label {
-    font-size: 14px;
-    color: var(--dark);
-}
-
-.auth-card .info-box,
-.auth-card .alert-info {
-    background: var(--light);
-    border-left: 4px solid var(--info);
-    padding: 16px 20px;
-    border-radius: var(--border-radius);
-    margin-bottom: 24px;
-}
-
-.auth-card .info-box h6,
-.auth-card .alert-info h6 {
-    color: var(--dark);
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.auth-card .alert-info {
-    background: rgba(23, 162, 184, 0.1);
-    border-left-color: var(--info);
-}
-
-.username-suggestions {
-    margin-top: 8px;
+/* Time Slot Legend */
+.time-slot-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-3);
+    padding: var(--spacing-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
 }
 
-.suggestion-badge {
-    background: var(--light);
-    color: var(--primary);
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    border: 1px solid var(--primary-light);
-    transition: all 0.3s ease;
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-size: var(--text-xs);
 }
 
-.suggestion-badge:hover {
-    background: var(--primary);
-    color: var(--white);
-    border-color: var(--primary);
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
 }
 
-/* ========================================
-   Form Responsive Design
-   ======================================== */
-
-@media (max-width: 992px) {
-    .form-grid-3 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .form-grid-4 {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.legend-color.available {
+    background: var(--success-green);
 }
 
+.legend-color.selected {
+    background: var(--medical-blue);
+}
+
+.legend-color.peak {
+    background: var(--warning-yellow);
+}
+
+.legend-color.lunch {
+    background: var(--blood-red);
+}
+
+/* Summary Section (from donate_blood) */
+.summary-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    margin-top: var(--spacing-4);
+    border-left: 4px solid var(--blood-red);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-    .form-container {
-        padding: 1.5rem;
-    }
-    
-    .form-container-medical {
-        padding: 2rem;
-    }
-    
-    .form-grid,
-    .form-grid-3,
-    .form-grid-4,
-    .form-grid-medical {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .form-col-span-2,
-    .form-col-span-3,
-    .form-col-span-4 {
-        grid-column: span 1;
-    }
-    
     .form-row {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        flex-direction: column;
+        gap: var(--spacing-3);
     }
     
-    .form-group,
-    .form-group-medical {
-        margin-bottom: 1rem;
+    .radio-group {
+        flex-direction: column;
+        gap: var(--spacing-2);
     }
     
-    .form-control,
-    .input-medical,
-    .form-control-medical {
-        padding: 0.625rem 0.875rem;
-        font-size: var(--font-size-sm);
+    .form-actions {
+        flex-direction: column;
     }
     
-    .form-steps {
-        overflow-x: auto;
-        padding-bottom: 1rem;
+    .form-actions .btn {
+        width: 100%;
     }
     
-    .form-step-label {
-        font-size: var(--font-size-xs);
-    }
-    
-    .blood-type-selector {
-        gap: 0.5rem;
-    }
-    
-    .blood-type-option label {
-        min-width: 60px;
-        min-height: 60px;
-        font-size: var(--font-size-lg);
-    }
-    
-    .filter-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .medical-question {
+    .location-card {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1rem;
     }
     
-    .auth-card {
-        max-width: 100%;
-        padding: 0 10px;
-    }
-    
-    .auth-card .row {
-        margin: 0;
-    }
-    
-    .auth-card .col-md-6,
-    .auth-card .col-md-4,
-    .auth-card .col-md-8 {
-        padding: 0;
-        margin-bottom: 16px;
-    }
-    
-    .auth-card .btn-primary {
-        padding: 12px 16px;
-        font-size: 15px;
-    }
-    
-    .auth-card h5 {
-        font-size: 16px;
-        margin: 20px 0 16px 0;
-    }
-}
-
-@media (max-width: 480px) {
-    .form-check {
-        padding-left: 1.5rem;
-    }
-    
-    .form-check-input {
-        width: 1rem;
-        height: 1rem;
-        margin-left: -1.5rem;
-    }
-    
-    .input-group {
+    .onboarding-steps {
         flex-direction: column;
+        gap: var(--spacing-2);
     }
     
-    .input-group .btn,
-    .input-group .input-group-text {
-        border-radius: var(--border-radius);
-        margin: 0;
-        margin-top: 0.5rem;
-    }
-    
-    .input-group .form-control {
-        border-radius: var(--border-radius);
-    }
-    
-    .blood-type-selector {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .blood-type-option label {
-        min-width: 50px;
-        min-height: 50px;
-        font-size: var(--font-size-base);
-    }
-    
-    .file-upload-label {
-        padding: 1.5rem 1rem;
-    }
-    
-    .file-upload-label i {
-        font-size: 1.5rem;
-    }
-    
-    .auth-card .form-control,
-    .auth-card input[type="text"],
-    .auth-card input[type="email"],
-    .auth-card input[type="password"],
-    .auth-card select {
-        padding: 12px 14px !important;
-        font-size: 14px;
-    }
-    
-    .auth-card .mb-3,
-    .auth-card .mb-4 {
-        margin-bottom: 18px !important;
-    }
-}
-
-/* ========================================
-   Form Animations
-   ======================================== */
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-    20%, 40%, 60%, 80% { transform: translateX(5px); }
-}
-
-.form-control.is-invalid {
-    animation: shake 0.5s ease-in-out;
-}
-
-@keyframes pulse-success {
-    0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-}
-
-.form-control.is-valid {
-    animation: pulse-success 1s ease-out;
-}
-
-/* ========================================
-   Print Styles
-   ======================================== */
-
-@media print {
-    .form-container,
-    .form-container-medical {
-        box-shadow: none;
-        padding: 0;
-    }
-    
-    .btn,
-    .password-toggle,
-    .file-upload-input,
-    .file-preview-remove {
+    .onboarding-step::before {
         display: none;
+    }
+    
+    .step-indicator {
+        width: 30px;
+        height: 30px;
+        font-size: var(--text-sm);
     }
 }

@@ -5,418 +5,354 @@
 {% block title %}Donor Eligibility - BloodConnect{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-10">
-      
-      <!-- Page Header -->
-      <div class="text-center mb-5">
-        <h1 class="display-5 fw-bold text-primary">
-          <i class="fas fa-clipboard-check me-3"></i>Donor Eligibility Assessment
-        </h1>
-        <p class="lead text-muted">
-          {% if is_first_time %}
-            Let's determine if you're eligible to donate blood. Everyone has a role in saving lives!
-          {% else %}
-            Update your health information to maintain accurate eligibility status.
-          {% endif %}
-        </p>
-      </div>
-
-      <!-- Info Alert -->
-      <div class="alert alert-info d-flex align-items-center mb-4">
-        <i class="fas fa-info-circle fa-2x me-3"></i>
-        <div>
-          <strong class="fs-5">Your age: {{ donor_age }} years</strong>
-          <p class="mb-0 text-muted">Based on your date of birth: {{ donor.dob|date:"F d, Y" }}</p>
-        </div>
-      </div>
-
-      <!-- Main Form Card -->
-      <div class="card shadow-lg border-0">
-        <div class="card-header bg-primary text-white py-3">
-          <h4 class="mb-0">
-            <i class="fas fa-heartbeat me-2"></i>Health Assessment Questionnaire
-          </h4>
-        </div>
-        
-        <div class="card-body p-4">
-          <form method="post" novalidate id="eligibilityForm">
-            {% csrf_token %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
             
-            <!-- Display non-field errors -->
-            {% if eligibility_form.non_field_errors %}
-              <div class="alert alert-danger">
-                {% for error in eligibility_form.non_field_errors %}
-                  <p class="mb-0">{{ error }}</p>
-                {% endfor %}
-              </div>
-            {% endif %}
-
-            <!-- Hidden age field -->
-            {{ eligibility_form.age }}
-
-            <!-- Basic Information Section -->
-            <div class="mb-4">
-              <h5 class="border-bottom pb-2 mb-3">
-                <i class="fas fa-user text-primary me-2"></i>Basic Information
-              </h5>
-              
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-semibold">
-                    <i class="fas fa-weight me-2"></i>Weight (kg) <span class="text-danger">*</span>
-                  </label>
-                  {% render_field eligibility_form.weight class="form-control" %}
-                  {% if eligibility_form.weight.errors %}
-                    <div class="text-danger small mt-1">{{ eligibility_form.weight.errors.0 }}</div>
-                  {% endif %}
-                  <small class="text-muted">{{ eligibility_form.weight.help_text }}</small>
-                </div>
-                
-                <div class="col-md-6">
-                  <label class="form-label fw-semibold">
-                    <i class="fas fa-venus-mars me-2"></i>Gender <span class="text-danger">*</span>
-                  </label>
-                  {% render_field eligibility_form.gender class="form-select" %}
-                  {% if eligibility_form.gender.errors %}
-                    <div class="text-danger small mt-1">{{ eligibility_form.gender.errors.0 }}</div>
-                  {% endif %}
-                </div>
-              </div>
+            <!-- Page Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-5 fw-bold text-primary">
+                    <i class="fas fa-clipboard-check me-3"></i>Donor Eligibility Assessment
+                </h1>
+                <p class="lead text-muted">
+                    {% if is_first_time %}
+                        Let's determine if you're eligible to donate blood.
+                    {% else %}
+                        Update your health information to maintain accurate eligibility status.
+                    {% endif %}
+                </p>
             </div>
 
-            <!-- Health Status Section -->
-            <div class="mb-4">
-              <h5 class="border-bottom pb-2 mb-3">
-                <i class="fas fa-heartbeat text-primary me-2"></i>Current Health Status
-              </h5>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold d-block">
-                  {{ eligibility_form.good_health.label }} <span class="text-danger">*</span>
-                </label>
-                <div class="d-flex gap-4">
-                  {% for radio in eligibility_form.good_health %}
-                    <div class="form-check">
-                      {{ radio.tag }}
-                      <label class="form-check-label" for="{{ radio.id_for_label }}">
-                        {{ radio.choice_label }}
-                      </label>
-                    </div>
-                  {% endfor %}
-                </div>
-                {% if eligibility_form.good_health.errors %}
-                  <div class="text-danger small mt-1">{{ eligibility_form.good_health.errors.0 }}</div>
-                {% endif %}
-                <small class="text-muted">{{ eligibility_form.good_health.help_text }}</small>
-              </div>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Medical Conditions / Allergies</label>
-                {% render_field eligibility_form.medical_conditions class="form-control" %}
-                {% if eligibility_form.medical_conditions.errors %}
-                  <div class="text-danger small mt-1">{{ eligibility_form.medical_conditions.errors.0 }}</div>
-                {% endif %}
-                <small class="text-muted">{{ eligibility_form.medical_conditions.help_text }}</small>
-              </div>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Current Medications</label>
-                {% render_field eligibility_form.medications class="form-control" placeholder="e.g., Blood pressure medication, antibiotics, etc." %}
-              </div>
-            </div>
-
-            <!-- Recent Activities Section -->
-            <div class="mb-4">
-              <h5 class="border-bottom pb-2 mb-3">
-                <i class="fas fa-clock text-primary me-2"></i>Recent Activities (Past 6 Months)
-              </h5>
-              
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-semibold d-block">
-                    Recent Surgery?
-                  </label>
-                  <div class="d-flex gap-4">
-                    {% for radio in eligibility_form.recent_surgery %}
-                      <div class="form-check">
-                        {{ radio.tag }}
-                        <label class="form-check-label" for="{{ radio.id_for_label }}">
-                          {{ radio.choice_label }}
-                        </label>
-                      </div>
-                    {% endfor %}
-                  </div>
-                </div>
-                
-                <div class="col-md-6">
-                  <label class="form-label fw-semibold d-block">
-                    Tattoo/Piercing?
-                  </label>
-                  <div class="d-flex gap-4">
-                    {% for radio in eligibility_form.recent_tattoo %}
-                      <div class="form-check">
-                        {{ radio.tag }}
-                        <label class="form-check-label" for="{{ radio.id_for_label }}">
-                          {{ radio.choice_label }}
-                        </label>
-                      </div>
-                    {% endfor %}
-                  </div>
-                  <small class="text-muted">{{ eligibility_form.recent_tattoo.help_text }}</small>
-                </div>
-              </div>
-            </div>
-
-            <!-- Travel History Section -->
-            <div class="mb-4">
-              <h5 class="border-bottom pb-2 mb-3">
-                <i class="fas fa-plane text-primary me-2"></i>Travel History
-              </h5>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold d-block">
-                  {{ eligibility_form.travel_history.label }} <span class="text-danger">*</span>
-                </label>
-                <div class="d-flex gap-4">
-                  {% for radio in eligibility_form.travel_history %}
-                    <div class="form-check">
-                      {{ radio.tag }}
-                      <label class="form-check-label" for="{{ radio.id_for_label }}">
-                        {{ radio.choice_label }}
-                      </label>
-                    </div>
-                  {% endfor %}
-                </div>
-                {% if eligibility_form.travel_history.errors %}
-                  <div class="text-danger small mt-1">{{ eligibility_form.travel_history.errors.0 }}</div>
-                {% endif %}
-                <small class="text-muted">{{ eligibility_form.travel_history.help_text }}</small>
-              </div>
-              
-              <div class="row g-3 travel-details" id="travelDetails" style="display: none;">
-                <div class="col-md-6">
-                  <label class="form-label">Travel Destination</label>
-                  {% render_field eligibility_form.travel_destination class="form-control" %}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Duration (days)</label>
-                  {% render_field eligibility_form.travel_duration class="form-control" %}
-                </div>
-              </div>
-            </div>
-
-            <!-- Female-Specific Questions -->
-            <div class="mb-4" id="femaleSection" style="display: none;">
-              <h5 class="border-bottom pb-2 mb-3">
-                <i class="fas fa-female text-primary me-2"></i>Female-Specific Questions
-              </h5>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold d-block">
-                  {{ eligibility_form.pregnant.label }}
-                </label>
-                <div class="d-flex gap-4">
-                  {% for radio in eligibility_form.pregnant %}
-                    <div class="form-check">
-                      {{ radio.tag }}
-                      <label class="form-check-label" for="{{ radio.id_for_label }}">
-                        {{ radio.choice_label }}
-                      </label>
-                    </div>
-                  {% endfor %}
-                </div>
-                <small class="text-muted">{{ eligibility_form.pregnant.help_text }}</small>
-              </div>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold d-block">
-                  Recent Childbirth?
-                </label>
-                <div class="d-flex gap-4">
-                  {% for radio in eligibility_form.recent_childbirth %}
-                    <div class="form-check">
-                      {{ radio.tag }}
-                      <label class="form-check-label" for="{{ radio.id_for_label }}">
-                        {{ radio.choice_label }}
-                      </label>
-                    </div>
-                  {% endfor %}
-                </div>
-              </div>
-              
-              <div class="mb-3">
-                <label class="form-label fw-semibold d-block">
-                  Currently Breastfeeding?
-                </label>
-                <div class="d-flex gap-4">
-                  {% for radio in eligibility_form.breastfeeding %}
-                    <div class="form-check">
-                      {{ radio.tag }}
-                      <label class="form-check-label" for="{{ radio.id_for_label }}">
-                        {{ radio.choice_label }}
-                      </label>
-                    </div>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-
-            <!-- Terms Agreement -->
-            <div class="mb-4 p-3 bg-light rounded">
-              <div class="form-check">
-                {% render_field eligibility_form.agree_to_terms class="form-check-input" %}
-                <label class="form-check-label fw-semibold" for="{{ eligibility_form.agree_to_terms.id_for_label }}">
-                  {{ eligibility_form.agree_to_terms.label }} <span class="text-danger">*</span>
-                </label>
-                {% if eligibility_form.agree_to_terms.errors %}
-                  <div class="text-danger small mt-1">{{ eligibility_form.agree_to_terms.errors.0 }}</div>
-                {% endif %}
-              </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="d-flex gap-3 justify-content-center mt-4">
-              <a href="{% url 'donor:donor-dashboard' %}" class="btn btn-secondary px-4">
-                <i class="fas fa-arrow-left me-2"></i>Cancel
-              </a>
-              <button type="submit" class="btn btn-primary px-5" id="submitBtn">
-                <i class="fas fa-check-circle me-2"></i>Submit Assessment
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- Support Options Section (Always Visible) -->
-      <div class="card mt-4 border-success">
-        <div class="card-header bg-success text-white">
-          <h5 class="mb-0">
-            <i class="fas fa-heart me-2"></i>
-            Everyone Has a Role in Saving Lives
-          </h5>
-        </div>
-        <div class="card-body">
-          <p class="mb-3">
-            Whether you're eligible to donate or not, you can still make a meaningful impact.
-            Here are some ways to get involved:
-          </p>
-          
-          <div class="row g-3">
-            {% for opportunity in volunteer_opportunities %}
-            <div class="col-md-4">
-              <div class="d-flex align-items-start">
-                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
-                  <i class="fas {{ opportunity.icon }} text-success"></i>
-                </div>
+            <!-- Age Info Alert -->
+            <div class="alert alert-info d-flex align-items-center mb-4">
+                <i class="fas fa-info-circle fa-2x me-3"></i>
                 <div>
-                  <h6 class="mb-1">{{ opportunity.title }}</h6>
-                  <p class="small text-muted mb-2">{{ opportunity.description }}</p>
-                  <a href="{{ opportunity.url }}" class="btn btn-sm btn-outline-success">Learn More</a>
+                    <strong class="fs-5">Your age: {{ donor_age }} years</strong>
+                    <p class="mb-0 text-muted">Based on your date of birth: {{ donor.dob|date:"F d, Y" }}</p>
                 </div>
-              </div>
             </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
 
-      <!-- Important Notes -->
-      <div class="alert alert-warning mt-4">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>Important:</strong> Your responses will be kept confidential and used only to determine
-        your eligibility for blood donation. All information is protected under medical privacy regulations.
-      </div>
+            <!-- Main Form Card -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-heartbeat me-2"></i>
+                    <h5 class="mb-0">Health Assessment Questionnaire</h5>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" novalidate id="eligibilityForm">
+                        {% csrf_token %}
+                        
+                        <!-- Non-field errors -->
+                        {% if eligibility_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in eligibility_form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {{ eligibility_form.age }}
+
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-user"></i> Basic Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-weight me-2"></i>Weight (kg) <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field eligibility_form.weight class="form-control" %}
+                                    {% if eligibility_form.weight.errors %}
+                                        <div class="invalid-feedback d-block">{{ eligibility_form.weight.errors.0 }}</div>
+                                    {% endif %}
+                                    <small class="text-muted">{{ eligibility_form.weight.help_text }}</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-venus-mars me-2"></i>Gender <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field eligibility_form.gender class="form-select" %}
+                                    {% if eligibility_form.gender.errors %}
+                                        <div class="invalid-feedback d-block">{{ eligibility_form.gender.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Health Status -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-heartbeat"></i> Current Health Status
+                            </h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label d-block">
+                                    {{ eligibility_form.good_health.label }} <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex gap-4">
+                                    {% for radio in eligibility_form.good_health %}
+                                        <div class="form-check">
+                                            {{ radio.tag }}
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if eligibility_form.good_health.errors %}
+                                    <div class="invalid-feedback d-block">{{ eligibility_form.good_health.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Medical Conditions / Allergies</label>
+                                {% render_field eligibility_form.medical_conditions class="form-control" rows="3" %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                {% render_field eligibility_form.medications class="form-control" placeholder="e.g., Blood pressure medication, antibiotics" %}
+                            </div>
+                        </div>
+
+                        <!-- Recent Activities -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-clock"></i> Recent Activities (Past 6 Months)
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label d-block">Recent Surgery?</label>
+                                    <div class="d-flex gap-4">
+                                        {% for radio in eligibility_form.recent_surgery %}
+                                            <div class="form-check">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label d-block">Tattoo/Piercing?</label>
+                                    <div class="d-flex gap-4">
+                                        {% for radio in eligibility_form.recent_tattoo %}
+                                            <div class="form-check">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Travel History -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-plane"></i> Travel History
+                            </h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label d-block">
+                                    {{ eligibility_form.travel_history.label }} <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex gap-4">
+                                    {% for radio in eligibility_form.travel_history %}
+                                        <div class="form-check">
+                                            {{ radio.tag }}
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3 travel-details" id="travelDetails">
+                                <div class="col-md-6">
+                                    <label class="form-label">Travel Destination</label>
+                                    {% render_field eligibility_form.travel_destination class="form-control" %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Duration (days)</label>
+                                    {% render_field eligibility_form.travel_duration class="form-control" %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Female-Specific Questions -->
+                        <div class="form-section" id="femaleSection">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-female"></i> Female-Specific Questions
+                            </h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label d-block">{{ eligibility_form.pregnant.label }}</label>
+                                <div class="d-flex gap-4">
+                                    {% for radio in eligibility_form.pregnant %}
+                                        <div class="form-check">
+                                            {{ radio.tag }}
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label d-block">Recent Childbirth?</label>
+                                <div class="d-flex gap-4">
+                                    {% for radio in eligibility_form.recent_childbirth %}
+                                        <div class="form-check">
+                                            {{ radio.tag }}
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label d-block">Currently Breastfeeding?</label>
+                                <div class="d-flex gap-4">
+                                    {% for radio in eligibility_form.breastfeeding %}
+                                        <div class="form-check">
+                                            {{ radio.tag }}
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Terms Agreement -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    {% render_field eligibility_form.agree_to_terms class="form-check-input" %}
+                                    <label class="form-check-label" for="{{ eligibility_form.agree_to_terms.id_for_label }}">
+                                        {{ eligibility_form.agree_to_terms.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {% if eligibility_form.agree_to_terms.errors %}
+                                        <div class="invalid-feedback d-block">{{ eligibility_form.agree_to_terms.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <a href="{% url 'donor:donor-dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-check-circle me-2"></i>Submit Assessment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Support Options -->
+            <div class="card border-success mt-4">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-heart me-2"></i>
+                    <h5 class="mb-0">Everyone Has a Role in Saving Lives</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for opportunity in volunteer_opportunities %}
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-start">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="fas {{ opportunity.icon }} text-success"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">{{ opportunity.title }}</h6>
+                                    <p class="small text-muted mb-2">{{ opportunity.description }}</p>
+                                    <a href="{{ opportunity.url }}" class="btn btn-sm btn-outline-success">Learn More</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // ========================================
-  // TOGGLE TRAVEL DETAILS BASED ON TRAVEL HISTORY
-  // ========================================
-  const travelHistoryRadios = document.querySelectorAll('[name="travel_history"]');
-  const travelDetails = document.getElementById('travelDetails');
-  
-  function toggleTravelDetails() {
-    const selected = document.querySelector('[name="travel_history"]:checked');
-    if (selected && selected.value === 'True') {
-      travelDetails.style.display = 'flex';
-    } else {
-      travelDetails.style.display = 'none';
-    }
-  }
-  
-  travelHistoryRadios.forEach(radio => {
-    radio.addEventListener('change', toggleTravelDetails);
-  });
-  toggleTravelDetails(); // Initial state
-
-  // ========================================
-  // TOGGLE FEMALE SECTION BASED ON GENDER
-  // ========================================
-  const genderSelect = document.querySelector('[name="gender"]');
-  const femaleSection = document.getElementById('femaleSection');
-  
-  function toggleFemaleSection() {
-    if (genderSelect.value === 'Female') {
-      femaleSection.style.display = 'block';
-    } else {
-      femaleSection.style.display = 'none';
-    }
-  }
-  
-  genderSelect.addEventListener('change', toggleFemaleSection);
-  toggleFemaleSection(); // Initial state
-
-  // ========================================
-  // FORM SUBMISSION HANDLER
-  // ========================================
-  const form = document.getElementById('eligibilityForm');
-  const submitBtn = document.getElementById('submitBtn');
-  
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      // Disable submit button to prevent double submission
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
-      
-      // Re-enable after 10 seconds in case of error
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Submit Assessment';
-      }, 10000);
-    });
-  }
-
-  // ========================================
-  // VALIDATE WEIGHT INPUT
-  // ========================================
-  const weightInput = document.querySelector('[name="weight"]');
-  if (weightInput) {
-    weightInput.addEventListener('input', function() {
-      const weight = parseFloat(this.value);
-      if (weight < 50 && weight > 0) {
-        this.classList.add('is-invalid');
-        if (!this.nextElementSibling?.classList.contains('invalid-feedback')) {
-          const feedback = document.createElement('div');
-          feedback.className = 'invalid-feedback';
-          feedback.textContent = 'Minimum weight requirement is 50 kg';
-          this.parentNode.appendChild(feedback);
+    // Toggle travel details
+    const travelHistoryRadios = document.querySelectorAll('[name="travel_history"]');
+    const travelDetails = document.getElementById('travelDetails');
+    
+    function toggleTravelDetails() {
+        const selected = document.querySelector('[name="travel_history"]:checked');
+        if (selected && selected.value === 'True') {
+            travelDetails.style.display = 'flex';
+        } else {
+            travelDetails.style.display = 'none';
         }
-      } else {
-        this.classList.remove('is-invalid');
-        const feedback = this.nextElementSibling;
-        if (feedback?.classList.contains('invalid-feedback')) {
-          feedback.remove();
-        }
-      }
+    }
+    
+    travelHistoryRadios.forEach(radio => {
+        radio.addEventListener('change', toggleTravelDetails);
     });
-  }
+    toggleTravelDetails();
+
+    // Toggle female section
+    const genderSelect = document.querySelector('[name="gender"]');
+    const femaleSection = document.getElementById('femaleSection');
+    
+    function toggleFemaleSection() {
+        femaleSection.style.display = genderSelect.value === 'Female' ? 'block' : 'none';
+    }
+    
+    genderSelect.addEventListener('change', toggleFemaleSection);
+    toggleFemaleSection();
+
+    // Form submission
+    const form = document.getElementById('eligibilityForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (form) {
+        form.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+        });
+    }
+
+    // Weight validation
+    const weightInput = document.querySelector('[name="weight"]');
+    if (weightInput) {
+        weightInput.addEventListener('input', function() {
+            const weight = parseFloat(this.value);
+            if (weight < 50 && weight > 0) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

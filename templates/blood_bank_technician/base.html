@@ -1,7 +1,7 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Blood Bank Technician Dashboard{% endblock %}
+{% block title %}Blood Bank Technician Dashboard - BloodConnect{% endblock %}
 
 {% block nav_icon %}fas fa-tint{% endblock %}
 {% block app_name %}Blood Bank{% endblock %}
@@ -14,6 +14,8 @@
 {% block auth_card_class %}blood-bank{% endblock %}
 {% block auth_icon %}fas fa-tint{% endblock %}
 {% block auth_title %}Blood Bank Technician Login{% endblock %}
+
+{% block notifications_url %}#{% endblock %}
 
 {% block profile_menu %}
     {% if user.blood_bank_tech_profile %}
@@ -28,43 +30,117 @@
 
 {% block profile_url %}{% url 'blood_bank_technician:blood_bank_tech_profile' %}{% endblock %}
 {% block edit_profile_url %}{% url 'blood_bank_technician:blood_bank_tech_profile_edit' user.blood_bank_tech_profile.pk %}{% endblock %}
-{% block notifications_url %}#{% endblock %}
 
 {% block extra_nav_items %}
-    <!-- Any blood bank specific nav items can go here -->
+    <!-- Pending Requests Badge -->
+    {% if pending_requests_count > 0 %}
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'blood_bank_technician:pending_requests' %}" title="Pending Requests">
+            <div class="nav-icon">
+                <i class="fas fa-clock"></i>
+                <span class="notification-badge">{{ pending_requests_count }}</span>
+            </div>
+        </a>
+    </li>
+    {% endif %}
+    
+    <!-- Expiring Blood Badge -->
+    {% if expiring_count > 0 %}
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'blood_bank_technician:expiring_blood' %}" title="Expiring Soon">
+            <div class="nav-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span class="notification-badge">{{ expiring_count }}</span>
+            </div>
+        </a>
+    </li>
+    {% endif %}
+    
+    <!-- Chatbot Mobile Icon -->
+    <li class="nav-item d-lg-none">
+        <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
+            <div class="nav-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+        </a>
+    </li>
 {% endblock %}
 
 {% block sidebar_menu %}
-    <a href="{% url 'blood_bank_technician:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="fas fa-tachometer-alt"></i> Dashboard
-    </a>
-    <a href="{% url 'blood_bank_technician:inventory' %}" class="{% if request.resolver_match.url_name == 'inventory' %}active{% endif %}">
-        <i class="fas fa-boxes"></i> Inventory
-    </a>
-    <a href="{% url 'blood_bank_technician:pending_verification' %}" class="{% if request.resolver_match.url_name == 'pending_verification' %}active{% endif %}">
-        <i class="fas fa-hourglass-half"></i> Pending Verification
-    </a>
-    <a href="{% url 'blood_bank_technician:pending_requests' %}" class="{% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}">
-        <i class="fas fa-clock"></i> Pending Requests
-    </a>
-    <a href="{% url 'blood_bank_technician:approved_requests' %}" class="{% if request.resolver_match.url_name == 'approved_requests' %}active{% endif %}">
-        <i class="fas fa-check-circle"></i> Approved
-    </a>
-    <a href="{% url 'blood_bank_technician:expiring_blood' %}" class="{% if request.resolver_match.url_name == 'expiring_blood' %}active{% endif %}">
-        <i class="fas fa-exclamation-triangle"></i> Expiring Soon
-    </a>
-    <a href="{% url 'blood_bank_technician:unsafe_blood' %}" class="{% if request.resolver_match.url_name == 'unsafe_blood' %}active{% endif %}">
-        <i class="fas fa-exclamation-circle"></i> Unsafe Blood
-    </a>
+    <!-- Dashboard -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">MAIN</div>
+        <a href="{% url 'blood_bank_technician:dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+    </div>
+
+    <!-- Inventory Management -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">INVENTORY</div>
+        <a href="{% url 'blood_bank_technician:inventory' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}">
+            <i class="fas fa-boxes"></i>
+            <span>Inventory</span>
+        </a>
+        <a href="{% url 'blood_bank_technician:pending_verification' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'pending_verification' %}active{% endif %}">
+            <i class="fas fa-hourglass-half"></i>
+            <span>Pending Verification</span>
+            {% if pending_verification_count > 0 %}
+                <span class="badge badge-warning ms-auto">{{ pending_verification_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'blood_bank_technician:expiring_blood' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'expiring_blood' %}active{% endif %}">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Expiring Soon</span>
+            {% if expiring_count > 0 %}
+                <span class="badge badge-danger ms-auto">{{ expiring_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'blood_bank_technician:unsafe_blood' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'unsafe_blood' %}active{% endif %}">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>Unsafe Blood</span>
+            {% if unsafe_count > 0 %}
+                <span class="badge badge-danger ms-auto">{{ unsafe_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- Request Management -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">REQUESTS</div>
+        <a href="{% url 'blood_bank_technician:pending_requests' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}">
+            <i class="fas fa-clock"></i>
+            <span>Pending Requests</span>
+            {% if pending_requests_count > 0 %}
+                <span class="badge badge-warning ms-auto">{{ pending_requests_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'blood_bank_technician:approved_requests' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'approved_requests' %}active{% endif %}">
+            <i class="fas fa-check-circle"></i>
+            <span>Approved</span>
+        </a>
+    </div>
+
+    <!-- Profile Management -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">PROFILE</div>
+        <a href="{% url 'blood_bank_technician:blood_bank_tech_profile' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'blood_bank_tech_profile' %}active{% endif %}">
+            <i class="fas fa-user-circle"></i>
+            <span>View Profile</span>
+        </a>
+        <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' user.blood_bank_tech_profile.pk %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'blood_bank_tech_profile_edit' %}active{% endif %}">
+            <i class="fas fa-edit"></i>
+            <span>Edit Profile</span>
+        </a>
+    </div>
 {% endblock %}
 
 {% block extra_css %}
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Blood bank-specific JavaScript
     document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Blood Bank Technician base template loaded');
         
@@ -77,42 +153,85 @@
             };
         });
         
-        // Update pending count dynamically if needed
-        {% if pending_count > 0 %}
-        console.log('📊 You have {{ pending_count }} pending items');
+        // Update pending counts
+        {% if pending_requests_count > 0 %}
+        console.log('📊 Pending requests: {{ pending_requests_count }}');
+        const pendingBadge = document.querySelector('a[href*="pending_requests"] .badge');
+        if (pendingBadge) {
+            pendingBadge.textContent = "{{ pending_requests_count }}";
+        }
         {% endif %}
+
+        {% if expiring_count > 0 %}
+        console.log('⚠️ Expiring units: {{ expiring_count }}');
+        const expiringBadge = document.querySelector('a[href*="expiring"] .badge');
+        if (expiringBadge) {
+            expiringBadge.textContent = "{{ expiring_count }}";
+        }
+        {% endif %}
+
+        {% if pending_verification_count > 0 %}
+        const verificationBadge = document.querySelector('a[href*="pending_verification"] .badge');
+        if (verificationBadge) {
+            verificationBadge.textContent = "{{ pending_verification_count }}";
+        }
+        {% endif %}
+
+        // Sidebar active state for mobile
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
+        sidebarLinks.forEach(link => {
+            if (link.classList.contains('active')) {
+                link.setAttribute('aria-current', 'page');
+            }
+        });
         
-        // Add blood type color coding to inventory items if they exist
+        // Blood type color coding
         const bloodTypeElements = document.querySelectorAll('.blood-type');
         bloodTypeElements.forEach(el => {
             const bloodType = el.textContent.trim();
+            el.classList.remove('blood-type-a', 'blood-type-b', 'blood-type-ab', 'blood-type-o');
             if (bloodType === 'A+') el.classList.add('blood-type-a');
+            else if (bloodType === 'A-') el.classList.add('blood-type-a');
             else if (bloodType === 'B+') el.classList.add('blood-type-b');
+            else if (bloodType === 'B-') el.classList.add('blood-type-b');
             else if (bloodType === 'AB+') el.classList.add('blood-type-ab');
+            else if (bloodType === 'AB-') el.classList.add('blood-type-ab');
             else if (bloodType === 'O+') el.classList.add('blood-type-o');
+            else if (bloodType === 'O-') el.classList.add('blood-type-o');
         });
     });
 
-    // Optional: Add real-time pending count update
-    function updatePendingCount() {
-        fetch('/blood-bank/api/pending-count/')
+    // Real-time pending count update
+    function updatePendingCounts() {
+        fetch('/blood-bank/api/pending-counts/')
             .then(response => response.json())
             .then(data => {
-                const badge = document.querySelector('.notification-badge');
-                if (badge) {
-                    if (data.count > 0) {
-                        badge.textContent = data.count;
-                        badge.style.display = 'inline';
-                    } else {
-                        badge.style.display = 'none';
-                    }
+                // Update pending requests badge
+                const pendingBadge = document.querySelector('a[href*="pending_requests"] .badge');
+                if (pendingBadge && data.pending_requests > 0) {
+                    pendingBadge.textContent = data.pending_requests;
+                    pendingBadge.style.display = 'inline-block';
+                }
+                
+                // Update verification badge
+                const verificationBadge = document.querySelector('a[href*="pending_verification"] .badge');
+                if (verificationBadge && data.pending_verification > 0) {
+                    verificationBadge.textContent = data.pending_verification;
+                    verificationBadge.style.display = 'inline-block';
+                }
+                
+                // Update expiring badge
+                const expiringBadge = document.querySelector('a[href*="expiring"] .badge');
+                if (expiringBadge && data.expiring > 0) {
+                    expiringBadge.textContent = data.expiring;
+                    expiringBadge.style.display = 'inline-block';
                 }
             })
-            .catch(error => console.error('Error updating pending count:', error));
+            .catch(error => console.error('Error updating counts:', error));
     }
 
-    // Uncomment to enable real-time updates every 30 seconds
-    // setInterval(updatePendingCount, 30000);
+    // Update every 30 seconds (optional)
+    // setInterval(updatePendingCounts, 30000);
 </script>
 {% endblock %}
 

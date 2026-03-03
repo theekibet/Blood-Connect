@@ -1,0 +1,97 @@
+templates//blood_bank_technician/profile_edit.html:48:                                         style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+templates//blood_bank_technician/profile_edit.html:53:                                            style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"
+templates//blood_bank_technician/profile_edit.html:62:                                         style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//blood_bank_technician/profile_detail.html:36:                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+templates//blood_bank_technician/profile_detail.html:41:                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//blood_bank_technician/reject_request.html:28:                                <th style="width: 200px;">Patient Name</th>
+templates//blood_bank_technician/request_detail.html:50:                                <th style="width: 40%;">Full Name:</th>
+templates//blood_bank_technician/request_detail.html:77:                                <th style="width: 40%;">Hospital Name:</th>
+templates//blood_bank_technician/request_detail.html:122:                                <th style="width: 40%;">Doctor Name:</th>
+templates//blood_bank_technician/request_detail.html:144:                                <th style="width: 40%;">Blood Group:</th>
+templates//lab_technologist/profile_edit.html:50:                                         style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+templates//lab_technologist/profile_edit.html:55:                                            style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"
+templates//lab_technologist/profile_edit.html:64:                                         style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//lab_technologist/profile_detail.html:22:                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//lab_technologist/profile_detail.html:24:                            <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: bold; margin: 0 auto; border: 3px solid #3498db; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//lab_technologist/test_result.html:37:                        <th style="width: 200px;">Test ID</th>
+templates//lab_technologist/perform_test.html:20:                        <th style="width: 200px;">Donor Name</th>
+templates//lab_technologist/perform_test.html:162:                    <div id="unsafe-reason-container" style="display: none;" class="mb-3">
+templates//shared/index.html:93:                <i class="{{ stat.icon_class }}" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+templates//shared/index.html:273:        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+templates//shared/base.html:178:                <div class="progress" style="height: 10px;">
+templates//shared/base.html:181:                         style="width: {{ onboarding_progress }}%; background: linear-gradient(90deg, #667eea, #764ba2);"
+templates//shared/learn_more.html:47:        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+templates//shared/learn_more.html:48:            <div style="flex: 1; min-width: 150px; text-align: center;">
+templates//shared/learn_more.html:49:                <i class="fas fa-droplet" style="color: #dc3545; font-size: 2rem;"></i>
+templates//shared/learn_more.html:50:                <p style="margin-top: 5px;"><strong>Donate Blood</strong></p>
+templates//shared/learn_more.html:52:            <div style="flex: 1; min-width: 150px; text-align: center;">
+templates//shared/learn_more.html:53:                <i class="fas fa-calendar-check" style="color: #dc3545; font-size: 2rem;"></i>
+templates//shared/learn_more.html:54:                <p style="margin-top: 5px;"><strong>Volunteer</strong></p>
+templates//shared/learn_more.html:56:            <div style="flex: 1; min-width: 150px; text-align: center;">
+templates//shared/learn_more.html:57:                <i class="fas fa-share-alt" style="color: #dc3545; font-size: 2rem;"></i>
+templates//shared/learn_more.html:58:                <p style="margin-top: 5px;"><strong>Spread Word</strong></p>
+templates//shared/learn_more.html:67:        <div style="text-align: center;">
+templates//shared/learn_more.html:73:        <div style="margin-top: 20px; text-align: center;">
+templates//shared/learn_more.html:75:                <i class="fas fa-check-circle" style="color: #28a745;"></i> 
+templates//shared/learn_more.html:76:                Already have an account? <a href="{% url 'donorlogin' %}" style="color: #dc3545;">Login here</a>
+templates//shared/public_navbar.html:71:                            <i class="fas fa-tint" style="color: #667eea;"></i> Blood Bank Login
+templates//shared/about_us.html:22:                             style="width:180px;height:180px;border-radius:50%;object-fit:cover;">
+templates//shared/about_us.html:26:                             style="width:180px;height:180px;border-radius:50%;object-fit:cover;">
+templates//blood/honeypot_monitor.html:123:                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+templates//blood/admin_dashboard.html:118:                    <div class="progress" style="height: 10px;">
+templates//blood/admin_dashboard.html:127:                            style="width: {{ blood.percentage }}%;"></div>
+templates//blood/admin_dashboard.html:146:                    <i class="{{ stat.icon }}" style="color: {{ stat.color }}; font-size: 2rem;"></i><br><br>
+templates//blood/admin_dashboard.html:169:                    <i class="fas fa-tint pulse" style="font-size: 2rem;"></i><br><br>
+templates//blood/admin_dashboard.html:200:                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+templates//blood/admin_dashboard.html:241:                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+templates//blood/admin_dashboard.html:285:            <div style="max-height: 600px; overflow-y: auto;">
+templates//blood/admin_dashboard.html:347:    <div class="text-end text-muted mt-4 mb-3" style="font-size: 0.85rem;">
+templates//hospital/profile.html:50:                            <div id="map" style="height: 200px; border-radius: 10px;"></div>
+templates//phlebotomist/phlebotomist_donation_bookings.html:29:    <div style="max-height: 700px; overflow-y: auto;">
+templates//phlebotomist/phlebotomist_donation_bookings.html:41:            <td><div style="font-weight:700;">{{ appointment.barcode|default:appointment.id }}</div></td>
+templates//phlebotomist/collect_with_barcode.html:244:                                    <div class="col-md-8 mb-3" id="adverseEventDetailsDiv" style="display: none;">
+templates//phlebotomist/phlebotomist_pending_approval.html:36:                        <div class="spinner-border text-warning" style="width: 3rem; height: 3rem;" role="status">
+templates//phlebotomist/phlebotomist_profile_edit.html:49:                       style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+templates//phlebotomist/phlebotomist_profile_edit.html:55:                       style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//phlebotomist/dashboard.html:205:                  <td colspan="3" style="text-align: center; padding: 30px; color: #999;">
+templates//phlebotomist/dashboard.html:206:                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+templates//phlebotomist/phlebotomist_profile.html:42:                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+templates//phlebotomist/phlebotomist_profile.html:47:                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+templates//donor/nearby_centers.html:34:        <i class="fas fa-exclamation-triangle fa-2x me-3" style="color: #F59E0B;"></i>
+templates//donor/nearby_centers.html:64:                    <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 80px; height: 80px;">
+templates//donor/nearby_centers.html:75:                    <div class="dashboard-icon-wrapper bg-success bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 80px; height: 80px;">
+templates//donor/nearby_centers.html:86:                    <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 80px; height: 80px;">
+templates//donor/nearby_centers.html:97:                    <div class="dashboard-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 80px; height: 80px;">
+templates//donor/nearby_centers.html:172:                            <i class="fas fa-map-marker-alt text-primary me-2" style="width: 20px;"></i>
+templates//donor/nearby_centers.html:176:                            <i class="fas fa-phone-alt text-primary me-2" style="width: 20px;"></i>
+templates//donor/nearby_centers.html:180:                            <i class="fas fa-clock text-primary me-2" style="width: 20px;"></i>
+templates//donor/donor_profile.html:26:                                 style="width: 150px; height: 150px; object-fit: cover;">
+templates//donor/donor_profile.html:30:                                 style="width: 150px; height: 150px; object-fit: cover;">
+templates//donor/donor_profile.html:41:                            <th style="width: 150px;">Full Name:</th>
+templates//donor/donor_profile.html:61:                            <th style="width: 150px;">Blood Group:</th>
+templates//donor/donor_profile.html:124:                            <th style="width: 150px;">Total Donations:</th>
+templates//donor/donor_edit_profile.html:41:                        <div class="progress" style="height: 10px;">
+templates//donor/donor_edit_profile.html:43:                                 style="width: {{ completion_percentage }}%;" 
+templates//donor/donor_eligibility_form.html:198:              <div class="row g-3 travel-details" id="travelDetails" style="display: none;">
+templates//donor/donor_eligibility_form.html:211:            <div class="mb-4" id="femaleSection" style="display: none;">
+templates//donor/donor_eligibility_status.html:14:                    <div class="position-absolute top-0 end-0 opacity-10" style="font-size: 8rem; transform: rotate(15deg);">
+templates//donor/awareness/share_awareness.html:73:                        <div class="progress mb-3" style="height: 10px;">
+templates//donor/awareness/share_awareness.html:74:                            <div class="progress-bar bg-primary progress-bar-striped" style="width: 75%"></div>
+templates//donor/resources/donor_resources.html:10:        <div class="d-inline-block bg-kenyan-gradient p-4 rounded-circle mb-4" style="background: linear-gradient(135deg, #006233 0%, #FFFFFF 50%, #BB2028 100%);">
+templates//donor/resources/donor_resources.html:72:                    <div class="col-md-8 bg-dark text-white p-4" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('{% static 'images/kenya-donation.jpg' %}'); background-size: cover; background-position: center;">
+templates//donor/resources/donor_resources.html:175:                        <div class="progress mb-3" style="height: 8px;">
+templates//donor/resources/donor_resources.html:176:                            <div class="progress-bar bg-warning progress-bar-striped" style="width: 65%"></div>
+templates//donor/donor_dashboard.html:581:                      style="transition: stroke-dashoffset 1s ease;" />
+templates//donor/donate_blood.html:407:            <div class="alert alert-info mt-4" id="summarySection" style="display: none;">
+templates//donor/event_detail.html:23:                     style="max-height: 400px; object-fit: cover;">
+templates//donor/event_detail.html:62:                    <div id="event-map" style="height: 300px; width: 100%;"></div>
+templates//donor/event_detail.html:152:                        <div class="progress" style="height: 10px;">
+templates//donor/event_detail.html:154:                                 style="width: {% widthratio event.registered_count|default:0 event.capacity 100 %}%"></div>
+templates//donor/event_detail.html:256:                <div style="padding: 10px;">
+templates//donor/event_detail.html:257:                    <h6 style="margin: 0 0 5px 0;">{{ event.title|escapejs }}</h6>
+templates//donor/event_detail.html:258:                    <p style="margin: 0; font-size: 12px;">{{ event.location|escapejs }}</p>
+templates//donor/event_detail.html:259:                    <p style="margin: 5px 0 0 0; font-size: 12px;">{{ event.event_date|date:"M j, Y" }}</p>
+templates//donor/events.html:32:                     style="height: 200px; object-fit: cover;">
+templates//donor/events.html:35:                     style="height: 200px;">
+templates//donor/events.html:75:                        <div class="progress" style="height: 5px;">
+templates//donor/events.html:77:                                 style="width: {% widthratio event.registered event.capacity 100 %}%"></div>

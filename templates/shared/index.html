@@ -4,7 +4,7 @@
 {% block title %}BloodConnect Kenya - Save Lives Through Blood Donation{% endblock %}
 
 {% block extra_css %}
-
+<!-- Any page-specific CSS can go here -->
 {% endblock %}
 
 {% block public_wrapper %}
@@ -12,24 +12,23 @@
 {% block content %}
 
 <!-- Hero Section -->
-<section class="hero">
+<section class="hero-section">
     <div class="hero-container">
         <div class="hero-content">
-            <h1>Every Drop Counts.<br>Save Lives Today.</h1>
-            <p>Join our community of life-savers. Connect with blood donors, request blood, and make a difference in someone's life.</p>
-            <div class="hero-buttons">
-                <a href="{% url 'hospital:register' %}" class="btn-primary">Register Hospital</a>
-                <a href="{% url 'donor:donorsignup' %}" class="btn-secondary">
+            <h1 class="fade-in">Every Drop Counts.<br>Save Lives Today.</h1>
+            <p class="fade-in delay-1">Join our community of life-savers. Connect with blood donors, request blood, and make a difference in someone's life.</p>
+            <div class="hero-buttons fade-in delay-2">
+                <a href="{% url 'hospital:register' %}" class="btn btn-primary">Register Hospital</a>
+                <a href="{% url 'donor:donorsignup' %}" class="btn btn-secondary">
                     Become a Donor <i class="fas fa-heart"></i>
                 </a>
                 
                 <!-- Enhanced Login Dropdown -->
                 <div class="login-dropdown">
-                    <button class="btn-outline-primary">
+                    <button class="btn btn-outline-light">
                         <i class="fas fa-sign-in-alt"></i> Login
                     </button>
                     <div class="login-dropdown-content">
-                        <!-- Donor Login -->
                         <div class="login-category">
                             <h4><i class="fas fa-hand-holding-heart"></i> Donor Login</h4>
                             <a href="{% url 'donor:donorlogin' %}">
@@ -37,7 +36,6 @@
                             </a>
                         </div>
                         
-                        <!-- Phlebotomist Login -->
                         <div class="login-category">
                             <h4><i class="fas fa-user-nurse"></i> Phlebotomist Login</h4>
                             <a href="{% url 'phlebotomist:phlebotomistlogin' %}">
@@ -45,9 +43,8 @@
                             </a>
                         </div>
                         
-                        <!-- Donation Center Related Logins -->
                         <div class="login-category">
-                            <h4><i class="fas fa-hospital"></i> Donation Center</h4>
+                            <h4><i class="fas fa-flask"></i> Lab & Blood Bank</h4>
                             <a href="{% url 'blood_bank_technician:login' %}">
                                 <i class="fas fa-flask"></i> Blood Bank Technician
                             </a>
@@ -56,21 +53,16 @@
                             </a>
                         </div>
                         
-                        <!-- Hospital Related Logins -->
                         <div class="login-category">
-                            <h4><i class="fas fa-building"></i> Hospital</h4>
+                            <h4><i class="fas fa-hospital"></i> Hospital</h4>
                             <a href="{% url 'hospital:login' %}">
                                 <i class="fas fa-hospital"></i> Hospital Login
                             </a>
-                            <a href="{% url 'hospital:login' %}" class="text-muted">
-                                <i class="fas fa-user-md"></i> Hospital Staff (Use Hospital Login)
-                            </a>
                         </div>
                         
-                        <!-- Admin Login (Separate) -->
                         <div class="login-category">
                             <h4><i class="fas fa-user-shield"></i> Administration</h4>
-                            <a href="{% url 'fake_admin_login' %}" class="btn btn-outline-danger">
+                            <a href="{% url 'fake_admin_login' %}" class="btn btn-outline-danger btn-sm">
                                 <i class="fas fa-skull-crossbones"></i> Admin Portal
                             </a>
                         </div>
@@ -78,19 +70,19 @@
                 </div>
             </div>
         </div>
-        <div class="hero-image">
-            <i class="fas fa-tint text-white fa-5x"></i>
+        <div class="hero-image fade-in delay-3">
+            <i class="fas fa-tint"></i>
         </div>
     </div>
 </section>
 
 <!-- Stats Section -->
-<section class="stats">
+<section class="stats-section">
     <div class="stats-container">
         {% for stat in stats %}
             {% if stat.stat_name != "Units Available" %}
-            <div class="stat-item">
-                <i class="{{ stat.icon_class }}" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+            <div class="stat-item fade-in">
+                <i class="{{ stat.icon_class }}"></i>
                 <span class="stat-number" data-target="{{ stat.stat_value }}">0</span>
                 <span class="stat-label">{{ stat.stat_name }}</span>
             </div>
@@ -99,14 +91,14 @@
     </div>
 </section>
 
-<!-- UPDATED FEATURES SECTION - ENHANCED WITH SYSTEM CAPABILITIES -->
-<section class="features">
+<!-- Features Section -->
+<section class="features-section">
     <div class="features-container">
-        <h2 class="section-title">Complete Blood Donation Ecosystem</h2>
-        <p class="section-subtitle">Powerful features for every role in the donation chain</p>
+        <h2 class="section-title fade-in">Complete Blood Donation Ecosystem</h2>
+        <p class="section-subtitle fade-in delay-1">Powerful features for every role in the donation chain</p>
         
         <div class="features-grid">
-            <!-- Donor Features -->
+            <!-- Donor Dashboard -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-hand-holding-heart"></i>
@@ -114,12 +106,13 @@
                 <h3>Donor Dashboard</h3>
                 <p>Track donations, check eligibility, earn points, and schedule appointments all in one place.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Eligibility Checker</span>
-                    <span class="badge bg-light text-dark me-1">Donation History</span>
-                    <span class="badge bg-light text-dark">Points & Rewards</span>
+                    <span class="badge badge-outline-primary">Eligibility Checker</span>
+                    <span class="badge badge-outline-primary">Donation History</span>
+                    <span class="badge badge-outline-primary">Points & Rewards</span>
                 </div>
             </div>
 
+            <!-- Hospital Portal -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-hospital"></i>
@@ -127,12 +120,13 @@
                 <h3>Hospital Portal</h3>
                 <p>Request blood 24/7, track status in real-time, and receive instant dispatch notifications.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Emergency Requests</span>
-                    <span class="badge bg-light text-dark me-1">Real-time Tracking</span>
-                    <span class="badge bg-light text-dark">Dispatch Alerts</span>
+                    <span class="badge badge-outline-primary">Emergency Requests</span>
+                    <span class="badge badge-outline-primary">Real-time Tracking</span>
+                    <span class="badge badge-outline-primary">Dispatch Alerts</span>
                 </div>
             </div>
 
+            <!-- Phlebotomist Tools -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-user-nurse"></i>
@@ -140,12 +134,13 @@
                 <h3>Phlebotomist Tools</h3>
                 <p>Manage appointments, record collections, and monitor center blood levels efficiently.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Appointment Management</span>
-                    <span class="badge bg-light text-dark me-1">Collection Tracking</span>
-                    <span class="badge bg-light text-dark">Stock Visibility</span>
+                    <span class="badge badge-outline-primary">Appointment Management</span>
+                    <span class="badge badge-outline-primary">Collection Tracking</span>
+                    <span class="badge badge-outline-primary">Stock Visibility</span>
                 </div>
             </div>
 
+            <!-- Lab Integration -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-flask"></i>
@@ -153,12 +148,13 @@
                 <h3>Lab Integration</h3>
                 <p>Record test results, verify blood groups permanently, and mark blood as safe/unsafe.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Blood Group Verification</span>
-                    <span class="badge bg-light text-dark me-1">Safety Status</span>
-                    <span class="badge bg-light text-dark">Test History</span>
+                    <span class="badge badge-outline-primary">Blood Group Verification</span>
+                    <span class="badge badge-outline-primary">Safety Status</span>
+                    <span class="badge badge-outline-primary">Test History</span>
                 </div>
             </div>
 
+            <!-- Blood Bank Inventory -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-boxes"></i>
@@ -166,12 +162,13 @@
                 <h3>Blood Bank Inventory</h3>
                 <p>Real-time stock monitoring with expiry alerts and critical shortage notifications.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Stock by Blood Type</span>
-                    <span class="badge bg-light text-dark me-1">Expiry Alerts</span>
-                    <span class="badge bg-light text-dark">FIFO Tracking</span>
+                    <span class="badge badge-outline-primary">Stock by Blood Type</span>
+                    <span class="badge badge-outline-primary">Expiry Alerts</span>
+                    <span class="badge badge-outline-primary">FIFO Tracking</span>
                 </div>
             </div>
 
+            <!-- AI Assistant -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-robot"></i>
@@ -179,12 +176,13 @@
                 <h3>AI Assistant</h3>
                 <p>Get instant answers about eligibility, centers, and donation process from our chatbot.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">24/7 Availability</span>
-                    <span class="badge bg-light text-dark me-1">Role-Specific</span>
-                    <span class="badge bg-light text-dark">Quick Actions</span>
+                    <span class="badge badge-outline-primary">24/7 Availability</span>
+                    <span class="badge badge-outline-primary">Role-Specific</span>
+                    <span class="badge badge-outline-primary">Quick Actions</span>
                 </div>
             </div>
 
+            <!-- Barcode Tracking -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-barcode"></i>
@@ -192,12 +190,13 @@
                 <h3>Barcode Tracking</h3>
                 <p>Every blood bag tracked from collection to transfusion with unique barcode system.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Unique Identification</span>
-                    <span class="badge bg-light text-dark me-1">Chain of Custody</span>
-                    <span class="badge bg-light text-dark">Expiry Tracking</span>
+                    <span class="badge badge-outline-primary">Unique Identification</span>
+                    <span class="badge badge-outline-primary">Chain of Custody</span>
+                    <span class="badge badge-outline-primary">Expiry Tracking</span>
                 </div>
             </div>
 
+            <!-- Real-time Notifications -->
             <div class="feature-card fade-in">
                 <div class="feature-icon">
                     <i class="fas fa-bell"></i>
@@ -205,31 +204,31 @@
                 <h3>Real-time Notifications</h3>
                 <p>Instant alerts for appointments, requests, test results, and critical stock levels.</p>
                 <div class="feature-tags">
-                    <span class="badge bg-light text-dark me-1">Email & In-App</span>
-                    <span class="badge bg-light text-dark me-1">Role-Based</span>
-                    <span class="badge bg-light text-dark">Emergency Alerts</span>
+                    <span class="badge badge-outline-primary">Email & In-App</span>
+                    <span class="badge badge-outline-primary">Role-Based</span>
+                    <span class="badge badge-outline-primary">Emergency Alerts</span>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- TESTIMONIALS SECTION -->
+<!-- Testimonials Section -->
 {% if testimonials %}
-<section class="testimonials">
+<section class="testimonials-section">
     <div class="testimonials-container">
-        <h2 class="section-title">What People Say</h2>
-        <p class="section-subtitle">Real stories from our community of donors and recipients</p>
+        <h2 class="section-title fade-in">What People Say</h2>
+        <p class="section-subtitle fade-in delay-1">Real stories from our community of donors and recipients</p>
         
         <div class="testimonials-grid">
             {% for testimonial in testimonials %}
-            <div class="testimonial-card fade-in">
+            <div class="testimonial-card fade-in {% cycle 'delay-2' 'delay-3' 'delay-4' %}">
                 <div class="testimonial-header">
                     <div class="testimonial-avatar">
                         {% if testimonial.avatar %}
                         <img src="{{ testimonial.avatar.url }}" alt="{{ testimonial.name }}">
                         {% else %}
-                        {{ testimonial.name|first }}
+                        <span>{{ testimonial.name|first }}</span>
                         {% endif %}
                     </div>
                     <div class="testimonial-info">
@@ -238,7 +237,7 @@
                     </div>
                 </div>
                 <div class="testimonial-rating">
-                    {% for i in "12345" %}
+                    {% for i in "12345"|make_list %}
                         {% if forloop.counter <= testimonial.rating %}
                         <i class="fas fa-star"></i>
                         {% else %}
@@ -255,23 +254,23 @@
 {% endif %}
 
 <!-- Impact Section -->
-<section class="impact">
+<section class="impact-section">
     <div class="impact-container">
-        <h2>How Your Donation Helps Sickle Cell Patients</h2>
-        <p>Sickle cell disease causes red blood cells to become misshapen and block blood flow, leading to severe pain and complications. Your blood donation provides healthy red blood cells that improve oxygen delivery, reduce painful crises, and prevent life-threatening complications.</p>
-        <a href="{% url 'donor:donorsignup' %}" class="btn-primary">
+        <h2 class="fade-in">How Your Donation Helps Sickle Cell Patients</h2>
+        <p class="fade-in delay-1">Sickle cell disease causes red blood cells to become misshapen and block blood flow, leading to severe pain and complications. Your blood donation provides healthy red blood cells that improve oxygen delivery, reduce painful crises, and prevent life-threatening complications.</p>
+        <a href="{% url 'donor:donorsignup' %}" class="btn btn-primary btn-lg fade-in delay-2">
             See Your Impact <i class="fas fa-heartbeat"></i>
         </a>
     </div>
 </section>
 
 <!-- CTA Section -->
-<section class="cta">
+<section class="cta-section">
     <div class="cta-container">
-        <h2>Ready to Make a Difference?</h2>
-        <p>Join thousands of donors and patients who trust BloodConnect</p>
-        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="{% url 'contact' %}" class="btn-secondary">Contact Us</a>
+        <h2 class="fade-in">Ready to Make a Difference?</h2>
+        <p class="fade-in delay-1">Join thousands of donors and patients who trust BloodConnect</p>
+        <div class="fade-in delay-2">
+            <a href="{% url 'contact' %}" class="btn btn-secondary btn-lg">Contact Us</a>
         </div>
     </div>
 </section>
@@ -287,22 +286,26 @@
     // ========================================
     // NAVBAR SCROLL EFFECT
     // ========================================
-    const navbar = document.getElementById('navbar');
-    if (navbar) {
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        const navbar = document.querySelector('.public-navbar');
+        if (navbar) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
+        }
+    });
 
     // ========================================
     // COUNTER ANIMATION
     // ========================================
     function animateCounter(element) {
         const target = parseInt(element.getAttribute('data-target'));
+        if (isNaN(target) || target === 0) return;
+        
         const duration = 2000;
         const increment = target / (duration / 16);
         let current = 0;
@@ -322,7 +325,7 @@
     // ========================================
     const observerOptions = {
         threshold: 0.1,
-        rootMargin: '0px 0px -100px 0px'
+        rootMargin: '0px 0px -50px 0px'
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -342,8 +345,38 @@
         });
     }, observerOptions);
 
-    document.querySelectorAll('.stat-item, .fade-in').forEach(el => {
+    // Observe all elements with fade-in class
+    document.querySelectorAll('.fade-in, .stat-item, .feature-card, .testimonial-card').forEach(el => {
         observer.observe(el);
+    });
+
+    // ========================================
+    // LOGIN DROPDOWN HOVER EFFECT (for mobile)
+    // ========================================
+    if (window.innerWidth <= 768) {
+        const loginDropdown = document.querySelector('.login-dropdown');
+        if (loginDropdown) {
+            loginDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.classList.toggle('active');
+            });
+        }
+    }
+
+    // ========================================
+    // SMOOTH SCROLL FOR ANCHOR LINKS
+    // ========================================
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
     });
 </script>
 {% endblock %}

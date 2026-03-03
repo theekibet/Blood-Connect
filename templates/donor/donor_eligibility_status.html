@@ -4,60 +4,57 @@
 {% block title %}Eligibility Status - BloodConnect{% endblock %}
 
 {% block content %}
-<div class="container py-5">
+<div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-10 col-lg-8">
             
-            <!-- Status Badge Card -->
-            <div class="card text-center border-0 shadow-lg mb-4 overflow-hidden">
-                <div class="card-header {{ badge_color }} text-white py-4 position-relative">
-                    <div class="position-absolute top-0 end-0 opacity-10" style="font-size: 8rem; transform: rotate(15deg);">
-                        <i class="fas {{ badge_icon }}"></i>
-                    </div>
-                    <i class="fas {{ badge_icon }} fa-4x mb-3 position-relative"></i>
-                    <h1 class="h2 mb-0 position-relative">{{ badge_text }}</h1>
-                    <p class="small opacity-75 mt-2 position-relative">Last updated: {{ last_updated|date:"M d, Y" }}</p>
+            <!-- Status Card -->
+            <div class="card text-center mb-4">
+                <div class="card-header bg-{{ badge_type }} text-white py-4">
+                    <i class="fas {{ badge_icon }} fa-4x mb-3"></i>
+                    <h2 class="h3 mb-0">{{ badge_text }}</h2>
+                    <p class="small opacity-75 mt-2">Last updated: {{ last_updated|date:"M d, Y" }}</p>
                 </div>
                 
-                <div class="card-body p-4 p-md-5">
+                <div class="card-body p-4">
                     
                     {% if status == 'eligible' %}
-                        <!-- ELIGIBLE DONOR - CELEBRATION BADGE -->
+                        <!-- Eligible Donor -->
                         <div class="text-center mb-4">
                             <span class="display-1 d-block mb-3">🩸</span>
                             <h3 class="fw-bold text-success">{{ title }}</h3>
-                            <div class="alert alert-success bg-success-soft border-0 p-4 mt-3">
-                                <i class="fas fa-quote-left me-2 opacity-50"></i>
+                            <div class="alert alert-success mt-3">
+                                <i class="fas fa-quote-left me-2"></i>
                                 {{ message }}
-                                <i class="fas fa-quote-right ms-2 opacity-50"></i>
+                                <i class="fas fa-quote-right ms-2"></i>
                             </div>
                         </div>
                         
-                        <!-- Donor Achievement Badges -->
+                        <!-- Achievement Badges -->
                         <div class="row g-3 mb-4">
                             <div class="col-4">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-heartbeat fa-2x text-danger mb-2"></i>
-                                        <h5 class="mb-0">❤️</h5>
+                                        <h6 class="mb-0">❤️</h6>
                                         <small class="text-muted">Lifesaver</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-shield-alt fa-2x text-primary mb-2"></i>
-                                        <h5 class="mb-0">🛡️</h5>
+                                        <h6 class="mb-0">🛡️</h6>
                                         <small class="text-muted">Verified</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
-                                        <h5 class="mb-0">🏆</h5>
+                                        <h6 class="mb-0">🏆</h6>
                                         <small class="text-muted">Champion</small>
                                     </div>
                                 </div>
@@ -67,75 +64,75 @@
                         {% if can_donate_now %}
                             <div class="alert alert-success d-flex align-items-center mb-4">
                                 <i class="fas fa-check-circle fa-2x me-3"></i>
-                                <div>
-                                    <strong class="fs-5">You're eligible to donate now!</strong>
+                                <div class="text-start">
+                                    <strong>You're eligible to donate now!</strong>
                                     <p class="mb-0">Schedule your appointment today and save lives.</p>
                                 </div>
                             </div>
                         {% else %}
                             <div class="alert alert-warning d-flex align-items-center mb-4">
                                 <i class="fas fa-hourglass-half fa-2x me-3"></i>
-                                <div>
-                                    <strong class="fs-5">Waiting Period Active</strong>
+                                <div class="text-start">
+                                    <strong>Waiting Period Active</strong>
                                     <p class="mb-0">{{ wait_message }}</p>
                                 </div>
                             </div>
                         {% endif %}
                         
                     {% elif status == 'not_eligible' %}
-                        <!-- NOT ELIGIBLE - SUPPORTER BADGE -->
+                        <!-- Not Eligible -->
                         <div class="text-center mb-4">
                             <span class="display-1 d-block mb-3">🌟</span>
                             <h3 class="fw-bold text-warning">{{ title }}</h3>
-                            <div class="alert alert-warning bg-warning-soft border-0 p-4 mt-3">
-                                <i class="fas fa-quote-left me-2 opacity-50"></i>
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-quote-left me-2"></i>
                                 {{ message }}
-                                <i class="fas fa-quote-right ms-2 opacity-50"></i>
+                                <i class="fas fa-quote-right ms-2"></i>
                             </div>
                         </div>
                         
-                        <!-- Supporter Achievement Badges -->
+                        <!-- Supporter Badges -->
                         <div class="row g-3 mb-4">
                             <div class="col-4">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-hands-helping fa-2x text-success mb-2"></i>
-                                        <h5 class="mb-0">🤝</h5>
+                                        <h6 class="mb-0">🤝</h6>
                                         <small class="text-muted">Supporter</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-bullhorn fa-2x text-info mb-2"></i>
-                                        <h5 class="mb-0">📢</h5>
+                                        <h6 class="mb-0">📢</h6>
                                         <small class="text-muted">Advocate</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-heart fa-2x text-danger mb-2"></i>
-                                        <h5 class="mb-0">❤️</h5>
+                                        <h6 class="mb-0">❤️</h6>
                                         <small class="text-muted">Caring</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Reasons for Deferral -->
+                        <!-- Reasons -->
                         {% if reasons %}
-                            <div class="card bg-light border-0 mb-4">
-                                <div class="card-header bg-transparent fw-bold border-0">
+                            <div class="card bg-light mb-4">
+                                <div class="card-header bg-transparent fw-bold">
                                     <i class="fas fa-info-circle text-primary me-2"></i>
                                     Why You May Not Be Eligible:
                                 </div>
-                                <div class="card-body pt-0">
-                                    <ul class="list-group list-group-flush bg-transparent">
+                                <div class="card-body">
+                                    <ul class="list-unstyled mb-0">
                                         {% for reason in reasons %}
-                                            <li class="list-group-item bg-transparent border-0 ps-0">
+                                            <li class="mb-2">
                                                 <i class="fas fa-times-circle text-danger me-2"></i>
                                                 {{ reason }}
                                             </li>
@@ -159,33 +156,33 @@
                         {% endif %}
                         
                     {% elif status == 'no_record' %}
-                        <!-- NO RECORD - NEW USER BADGE -->
+                        <!-- No Record -->
                         <div class="text-center mb-4">
                             <span class="display-1 d-block mb-3">👋</span>
                             <h3 class="fw-bold text-secondary">{{ title }}</h3>
-                            <div class="alert alert-secondary bg-secondary-soft border-0 p-4 mt-3">
-                                <i class="fas fa-quote-left me-2 opacity-50"></i>
+                            <div class="alert alert-secondary mt-3">
+                                <i class="fas fa-quote-left me-2"></i>
                                 {{ message }}
-                                <i class="fas fa-quote-right ms-2 opacity-50"></i>
+                                <i class="fas fa-quote-right ms-2"></i>
                             </div>
                         </div>
                         
                         <!-- Welcome Badges -->
                         <div class="row g-3 mb-4">
                             <div class="col-6">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-user-plus fa-2x text-primary mb-2"></i>
-                                        <h5 class="mb-0">🆕</h5>
+                                        <h6 class="mb-0">🆕</h6>
                                         <small class="text-muted">New Member</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="card bg-light border-0 text-center py-3">
+                                <div class="card bg-light text-center py-3">
                                     <div class="card-body p-2">
                                         <i class="fas fa-star fa-2x text-warning mb-2"></i>
-                                        <h5 class="mb-0">⭐</h5>
+                                        <h6 class="mb-0">⭐</h6>
                                         <small class="text-muted">Future Hero</small>
                                     </div>
                                 </div>
@@ -193,9 +190,9 @@
                         </div>
                     {% endif %}
                     
-                    <!-- Eligibility Details Card -->
-                    <div class="card border-0 bg-light mb-4">
-                        <div class="card-header bg-transparent fw-bold border-0">
+                    <!-- Details Card -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-header bg-transparent fw-bold">
                             <i class="fas fa-clipboard-check text-primary me-2"></i>
                             Your Submission Details
                         </div>
@@ -252,9 +249,7 @@
                         </div>
                     </div>
                     
-                    <!-- ========================================== -->
-                    <!-- ACTION BUTTONS - Main Actions -->
-                    <!-- ========================================== -->
+                    <!-- Action Buttons -->
                     <div class="d-grid gap-3 mb-4">
                         <a href="{% url main_action_url %}" class="btn btn-primary btn-lg">
                             <i class="fas fa-arrow-right me-2"></i>{{ main_action_text }}
@@ -267,80 +262,10 @@
                         {% endif %}
                     </div>
                     
-                    <!-- ========================================== -->
-                    <!-- DISPUTE RESOLUTION OPTIONS -->
-                    <!-- ========================================== -->
-                    <div class="card border-0 bg-light mb-4">
-                        <div class="card-header bg-transparent fw-bold border-0">
-                            <i class="fas fa-question-circle text-primary me-2"></i>
-                            Think This Assessment Is Inaccurate?
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <div class="card h-100 border-0">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-map-marker-alt fa-3x text-primary mb-3"></i>
-                                            <h6>Visit a Donation Center</h6>
-                                            <p class="small text-muted">Get tested in person for accurate results</p>
-                                            <a href="{% url 'nearby-centers' %}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-map-marker-alt me-2"></i>Find Nearest Center
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card h-100 border-0">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-envelope fa-3x text-info mb-3"></i>
-                                            <h6>Contact Support</h6>
-                                            <p class="small text-muted">Email or call us for clarification</p>
-                                            <a href="mailto:{{ contact_email }}" class="btn btn-sm btn-outline-info">
-                                                Email Support
-                                            </a>
-                                            <a href="tel:{{ contact_phone }}" class="btn btn-sm btn-outline-info mt-1">
-                                                Call {{ contact_phone }}
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- ========================================== -->
-                    <!-- BLOOD GROUP VERIFICATION OPTION -->
-                    <!-- ========================================== -->
-                    {% if show_verification_option %}
-                    <div class="card border-0 bg-light mb-4">
-                        <div class="card-header bg-transparent fw-bold border-0">
-                            <i class="fas fa-tint text-danger me-2"></i>
-                            Know Your Blood Group?
-                        </div>
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <p class="mb-md-0">
-                                        If you know your blood group and believe it should be verified,
-                                        you can request manual verification by our staff.
-                                    </p>
-                                </div>
-
-                            </div>
-                            <small class="text-muted d-block mt-2">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Verification requires visiting a donation center or providing documentation.
-                            </small>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- ========================================== -->
-                    <!-- SUPPORT OPTIONS FOR NON-ELIGIBLE -->
-                    <!-- ========================================== -->
+                    <!-- Support Options -->
                     {% if status == 'not_eligible' or status == 'no_record' %}
-                    <div class="card border-0 bg-success-soft mt-4">
-                        <div class="card-header bg-transparent fw-bold border-0 text-success">
+                    <div class="card border-success mt-4">
+                        <div class="card-header bg-success text-white">
                             <i class="fas fa-hands-helping me-2"></i>
                             Everyone Has a Role in Saving Lives
                         </div>
@@ -352,17 +277,10 @@
                                         <small>Volunteer</small>
                                     </a>
                                 </div>
-
                                 <div class="col-6 col-md-3">
                                     <a href="{% url 'donor:awareness-hub' %}" class="btn btn-outline-warning w-100 py-3">
                                         <i class="fas fa-bullhorn d-block fa-2x mb-2"></i>
                                         <small>Awareness</small>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <a href="javascript:void(0)" class="btn btn-outline-primary w-100 py-3">
-                                        <i class="fas fa-hand-holding-usd d-block fa-2x mb-2"></i>
-                                        <small>Support</small>
                                     </a>
                                 </div>
                             </div>
@@ -381,6 +299,4 @@
         </div>
     </div>
 </div>
-
-
 {% endblock %}

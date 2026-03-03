@@ -1,23 +1,38 @@
 {% extends 'donor/donorbase.html' %}
 {% load static %}
 
-{% block title %}Edit Donor Profile{% endblock %}
+{% block title %}Edit Donor Profile - BloodConnect{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-user-edit mr-2"></i>Edit Donor Profile
-                    </h4>
+        <div class="col-lg-8">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-header-content">
+                        <div class="profile-avatar">
+                            {% if profile_pic_url %}
+                                <img src="{{ profile_pic_url }}" alt="{{ user.get_full_name }}">
+                            {% else %}
+                                <div class="avatar-placeholder">
+                                    {{ user.first_name|first|default:user.username|first|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="profile-info">
+                            <h2>{{ user.get_full_name }}</h2>
+                            <div class="role-badge">
+                                <i class="fas fa-hand-holding-heart"></i> Donor
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
+
+                <div class="profile-body">
                     <!-- Welcome message for first-time users -->
                     {% if is_first_time %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle mr-2"></i>
+                        <i class="fas fa-info-circle me-2"></i>
                         <strong>Welcome!</strong> Complete your profile to start your donation journey.
                         Don't worry if you don't know your blood type - you can leave it blank and we'll verify it during your first donation.
                     </div>
@@ -25,23 +40,25 @@
 
                     <!-- Verification Status Alert -->
                     {% if bloodgroup_verified %}
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle mr-2"></i>
-                            <strong>Blood Group Verified:</strong> {{ verified_bloodgroup }}
-                            {% if verified_by %}
-                                <br><small>Verified by {{ verified_by }} on {{ verified_at|date:"F j, Y" }}</small>
-                            {% endif %}
-                        </div>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Blood Group Verified:</strong> {{ verified_bloodgroup }}
+                        {% if verified_by %}
+                            <br><small class="text-muted">Verified by {{ verified_by }} on {{ verified_at|date:"F j, Y" }}</small>
+                        {% endif %}
+                    </div>
                     {% endif %}
 
                     <!-- Profile Completion Progress (during onboarding) -->
                     {% if is_first_time %}
                     <div class="mb-4">
-                        <h6>Profile Completion</h6>
-                        <div class="progress" style="height: 10px;">
+                        <h6 class="mb-2">Profile Completion</h6>
+                        <div class="progress">
                             <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ completion_percentage }}%;" 
-                                 aria-valuenow="{{ completion_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                 style="width: {{ completion_percentage }}%"
+                                 aria-valuenow="{{ completion_percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
                             </div>
                         </div>
                         <small class="text-muted">{{ completed_fields }}/4 fields completed (Blood group optional)</small>
@@ -50,26 +67,26 @@
 
                     <!-- Form Errors -->
                     {% if profile_form.errors %}
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle mr-2"></i>
-                            <strong>Please correct the following errors:</strong>
-                            <ul class="mb-0 mt-2">
-                                {% for field, errors in profile_form.errors.items %}
-                                    {% for error in errors %}
-                                        <li>
-                                            {% if field == 'bloodgroup' %}
-                                                Blood Group: {{ error }}
-                                            {% else %}
-                                                {{ field|title }}: {{ error }}
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Please correct the following errors:</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for field, errors in profile_form.errors.items %}
+                                {% for error in errors %}
+                                    <li>
+                                        {% if field == 'bloodgroup' %}
+                                            Blood Group: {{ error }}
+                                        {% else %}
+                                            {{ field|title }}: {{ error }}
+                                        {% endif %}
+                                    </li>
                                 {% endfor %}
-                            </ul>
-                        </div>
+                            {% endfor %}
+                        </ul>
+                    </div>
                     {% endif %}
 
-                    <form method="post">
+                    <form method="post" class="profile-edit-form">
                         {% csrf_token %}
                         
                         <!-- Hidden fields for user data -->
@@ -78,148 +95,153 @@
                         <input type="hidden" name="email" value="{{ user.email }}">
                         
                         <!-- Personal Information (Read-only) -->
-                        <h5 class="border-bottom pb-2 mb-3">
-                            <i class="fas fa-user text-primary mr-2"></i>Personal Information
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">First Name</label>
-                                <input type="text" class="form-control bg-light" value="{{ user.first_name }}" readonly>
-                                <small class="text-muted"><i class="fas fa-lock"></i> Cannot be changed</small>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Last Name</label>
-                                <input type="text" class="form-control bg-light" value="{{ user.last_name }}" readonly>
-                                <small class="text-muted"><i class="fas fa-lock"></i> Cannot be changed</small>
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-user"></i> Personal Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-control bg-light" value="{{ user.first_name }}" readonly>
+                                    <small class="readonly-hint">
+                                        <i class="fas fa-lock"></i> Cannot be changed
+                                    </small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control bg-light" value="{{ user.last_name }}" readonly>
+                                    <small class="readonly-hint">
+                                        <i class="fas fa-lock"></i> Cannot be changed
+                                    </small>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- Donor Details -->
-                        <h5 class="border-bottom pb-2 mb-3 mt-4">
-                            <i class="fas fa-heartbeat text-primary mr-2"></i>Donor Details
-                        </h5>
-                        
-                        <!-- Blood Group - Optional & Conditionally Editable -->
-                        <div class="form-group mb-3">
-                            <label class="form-label fw-bold">
-                                Blood Group
-                                {% if bloodgroup_verified %}
-                                    <span class="badge badge-success ml-2">Verified</span>
-                                {% else %}
-                                    <span class="badge badge-info ml-2">Optional</span>
-                                {% endif %}
-                            </label>
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-heartbeat"></i> Donor Details
+                            </h5>
                             
-                            {% if bloodgroup_verified %}
-                                <!-- Verified - Read-only display -->
-                                <input type="text" class="form-control bg-light" 
-                                       value="{{ verified_bloodgroup }}" readonly>
-                                <small class="text-muted">
-                                    <i class="fas fa-lock text-warning"></i> 
-                                    Verified blood group cannot be changed. Contact lab if incorrect.
-                                </small>
-                            {% else %}
-                                <!-- Not verified - Editable (optional) -->
-                                {{ profile_form.bloodgroup }}
-                                {% if profile_form.bloodgroup.errors %}
-                                    <div class="text-danger mt-1">{{ profile_form.bloodgroup.errors }}</div>
+                            <!-- Blood Group -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Blood Group
+                                    {% if bloodgroup_verified %}
+                                        <span class="badge badge-success ms-2">Verified</span>
+                                    {% else %}
+                                        <span class="badge badge-info ms-2">Optional</span>
+                                    {% endif %}
+                                </label>
+                                
+                                {% if bloodgroup_verified %}
+                                    <input type="text" class="form-control bg-light" 
+                                           value="{{ verified_bloodgroup }}" readonly>
+                                    <small class="readonly-hint">
+                                        <i class="fas fa-lock"></i> Verified blood group cannot be changed
+                                    </small>
+                                {% else %}
+                                    {{ profile_form.bloodgroup }}
+                                    {% if profile_form.bloodgroup.errors %}
+                                        <div class="invalid-feedback d-block">{{ profile_form.bloodgroup.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Don't know your blood type? Leave blank - we'll verify during first donation.
+                                    </small>
                                 {% endif %}
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle"></i> 
-                                    Don't know your blood type? Leave this blank - we'll verify it during your first donation.
-                                </small>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Mobile - Always Editable & Required -->
-                        <div class="form-group mb-3">
-                            <label class="form-label fw-bold">Mobile Number <span class="text-danger">*</span></label>
-                            {{ profile_form.mobile }}
-                            {% if profile_form.mobile.errors %}
-                                <div class="text-danger mt-1">{{ profile_form.mobile.errors }}</div>
-                            {% endif %}
-                            <small class="text-muted">Format: +254712345678 (required for appointment reminders)</small>
-                        </div>
-                        
-                        <!-- National ID - Read-only after set, Required during onboarding -->
-                        <div class="form-group mb-3">
-                            <label class="form-label fw-bold">
-                                National ID 
-                                {% if not donor.national_id %}
-                                    <span class="text-danger">*</span>
+                            </div>
+                            
+                            <!-- Mobile -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Mobile Number <span class="text-danger">*</span>
+                                </label>
+                                {{ profile_form.mobile }}
+                                {% if profile_form.mobile.errors %}
+                                    <div class="invalid-feedback d-block">{{ profile_form.mobile.errors }}</div>
                                 {% endif %}
-                            </label>
-                            {% if donor.national_id %}
-                                <input type="text" class="form-control bg-light" 
-                                       value="{{ donor.national_id }}" readonly>
-                                <small class="text-muted">
-                                    <i class="fas fa-lock"></i> National ID cannot be changed after registration
-                                </small>
-                            {% else %}
-                                {{ profile_form.national_id }}
-                                {% if profile_form.national_id.errors %}
-                                    <div class="text-danger mt-1">{{ profile_form.national_id.errors }}</div>
+                                <small class="text-muted">Format: +254712345678</small>
+                            </div>
+                            
+                            <!-- National ID -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    National ID 
+                                    {% if not donor.national_id %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+                                {% if donor.national_id %}
+                                    <input type="text" class="form-control bg-light" 
+                                           value="{{ donor.national_id }}" readonly>
+                                    <small class="readonly-hint">
+                                        <i class="fas fa-lock"></i> National ID cannot be changed
+                                    </small>
+                                {% else %}
+                                    {{ profile_form.national_id }}
+                                    {% if profile_form.national_id.errors %}
+                                        <div class="invalid-feedback d-block">{{ profile_form.national_id.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted">8 digits (required for identity verification)</small>
                                 {% endif %}
-                                <small class="text-muted">8 digits (required for identity verification)</small>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Date of Birth - Read-only after set, Required during onboarding -->
-                        <div class="form-group mb-3">
-                            <label class="form-label fw-bold">
-                                Date of Birth
-                                {% if not donor.dob %}
-                                    <span class="text-danger">*</span>
+                            </div>
+                            
+                            <!-- Date of Birth -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Date of Birth
+                                    {% if not donor.dob %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+                                {% if donor.dob %}
+                                    <input type="text" class="form-control bg-light" 
+                                           value="{{ donor.dob|date:'Y-m-d' }}" readonly>
+                                    <small class="readonly-hint">
+                                        <i class="fas fa-lock"></i> Date of birth cannot be changed
+                                    </small>
+                                {% else %}
+                                    {{ profile_form.dob }}
+                                    {% if profile_form.dob.errors %}
+                                        <div class="invalid-feedback d-block">{{ profile_form.dob.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted">Required to verify age (must be 18+)</small>
                                 {% endif %}
-                            </label>
-                            {% if donor.dob %}
-                                <input type="text" class="form-control bg-light" 
-                                       value="{{ donor.dob|date:'Y-m-d' }}" readonly>
-                                <small class="text-muted">
-                                    <i class="fas fa-lock"></i> Date of birth cannot be changed
-                                </small>
-                            {% else %}
-                                {{ profile_form.dob }}
-                                {% if profile_form.dob.errors %}
-                                    <div class="text-danger mt-1">{{ profile_form.dob.errors }}</div>
+                            </div>
+                            
+                            <!-- County -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    County <span class="text-danger">*</span>
+                                </label>
+                                {{ profile_form.county }}
+                                {% if profile_form.county.errors %}
+                                    <div class="invalid-feedback d-block">{{ profile_form.county.errors }}</div>
                                 {% endif %}
-                                <small class="text-muted">Required to verify age (must be 18+)</small>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- County - Always Editable & Required -->
-                        <div class="form-group mb-3">
-                            <label class="form-label fw-bold">
-                                County 
-                                <span class="text-danger">*</span>
-                            </label>
-                            {{ profile_form.county }}
-                            {% if profile_form.county.errors %}
-                                <div class="text-danger mt-1">{{ profile_form.county.errors }}</div>
-                            {% endif %}
-                            <small class="text-muted">Required to find donation centers near you</small>
-                        </div>
+                                <small class="text-muted">Required to find donation centers near you</small>
+                            </div>
 
-                        <!-- Location Fields (Hidden) -->
-                        <input type="hidden" name="latitude" id="latitude">
-                        <input type="hidden" name="longitude" id="longitude">
+                            <!-- Location Fields (Hidden) -->
+                            <input type="hidden" name="latitude" id="latitude">
+                            <input type="hidden" name="longitude" id="longitude">
+                        </div>
                         
-                        <hr>
-                        
-                        <!-- Help text for required fields -->
+                        <!-- Help text -->
                         <div class="alert alert-info">
-                            <i class="fas fa-info-circle mr-2"></i>
+                            <i class="fas fa-info-circle me-2"></i>
                             <strong>Note:</strong> Fields marked with <span class="text-danger">*</span> are required.
                             Blood group is optional - you can leave it blank if you're unsure.
                         </div>
                         
-                        <div class="d-flex justify-content-between">
+                        <!-- Form Actions -->
+                        <div class="form-actions">
                             <a href="{% url 'donor:donor-profile' %}" class="btn btn-secondary">
-                                <i class="fas fa-times mr-2"></i>Cancel
+                                <i class="fas fa-times me-2"></i>Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save mr-2"></i>
+                                <i class="fas fa-save me-2"></i>
                                 {% if is_first_time %}
                                     Complete Profile & Continue
                                 {% else %}
@@ -249,20 +271,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         );
     }
-
-    // Add helpful tooltips for blood group field
-    const bloodGroupField = document.querySelector('[name="bloodgroup"]');
-    if (bloodGroupField) {
-        // Add a visual indicator that it's optional
-        const parent = bloodGroupField.closest('.form-group');
-        if (parent) {
-            const optionalBadge = document.createElement('span');
-            optionalBadge.className = 'badge badge-info ml-2';
-            optionalBadge.textContent = 'Optional';
-            parent.querySelector('label').appendChild(optionalBadge);
-        }
-    }
 });
 </script>
-
 {% endblock %}

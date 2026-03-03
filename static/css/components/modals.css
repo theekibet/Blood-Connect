@@ -1,0 +1,619 @@
+/* ========================================
+   Modal System - BloodConnect
+   ======================================== */
+
+/* Modal Base */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-modal);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-4);
+}
+
+.modal.show {
+    display: flex;
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: calc(var(--z-modal) - 1);
+    animation: fadeIn var(--transition-base) var(--transition-timing);
+}
+
+/* Modal Dialog */
+.modal-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    background: var(--bg-primary);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-xl);
+    animation: slideUp var(--transition-base) var(--transition-timing);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modal Sizes */
+.modal-sm {
+    max-width: 400px;
+}
+
+.modal-lg {
+    max-width: 800px;
+}
+
+.modal-xl {
+    max-width: 1140px;
+}
+
+.modal-fullscreen {
+    max-width: none;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-4) var(--spacing-6);
+    border-bottom: 1px solid var(--border-light);
+    background: linear-gradient(135deg, var(--blood-red), var(--blood-red-dark));
+    color: white;
+}
+
+.modal-header h3, .modal-header h4, .modal-header h5 {
+    margin: 0;
+    color: white;
+    font-weight: var(--font-semibold);
+}
+
+.modal-header i {
+    margin-right: var(--spacing-2);
+}
+
+/* Modal Close Button */
+.modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: var(--text-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast) var(--transition-timing);
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.modal-close-white {
+    background: transparent;
+    color: white;
+}
+
+.modal-close-white:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Modal Body */
+.modal-body {
+    padding: var(--spacing-6);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Modal Footer */
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4) var(--spacing-6);
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-secondary);
+}
+
+/* Modal Title */
+.modal-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    margin: 0;
+}
+
+/* Modal Subtitle */
+.modal-subtitle {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-top: var(--spacing-1);
+}
+
+/* Modal with Tabs */
+.modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-secondary);
+}
+
+.modal-tab {
+    flex: 1;
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast) var(--transition-timing);
+    border-bottom: 2px solid transparent;
+}
+
+.modal-tab:hover {
+    background: var(--bg-tertiary);
+}
+
+.modal-tab.active {
+    border-bottom-color: var(--blood-red);
+    color: var(--blood-red);
+    font-weight: var(--font-medium);
+}
+
+/* Terms Modal (from signup pages) */
+.terms-modal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: var(--spacing-6);
+}
+
+.terms-modal h6 {
+    color: var(--blood-red);
+    margin-top: var(--spacing-4);
+    margin-bottom: var(--spacing-2);
+}
+
+.terms-modal h6:first-child {
+    margin-top: 0;
+}
+
+.terms-modal p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--spacing-3);
+}
+
+/* Info Modal (from donation history) */
+.info-modal .modal-header {
+    background: linear-gradient(135deg, var(--info-blue), var(--info-blue-dark));
+}
+
+.info-modal .modal-body {
+    text-align: center;
+    padding: var(--spacing-8);
+}
+
+.info-modal i {
+    font-size: 4rem;
+    color: var(--info-blue);
+    margin-bottom: var(--spacing-4);
+}
+
+.info-modal h4 {
+    margin-bottom: var(--spacing-3);
+}
+
+.info-modal p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-4);
+}
+
+/* Success Modal */
+.success-modal .modal-header {
+    background: linear-gradient(135deg, var(--success-green), var(--success-green-dark));
+}
+
+.success-modal .modal-body {
+    text-align: center;
+    padding: var(--spacing-8);
+}
+
+.success-modal i {
+    font-size: 4rem;
+    color: var(--success-green);
+    margin-bottom: var(--spacing-4);
+}
+
+/* Warning Modal */
+.warning-modal .modal-header {
+    background: linear-gradient(135deg, var(--warning-yellow), var(--warning-yellow-dark));
+}
+
+.warning-modal .modal-body {
+    text-align: center;
+    padding: var(--spacing-8);
+}
+
+.warning-modal i {
+    font-size: 4rem;
+    color: var(--warning-yellow);
+    margin-bottom: var(--spacing-4);
+}
+
+/* Danger Modal */
+.danger-modal .modal-header {
+    background: linear-gradient(135deg, var(--blood-red), var(--blood-red-dark));
+}
+
+.danger-modal .modal-body {
+    text-align: center;
+    padding: var(--spacing-8);
+}
+
+.danger-modal i {
+    font-size: 4rem;
+    color: var(--blood-red);
+    margin-bottom: var(--spacing-4);
+}
+
+/* Confirmation Modal */
+.confirm-modal {
+    text-align: center;
+}
+
+.confirm-icon {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto var(--spacing-4);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+}
+
+.confirm-icon.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-yellow);
+}
+
+.confirm-icon.danger {
+    background: rgba(196, 30, 58, 0.1);
+    color: var(--blood-red);
+}
+
+.confirm-icon.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-green);
+}
+
+.confirm-icon.info {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--medical-blue);
+}
+
+.confirm-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    margin-bottom: var(--spacing-2);
+}
+
+.confirm-message {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-6);
+}
+
+.confirm-actions {
+    display: flex;
+    gap: var(--spacing-3);
+    justify-content: center;
+}
+
+/* Eligibility Awareness Modal (from donor dashboard) */
+.eligibility-modal .modal-body {
+    padding: var(--spacing-8);
+}
+
+.eligibility-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-4);
+    margin-top: var(--spacing-6);
+}
+
+.eligibility-option {
+    text-align: center;
+    padding: var(--spacing-6);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base) var(--transition-timing);
+    cursor: pointer;
+}
+
+.eligibility-option:hover {
+    border-color: var(--blood-red);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.eligibility-option i {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-4);
+}
+
+.eligibility-option.primary i {
+    color: var(--medical-blue);
+}
+
+.eligibility-option.success i {
+    color: var(--success-green);
+}
+
+.eligibility-option h4 {
+    margin-bottom: var(--spacing-2);
+}
+
+.eligibility-option p {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+/* Support Options Modal (from donor dashboard) */
+.support-modal .modal-body {
+    padding: var(--spacing-8);
+}
+
+.support-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-4);
+    margin-top: var(--spacing-6);
+}
+
+.support-card {
+    text-align: center;
+    padding: var(--spacing-4);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base) var(--transition-timing);
+}
+
+.support-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.support-card i {
+    font-size: 2.5rem;
+    color: var(--success-green);
+    margin-bottom: var(--spacing-3);
+}
+
+.support-card h5 {
+    margin-bottom: var(--spacing-2);
+    font-size: var(--text-lg);
+}
+
+.support-card p {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--spacing-3);
+}
+
+/* Form Modal */
+.form-modal .modal-body {
+    padding: var(--spacing-6);
+}
+
+.form-modal .form-group {
+    margin-bottom: var(--spacing-4);
+}
+
+.form-modal .form-label {
+    font-weight: var(--font-medium);
+}
+
+.form-modal .modal-footer {
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-light);
+}
+
+/* Scrollable Modal */
+.modal-scrollable {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-scrollable .modal-body {
+    max-height: none;
+}
+
+/* Modal with Steps */
+.modal-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+}
+
+.modal-step {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    color: var(--text-tertiary);
+}
+
+.modal-step.active {
+    color: var(--blood-red);
+    font-weight: var(--font-medium);
+}
+
+.modal-step.completed {
+    color: var(--success-green);
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+}
+
+.modal-step.active .step-number {
+    background: var(--blood-red);
+    color: white;
+}
+
+.modal-step.completed .step-number {
+    background: var(--success-green);
+    color: white;
+}
+
+/* Image Modal */
+.image-modal .modal-dialog {
+    max-width: 800px;
+}
+
+.image-modal img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.image-modal .modal-body {
+    padding: 0;
+}
+
+.image-modal .modal-footer {
+    justify-content: center;
+    background: var(--bg-primary);
+}
+
+/* Video Modal */
+.video-modal .modal-dialog {
+    max-width: 900px;
+}
+
+.video-modal .modal-body {
+    padding: 0;
+    aspect-ratio: 16 / 9;
+}
+
+.video-modal iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Animations */
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modal-dialog {
+        max-width: 95%;
+        margin: var(--spacing-2);
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: var(--spacing-4);
+    }
+    
+    .modal-title {
+        font-size: var(--text-lg);
+    }
+    
+    .eligibility-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .support-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .confirm-actions {
+        flex-direction: column;
+    }
+    
+    .modal-steps {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-2);
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-header {
+        flex-wrap: wrap;
+    }
+    
+    .modal-close {
+        position: absolute;
+        top: var(--spacing-3);
+        right: var(--spacing-3);
+    }
+}

@@ -1,181 +1,185 @@
 {% extends 'phlebotomist/phlebotomistbase.html' %}
 {% load static %}
 
+{% block title %}Phlebotomist Profile - {{ phlebotomist.user.get_full_name }}{% endblock %}
+
 {% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Profile Card -->
+            <div class="profile-card">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-header-content">
+                        <div class="profile-avatar">
+                            {% if phlebotomist.profile_pic and phlebotomist.profile_pic.url %}
+                                <img src="{{ phlebotomist.profile_pic.url }}" 
+                                     alt="{{ phlebotomist.user.get_full_name }}">
+                            {% else %}
+                                <div class="avatar-placeholder">
+                                    {{ phlebotomist.user.first_name|first|default:phlebotomist.user.username|first|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="profile-info">
+                            <h2>{{ phlebotomist.user.get_full_name }}</h2>
+                            <div class="role-badge">
+                                <i class="fas fa-user-nurse"></i> Phlebotomist
+                            </div>
+                            <div class="profile-meta">
+                                <span class="profile-meta-item">
+                                    <i class="fas fa-envelope"></i> {{ phlebotomist.user.email }}
+                                </span>
+                                <span class="profile-meta-item">
+                                    <i class="fas fa-calendar-alt"></i> Joined {{ phlebotomist.created_at|date:"M Y" }}
+                                </span>
+                            </div>
+                        </div>
+                        <a href="{% url 'phlebotomist:phlebotomist-profile-edit' phlebotomist.pk %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </a>
+                    </div>
+                </div>
 
-<div class="container mt-4">
-  <div class="row">
-    <div class="col-md-8 offset-md-2">
-      
-      <!-- Bootstrap card -->
-      <div class="card">
-        
-        <!-- Card header with bg-primary -->
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-          <h4 class="mb-0">
-            <i class="fas fa-user-nurse mr-2"></i>Phlebotomist Profile
-          </h4>
-          <a href="{% url 'phlebotomist:phlebotomist-profile-edit' phlebotomist.pk %}" class="btn btn-light btn-sm">
-            <i class="fas fa-edit"></i> Edit Profile
-          </a>
-        </div>
-
-        <!-- Card body -->
-        <div class="card-body">
-          
-          <!-- Messages -->
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-          
-          <!-- Profile Picture -->
-          <div class="text-center mb-4">
-            {% if phlebotomist.profile_pic and phlebotomist.profile_pic.url %}
-              <img src="{{ phlebotomist.profile_pic.url }}" 
-                   alt="{{ phlebotomist.user.get_full_name }}" 
-                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-                   onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
-            {% else %}
-              <img src="{% static 'images/default-profile.png' %}" 
-                   alt="Default Profile" 
-                   style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dc3545; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            {% endif %}
-            
-            <!-- Role badge -->
-            <div class="mt-2">
-              <span class="badge bg-info">
-                <i class="fas fa-user-nurse"></i> Registered Phlebotomist
-              </span>
-              {% if phlebotomist.is_approved %}
-                <span class="badge bg-success">
-                  <i class="fas fa-check-circle"></i> Approved
-                </span>
-              {% else %}
-                <span class="badge bg-warning text-dark">
-                  <i class="fas fa-clock"></i> Pending Approval
-                </span>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Profile details using Bootstrap table -->
-          <div class="row">
-            <div class="col-md-6">
-              <h5 class="border-bottom pb-2">
-                <i class="fas fa-user-circle text-primary mr-2"></i>Personal Information
-              </h5>
-              <table class="table table-borderless">
-                <tr>
-                  <th width="40%">Username:</th>
-                  <td><strong>@{{ phlebotomist.user.username|default:"Not provided" }}</strong></td>
-                </tr>
-                <tr>
-                  <th>First Name:</th>
-                  <td>{{ phlebotomist.user.first_name|default:"Not provided" }}</td>
-                </tr>
-                <tr>
-                  <th>Last Name:</th>
-                  <td>{{ phlebotomist.user.last_name|default:"Not provided" }}</td>
-                </tr>
-                <tr>
-                  <th>Email:</th>
-                  <td>
-                    {% if phlebotomist.user.email %}
-                      <a href="mailto:{{ phlebotomist.user.email }}">{{ phlebotomist.user.email }}</a>
-                    {% else %}
-                      <span class="text-muted">Not provided</span>
+                <!-- Profile Body -->
+                <div class="profile-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
                     {% endif %}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Phone:</th>
-                  <td>{{ phlebotomist.phone|default:"<span class='text-muted'>Not provided</span>" }}</td>
-                </tr>
-              </table>
-            </div>
-            
-            <div class="col-md-6">
-              <h5 class="border-bottom pb-2">
-                <i class="fas fa-stethoscope text-info mr-2"></i>Professional Details
-              </h5>
-              <table class="table table-borderless">
-                <tr>
-                  <th width="40%">Specialization:</th>
-                  <td>{{ phlebotomist.get_specialization_display|default:"Not specified" }}</td>
-                </tr>
-                <tr>
-                  <th>License Number:</th>
-                  <td>{{ phlebotomist.license_number|default:"Not provided" }}</td>
-                </tr>
-                <tr>
-                  <th>Donation Center:</th>
-                  <td>{{ phlebotomist.center.name|default:"Not assigned" }}</td>
-                </tr>
-                <tr>
-                  <th>Qualification:</th>
-                  <td>{{ phlebotomist.qualification|default:"Not provided" }}</td>
-                </tr>
-                <tr>
-                  <th>Years Experience:</th>
-                  <td>{{ phlebotomist.years_of_experience|default:"0" }} years</td>
-                </tr>
-              </table>
-            </div>
-          </div>
 
-          <!-- Bio section -->
-          {% if phlebotomist.bio %}
-          <div class="mt-4">
-            <h5 class="border-bottom pb-2">
-              <i class="fas fa-align-left text-secondary mr-2"></i>Bio
-            </h5>
-            <div class="p-3 bg-light rounded">
-              {{ phlebotomist.bio|linebreaksbr }}
-            </div>
-          </div>
-          {% endif %}
+                    <!-- Account Status -->
+                    <div class="mb-4 text-center">
+                        <span class="badge bg-info me-2">
+                            <i class="fas fa-user-nurse"></i> Registered Phlebotomist
+                        </span>
+                        {% if phlebotomist.is_approved %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle me-1"></i> Approved
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-clock me-1"></i> Pending Approval
+                            </span>
+                        {% endif %}
+                    </div>
 
-          <!-- Stats cards -->
-          <div class="row mt-4">
-            <div class="col-md-4">
-              <div class="border rounded p-3 text-center">
-                <div class="h3 text-primary">{{ total_appointments|default:"0" }}</div>
-                <div class="small text-muted">Total Appointments</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="border rounded p-3 text-center">
-                <div class="h3 text-success">{{ today_appointments|default:"0" }}</div>
-                <div class="small text-muted">Today's Appointments</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="border rounded p-3 text-center">
-                <div class="h3 text-warning">{{ pending_appointments|default:"0" }}</div>
-                <div class="small text-muted">Pending</div>
-              </div>
-            </div>
-          </div>
+                    <!-- Personal Information -->
+                    <div class="profile-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-user-circle"></i> Personal Information
+                        </h5>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Username</div>
+                                <div class="detail-value">@{{ phlebotomist.user.username }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">First Name</div>
+                                <div class="detail-value">{{ phlebotomist.user.first_name|default:"Not provided" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Last Name</div>
+                                <div class="detail-value">{{ phlebotomist.user.last_name|default:"Not provided" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Email</div>
+                                <div class="detail-value">
+                                    {% if phlebotomist.user.email %}
+                                        <a href="mailto:{{ phlebotomist.user.email }}">{{ phlebotomist.user.email }}</a>
+                                    {% else %}
+                                        <span class="text-muted">Not provided</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Phone</div>
+                                <div class="detail-value">{{ phlebotomist.phone|default:"Not provided" }}</div>
+                            </div>
+                        </div>
+                    </div>
 
-        </div> <!-- end card-body -->
-        
-        <!-- Card footer -->
-        <div class="card-footer">
-          <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Dashboard
-          </a>
+                    <!-- Professional Details -->
+                    <div class="profile-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-stethoscope"></i> Professional Details
+                        </h5>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Specialization</div>
+                                <div class="detail-value">{{ phlebotomist.get_specialization_display|default:"Not specified" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">License Number</div>
+                                <div class="detail-value">{{ phlebotomist.license_number|default:"Not provided" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Donation Center</div>
+                                <div class="detail-value">{{ phlebotomist.center.name|default:"Not assigned" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Qualification</div>
+                                <div class="detail-value">{{ phlebotomist.qualification|default:"Not provided" }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Years Experience</div>
+                                <div class="detail-value">{{ phlebotomist.years_of_experience|default:"0" }} years</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bio Section -->
+                    {% if phlebotomist.bio %}
+                        <div class="profile-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-align-left"></i> Bio
+                            </h5>
+                            <div class="p-3 bg-light rounded">
+                                {{ phlebotomist.bio|linebreaksbr }}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Statistics -->
+                    <div class="profile-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-chart-line"></i> Statistics
+                        </h5>
+                        <div class="profile-stats">
+                            <div class="stat-box">
+                                <h3>{{ total_appointments|default:"0" }}</h3>
+                                <p>Total Appointments</p>
+                                <small class="text-muted">All time</small>
+                            </div>
+                            <div class="stat-box">
+                                <h3>{{ today_appointments|default:"0" }}</h3>
+                                <p>Today's Appointments</p>
+                                <small class="text-muted">Scheduled for today</small>
+                            </div>
+                            <div class="stat-box">
+                                <h3>{{ pending_appointments|default:"0" }}</h3>
+                                <p>Pending</p>
+                                <small class="text-muted">Awaiting action</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Back Button -->
+                    <div class="text-center mt-4">
+                        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-      </div> <!-- end card -->
-    </div> <!-- end col -->
-  </div> <!-- end row -->
-</div> <!-- end container -->
-
-
+    </div>
+</div>
 {% endblock %}

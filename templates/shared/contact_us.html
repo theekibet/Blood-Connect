@@ -7,13 +7,15 @@
 {% block auth_title %}Contact Us{% endblock %}
 
 {% block auth_content %}
-<div class="contact-wrapper">
-    <!-- CONTACT FORM CARD -->
-    <div class="contact-card">
-        <h2 class="contact-title"><i class="fas fa-envelope-open-text"></i> Contact Us</h2>
-        
-        <p class="contact-subtitle">We'd love to hear from you. Send us a message 👇</p>
+<div class="auth-card contact-card">
+    <div class="card-header">
+        <i class="fas fa-envelope-open-text"></i>
+        <h4>Get in Touch</h4>
+        <p class="text-muted">We'd love to hear from you. Send us a message 👋</p>
+    </div>
 
+    <div class="card-body">
+        <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -21,7 +23,7 @@
                         {% if message.tags == 'success' %}fa-check-circle
                         {% elif message.tags == 'error' %}fa-exclamation-circle
                         {% elif message.tags == 'warning' %}fa-exclamation-triangle
-                        {% else %}fa-info-circle{% endif %}">
+                        {% else %}fa-info-circle{% endif %} me-2">
                     </i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -29,82 +31,108 @@
             {% endfor %}
         {% endif %}
 
-        <form action="" method="post" class="contact-form">
+        <!-- Form Errors -->
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Please correct the errors below.
+            </div>
+        {% endif %}
+
+        <form method="post" class="contact-form">
             {% csrf_token %}
 
             <div class="form-group">
-                <label for="id_name" class="form-label">
-                    <i class="fas fa-user"></i> Name
+                <label for="{{ form.name.id_for_label }}" class="form-label">
+                    <i class="fas fa-user"></i> Name <span class="text-danger">*</span>
                 </label>
-                {% if user.is_authenticated %}
-                    <input type="text" 
-                           name="name" 
-                           id="id_name"
-                           class="form-control" 
-                           value="{{ user.get_full_name }}" 
-                           placeholder="Enter your name" 
-                           required>
-                {% else %}
-                    <input type="text" 
-                           name="name" 
-                           id="id_name"
-                           class="form-control" 
-                           placeholder="Enter your name" 
-                           required>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    {% if user.is_authenticated %}
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}"
+                               class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                               value="{{ user.get_full_name }}" placeholder="Enter your name" required>
+                    {% else %}
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}"
+                               class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                               placeholder="Enter your name" value="{{ form.name.value|default:'' }}" required>
+                    {% endif %}
+                </div>
+                {% if form.name.errors %}
+                    <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
                 {% endif %}
             </div>
 
             <div class="form-group">
-                <label for="id_email" class="form-label">
-                    <i class="fas fa-envelope"></i> Email
+                <label for="{{ form.email.id_for_label }}" class="form-label">
+                    <i class="fas fa-envelope"></i> Email <span class="text-danger">*</span>
                 </label>
-                {% if user.is_authenticated %}
-                    <input type="email" 
-                           name="email" 
-                           id="id_email"
-                           class="form-control" 
-                           value="{{ user.email }}" 
-                           placeholder="Enter your email" 
-                           required>
-                {% else %}
-                    <input type="email" 
-                           name="email" 
-                           id="id_email"
-                           class="form-control" 
-                           placeholder="Enter your email" 
-                           required>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    {% if user.is_authenticated %}
+                        <input type="email" name="email" id="{{ form.email.id_for_label }}"
+                               class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                               value="{{ user.email }}" placeholder="Enter your email" required>
+                    {% else %}
+                        <input type="email" name="email" id="{{ form.email.id_for_label }}"
+                               class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                               placeholder="Enter your email" value="{{ form.email.value|default:'' }}" required>
+                    {% endif %}
+                </div>
+                {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
                 {% endif %}
             </div>
 
             <div class="form-group">
-                <label for="id_message" class="form-label">
-                    <i class="fas fa-comment"></i> Message
+                <label for="{{ form.message.id_for_label }}" class="form-label">
+                    <i class="fas fa-comment"></i> Message <span class="text-danger">*</span>
                 </label>
-                <textarea name="message" 
-                          id="id_message"
-                          class="form-control" 
-                          rows="5" 
-                          placeholder="Write your message..." 
-                          required></textarea>
+                <textarea name="message" id="{{ form.message.id_for_label }}"
+                          class="form-control {% if form.message.errors %}is-invalid{% endif %}"
+                          rows="5" placeholder="Write your message..." required>{{ form.message.value|default:'' }}</textarea>
+                {% if form.message.errors %}
+                    <div class="invalid-feedback d-block">{{ form.message.errors.0 }}</div>
+                {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-paper-plane"></i> Send Message
-            </button>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg btn-block">
+                    <i class="fas fa-paper-plane me-2"></i>Send Message
+                </button>
+            </div>
         </form>
+
+        <div class="text-center mt-4">
+            <a href="javascript:history.back()" class="btn btn-link">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    // Form submission animation
-    $('.contact-form').on('submit', function(e) {
-        const btn = $(this).find('.btn-primary');
-        btn.html('<i class="fas fa-spinner fa-spin"></i> Sending...');
-        btn.prop('disabled', true);
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    // Form submission loading state
+    const form = document.querySelector('.contact-form');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+        });
+    }
+
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 300);
+        });
+    }, 5000);
 });
 </script>
 {% endblock %}

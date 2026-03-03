@@ -26,7 +26,6 @@
     <a class="dropdown-item" href="{% url 'donor:volunteer' %}">
         <i class="fas fa-hands-helping"></i> Volunteer Opportunities
     </a>
-    <!-- Simple link to open chatbot -->
     <a class="dropdown-item" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
         <i class="fas fa-robot"></i> Ask Assistant
     </a>
@@ -38,9 +37,9 @@
 
 {% block extra_nav_items %}
     <!-- Rewards/Eligibility Icon -->
-    <li class="nav-item mx-2">
+    <li class="nav-item">
         <a class="nav-link" href="{% url 'donor:donor-eligibility-status' %}" title="Rewards / Eligibility">
-            <div class="rewards-icon">
+            <div class="nav-icon">
                 <i class="fas fa-medal"></i>
                 {% if donor_eligibility_status and donor_eligibility_status.is_eligible %}
                     <span class="status-badge eligible"></span>
@@ -50,18 +49,18 @@
     </li>
     
     <!-- Impact Icon -->
-    <li class="nav-item mx-2">
+    <li class="nav-item">
         <a class="nav-link" href="{% url 'donor:impact' %}" title="Our Collective Impact">
-            <div class="impact-icon">
+            <div class="nav-icon">
                 <i class="fas fa-chart-line"></i>
             </div>
         </a>
     </li>
     
     <!-- Chatbot Mobile Icon (visible only on mobile) -->
-    <li class="nav-item mx-2 d-lg-none">
+    <li class="nav-item d-lg-none">
         <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
-            <div class="chatbot-icon">
+            <div class="nav-icon">
                 <i class="fas fa-robot"></i>
             </div>
         </a>
@@ -72,91 +71,94 @@
     <!-- Main Dashboard -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
-        <a href="{% url 'donor:donor-dashboard' %}" class="{% if request.resolver_match.url_name == 'donor-dashboard' %}active{% endif %}">
-            <i class="fas fa-tachometer-alt"></i> Dashboard
+        <a href="{% url 'donor:donor-dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'donor-dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
         </a>
     </div>
 
     <!-- Donation Related -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">DONATION</div>
-        <a href="{% url 'donor:donate-blood' %}" class="{% if 'donate-blood' in request.path %}active{% endif %}">
-            <i class="fas fa-hand-holding-medical"></i> Donate Blood
+        <a href="{% url 'donor:donate-blood' %}" class="sidebar-menu-item {% if 'donate-blood' in request.path %}active{% endif %}">
+            <i class="fas fa-hand-holding-medical"></i>
+            <span>Donate Blood</span>
         </a>
-        <a href="{% url 'donor:donation-history' %}" class="{% if 'donation-history' in request.path %}active{% endif %}">
-            <i class="fas fa-history"></i> Donation History
+        <a href="{% url 'donor:donation-history' %}" class="sidebar-menu-item {% if 'donation-history' in request.path %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            <span>Donation History</span>
         </a>
-        <a href="{% url 'donor:donor-eligibility' %}" class="{% if 'eligibility' in request.path %}active{% endif %}">
-            <i class="fas fa-clipboard-check"></i> Eligibility Check
+        <a href="{% url 'donor:donor-eligibility' %}" class="sidebar-menu-item {% if 'eligibility' in request.path %}active{% endif %}">
+            <i class="fas fa-clipboard-check"></i>
+            <span>Eligibility Check</span>
         </a>
     </div>
 
     <!-- Engagement -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">GET INVOLVED</div>
-        <a href="{% url 'donor:volunteer' %}" class="{% if 'volunteer' in request.path %}active{% endif %}">
-            <i class="fas fa-hands-helping"></i> Volunteer
+        <a href="{% url 'donor:volunteer' %}" class="sidebar-menu-item {% if 'volunteer' in request.path %}active{% endif %}">
+            <i class="fas fa-hands-helping"></i>
+            <span>Volunteer</span>
         </a>
-        <a href="{% url 'donor:awareness-hub' %}" class="{% if 'awareness' in request.path %}active{% endif %}">
-            <i class="fas fa-bullhorn"></i> Spread Awareness
+        <a href="{% url 'donor:awareness-hub' %}" class="sidebar-menu-item {% if 'awareness' in request.path %}active{% endif %}">
+            <i class="fas fa-bullhorn"></i>
+            <span>Spread Awareness</span>
         </a>
     </div>
 
     <!-- Resources -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">RESOURCES</div>
-        <a href="{% url 'donor:donor-resources' %}" class="{% if 'resources' in request.path %}active{% endif %}">
-            <i class="fas fa-book"></i> Resources
+        <a href="{% url 'donor:donor-resources' %}" class="sidebar-menu-item {% if 'resources' in request.path %}active{% endif %}">
+            <i class="fas fa-book"></i>
+            <span>Resources</span>
         </a>
-        <a href="{% url 'donor:health-tips' %}" class="{% if 'health' in request.path %}active{% endif %}">
-            <i class="fas fa-heartbeat"></i> Health Tips
+        <a href="{% url 'donor:health-tips' %}" class="sidebar-menu-item {% if 'health' in request.path %}active{% endif %}">
+            <i class="fas fa-heartbeat"></i>
+            <span>Health Tips</span>
         </a>
-        <a href="{% url 'donor:faqs' %}" class="{% if 'faqs' in request.path %}active{% endif %}">
-            <i class="fas fa-question-circle"></i> FAQs
+        <a href="{% url 'donor:faqs' %}" class="sidebar-menu-item {% if 'faqs' in request.path %}active{% endif %}">
+            <i class="fas fa-question-circle"></i>
+            <span>FAQs</span>
         </a>
     </div>
 
     <!-- Community -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">COMMUNITY</div>
-        <a href="{% url 'donor:events' %}" class="{% if 'events' in request.path %}active{% endif %}">
-            <i class="fas fa-calendar-alt"></i> Events
-    
+        <a href="{% url 'donor:events' %}" class="sidebar-menu-item {% if 'events' in request.path %}active{% endif %}">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Events</span>
+        </a>
     </div>
     
     <!-- AI Assistant Link -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">ASSISTANT</div>
-        <a href="#" onclick="document.getElementById('chatbotButton').click(); return false;" class="chatbot-sidebar-link">
-            <i class="fas fa-robot"></i> Ask AI Assistant
-            <span class="badge badge-primary ml-2">New</span>
+        <a href="#" onclick="document.getElementById('chatbotButton').click(); return false;" class="sidebar-menu-item">
+            <i class="fas fa-robot"></i>
+            <span>Ask AI Assistant</span>
+            <span class="badge badge-primary">New</span>
         </a>
     </div>
 {% endblock %}
 
-
-
 {% block extra_js %}
 <script>
-    // ========================================
-    // DONOR-SPECIFIC ENHANCEMENTS ONLY
-    // ========================================
-    // The chatbot JavaScript is handled by the base template
-    
     document.addEventListener('DOMContentLoaded', function() {
         // Update notification badge
         {% if donor_unread_notification_count > 0 %}
-        const badge = document.querySelector('.notification-badge');
-        if (badge) {
-            badge.textContent = "{{ donor_unread_notification_count }}";
-            badge.style.display = 'inline-block';
+        const notificationBadge = document.querySelector('.notification-badge');
+        if (notificationBadge) {
+            notificationBadge.textContent = "{{ donor_unread_notification_count }}";
+            notificationBadge.style.display = 'flex';
         }
         {% endif %}
         
         // Eligibility reminder (optional)
         {% if donor_eligibility_status and donor_eligibility_status.can_donate_now %}
         setTimeout(function() {
-            // Only show if chatbot isn't open
             const chatbotContainer = document.getElementById('chatbotContainer');
             if (chatbotContainer && !chatbotContainer.classList.contains('active')) {
                 const reminder = document.createElement('div');
@@ -167,10 +169,10 @@
                 reminder.style.zIndex = '999';
                 reminder.style.maxWidth = '300px';
                 reminder.innerHTML = `
-                    <i class="fas fa-heart mr-2"></i>
+                    <i class="fas fa-heart me-2"></i>
                     <strong>You're eligible to donate!</strong>
                     <p class="mb-0 mt-1 small">Schedule your next donation and save lives.</p>
-                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 `;
                 document.body.appendChild(reminder);
                 
@@ -180,6 +182,14 @@
             }
         }, 3000);
         {% endif %}
+
+        // Sidebar active state for mobile
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
+        sidebarLinks.forEach(link => {
+            if (link.classList.contains('active')) {
+                link.setAttribute('aria-current', 'page');
+            }
+        });
     });
 </script>
 {% endblock %}

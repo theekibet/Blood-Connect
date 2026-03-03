@@ -3,190 +3,209 @@
 
 {% block title %}Test History - Lab Technologist{% endblock %}
 
-{% block page_title %}Test History{% endblock %}
-
 {% block content %}
-<!-- Summary Cards -->
-<div class="stats mb-4">
-    <div class="stat-box">
-        <div class="stat-icon total">
-            <i class="fas fa-vial"></i>
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center mb-4">
+        <div class="dashboard-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+            <i class="fas fa-history fa-2x text-primary"></i>
         </div>
-        <div class="stat-info">
-            <h3>{{ total_tests|default:0 }}</h3>
-            <p>Total Tests</p>
-            <small class="text-muted">All time</small>
-        </div>
-    </div>
-    <div class="stat-box">
-        <div class="stat-icon safe">
-            <i class="fas fa-check-circle"></i>
-        </div>
-        <div class="stat-info">
-            <h3>{{ safe_count|default:0 }}</h3>
-            <p>Safe</p>
-            <small class="text-muted">{{ safe_percentage|floatformat:1 }}% of tests</small>
+        <div>
+            <h1 class="display-5 fw-bold mb-1">Test History</h1>
+            <p class="lead text-muted mb-0">View all completed blood tests</p>
         </div>
     </div>
-    <div class="stat-box">
-        <div class="stat-icon unsafe">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <div class="stat-info">
-            <h3>{{ unsafe_count|default:0 }}</h3>
-            <p>Unsafe</p>
-            <small class="text-muted">{{ unsafe_percentage|floatformat:1 }}% of tests</small>
-        </div>
-    </div>
-</div>
 
-<!-- Center Information -->
-{% if center %}
-<div class="alert alert-info mb-4">
-    <i class="fas fa-map-marker-alt me-2"></i>
-    <strong>Center:</strong> {{ center.name }}
-</div>
-{% endif %}
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-vial fa-2x text-info"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ total_tests|default:0 }}</div>
+                            <div class="card-label">Total Tests</div>
+                            <small class="text-muted">All time</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ safe_count|default:0 }}</div>
+                            <div class="card-label">Safe</div>
+                            <small class="text-muted">{{ safe_percentage|floatformat:1 }}% of tests</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="dashboard-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        </div>
+                        <div>
+                            <div class="card-count">{{ unsafe_count|default:0 }}</div>
+                            <div class="card-label">Unsafe</div>
+                            <small class="text-muted">{{ unsafe_percentage|floatformat:1 }}% of tests</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Filters -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <label for="result" class="form-label">Filter by Result</label>
-                <select name="result" id="result" class="form-select">
-                    <option value="">All Results</option>
-                    <option value="safe" {% if result_filter == 'safe' %}selected{% endif %}>Safe</option>
-                    <option value="unsafe" {% if result_filter == 'unsafe' %}selected{% endif %}>Unsafe</option>
-                    <option value="pending" {% if result_filter == 'pending' %}selected{% endif %}>Pending</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="search" class="form-label">Search by Barcode/Donor</label>
-                <input type="text" name="search" id="search" class="form-control" 
-                       placeholder="Enter barcode or donor name..." value="{{ search_query|default:'' }}">
-            </div>
-            <div class="col-md-3">
-                <label for="date_from" class="form-label">Date From</label>
-                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from|default:'' }}">
-            </div>
-            <div class="col-md-3">
-                <label for="date_to" class="form-label">Date To</label>
-                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default:'' }}">
-            </div>
-            <div class="col-12 d-flex align-items-end justify-content-end">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="fas fa-filter"></i> Apply Filters
-                </button>
-                <a href="{% url 'lab_technologist:test_history' %}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Clear
+    <!-- Center Information -->
+    {% if center %}
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-map-marker-alt me-2"></i>
+            <strong>Center:</strong> {{ center.name }}
+        </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-filter me-2"></i>
+            <h5 class="mb-0">Filter Tests</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="result" class="form-label">Result</label>
+                    <select name="result" id="result" class="form-select">
+                        <option value="">All Results</option>
+                        <option value="safe" {% if result_filter == 'safe' %}selected{% endif %}>Safe</option>
+                        <option value="unsafe" {% if result_filter == 'unsafe' %}selected{% endif %}>Unsafe</option>
+                        <option value="pending" {% if result_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           placeholder="Barcode or donor..." value="{{ search_query|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_from" class="form-label">From</label>
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_to" class="form-label">To</label>
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default:'' }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+            <div class="mt-2 text-end">
+                <a href="{% url 'lab_technologist:test_history' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear Filters
                 </a>
             </div>
-        </form>
+        </div>
     </div>
-</div>
 
-<!-- Test History Table -->
-<div class="card">
-    <div class="card-body">
-        <h5 class="card-title mb-3">Test Records</h5>
-        
-        {% if tests %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Barcode</th>
-                            <th>Test ID</th>
-                            <th>Donor</th>
-                            <th>Blood Group</th>
-                            <th>Result</th>
-                            <th>Test Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in tests %}
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-barcode me-2 text-muted"></i>
-                                    <code class="fw-bold">{{ item.barcode }}</code>
-                                </div>
-                            </td>
-                            <td><code>#{{ item.test.id }}</code></td>
-                            <td>
-                                <strong>{{ item.donor_name }}</strong>
-                                <br>
-                                <small class="text-muted">ID: 
-                                    {% if item.test.blood_collection and item.test.blood_collection.donor %}
-                                        {{ item.test.blood_collection.donor.id }}
+    <!-- Test History Table -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-list me-2"></i>
+            <h5 class="mb-0">Test Records</h5>
+        </div>
+        <div class="card-body">
+            {% if tests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Barcode</th>
+                                <th>Test ID</th>
+                                <th>Donor</th>
+                                <th>Blood Group</th>
+                                <th>Result</th>
+                                <th>Test Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in tests %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-barcode me-2 text-muted"></i>
+                                        <code class="fw-bold">{{ item.barcode }}</code>
+                                    </div>
+                                </td>
+                                <td><code>#{{ item.test.id }}</code></td>
+                                <td>
+                                    <strong>{{ item.donor_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">ID: {{ item.test.blood_collection.donor.id|default:"N/A" }}</small>
+                                </td>
+                                <td>
+                                    {% if item.test.blood_group %}
+                                        <span class="badge bg-info">{{ item.test.blood_group }}</span>
                                     {% else %}
-                                        N/A
+                                        <span class="text-muted">—</span>
                                     {% endif %}
-                                </small>
-                            </td>
-                            <td>
-                                {% if item.test.blood_group %}
-                                    <span class="badge bg-info">{{ item.test.blood_group }}</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if item.test.result == 'safe' %}
-                                    <span class="badge bg-success">Safe</span>
-                                {% elif item.test.result == 'unsafe' %}
-                                    <span class="badge bg-danger">Unsafe</span>
-                                {% else %}
-                                    <span class="badge bg-warning">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ item.test.test_date|date:"M d, Y H:i" }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
+                                </td>
+                                <td>
+                                    {% if item.test.result == 'safe' %}
+                                        <span class="badge bg-success">Safe</span>
+                                    {% elif item.test.result == 'unsafe' %}
+                                        <span class="badge bg-danger">Unsafe</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.test.test_date|date:"M d, Y H:i" }}</td>
+                                <td>
                                     <a href="{% url 'lab_technologist:test_result' item.id %}" 
-                                       class="btn btn-outline-primary" title="View Details">
+                                       class="btn btn-sm btn-outline-primary" title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    {% if item.test.result == 'safe' %}
-                                    <a href="#" class="btn btn-outline-success" title="View in Inventory">
-                                        <i class="fas fa-box"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-history fa-4x text-muted mb-3"></i>
-                <h5>No Test History Found</h5>
-                <p class="text-muted">No tests match your current filters.</p>
-                <a href="{% url 'lab_technologist:pending_tests' %}" class="btn btn-primary mt-3">
-                    <i class="fas fa-flask"></i> Go to Pending Tests
-                </a>
-            </div>
-        {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Export Options -->
+                <div class="text-end mt-3">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>Print
+                    </button>
+                    <a href="?export=csv{% if result_filter %}&result={{ result_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-file-csv me-1"></i>Export CSV
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-4x text-muted mb-3"></i>
+                    <h5>No Test History Found</h5>
+                    <p class="text-muted">No tests match your current filters.</p>
+                    <a href="{% url 'lab_technologist:pending_tests' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-flask me-2"></i>Go to Pending Tests
+                    </a>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
-
-<!-- Export Options -->
-{% if tests %}
-<div class="text-end mt-3">
-    <div class="btn-group">
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-            <i class="fas fa-print"></i> Print
-        </button>
-        <a href="?export=csv{% if result_filter %}&result={{ result_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-file-csv"></i> Export CSV
-        </a>
-    </div>
-</div>
-{% endif %}
-
-
 {% endblock %}

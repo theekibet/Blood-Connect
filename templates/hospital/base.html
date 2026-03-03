@@ -1,54 +1,89 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block extra_css %}
-    {{ block.super }}
-{% endblock %}
+{% block title %}Hospital Portal - BloodConnect{% endblock %}
 
 {% block nav_icon %}fas fa-hospital{% endblock %}
 {% block app_name %}Hospital Portal{% endblock %}
-{% block notifications_url %}{% url 'hospital:dashboard' %}{% endblock %}
+
+{% block notifications_url %}#{% endblock %}
+
 {% block user_role_label %}Hospital Staff{% endblock %}
+
 {% block profile_url %}{% url 'hospital:profile' %}{% endblock %}
 {% block edit_profile_url %}{% url 'hospital:profile' %}{% endblock %}
+
 {% block sidebar_icon %}fas fa-hospital{% endblock %}
 {% block sidebar_title %}Hospital Menu{% endblock %}
 
+{% block extra_nav_items %}
+    <!-- Hospital-specific nav items can go here -->
+{% endblock %}
+
 {% block sidebar_menu %}
-<ul class="nav flex-column">
-    <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'hospital:dashboard' %}">
-            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+    <!-- Main Dashboard -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">MAIN</div>
+        <a href="{% url 'hospital:dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}" href="{% url 'hospital:request_list' %}">
-            <i class="fas fa-list me-2"></i>Blood Requests
+    </div>
+
+    <!-- Blood Requests -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">BLOOD REQUESTS</div>
+        <a href="{% url 'hospital:request_list' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}">
+            <i class="fas fa-list"></i>
+            <span>All Requests</span>
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'create_request' %}active{% endif %}" href="{% url 'hospital:create_request' %}">
-            <i class="fas fa-plus-circle me-2"></i>New Request
+        <a href="{% url 'hospital:create_request' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'create_request' %}active{% endif %}">
+            <i class="fas fa-plus-circle"></i>
+            <span>New Request</span>
         </a>
-    </li>
-    
+    </div>
+
+    <!-- Request Filters (Quick Links) -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">QUICK FILTERS</div>
+        <a href="{% url 'hospital:request_list' %}?status=pending" class="sidebar-menu-item">
+            <i class="fas fa-hourglass-half"></i>
+            <span>Pending Requests</span>
+            {% if pending_count > 0 %}
+                <span class="badge badge-warning ms-auto">{{ pending_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'hospital:request_list' %}?status=approved" class="sidebar-menu-item">
+            <i class="fas fa-check-circle"></i>
+            <span>Approved</span>
+        </a>
+        <a href="{% url 'hospital:request_list' %}?status=dispatched" class="sidebar-menu-item">
+            <i class="fas fa-truck"></i>
+            <span>Dispatched</span>
+        </a>
+        <a href="{% url 'hospital:request_list' %}?status=delivered" class="sidebar-menu-item">
+            <i class="fas fa-check-double"></i>
+            <span>Delivered</span>
+        </a>
+    </div>
+
+    <!-- Administration (for admin users only) -->
     {% if hospital_user.role == 'admin' %}
-    <li class="nav-item mt-3">
-        <hr class="sidebar-divider">
-        <span class="sidebar-heading">Administration</span>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'hospital:dashboard_admin' %}">
-            <i class="fas fa-user-shield me-2"></i>Admin Dashboard
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ADMINISTRATION</div>
+        <a href="{% url 'hospital:dashboard_admin' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}">
+            <i class="fas fa-user-shield"></i>
+            <span>Admin Dashboard</span>
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}" href="{% url 'hospital:user_management' %}">
-            <i class="fas fa-users-cog me-2"></i>User Management
+        <a href="{% url 'hospital:user_management' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
+            <i class="fas fa-users-cog"></i>
+            <span>User Management</span>
+            {% if pending_users_count > 0 %}
+                <span class="badge badge-danger ms-auto">{{ pending_users_count }}</span>
+            {% endif %}
         </a>
-    </li>
+    </div>
     {% endif %}
-</ul>
 {% endblock %}
 
 {% block profile_menu %}
@@ -56,4 +91,49 @@
         <i class="fas fa-id-card"></i> Hospital Profile
     </a>
     {{ block.super }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('✅ Hospital base template loaded');
+        
+        // Update notification badge if needed
+        {% if pending_count > 0 %}
+        const notificationBadge = document.querySelector('.notification-badge');
+        if (notificationBadge) {
+            notificationBadge.textContent = "{{ pending_count }}";
+            notificationBadge.style.display = 'flex';
+        }
+        {% endif %}
+
+        // Sidebar active state for mobile
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
+        sidebarLinks.forEach(link => {
+            if (link.classList.contains('active')) {
+                link.setAttribute('aria-current', 'page');
+            }
+        });
+
+        // Real-time pending requests count update
+        function updatePendingCount() {
+            fetch('/hospital/api/pending-count/')
+                .then(response => response.json())
+                .then(data => {
+                    const sidebarBadge = document.querySelector('a[href*="pending"] .badge');
+                    if (sidebarBadge && data.count > 0) {
+                        sidebarBadge.textContent = data.count;
+                        sidebarBadge.style.display = 'inline-block';
+                    }
+                    if (sidebarBadge && data.count === 0) {
+                        sidebarBadge.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error updating pending count:', error));
+        }
+
+        // Update every 30 seconds (optional)
+        // setInterval(updatePendingCount, 30000);
+    });
+</script>
 {% endblock %}

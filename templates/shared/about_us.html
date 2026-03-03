@@ -3,70 +3,151 @@
 
 {% block title %}{{ page_title }}{% endblock %}
 
+{% block extra_css %}
+<!-- Any page-specific CSS can go here -->
+{% endblock %}
+
 {% block auth_content %}
-
 <div class="about-container">
-
-    <!-- HERO SECTION -->
-    <section class="hero-section text-center py-5">
-
-        <div class="profile-wrapper mb-4">
-
+    <!-- Hero Section -->
+    <section class="about-hero">
+        <div class="profile-wrapper fade-in">
             <div class="profile-image">
-
                 {% if creator.image_url %}
-
                     {% if creator.use_static %}
-                        <img src="{% static creator.image_url %}"
-                             alt="{{ creator.name }}"
-                             style="width:180px;height:180px;border-radius:50%;object-fit:cover;">
+                        <img src="{% static creator.image_url %}" alt="{{ creator.name }}">
                     {% else %}
-                        <img src="{{ creator.image_url }}"
-                             alt="{{ creator.name }}"
-                             style="width:180px;height:180px;border-radius:50%;object-fit:cover;">
+                        <img src="{{ creator.image_url }}" alt="{{ creator.name }}">
                     {% endif %}
-
                 {% else %}
                     <div class="profile-placeholder">
-                        <i class="fas fa-user fa-4x"></i>
+                        <i class="fas fa-user"></i>
                     </div>
                 {% endif %}
-
-            </div>
-
-        </div>
-
-        <h1>{{ creator.name }}</h1>
-        <p class="lead">{{ creator.role }}</p>
-        <p>{{ creator.bio }}</p>
-
-    </section>
-
-
-    <!-- IMPACT SECTION -->
-    <section class="impact-section py-5 bg-light text-center">
-        <div class="container">
-            <div class="row">
-
-                {% for stat in impact %}
-                    <div class="col-md-4 mb-3">
-                        <h2>{{ stat.number }}</h2>
-                        <p>{{ stat.label }}</p>
-                    </div>
-                {% endfor %}
-
             </div>
         </div>
+
+        <h1 class="fade-in delay-1">{{ creator.name }}</h1>
+        <p class="lead fade-in delay-2">{{ creator.role }}</p>
+        <p class="bio fade-in delay-3">{{ creator.bio }}</p>
+        {% if creator.quote %}
+        <blockquote class="quote fade-in delay-4">
+            <i class="fas fa-quote-left"></i>
+            "{{ creator.quote }}"
+        </blockquote>
+        {% endif %}
+    </section>
+
+    <!-- Impact Section -->
+    <section class="impact-section">
+        <h2 class="section-title fade-in">Our Impact</h2>
+        <div class="impact-grid">
+            {% for stat in impact %}
+            <div class="stat-card fade-in {% cycle 'delay-1' 'delay-2' 'delay-3' %}">
+                <h3 class="impact-number">{{ stat.number }}</h3>
+                <p class="impact-label">{{ stat.label }}</p>
+            </div>
+            {% endfor %}
+        </div>
     </section>
 
 
-    <!-- CONTACT SECTION -->
-    <section class="contact-section py-5 text-center">
-        <p><strong>Email:</strong> {{ creator.email }}</p>
-        <p><strong>Phone:</strong> {{ creator.phone }}</p>
-        <p><strong>Location:</strong> {{ creator.location }}</p>
+
+    <!-- Contact Section -->
+    <section class="contact-section">
+        <h2 class="fade-in">Get in Touch</h2>
+        <div class="contact-details">
+            <div class="contact-item fade-in delay-1">
+                <i class="fas fa-envelope"></i>
+                <a href="mailto:{{ creator.email }}">{{ creator.email }}</a>
+            </div>
+            <div class="contact-item fade-in delay-2">
+                <i class="fas fa-phone-alt"></i>
+                <a href="tel:{{ creator.phone }}">{{ creator.phone }}</a>
+            </div>
+            <div class="contact-item fade-in delay-3">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ creator.location }}</span>
+            </div>
+        </div>
     </section>
 
+    <!-- Current Year -->
+    <div class="text-center text-muted small mt-4">
+        <i class="fas fa-calendar-alt me-1"></i> © {{ current_year }} BloodConnect
+    </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script>
+    // ========================================
+    // INTERSECTION OBSERVER FOR ANIMATIONS
+    // ========================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all elements with fade-in class
+        document.querySelectorAll('.fade-in, .stat-card').forEach(el => {
+            observer.observe(el);
+        });
+
+        // ========================================
+        // COUNTER ANIMATION FOR STATS
+        // ========================================
+        function animateCounter(element) {
+            // Extract number from string (removes + and commas)
+            const text = element.textContent;
+            const target = parseInt(text.replace(/[^0-9]/g, ''));
+            if (isNaN(target) || target === 0) return;
+            
+            const duration = 2000;
+            const increment = target / (duration / 16);
+            let current = 0;
+            
+            // Preserve the original format (+ sign if present)
+            const hasPlus = text.includes('+');
+
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                // Format with commas and add + if needed
+                element.textContent = Math.floor(current).toLocaleString() + (hasPlus ? '+' : '');
+            }, 16);
+        }
+
+        // Observe stat cards for counter animation
+        const statObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const numberElement = entry.target.querySelector('.impact-number, h3');
+                    if (numberElement && !numberElement.classList.contains('animated')) {
+                        numberElement.classList.add('animated');
+                        animateCounter(numberElement);
+                    }
+                    statObserver.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.stat-card, .impact-grid .stat-card').forEach(el => {
+            statObserver.observe(el);
+        });
+    });
+</script>
 {% endblock %}
