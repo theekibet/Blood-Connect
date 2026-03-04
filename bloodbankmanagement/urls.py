@@ -9,6 +9,7 @@ from blood import views as blood_views
 from phlebotomist import views as phlebotomist_views
 from django.views.generic import TemplateView
 from blood.views import CustomPasswordChangeView  
+# Fixed import - removed incorrect line
 
 urlpatterns = [
 
@@ -34,29 +35,19 @@ urlpatterns = [
     path('admin123/', blood_views.fake_admin_login_view),        # Common brute force path
     path('admin2024/', blood_views.fake_admin_login_view),       # Year-based path
 
-    # ===================================
-    # REMOVED / COMMENTED OUT - OLD ADMIN LOGIN
-    # ===================================
-    # Legacy admin login - REMOVED for security
-    # path('adminlogin/', blood_views.adminlogin_view, name='adminlogin'),
+
     
     # ===================================
     # CENTRALIZED AUTHENTICATION FOR ALL USERS
     # ===================================
     path('logout/', LogoutView.as_view(template_name='blood/logout.html'), name='logout'),
     
-    # Keep afterlogin for redirects (this is safe)
+
     path('afterlogin/', blood_views.afterlogin_view, name='afterlogin'),
 
     # Password Change URLs
-    path('password-change/', 
-         CustomPasswordChangeView.as_view(), 
-         name='password_change'),
-    
-    # Password change success URL
-    path('password-change/success/', 
-         TemplateView.as_view(template_name='shared/password_change_success.html'), 
-         name='password-change-success'),
+    path('password-change/', CustomPasswordChangeView.as_view(), name='password_change'),
+    path('password-change/success/', TemplateView.as_view(template_name='shared/password_change_success.html'), name='password-change-success'),
 
     # ===================================
     # PUBLIC SITE ROUTES
@@ -67,6 +58,7 @@ urlpatterns = [
     path('about-us/', blood_views.about_us_view, name='about-us'),
     path('contact/', blood_views.contact_view, name='contact'),
     path('contact/success/', blood_views.contact_success, name='contact_success'),
+    
 
     # ===================================
     # APP-SPECIFIC URLS
@@ -75,6 +67,8 @@ urlpatterns = [
     path('phlebotomist/', include('phlebotomist.urls')),  
     path('chatbot/', include('chatbot.urls')),
     path('hospital/', include('hospital.urls')),
+    path('lab-tech/', include('lab_technologist.urls')),
+    path('blood-bank/', include('blood_bank_technician.urls')),
     
     # ===================================
     # ADMIN PANEL ROUTES (Custom Admin Views)
@@ -120,12 +114,10 @@ urlpatterns = [
     path('blood-drives/', blood_views.blood_drives_list, name='blood-drives-list'),
     path('blood-drive/<int:pk>/', blood_views.blood_drive_detail, name='blood-drive-detail'),
 
-    # Other app includes
-    path('lab-tech/', include('lab_technologist.urls')),
-    path('blood-bank/', include('blood_bank_technician.urls')),
+    # Profile image update
     path('update-profile-image/', blood_views.update_profile_image, name='update_profile_image'),
 ]
 
-# Media files serving in development
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

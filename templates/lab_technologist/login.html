@@ -1,6 +1,7 @@
 <!-- templates/lab_technologist/login.html -->
 {% extends 'shared/base.html' %}
 {% load static %}
+{% load widget_tweaks %}
 
 {% block title %}Lab Technologist Login - BloodConnect{% endblock %}
 
@@ -9,13 +10,18 @@
 {% block auth_card_class %}lab-tech{% endblock %}
 
 {% block auth_content %}
+<!-- Welcome message -->
+<p class="text-muted text-center mb-4">Laboratory Personnel Access Only</p>
+
+<!-- Login Form -->
 <form method="post">
     {% csrf_token %}
     
     {% if form.errors %}
-        <div class="alert alert-danger">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i>
             Invalid username or password. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     {% endif %}
     
@@ -23,30 +29,43 @@
         <label for="username" class="form-label">
             <i class="fas fa-user me-2"></i>Username
         </label>
-        <input type="text" 
-               class="form-control" 
-               id="username" 
-               name="username" 
-               required 
-               autofocus
-               placeholder="Enter your username">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-user"></i></span>
+            <input type="text" 
+                   class="form-control" 
+                   id="username" 
+                   name="username" 
+                   required 
+                   autofocus
+                   placeholder="Enter your username">
+        </div>
     </div>
     
     <div class="mb-3">
         <label for="password" class="form-label">
             <i class="fas fa-lock me-2"></i>Password
         </label>
-        <input type="password" 
-               class="form-control" 
-               id="password" 
-               name="password" 
-               required
-               placeholder="Enter your password">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+            <input type="password" 
+                   class="form-control" 
+                   id="password" 
+                   name="password" 
+                   required
+                   placeholder="Enter your password">
+            <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                <i class="fa fa-eye" id="togglePasswordIcon"></i>
+            </button>
+        </div>
+        <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
+            <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+        </div>
     </div>
     
     <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-sign-in-alt me-2"></i>Login
+        <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+            <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login</span>
+            <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
         </button>
     </div>
     
@@ -61,12 +80,10 @@
     <hr class="my-4">
     
     <div class="text-center">
-        <p class="mb-0">
-            Don't have an account? 
-            <a href="{% url 'lab_technologist:signup' %}" class="btn btn-link">
-                Register here <i class="fas fa-arrow-right ms-1"></i>
-            </a>
-        </p>
+        <p class="mb-2">Don't have an account?</p>
+        <a href="{% url 'lab_technologist:signup' %}" class="btn btn-outline-primary">
+            <i class="fas fa-user-plus me-2"></i> Register as Lab Technologist
+        </a>
     </div>
     
     <div class="text-center mt-3">
@@ -76,4 +93,64 @@
         </small>
     </div>
 </form>
+
+<script>
+// Password visibility toggle
+function togglePassword() {
+    const passwordField = document.getElementById('password');
+    const icon = document.getElementById('togglePasswordIcon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+// Caps lock warning
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('password');
+    const capsWarning = document.getElementById('capsWarning');
+    
+    if (passwordInput && capsWarning) {
+        passwordInput.addEventListener('keyup', function(e) {
+            if (e.getModifierState('CapsLock')) {
+                capsWarning.classList.remove('d-none');
+            } else {
+                capsWarning.classList.add('d-none');
+            }
+        });
+
+        passwordInput.addEventListener('blur', function() {
+            capsWarning.classList.add('d-none');
+        });
+    }
+
+    // Form submission handling
+    const form = document.querySelector('form');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginSpinner = document.getElementById('loginSpinner');
+    
+    if (form) {
+        form.addEventListener('submit', function() {
+            if (loginBtnText && loginSpinner && loginBtn) {
+                loginBtnText.classList.add('d-none');
+                loginSpinner.classList.remove('d-none');
+                loginBtn.disabled = true;
+            }
+        });
+    }
+
+    // Auto-focus on username field
+    const usernameField = document.getElementById('username');
+    if (usernameField) {
+        usernameField.focus();
+    }
+});
+</script>
 {% endblock %}

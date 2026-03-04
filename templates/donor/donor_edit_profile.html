@@ -12,9 +12,9 @@
                     <div class="profile-header-content">
                         <div class="profile-avatar">
                             {% if profile_pic_url %}
-                                <img src="{{ profile_pic_url }}" alt="{{ user.get_full_name }}">
+                                <img src="{{ profile_pic_url }}" alt="{{ user.get_full_name }}" id="profilePreview">
                             {% else %}
-                                <div class="avatar-placeholder">
+                                <div class="avatar-placeholder" id="profilePreview">
                                     {{ user.first_name|first|default:user.username|first|upper }}
                                 </div>
                             {% endif %}
@@ -86,13 +86,57 @@
                     </div>
                     {% endif %}
 
-                    <form method="post" class="profile-edit-form">
+                    <form method="post" class="profile-edit-form" enctype="multipart/form-data">
                         {% csrf_token %}
                         
                         <!-- Hidden fields for user data -->
                         <input type="hidden" name="first_name" value="{{ user.first_name }}">
                         <input type="hidden" name="last_name" value="{{ user.last_name }}">
                         <input type="hidden" name="email" value="{{ user.email }}">
+                        
+                        <!-- Profile Picture Upload Section -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-camera"></i> Profile Picture
+                            </h5>
+                            
+                            <div class="text-center mb-4">
+                                <!-- Current Picture Display -->
+                                <div class="mb-3 position-relative d-inline-block">
+                                    {% if profile_pic_url %}
+                                        <img src="{{ profile_pic_url }}" alt="Current Profile Picture" 
+                                             id="currentProfilePic"
+                                             style="width: 150px; height: 150px; object-fit: cover; border-radius: 50%; border: 3px solid var(--blood-red);">
+                                    {% else %}
+                                        <div class="avatar-placeholder" 
+                                             style="width: 150px; height: 150px; font-size: 4rem; margin: 0 auto; border: 3px solid var(--blood-red);">
+                                            {{ user.first_name|first|default:user.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- File Upload -->
+                                <div class="mb-3">
+                                    <label for="id_profile_pic" class="btn btn-outline-primary">
+                                        <i class="fas fa-upload me-2"></i>Choose New Picture
+                                    </label>
+                                    <input type="file" name="profile_pic" id="id_profile_pic" class="d-none" accept="image/*">
+                                    
+                                    {% if profile_pic_url %}
+                                        <div class="form-check mt-3">
+                                            <input type="checkbox" class="form-check-input" id="remove_profile_pic" name="remove_profile_pic">
+                                            <label class="form-check-label text-danger" for="remove_profile_pic">
+                                                <i class="fas fa-trash-alt me-1"></i>Remove current picture
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>Accepted: JPG, PNG, GIF (Max 5MB)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
                         
                         <!-- Personal Information (Read-only) -->
                         <div class="form-section">
@@ -271,6 +315,89 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         );
     }
+
+    // Profile picture preview
+    const fileInput = document.getElementById('id_profile_pic');
+    const profilePreview = document.getElementById('profilePreview');
+    const removeCheckbox = document.getElementById('remove_profile_pic');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    this.value = '';
+                    return;
+                }
+                
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Only JPG, PNG, and GIF files are allowed');
+                    this.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (profilePreview.tagName === 'IMG') {
+                        profilePreview.src = e.target.result;
+                    } else {
+                        // Replace avatar placeholder with img
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = '{{ user.get_full_name }}';
+                        newImg.id = 'profilePreview';
+                        newImg.style.width = '100%';
+                        newImg.style.height = '100%';
+                        newImg.style.objectFit = 'cover';
+                        profilePreview.parentNode.replaceChild(newImg, profilePreview);
+                    }
+                }
+                reader.readAsDataURL(file);
+                
+                // Uncheck remove checkbox if user selects new image
+                if (removeCheckbox) {
+                    removeCheckbox.checked = false;
+                }
+            }
+        });
+    }
+
+    // Warn before leaving with unsaved changes
+    const form = document.querySelector('form');
+    let formChanged = false;
+    
+    form.addEventListener('input', function() {
+        formChanged = true;
+    });
+    
+    // Also track file input changes
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            formChanged = true;
+        });
+    }
+    
+    // Track checkbox changes
+    if (removeCheckbox) {
+        removeCheckbox.addEventListener('change', function() {
+            formChanged = true;
+        });
+    }
+    
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+    });
+    
+    form.addEventListener('submit', function() {
+        formChanged = false;
+    });
 });
 </script>
 {% endblock %}

@@ -1212,11 +1212,11 @@ def phlebotomist_profile_edit_view(request, pk):
     # Ensure only profile owner can edit
     if request.user != phlebotomist.user:
         messages.error(request, "You are not authorized to edit this profile.")
-        return redirect('phlebotomist-profile', pk=phlebotomist.pk)
+        return redirect('phlebotomist:phlebotomist-profile', pk=phlebotomist.pk)  # FIXED: Added namespace
     
     # Store original read-only values for integrity check
-    original_license_number = phlebotomist.license_number  # Changed from registration_number
-    original_donation_center = phlebotomist.center  # Changed from donation_center to center
+    original_license_number = phlebotomist.license_number
+    original_donation_center = phlebotomist.center
     
     if request.method == "POST":
         user_form = PhlebotomistUserForm(request.POST, instance=phlebotomist.user)
@@ -1238,13 +1238,13 @@ def phlebotomist_profile_edit_view(request, pk):
                     phlebotomist_instance = phlebotomist_form.save(commit=False)
                     
                     # SECURITY: Restore read-only fields to prevent tampering
-                    phlebotomist_instance.license_number = original_license_number  # Changed
-                    phlebotomist_instance.center = original_donation_center  # Changed
+                    phlebotomist_instance.license_number = original_license_number
+                    phlebotomist_instance.center = original_donation_center
                     
                     phlebotomist_instance.save()
                     
                     messages.success(request, "Profile updated successfully.")
-                    return redirect('phlebotomist-profile', pk=phlebotomist.pk)
+                    return redirect('phlebotomist:phlebotomist-profile', pk=phlebotomist.pk)  # FIXED: Added namespace
             except Exception as e:
                 messages.error(request, f"An error occurred while saving: {str(e)}")
         else:
@@ -1304,34 +1304,86 @@ def mark_phlebotomist_notification_read(request, pk):
 # ----------------------------------
 # Ajax Booked Time Slots
 # ------------------------------------
+
 @login_required(login_url='/phlebotomist/phlebotomistlogin/')
 def ajax_booked_timeslots(request):
+    """
+    Returns booked time slots for a specific phlebotomist on a given date.
+    Now includes better validation and returns times in both 12h and 24h formats.
+    """
     phlebotomist_id = request.GET.get('phlebotomist_id')
-    date_str = request.GET.get('date')  # Expected format 'dd-mm-YYYY'
-
+    date_str = request.GET.get('date')  # Expected format 'YYYY-MM-DD'
+    
+    logger.info(f"🔍 Checking booked times - Phlebotomist ID: {phlebotomist_id}, Date: {date_str}")
+    
     if not phlebotomist_id or not date_str:
-        return JsonResponse({'booked_times': []})
+        logger.warning("⚠️ Missing phlebotomist_id or date parameter")
+        return JsonResponse({
+            'booked_times': [],
+            'booked_times_24h': [],
+            'message': 'Missing parameters'
+        })
 
     try:
         phlebotomist = Phlebotomist.objects.filter(id=phlebotomist_id).first()
         if not phlebotomist:
-            return JsonResponse({'booked_times': []})
+            logger.warning(f"⚠️ Phlebotomist not found with ID: {phlebotomist_id}")
+            return JsonResponse({
+                'booked_times': [],
+                'booked_times_24h': [],
+                'message': 'Phlebotomist not found'
+            })
 
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        # Parse the date
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            logger.warning(f"⚠️ Invalid date format: {date_str}")
+            return JsonResponse({
+                'booked_times': [],
+                'booked_times_24h': [],
+                'message': 'Invalid date format'
+            })
 
+        # Get all appointments for this phlebotomist on this date
+        # Include all non-cancelled/non-rejected appointments
         appointments = Appointment.objects.filter(
             phlebotomist=phlebotomist,
             date__date=date_obj,
-            status__in=['pending', 'approved']
-        )
+        ).exclude(
+            status__in=['cancelled', 'rejected']
+        ).values_list('date', flat=True)
 
-        booked_times = [appt.date.strftime('%I:%M %p') for appt in appointments]
+        # Format booked times for display
+        booked_times = []
+        booked_times_24h = []
+        
+        for appt in appointments:
+            # Store both formats for flexibility
+            time_12h = appt.strftime('%I:%M %p')  # 12-hour format with AM/PM
+            time_24h = appt.strftime('%H:%M')     # 24-hour format
+            
+            booked_times.append(time_12h)
+            booked_times_24h.append(time_24h)
+            
+            logger.debug(f"📅 Booked time: {time_12h} ({time_24h})")
 
-        return JsonResponse({'booked_times': booked_times})
+        logger.info(f"✅ Found {len(booked_times)} booked times for phlebotomist {phlebotomist_id} on {date_obj}")
+        
+        return JsonResponse({
+            'booked_times': booked_times,
+            'booked_times_24h': booked_times_24h,
+            'message': 'Success',
+            'phlebotomist_name': phlebotomist.user.get_full_name() or phlebotomist.user.username
+        })
 
     except Exception as e:
-        print("Error in ajax_booked_timeslots:", e)
-        return JsonResponse({'booked_times': []})
+        logger.error(f"❌ Error in ajax_booked_timeslots: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'booked_times': [],
+            'booked_times_24h': [],
+            'message': f'Error: {str(e)}'
+        })
 
 @login_required
 @user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')

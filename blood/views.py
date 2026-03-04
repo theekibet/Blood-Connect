@@ -314,7 +314,7 @@ def about_us_view(request):
             'location': 'Nairobi, Kenya',
             'email': 'allankibet1820@gmail.com',
             'phone': '+254 781 024 762',
-            'quote': "I built BloodConnect to unite donors, phlebotomists, and hospitals in one life-saving network.",
+            'quote': "I built BloodConnect to unite donors, phlebotomists, and hospitals in one life-saving network — with a special dedication to my ever-crashing laptop that somehow survived the journey. ",
             'image_url': image_url,
             'use_static': use_static,
         },
@@ -574,8 +574,8 @@ def afterlogin_view(request):
         elif profile_type == 'phlebotomist':
             # Check if phlebotomist needs approval
             if hasattr(profile, 'is_approved') and not profile.is_approved:
-                return redirect('phlebotomist-pending-approval')
-            return redirect('phlebotomist-dashboard')
+                return redirect('phlebotomist:phlebotomist-pending-approval')
+            return redirect('phlebotomist:phlebotomist-dashboard')
         elif profile_type == 'hospital_staff':
             return redirect('hospital:dashboard')
         elif profile_type == 'lab_technologist':
@@ -1096,7 +1096,7 @@ def nearby_centers_view(request):
 
 @login_required
 def save_user_location(request):
-    """Save user location from browser geolocation"""
+    """Save user location from browser geolocation - ONLY saves precise location details, NOT county"""
     if request.method == 'POST':
         lat = request.POST.get('latitude')
         lon = request.POST.get('longitude')
@@ -1110,52 +1110,116 @@ def save_user_location(request):
         except ValueError:
             return JsonResponse({'status': 'error', 'message': 'Invalid latitude or longitude format'}, status=400)
 
-        location_name = None
+        # Default values
+        location_details = {
+            'precise_location': None,
+            'town': None,
+            'road': None,
+            'neighbourhood': None,
+            'display_name': None
+        }
 
-        # Reverse geocoding to get location name
+        # Reverse geocoding to get detailed location info
         try:
             url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}'
             response = requests.get(url, headers={'User-Agent': 'BloodConnect/1.0'})
             if response.status_code == 200:
                 data = response.json()
-                location_name = data.get('address', {}).get('city') or \
-                                data.get('address', {}).get('town') or \
-                                data.get('address', {}).get('village') or \
-                                data.get('display_name')
+                address = data.get('address', {})
+                
+                # Build a comprehensive location string
+                parts = []
+                
+                # Get road/street
+                if address.get('road'):
+                    parts.append(address['road'])
+                    location_details['road'] = address['road']
+                
+                # Get neighbourhood/suburb
+                if address.get('neighbourhood'):
+                    parts.append(address['neighbourhood'])
+                    location_details['neighbourhood'] = address['neighbourhood']
+                elif address.get('suburb'):
+                    parts.append(address['suburb'])
+                    location_details['neighbourhood'] = address['suburb']
+                
+                # Get town/city/village
+                town = (address.get('city') or 
+                       address.get('town') or 
+                       address.get('village'))
+                if town:
+                    parts.append(town)
+                    location_details['town'] = town
+                
+                # Create a user-friendly location string
+                location_details['precise_location'] = ', '.join(parts) if parts else None
+                location_details['display_name'] = data.get('display_name')
+                
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
-            location_name = None
 
         user = request.user
 
         if hasattr(user, 'donor'):
+            # Save coordinates
             user.donor.latitude = lat
             user.donor.longitude = lon
-            user.donor.location_name = location_name
+            
+            # Save location_name with precise details (BUT NOT COUNTY)
+            if location_details['precise_location']:
+                user.donor.location_name = location_details['precise_location']
+            elif location_details['display_name']:
+                # Truncate display_name if too long
+                user.donor.location_name = location_details['display_name'][:100]
+            else:
+                user.donor.location_name = f"Location at {lat:.4f}, {lon:.4f}"
+            
             user.donor.save()
-            messages.success(request, f"Location updated to {location_name or 'your area'}")
+            
+            # Prepare response with ALL location details for the frontend
+            response_data = {
+                'status': 'success',
+                'message': 'Precise location updated',
+                'location_name': user.donor.location_name,
+                'location_details': {
+                    'precise_location': location_details['precise_location'],
+                    'town': location_details['town'],
+                    'road': location_details['road'],
+                    'neighbourhood': location_details['neighbourhood'],
+                    'display_name': location_details['display_name']
+                }
+            }
+            
+            messages.success(request, f"Your precise location has been updated!")
+            return JsonResponse(response_data)
             
         elif hasattr(user, 'patient'):
+            # Similar for patient
             user.patient.latitude = lat
             user.patient.longitude = lon
-            user.patient.location_name = location_name
+            user.patient.location_name = location_details['precise_location'] or location_details['display_name']
             user.patient.save()
-            messages.success(request, f"Location updated to {location_name or 'your area'}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Precise location updated',
+                'location_name': user.patient.location_name
+            })
             
         elif hasattr(user, 'phlebotomist') and user.phlebotomist.center:
+            # For phlebotomists, store in session
             request.session['temp_latitude'] = lat
             request.session['temp_longitude'] = lon
-            request.session['temp_location_name'] = location_name
-            messages.success(request, f"Temporary location set to {location_name or 'your area'}")
+            request.session['temp_location_name'] = location_details['precise_location'] or location_details['display_name']
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Temporary location set',
+                'location_name': request.session['temp_location_name']
+            })
             
         else:
             return JsonResponse({'status': 'error', 'message': 'Unable to save location for this user type'}, status=400)
-
-        return JsonResponse({
-            'status': 'success', 
-            'message': 'Location updated', 
-            'location_name': location_name
-        })
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
@@ -1377,3 +1441,6 @@ def admin_post_notification(request):
         'phlebotomists': phlebotomists,
     }
     return render(request, 'blood/admin_post_notification.html', context)
+
+
+

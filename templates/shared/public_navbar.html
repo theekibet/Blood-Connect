@@ -15,12 +15,13 @@
         <!-- Navbar Links -->
         <div class="collapse navbar-collapse" id="publicNavbar">
             <ul class="navbar-nav ml-auto">
-                <!-- Report Bug (Coming Soon) -->
+                <!-- Report Bug -->
                 <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="alert('Bug reporting feature coming soon,Allan Kibe is aware of the numerous bugs for now!Stay put,Na uvae sweater'); return false;">
-                         <i class="fas fa-bug"></i> 
+                    <a class="nav-link" href="#" onclick="reportBug(); return false;" title="Report a Bug">
+                        <i class="fas fa-bug"></i>
                     </a>
                 </li>
+                
                 <!-- Home -->
                 <li class="nav-item">
                     <a class="nav-link" href="/">
@@ -42,41 +43,84 @@
                     </a>
                 </li>
                 
-                <!-- Login Dropdown -->
+                <!-- Login Dropdown - Organized by System -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="loginDropdown" role="button" 
                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-sign-in-alt"></i> Login
                     </a>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="loginDropdown">
-                        <h6 class="dropdown-header">Select Your Role</h6>
-                        
-                        <!-- Donor Login -->
-                        <a class="dropdown-item" href="{% url 'donor:donorlogin' %}">
-                            <i class="fas fa-hand-holding-heart text-success"></i> Donor Login
-                        </a>
-                        
-                        <!-- Phlebotomist Login (formerly Nurse Login) -->
-                        <a class="dropdown-item" href="{% url 'phlebotomist:phlebotomistlogin' %}">
-                            <i class="fas fa-user-nurse text-info"></i> Phlebotomist Login
-                        </a>
-                        
-                        <!-- Lab Tech Login -->
-                        <a class="dropdown-item" href="{% url 'lab_technologist:login' %}">
-                            <i class="fas fa-flask text-primary"></i> Lab Tech Login
-                        </a>
-                        
-                        <!-- Blood Bank Login -->
-                        <a class="dropdown-item" href="{% url 'blood_bank_technician:login' %}">
-                            <i class="fas fa-tint"></i> Blood Bank Login
-                        </a>
+                        <!-- DONORS SECTION -->
+                        <div class="dropdown-section donors">
+                            <h6 class="dropdown-header">
+                                <i class="fas fa-hand-holding-heart"></i> BLOOD DONORS
+                            </h6>
+                            <a class="dropdown-item" href="{% url 'donor:donorlogin' %}">
+                                <i class="fas fa-user text-success"></i> Donor Login
+                            </a>
+                            <div class="dropdown-subtext">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Self-registration available
+                                </small>
+                            </div>
+                        </div>
                         
                         <div class="dropdown-divider"></div>
                         
-                        <!-- Admin Login -->
-                        <a class="dropdown-item" href="{% url 'fake_admin_login' %}">
-                            <i class="fas fa-user-cog text-dark"></i> Admin Portal
-                        </a>
+                        <!-- DONATION CENTER STAFF SECTION -->
+                        <div class="dropdown-section donation-center">
+                            <h6 class="dropdown-header">
+                                <i class="fas fa-building"></i> BLOOD DONATION CENTER STAFF
+                            </h6>
+                            <a class="dropdown-item" href="{% url 'phlebotomist:phlebotomistlogin' %}">
+                                <i class="fas fa-user-nurse text-info"></i> Phlebotomist
+                            </a>
+                            <a class="dropdown-item" href="{% url 'blood_bank_technician:login' %}">
+                                <i class="fas fa-tint text-primary"></i> Blood Bank Technician
+                            </a>
+                            <a class="dropdown-item" href="{% url 'lab_technologist:login' %}">
+                                <i class="fas fa-flask text-warning"></i> Lab Technologist
+                            </a>
+                            <div class="dropdown-subtext">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Accounts created by center administrator
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="dropdown-divider"></div>
+                        
+                        <!-- HOSPITAL STAFF SECTION -->
+                        <div class="dropdown-section hospital">
+                            <h6 class="dropdown-header">
+                                <i class="fas fa-hospital"></i> HOSPITAL STAFF
+                            </h6>
+                            <a class="dropdown-item" href="{% url 'hospital:login' %}">
+                                <i class="fas fa-hospital-user text-success"></i> Hospital Staff
+                            </a>
+                            <div class="dropdown-subtext">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Register hospital first
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="dropdown-divider"></div>
+                        
+                        <!-- ADMIN SECTION -->
+                        <div class="dropdown-section admin">
+                            <h6 class="dropdown-header">
+                                <i class="fas fa-user-shield"></i> ADMINISTRATION
+                            </h6>
+                            <a class="dropdown-item" href="{% url 'fake_admin_login' %}">
+                                <i class="fas fa-cog text-dark"></i> Admin Portal
+                            </a>
+                            <div class="dropdown-subtext">
+                                <small class="text-muted">
+                                    <i class="fas fa-shield-alt"></i> Staff access only
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </li>
             </ul>
@@ -84,4 +128,18 @@
     </div>
 </nav>
 
-<!-- Add this CSS to your master base or here with style tag -->
+<script>
+function reportBug() {
+    alert('Bug reporting feature coming soon! Allan Kibe is aware of the numerous bugs for now! Stay put and dress warm, Ni baridi huku nje');
+    return false;
+}
+
+// Fix for Bootstrap dropdown on mobile
+$(document).ready(function() {
+    $('.dropdown-menu').on('click', function(e) {
+        if ($(window).width() <= 768) {
+            e.stopPropagation();
+        }
+    });
+});
+</script>

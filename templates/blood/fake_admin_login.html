@@ -4,65 +4,150 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Portal · BloodConnect</title>
+    
+    <!-- Load your main CSS directly -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    
+    <!-- Font Awesome (already in main.css but keeping for safety) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* Additional honeypot-specific styles that extend your theme */
+        body {
+            background: linear-gradient(135deg, var(--blood-red) 0%, var(--blood-red-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-sans);
+            margin: 0;
+            padding: var(--spacing-4);
+        }
+        
+        .login-card {
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .counter {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-3);
+            text-align: center;
+            margin-bottom: var(--spacing-4);
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+        
+        .counter i {
+            color: var(--blood-red);
+        }
+        
+        .alert {
+            padding: var(--spacing-3);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .alert-error {
+            background: rgba(196, 30, 58, 0.1);
+            border: 1px solid var(--blood-red);
+            color: var(--blood-red-dark);
+        }
+        
+        .footer {
+            margin-top: var(--spacing-6);
+            text-align: center;
+            font-size: var(--text-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .footer i {
+            margin-right: var(--spacing-1);
+        }
+    </style>
 </head>
 <body>
     <div class="login-card">
-        <div class="header">
-            <i class="fas fa-shield-alt"></i>
-            <h2>Admin Portal</h2>
-            <p>Authorized personnel only</p>
-        </div>
-        
-        <div class="body">
-            <div class="counter">
-                <i class="fas fa-exclamation-triangle"></i>
-                Failed attempts: <strong>{{ attempt_count|default:1337 }}</strong>
+        <!-- Use your auth-card component -->
+        <div class="auth-card">
+            <div class="card-header">
+                <i class="fas fa-shield-alt"></i>
+                <h4>Admin Portal</h4>
+                <p class="text-muted">Authorized personnel only</p>
             </div>
             
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}">
-                        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% else %}exclamation-triangle{% endif %}"></i>
-                        {{ message }}
+            <div class="card-body">
+                <!-- Fake counter to trick attackers -->
+                <div class="counter">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Failed attempts: <strong>{{ attempt_count|default:1337 }}</strong>
+                </div>
+                
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Honeypot Form -->
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-user me-2"></i>Username
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" name="username" class="form-control" 
+                                   placeholder="Enter username" required autocomplete="off">
+                        </div>
                     </div>
-                {% endfor %}
-            {% endif %}
-            
-            <form method="post">
-                {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-lock me-2"></i>Password
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" name="password" class="form-control" 
+                                   placeholder="Enter password" required autocomplete="off">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-lg btn-block">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        </button>
+                    </div>
+                </form>
                 
-                <div class="form-group">
-                    <label><i class="fas fa-user"></i> Username</label>
-                    <input type="text" name="username" placeholder="Enter username" required autocomplete="off">
+                <!-- Funny footer message -->
+                <div class="footer">
+                    <i class="fas fa-skull-crosswalk"></i>
+                    {% now "H" as hour %}
+                    {% with hour|add:"0" as hour_int %}
+                        {% if hour_int < 12 %}
+                            ☕ Morning session
+                        {% elif hour_int < 18 %}
+                            🎯 Keep trying...
+                        {% else %}
+                            😴 Night night, script kiddie
+                        {% endif %}
+                    {% endwith %}
                 </div>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-lock"></i> Password</label>
-                    <input type="password" name="password" placeholder="Enter password" required autocomplete="off">
-                </div>
-                
-                <button type="submit">
-                    <i class="fas fa-sign-in-alt"></i> Sign In
-                </button>
-            </form>
-            
-            <div class="footer">
-                <i class="fas fa-skull-crosswalk"></i>
-                {% now "H" as hour %}
-                {% with hour|add:"0" as hour_int %}
-                    {% if hour_int < 12 %}
-                        Morning session
-                    {% elif hour_int < 18 %}
-                        Afternoon session
-                    {% else %}
-                        Night session
-                    {% endif %}
-                {% endwith %}
             </div>
         </div>
     </div>
     
-    <!-- Font Awesome (minimal) -->
+    <!-- Font Awesome (already in main.css, but keeping for safety) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 </body>
 </html>

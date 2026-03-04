@@ -39,6 +39,15 @@
                 </a>
                 
                 <div class="navbar-items">
+                    <!-- Report Bug - Added for authenticated users -->
+                    <div class="nav-item">
+                        <a class="nav-link" href="#" onclick="reportBug(); return false;" title="Report a Bug">
+                            <div class="nav-icon">
+                                <i class="fas fa-bug"></i>
+                            </div>
+                        </a>
+                    </div>
+
                     <!-- Role-Specific Navbar Icons from Context Processor -->
                     {% for icon in navbar_icons %}
                         <div class="nav-item">
@@ -76,7 +85,7 @@
 
                     <!-- Profile Dropdown - Using Context Processor -->
                     <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <div class="profile-dropdown">
                                 <!-- Profile Picture Container -->
                                 <div class="profile-image-container" id="profileImageContainer">
@@ -124,6 +133,12 @@
                                 </a>
                             {% endif %}
                             
+                            <!-- Report Bug in Dropdown (optional) -->
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" onclick="reportBug(); return false;">
+                                <i class="fas fa-bug text-warning"></i> Report a Bug
+                            </a>
+                            
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-danger" href="{% url 'logout' %}">
                                 <i class="fas fa-sign-out-alt"></i> Logout
@@ -164,7 +179,7 @@
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                         <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                         {{ message }}
-                        <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             </div>
@@ -306,7 +321,7 @@
                             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                                 <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                                 {{ message }}
-                                <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -401,32 +416,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Report bug function
+function reportBug() {
+    alert('Bug reporting feature coming soon! Allan Kibe is aware of the numerous bugs for now! Stay put, Na uvae sweater.');
+    return false;
+}
 </script>
 
 <script>
     // Global function to handle profile image errors
-    function handleProfileImageError(img) {
+    window.handleProfileImageError = function(img) {
+        console.log('Profile image failed to load:', img.src);
         const container = img.parentElement;
         const initial = img.getAttribute('data-initial') || 'U';
         
         // Hide the broken image
         img.style.display = 'none';
         
-        // Create or show avatar placeholder
-        let placeholder = container.querySelector('.avatar-placeholder');
-        if (!placeholder) {
-            placeholder = document.createElement('div');
-            placeholder.className = 'avatar-placeholder';
-            container.appendChild(placeholder);
+        // Remove any existing placeholder
+        const existingPlaceholder = container.querySelector('.avatar-placeholder');
+        if (existingPlaceholder) {
+            existingPlaceholder.remove();
         }
+        
+        // Create new placeholder
+        const placeholder = document.createElement('div');
+        placeholder.className = 'avatar-placeholder';
         placeholder.textContent = initial;
         placeholder.style.display = 'flex';
-    }
+        placeholder.style.width = '40px';
+        placeholder.style.height = '40px';
+        placeholder.style.borderRadius = '50%';
+        placeholder.style.background = 'linear-gradient(135deg, var(--blood-red), var(--blood-red-dark))';
+        placeholder.style.color = 'white';
+        placeholder.style.alignItems = 'center';
+        placeholder.style.justifyContent = 'center';
+        placeholder.style.fontWeight = 'bold';
+        placeholder.style.fontSize = '1.2rem';
+        container.appendChild(placeholder);
+    };
 
     // Toggle sidebar on mobile
     function toggleSidebar() {
         document.querySelector('.sidebar').classList.toggle('active');
-        document.querySelector('.mobile-menu-overlay').classList.toggle('active');
+        const overlay = document.querySelector('.mobile-menu-overlay');
+        if (overlay) overlay.classList.toggle('active');
         document.body.classList.toggle('sidebar-open');
     }
     
@@ -459,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
         profileImages.forEach(img => {
             // If image is already broken, trigger the handler
             if (img.complete && img.naturalHeight === 0) {
-                handleProfileImageError(img);
+                window.handleProfileImageError(img);
             }
         });
     });

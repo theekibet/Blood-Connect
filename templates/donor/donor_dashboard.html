@@ -134,34 +134,44 @@
   </div>
   {% endif %}
 
-  <!-- Location Card -->
+  <!-- Current Location Card - Shows PRECISE location details only (NO COORDINATES, NO COUNTY) -->
   {% if donor %}
-  <div class="card mb-4" id="locationDisplay">
+  <div class="card mb-4" id="locationCard">
     <div class="card-body">
-      <div class="d-flex align-items-center flex-wrap gap-3">
-        <div class="location-info d-flex align-items-center gap-2">
-          <i class="fas fa-map-marker-alt text-primary"></i>
-          <span class="fw-medium">Your Location:</span>
-          <span>
-            {% if donor.county %}
-              {{ donor.county }}
-            {% else %}
-              <span class="text-muted">County not set</span>
-            {% endif %}
-          </span>
-          
-          {% if donor.location_name %}
-            <span class="text-muted mx-1">|</span>
-            <i class="fas fa-home text-primary"></i>
-            <span id="locationName">{{ donor.location_name }}</span>
-          {% endif %}
+      <div class="d-flex align-items-start gap-3">
+        <!-- Location Icon -->
+        <div class="bg-primary bg-opacity-10 rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+          <i class="fas fa-map-pin fa-lg text-primary"></i>
         </div>
         
-        <button id="updateLocationBtn" class="btn btn-outline-primary btn-sm ms-auto" type="button">
-          <i class="fas fa-sync-alt me-1"></i> Update Location
-        </button>
+        <!-- Location Details -->
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+              <h6 class="mb-2">Your Current Location</h6>
+              
+              <!-- Precise Location Display - ONLY location name, NO coordinates -->
+              {% if donor.location_name %}
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fas fa-location-dot text-success"></i>
+                  <span class="fw-medium">{{ donor.location_name }}</span>
+                </div>
+              {% else %}
+                <span class="text-muted fst-italic">
+                  <i class="fas fa-info-circle me-1"></i>
+                  No location detected yet. Click "Update Current Location" to set your precise location.
+                </span>
+              {% endif %}
+            </div>
+            
+            <!-- Update Location Button - Distinct style -->
+            <button id="updateLocationBtn" class="btn location-update-btn" type="button">
+              <i class="fas fa-sync-alt me-1"></i> Update Current Location
+            </button>
+          </div>
+        </div>
         
-        <!-- Hidden coordinates -->
+        <!-- Hidden coordinates storage (still needed for the backend) -->
         {% if donor.latitude %}
           <span id="latText" class="d-none">{{ donor.latitude }}</span>
         {% endif %}
@@ -222,7 +232,7 @@
             <div class="flex-grow-1 ms-3">
               <div class="card-count">{{ total_safe_donations }}</div>
               <div class="card-label">Safe Donations</div>
-              <div class="card-description small text-muted">Lives impacted: {{ total_safe_donations|add:"0" }}</div>
+              <div class="card-description small text-muted">{{ total_safe_donations|pluralize:"Life,Lives" }} Impacted: {{ total_safe_donations }}</div>
             </div>
           </div>
         </div>
@@ -241,7 +251,7 @@
             <div class="flex-grow-1 ms-3">
               <div class="card-count">{{ points }}</div>
               <div class="card-label">Points Earned</div>
-              <div class="card-description small text-muted">{{ hero_level }}</div>
+              <div class="card-description small text-muted">{{ hero_level }} Level</div>
             </div>
           </div>
         </div>
@@ -279,13 +289,13 @@
           <div class="d-flex align-items-center">
             <div class="flex-shrink-0">
               <div class="dashboard-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3">
-                <i class="fas fa-calendar-check fa-2x text-info"></i>
+                <i class="fas fa-flask fa-2x text-info"></i>
               </div>
             </div>
             <div class="flex-grow-1 ms-3">
               <div class="card-count">{{ pending_tests }}</div>
-              <div class="card-label">Pending Tests</div>
-              <div class="card-description small text-muted">Awaiting lab results</div>
+              <div class="card-label">Lab Tests</div>
+              <div class="card-description small text-muted">{{ pending_tests|pluralize:"Sample,Samples" }} awaiting results</div>
             </div>
           </div>
         </div>
@@ -308,10 +318,7 @@
           
           {% if points > 0 %}
             <div class="display-4 text-success fw-bold mb-2">{{ points }}</div>
-            <p class="mb-1">From <strong>{{ total_safe_donations }}</strong> safe donation{{ total_safe_donations|pluralize }}</p>
-            <small class="text-muted">
-              <i class="fas fa-info-circle me-1"></i>Keep donating to earn more rewards!
-            </small>
+            <p class="mb-1">Earned from <strong>{{ total_safe_donations }}</strong> safe donation{{ total_safe_donations|pluralize }}</p>
           {% else %}
             <div class="display-4 text-muted fw-bold mb-2">0</div>
             <p class="mb-1">
@@ -321,15 +328,17 @@
                 <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>No points yet</span>
               {% endif %}
             </p>
-            <small class="text-muted">
-              <i class="fas fa-lightbulb me-1"></i>
-              {% if is_unsafe_donor %}
-                Please contact the blood bank for guidance.
-              {% else %}
-                Donate your first unit to start earning!
-              {% endif %}
-            </small>
           {% endif %}
+          <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            {% if is_unsafe_donor %}
+              Please contact the blood bank for guidance.
+            {% elif points == 0 %}
+              Donate your first unit to start earning!
+            {% else %}
+              Keep donating to earn more rewards!
+            {% endif %}
+          </small>
         </div>
       </div>
     </div>
@@ -367,17 +376,15 @@
             <p class="text-muted mb-2">You can donate again on:</p>
             <div class="display-6 text-primary fw-bold mb-3">{{ next_donation_date }}</div>
             
-            {% if days_until_next == 0 %}
-              <div class="alert alert-success py-2 mb-3">
+            <div class="alert {% if days_until_next == 0 %}alert-success{% else %}alert-info{% endif %} py-2 mb-3" id="countdown">
+              {% if days_until_next == 0 %}
                 <i class="fas fa-check-circle me-2"></i>
                 <strong>You're eligible now!</strong>
-              </div>
-            {% else %}
-              <div class="alert alert-info py-2 mb-3" id="countdown">
+              {% else %}
                 <i class="fas fa-hourglass-half me-2"></i>
                 <strong>{{ days_until_next }} days</strong> remaining
-              </div>
-            {% endif %}
+              {% endif %}
+            </div>
 
           {% else %}
             <p class="text-muted mb-3">No previous donations recorded</p>
@@ -559,8 +566,8 @@
   </div>
   {% endif %}
 
-  <!-- Last Donation Alert -->
-  {% if last_donation_date %}
+  <!-- Last Donation Alert (Condensed) -->
+  {% if last_donation_date and not recent_donations %}
   <div class="alert alert-info d-flex align-items-center" role="alert">
     <i class="fas fa-info-circle fs-4 me-3"></i>
     <div>
@@ -573,6 +580,37 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+  /* Distinct style for location update button */
+  .location-update-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  .location-update-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    color: white;
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4292 100%);
+  }
+  
+  .location-update-btn:disabled {
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .location-update-btn i {
+    font-size: 0.9rem;
+  }
+</style>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   // ========================================
@@ -637,7 +675,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // ========================================
-  // UPDATE LOCATION BUTTON
+  // UPDATE CURRENT LOCATION BUTTON
   // ========================================
   const updateBtn = document.getElementById('updateLocationBtn');
   if (updateBtn) {
@@ -648,13 +686,14 @@ document.addEventListener("DOMContentLoaded", function() {
       }
 
       updateBtn.disabled = true;
-      updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Updating...';
+      updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Detecting...';
 
       navigator.geolocation.getCurrentPosition(
         function(position) {
           const lat = position.coords.latitude.toFixed(6);
           const lon = position.coords.longitude.toFixed(6);
           
+          // Update hidden coordinates
           let latText = document.getElementById('latText');
           let lonText = document.getElementById('lonText');
           
@@ -662,13 +701,13 @@ document.addEventListener("DOMContentLoaded", function() {
             latText = document.createElement('span');
             latText.id = 'latText';
             latText.className = 'd-none';
-            document.getElementById('locationDisplay')?.appendChild(latText);
+            document.getElementById('locationCard')?.appendChild(latText);
           }
           if (!lonText) {
             lonText = document.createElement('span');
             lonText.id = 'lonText';
             lonText.className = 'd-none';
-            document.getElementById('locationDisplay')?.appendChild(lonText);
+            document.getElementById('locationCard')?.appendChild(lonText);
           }
           
           latText.textContent = lat;
@@ -688,40 +727,47 @@ document.addEventListener("DOMContentLoaded", function() {
           .then(response => response.json())
           .then(data => {
             if (data.status === 'success') {
-              let locationNameSpan = document.getElementById('locationName');
+              // Update the location display with precise details (NO COORDINATES)
+              const locationContainer = document.querySelector('#locationCard .flex-grow-1');
               
-              if (data.location_name) {
-                if (!locationNameSpan) {
-                  const locationDisplay = document.getElementById('locationDisplay');
+              if (locationContainer) {
+                // Find or create the location display element
+                let locationDisplay = locationContainer.querySelector('.d-flex.align-items-center.gap-2');
+                
+                if (data.location_name) {
                   if (locationDisplay) {
-                    const separator = document.createElement('span');
-                    separator.className = 'text-muted mx-1';
-                    separator.textContent = '|';
-                    
-                    const icon = document.createElement('i');
-                    icon.className = 'fas fa-map-marker-alt text-primary me-1';
-                    
-                    const span = document.createElement('span');
-                    span.id = 'locationName';
-                    span.textContent = data.location_name;
-                    
-                    locationDisplay.appendChild(separator);
-                    locationDisplay.appendChild(icon);
-                    locationDisplay.appendChild(span);
+                    // Update existing display
+                    const locationSpan = locationDisplay.querySelector('.fw-medium');
+                    if (locationSpan) {
+                      locationSpan.textContent = data.location_name;
+                    }
+                  } else {
+                    // Create new display (for when there was no location before)
+                    const locationDiv = locationContainer.querySelector('div:first-child div:first-child');
+                    if (locationDiv) {
+                      // Remove "no location" message if it exists
+                      const noLocationMsg = locationDiv.querySelector('.fst-italic');
+                      if (noLocationMsg) {
+                        noLocationMsg.remove();
+                      }
+                      
+                      // Add new location display
+                      const newDisplay = document.createElement('div');
+                      newDisplay.className = 'd-flex align-items-center gap-2';
+                      newDisplay.innerHTML = `
+                        <i class="fas fa-location-dot text-success"></i>
+                        <span class="fw-medium">${data.location_name}</span>
+                      `;
+                      locationDiv.appendChild(newDisplay);
+                    }
                   }
-                } else {
-                  locationNameSpan.textContent = data.location_name;
                 }
               }
               
               updateBtn.innerHTML = '<i class="fas fa-check me-1"></i> Updated!';
-              updateBtn.classList.remove('btn-outline-primary');
-              updateBtn.classList.add('btn-success');
               
               setTimeout(() => {
-                updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
-                updateBtn.classList.remove('btn-success');
-                updateBtn.classList.add('btn-outline-primary');
+                updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
                 updateBtn.disabled = false;
               }, 3000);
             } else {
@@ -730,14 +776,14 @@ document.addEventListener("DOMContentLoaded", function() {
           })
           .catch(error => {
             console.error('Error:', error);
-            alert(error.message || 'Failed to update location. Please try again.');
+            alert('Failed to detect precise location. Please try again.');
             
-            updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
+            updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
             updateBtn.disabled = false;
           });
         },
         function(error) {
-          let errorMessage = 'Error getting location: ';
+          let errorMessage = 'Error detecting location: ';
           switch(error.code) {
             case error.PERMISSION_DENIED:
               errorMessage += 'Please allow location access.';
@@ -751,7 +797,7 @@ document.addEventListener("DOMContentLoaded", function() {
           }
           
           alert(errorMessage);
-          updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Location';
+          updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
           updateBtn.disabled = false;
         }
       );

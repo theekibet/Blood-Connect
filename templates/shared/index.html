@@ -15,59 +15,15 @@
 <section class="hero-section">
     <div class="hero-container">
         <div class="hero-content">
-            <h1 class="fade-in">Every Drop Counts.<br>Save Lives Today.</h1>
-            <p class="fade-in delay-1">Join our community of life-savers. Connect with blood donors, request blood, and make a difference in someone's life.</p>
+            <h1 class="fade-in">Every Drop Counts.<br>Every Role Matters.</h1>
+            <p class="fade-in delay-1">Join our community of life-savers. Whether you donate blood, volunteer your time, or support in other ways, you have a place here.</p>
             <div class="hero-buttons fade-in delay-2">
                 <a href="{% url 'hospital:register' %}" class="btn btn-primary">Register Hospital</a>
                 <a href="{% url 'donor:donorsignup' %}" class="btn btn-secondary">
                     Become a Donor <i class="fas fa-heart"></i>
                 </a>
                 
-                <!-- Enhanced Login Dropdown -->
-                <div class="login-dropdown">
-                    <button class="btn btn-outline-light">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </button>
-                    <div class="login-dropdown-content">
-                        <div class="login-category">
-                            <h4><i class="fas fa-hand-holding-heart"></i> Donor Login</h4>
-                            <a href="{% url 'donor:donorlogin' %}">
-                                <i class="fas fa-user"></i> Donor Login
-                            </a>
-                        </div>
-                        
-                        <div class="login-category">
-                            <h4><i class="fas fa-user-nurse"></i> Phlebotomist Login</h4>
-                            <a href="{% url 'phlebotomist:phlebotomistlogin' %}">
-                                <i class="fas fa-user-nurse"></i> Phlebotomist Login
-                            </a>
-                        </div>
-                        
-                        <div class="login-category">
-                            <h4><i class="fas fa-flask"></i> Lab & Blood Bank</h4>
-                            <a href="{% url 'blood_bank_technician:login' %}">
-                                <i class="fas fa-flask"></i> Blood Bank Technician
-                            </a>
-                            <a href="{% url 'lab_technologist:login' %}">
-                                <i class="fas fa-microscope"></i> Lab Technologist
-                            </a>
-                        </div>
-                        
-                        <div class="login-category">
-                            <h4><i class="fas fa-hospital"></i> Hospital</h4>
-                            <a href="{% url 'hospital:login' %}">
-                                <i class="fas fa-hospital"></i> Hospital Login
-                            </a>
-                        </div>
-                        
-                        <div class="login-category">
-                            <h4><i class="fas fa-user-shield"></i> Administration</h4>
-                            <a href="{% url 'fake_admin_login' %}" class="btn btn-outline-danger btn-sm">
-                                <i class="fas fa-skull-crossbones"></i> Admin Portal
-                            </a>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
         <div class="hero-image fade-in delay-3">
@@ -264,11 +220,12 @@
     </div>
 </section>
 
+
 <!-- CTA Section -->
 <section class="cta-section">
     <div class="cta-container">
         <h2 class="fade-in">Ready to Make a Difference?</h2>
-        <p class="fade-in delay-1">Join thousands of donors and patients who trust BloodConnect</p>
+        <p class="fade-in delay-1">Join our network of donors, hospitals, and healthcare partners saving lives across Kenya</p>
         <div class="fade-in delay-2">
             <a href="{% url 'contact' %}" class="btn btn-secondary btn-lg">Contact Us</a>
         </div>

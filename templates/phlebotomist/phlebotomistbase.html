@@ -32,7 +32,7 @@
     <!-- Notification Count Badge (if needed) -->
     {% if unread_count > 0 %}
     <li class="nav-item">
-        <a class="nav-link position-relative" href="{% url 'phlebotomist:phlebotomist-notifications' %}" title="Notifications">
+        <a class="nav-link" href="{% url 'phlebotomist:phlebotomist-notifications' %}" title="Notifications">
             <div class="nav-icon">
                 <i class="fas fa-bell"></i>
                 <span class="notification-badge">{{ unread_count }}</span>
@@ -55,7 +55,7 @@
     <!-- Main Dashboard -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
-        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="sidebar-menu-item {% if 'dashboard' in request.path %}active{% endif %}">
+        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-dashboard' %}active{% endif %}">
             <i class="fas fa-tachometer-alt"></i>
             <span>Dashboard</span>
         </a>
@@ -64,7 +64,7 @@
     <!-- Appointments -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">APPOINTMENTS</div>
-        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="sidebar-menu-item {% if 'bookings' in request.path %}active{% endif %}">
+        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-donation-bookings' %}active{% endif %}">
             <i class="fas fa-calendar-check"></i>
             <span>Donation Bookings</span>
             {% if pending_bookings_count > 0 %}
@@ -92,11 +92,11 @@
     <!-- Profile Management -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">PROFILE</div>
-        <a href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}" class="sidebar-menu-item {% if 'profile' in request.path and not 'edit' in request.path %}active{% endif %}">
+        <a href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-profile' %}active{% endif %}">
             <i class="fas fa-user-circle"></i>
             <span>View Profile</span>
         </a>
-        <a href="{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}" class="sidebar-menu-item {% if 'edit' in request.path %}active{% endif %}">
+        <a href="{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-profile-edit' %}active{% endif %}">
             <i class="fas fa-edit"></i>
             <span>Edit Profile</span>
         </a>
@@ -105,7 +105,7 @@
     <!-- Notifications -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">NOTIFICATIONS</div>
-        <a href="{% url 'phlebotomist:phlebotomist-notifications' %}" class="sidebar-menu-item {% if 'notifications' in request.path %}active{% endif %}">
+        <a href="{% url 'phlebotomist:phlebotomist-notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-notifications' %}active{% endif %}">
             <i class="fas fa-bell"></i>
             <span>Notifications</span>
             {% if unread_count > 0 %}
@@ -142,7 +142,6 @@
         if (chatbotButton && chatbotContainer) {
             // Add phlebotomist-specific context to chatbot when opened
             chatbotButton.addEventListener('click', function() {
-                // You can add custom initialization here if needed
                 console.log('Phlebotomist opened chatbot');
             });
         }
@@ -180,211 +179,6 @@
         // Uncomment to enable real-time updates every 30 seconds
         // setInterval(updatePendingCounts, 30000);
     });
-
-    // ========================================
-    // CHATBOT FUNCTIONALITY (if not in base template)
-    // ========================================
-    // This is a fallback in case the base template doesn't have chatbot JS
-    function initializeChatbot() {
-        const chatbotToggle = document.getElementById('chatbotToggle');
-        const chatbotContainer = document.getElementById('chatbotContainer');
-        const chatbotClose = document.getElementById('chatbotClose');
-        const chatbotInput = document.getElementById('chatbotInput');
-        const chatbotSend = document.getElementById('chatbotSend');
-        const chatbotMessages = document.getElementById('chatbotMessages');
-
-        if (!chatbotToggle || !chatbotContainer) return;
-
-        // Generate session ID
-        let sessionId = sessionStorage.getItem('chatbot_session_id');
-        if (!sessionId) {
-            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            sessionStorage.setItem('chatbot_session_id', sessionId);
-        }
-
-        // Toggle chatbot
-        chatbotToggle.addEventListener('click', function() {
-            chatbotContainer.classList.toggle('active');
-            chatbotToggle.classList.toggle('active');
-            if (chatbotContainer.classList.contains('active')) {
-                chatbotInput.focus();
-                if (window.innerWidth <= 768) {
-                    document.body.style.overflow = 'hidden';
-                }
-            } else {
-                document.body.style.overflow = '';
-            }
-        });
-
-        chatbotClose.addEventListener('click', function() {
-            chatbotContainer.classList.remove('active');
-            chatbotToggle.classList.remove('active');
-            document.body.style.overflow = '';
-        });
-
-        // Quick action buttons
-        document.querySelectorAll('.quick-action-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const message = this.getAttribute('data-message');
-                sendMessage(message);
-            });
-        });
-
-        // Send message on button click
-        chatbotSend.addEventListener('click', function() {
-            const message = chatbotInput.value.trim();
-            if (message) {
-                sendMessage(message);
-            }
-        });
-
-        // Send message on Enter key
-        chatbotInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const message = chatbotInput.value.trim();
-                if (message) {
-                    sendMessage(message);
-                }
-            }
-        });
-
-        // Function to send message
-        function sendMessage(message) {
-            // Clear input
-            chatbotInput.value = '';
-            
-            // Add user message to chat
-            addMessage(message, 'user');
-            
-            // Show typing indicator
-            showTypingIndicator();
-            
-            // Disable input while processing
-            chatbotInput.disabled = true;
-            chatbotSend.disabled = true;
-            
-            // Get CSRF token
-            const csrftoken = getCookie('csrftoken');
-            
-            // Send to backend
-            fetch('/chatbot/api/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    message: message,
-                    session_id: sessionId,
-                    role: 'phlebotomist'  // Add role for context-aware responses
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                hideTypingIndicator();
-                
-                if (data.reply) {
-                    addMessage(data.reply, 'bot');
-                } else {
-                    addMessage('Sorry, I received an unexpected response.', 'bot');
-                }
-                
-                chatbotInput.disabled = false;
-                chatbotSend.disabled = false;
-                chatbotInput.focus();
-            })
-            .catch(error => {
-                console.error('Fetch Error:', error);
-                hideTypingIndicator();
-                
-                let errorMsg = 'Sorry, I\'m having trouble connecting. Please try again.';
-                addMessage(errorMsg, 'bot');
-                chatbotInput.disabled = false;
-                chatbotSend.disabled = false;
-            });
-        }
-
-        // Function to add message to chat
-        function addMessage(text, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chatbot-message ${type}`;
-            
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            
-            const avatar = type === 'bot' 
-                ? '<div class="message-avatar bot"><i class="fas fa-robot"></i></div>'
-                : '<div class="message-avatar user"><i class="fas fa-user"></i></div>';
-            
-            messageDiv.innerHTML = `
-                ${avatar}
-                <div class="message-content">
-                    <div class="message-bubble">${formatMessage(text)}</div>
-                    <div class="message-time">${timeString}</div>
-                </div>
-            `;
-            
-            chatbotMessages.appendChild(messageDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        // Format message
-        function formatMessage(text) {
-            return text.replace(/\n/g, '<br>');
-        }
-
-        // Show typing indicator
-        function showTypingIndicator() {
-            const indicator = document.createElement('div');
-            indicator.className = 'chatbot-typing active';
-            indicator.id = 'typingIndicator';
-            indicator.innerHTML = `
-                <div class="message-avatar bot"><i class="fas fa-robot"></i></div>
-                <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            `;
-            chatbotMessages.appendChild(indicator);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        // Hide typing indicator
-        function hideTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
-        }
-
-        // Get CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    }
-
-    // Initialize chatbot if elements exist and not already initialized
-    if (document.getElementById('chatbotToggle') && !window.chatbotInitialized) {
-        window.chatbotInitialized = true;
-        initializeChatbot();
-    }
 </script>
 {% endblock %}
 

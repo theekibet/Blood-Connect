@@ -1,19 +1,17 @@
-<!-- templates/shared/greeting_card.html -->
+<!-- templates/shared/greetings_card.html -->
 <div class="greeting-card {% if greeting_data.user_type %}{{ greeting_data.user_type }}{% endif %} {% if greeting_data.is_hero %}is-hero{% endif %}">
     <div class="greeting-content">
         <div class="greeting-avatar">
             {% if greeting_data.profile_pic %}
-                <img src="{{ greeting_data.profile_pic.url }}" alt="{{ greeting_data.user_type|title }} Avatar" class="user-avatar">
+                <img src="{{ greeting_data.profile_pic.url }}" alt="{{ greeting_data.user_type|title }} Avatar" class="profile-image">
             {% else %}
                 <div class="avatar-placeholder">
-                    <i class="fas fa-user-circle"></i>
+                    {% if greeting_data.user_initial %}
+                        {{ greeting_data.user_initial }}
+                    {% else %}
+                        <i class="fas fa-user-circle"></i>
+                    {% endif %}
                 </div>
-            {% endif %}
-            
-            {% if greeting_data.icon %}
-            <div class="greeting-icon">
-                {{ greeting_data.icon|safe }}
-            </div>
             {% endif %}
         </div>
         
@@ -21,49 +19,174 @@
             <h1>{{ greeting_data.greeting }}</h1>
             
             {% if greeting_data.context_message %}
-            <p class="greeting-subtitle">
-                {{ greeting_data.context_message }}
-            </p>
+                <p class="greeting-subtitle">{{ greeting_data.context_message }}</p>
             {% endif %}
             
-            {% if greeting_data.next_appointment_msg %}
-            <div class="appointment-reminder">
-                <i class="fas fa-clock"></i>
-                {{ greeting_data.next_appointment_msg }}
-            </div>
-            {% endif %}
-            
-            {% if greeting_data.health_tip %}
-            <div class="health-tip">
-                <i class="fas fa-heartbeat"></i>
-                {{ greeting_data.health_tip }}
-            </div>
-            {% endif %}
-            
-            {% if greeting_data.is_hero %}
-            <div class="hero-badge">
-                <i class="fas fa-award"></i>
-                Lifesaver Hero
-            </div>
-            {% endif %}
-            
-            <!-- User metadata -->
+            <!-- Meta Items as Badges -->
             {% if greeting_data.meta_items %}
-            <div class="greeting-meta">
-                {% for item in greeting_data.meta_items %}
-                <div class="meta-item">
-                    <i class="{{ item.icon }}"></i>
-                    <span>{{ item.text }}</span>
+                <div class="greeting-meta">
+                    {% for item in greeting_data.meta_items %}
+                        <span class="badge badge-outline-primary me-2 mb-2">
+                            <i class="{{ item.icon }} me-1"></i>
+                            {{ item.text }}
+                        </span>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
+            {% endif %}
+            
+            <!-- Next Appointment -->
+            {% if greeting_data.next_appointment_msg %}
+                <div class="alert alert-info mt-3 py-2">
+                    <i class="fas fa-clock me-2"></i>
+                    {{ greeting_data.next_appointment_msg }}
+                </div>
+            {% endif %}
+            
+            <!-- Health Tip -->
+            {% if greeting_data.health_tip %}
+                <div class="alert alert-success mt-3 py-2">
+                    <i class="fas fa-heartbeat me-2"></i>
+                    {{ greeting_data.health_tip }}
+                </div>
+            {% endif %}
+            
+            <!-- Hero Badge -->
+            {% if greeting_data.is_hero %}
+                <span class="badge bg-warning text-dark mt-2">
+                    <i class="fas fa-award me-1"></i>
+                    Lifesaver Hero
+                </span>
             {% endif %}
         </div>
         
         <div class="current-date">
-            <i class="fas fa-calendar-day"></i>
+            <i class="fas fa-calendar-day me-1"></i>
             <span>{{ current_date|date:"F d, Y" }}</span>
         </div>
     </div>
 </div>
 
+<style>
+/* Additional styles specific to greeting card if not in main CSS */
+.greeting-card {
+    background: linear-gradient(135deg, var(--blood-red), var(--blood-red-dark));
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-6);
+    margin-bottom: var(--spacing-6);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.greeting-card::before {
+    content: '🩸';
+    position: absolute;
+    right: -20px;
+    bottom: -20px;
+    font-size: 10rem;
+    opacity: 0.1;
+    transform: rotate(-15deg);
+}
+
+.greeting-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-6);
+    position: relative;
+    z-index: 2;
+    flex-wrap: wrap;
+}
+
+.greeting-avatar {
+    flex-shrink: 0;
+}
+
+.greeting-avatar .profile-image,
+.greeting-avatar .avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: var(--shadow-lg);
+}
+
+.greeting-avatar .avatar-placeholder {
+    background: linear-gradient(135deg, var(--blood-red-dark), var(--blood-red));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.greeting-avatar .avatar-placeholder i {
+    font-size: 3rem;
+}
+
+.greeting-text {
+    flex: 1;
+}
+
+.greeting-text h1 {
+    color: white;
+    margin-bottom: var(--spacing-2);
+    font-size: var(--text-2xl);
+}
+
+.greeting-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: var(--spacing-3);
+    font-size: var(--text-lg);
+}
+
+.greeting-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-3);
+}
+
+.greeting-meta .badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--text-sm);
+}
+
+.greeting-meta .badge i {
+    margin-right: var(--spacing-1);
+}
+
+.current-date {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .greeting-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-4);
+    }
+    
+    .current-date {
+        align-self: flex-start;
+    }
+    
+    .greeting-avatar .profile-image,
+    .greeting-avatar .avatar-placeholder {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+}
+</style>
