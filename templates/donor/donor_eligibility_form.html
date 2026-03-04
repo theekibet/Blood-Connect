@@ -4,6 +4,175 @@
 
 {% block title %}Donor Eligibility - BloodConnect{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Radio Button Styling Fix */
+    .form-check {
+        padding-left: 0 !important;
+    }
+    
+    .form-check-input {
+        position: relative !important;
+        margin-left: 0 !important;
+        margin-right: 0.5rem !important;
+        float: none !important;
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+        margin-bottom: 0;
+    }
+    
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    /* Radio buttons container */
+    .radio-group {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .radio-group .form-check {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+    
+    /* Form Section Styling */
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section-title {
+        color: #495057;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .form-section-title i {
+        color: #0d6efd;
+        margin-right: 0.5rem;
+    }
+    
+    /* Form Label Styling */
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-label i {
+        color: #6c757d;
+    }
+    
+    /* Form Actions */
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        padding-top: 1.5rem;
+        border-top: 2px solid #dee2e6;
+    }
+    
+    /* Card Styling */
+    .card {
+        border: none;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.25rem;
+        border-bottom: none;
+    }
+    
+    .card-header h5 {
+        margin: 0;
+        display: inline;
+    }
+    
+    /* Travel Details Conditional Section */
+    #travelDetails {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Female Section Conditional */
+    #femaleSection {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    #femaleSection .form-section-title {
+        color: #721c24;
+        border-bottom-color: #f5c6cb;
+    }
+    
+    /* Support Options Card */
+    .card.border-success .card-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    
+    /* Invalid Feedback */
+    .invalid-feedback {
+        display: block;
+        margin-top: 0.25rem;
+    }
+    
+    /* Alert Styling */
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .form-section {
+            padding: 1rem;
+        }
+        
+        .radio-group {
+            gap: 1rem;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .form-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
@@ -94,7 +263,7 @@
                                 <label class="form-label d-block">
                                     {{ eligibility_form.good_health.label }} <span class="text-danger">*</span>
                                 </label>
-                                <div class="d-flex gap-4">
+                                <div class="radio-group">
                                     {% for radio in eligibility_form.good_health %}
                                         <div class="form-check">
                                             {{ radio.tag }}
@@ -129,7 +298,7 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label d-block">Recent Surgery?</label>
-                                    <div class="d-flex gap-4">
+                                    <div class="radio-group">
                                         {% for radio in eligibility_form.recent_surgery %}
                                             <div class="form-check">
                                                 {{ radio.tag }}
@@ -143,7 +312,7 @@
                                 
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label d-block">Tattoo/Piercing?</label>
-                                    <div class="d-flex gap-4">
+                                    <div class="radio-group">
                                         {% for radio in eligibility_form.recent_tattoo %}
                                             <div class="form-check">
                                                 {{ radio.tag }}
@@ -164,10 +333,8 @@
                             </h5>
                             
                             <div class="mb-3">
-                                <label class="form-label d-block">
-                                    {{ eligibility_form.travel_history.label }} <span class="text-danger">*</span>
-                                </label>
-                                <div class="d-flex gap-4">
+                                <label class="form-label d-block">Traveled to Malaria-Endemic Region?</label>
+                                <div class="radio-group">
                                     {% for radio in eligibility_form.travel_history %}
                                         <div class="form-check">
                                             {{ radio.tag }}
@@ -179,63 +346,72 @@
                                 </div>
                             </div>
                             
-                            <div class="row g-3 travel-details" id="travelDetails">
-                                <div class="col-md-6">
-                                    <label class="form-label">Travel Destination</label>
-                                    {% render_field eligibility_form.travel_destination class="form-control" %}
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Duration (days)</label>
-                                    {% render_field eligibility_form.travel_duration class="form-control" %}
+                            <div id="travelDetails" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-map-marker-alt me-2"></i>Travel Destination
+                                        </label>
+                                        {% render_field eligibility_form.travel_destination class="form-control" %}
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-calendar me-2"></i>Return Date
+                                        </label>
+                                        {% render_field eligibility_form.travel_return_date class="form-control" %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Female-Specific Questions -->
-                        <div class="form-section" id="femaleSection">
-                            <h5 class="form-section-title">
-                                <i class="fas fa-female"></i> Female-Specific Questions
-                            </h5>
-                            
-                            <div class="mb-3">
-                                <label class="form-label d-block">{{ eligibility_form.pregnant.label }}</label>
-                                <div class="d-flex gap-4">
-                                    {% for radio in eligibility_form.pregnant %}
-                                        <div class="form-check">
-                                            {{ radio.tag }}
-                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                                {{ radio.choice_label }}
-                                            </label>
-                                        </div>
-                                    {% endfor %}
+                        <div id="femaleSection" style="display: none;">
+                            <div class="form-section">
+                                <h5 class="form-section-title">
+                                    <i class="fas fa-female"></i> Female-Specific Questions
+                                </h5>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Currently Pregnant?</label>
+                                    <div class="radio-group">
+                                        {% for radio in eligibility_form.pregnant %}
+                                            <div class="form-check">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label d-block">Recent Childbirth?</label>
-                                <div class="d-flex gap-4">
-                                    {% for radio in eligibility_form.recent_childbirth %}
-                                        <div class="form-check">
-                                            {{ radio.tag }}
-                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                                {{ radio.choice_label }}
-                                            </label>
-                                        </div>
-                                    {% endfor %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Recent Childbirth?</label>
+                                    <div class="radio-group">
+                                        {% for radio in eligibility_form.recent_childbirth %}
+                                            <div class="form-check">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label d-block">Currently Breastfeeding?</label>
-                                <div class="d-flex gap-4">
-                                    {% for radio in eligibility_form.breastfeeding %}
-                                        <div class="form-check">
-                                            {{ radio.tag }}
-                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                                {{ radio.choice_label }}
-                                            </label>
-                                        </div>
-                                    {% endfor %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Currently Breastfeeding?</label>
+                                    <div class="radio-group">
+                                        {% for radio in eligibility_form.breastfeeding %}
+                                            <div class="form-check">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -268,31 +444,7 @@
                 </div>
             </div>
 
-            <!-- Support Options -->
-            <div class="card border-success mt-4">
-                <div class="card-header bg-success text-white">
-                    <i class="fas fa-heart me-2"></i>
-                    <h5 class="mb-0">Everyone Has a Role in Saving Lives</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        {% for opportunity in volunteer_opportunities %}
-                        <div class="col-md-4">
-                            <div class="d-flex align-items-start">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
-                                    <i class="fas {{ opportunity.icon }} text-success"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">{{ opportunity.title }}</h6>
-                                    <p class="small text-muted mb-2">{{ opportunity.description }}</p>
-                                    <a href="{{ opportunity.url }}" class="btn btn-sm btn-outline-success">Learn More</a>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>
@@ -308,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleTravelDetails() {
         const selected = document.querySelector('[name="travel_history"]:checked');
         if (selected && selected.value === 'True') {
-            travelDetails.style.display = 'flex';
+            travelDetails.style.display = 'block';
         } else {
             travelDetails.style.display = 'none';
         }
@@ -324,11 +476,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const femaleSection = document.getElementById('femaleSection');
     
     function toggleFemaleSection() {
-        femaleSection.style.display = genderSelect.value === 'Female' ? 'block' : 'none';
+        if (genderSelect) {
+            femaleSection.style.display = genderSelect.value === 'Female' ? 'block' : 'none';
+        }
     }
     
-    genderSelect.addEventListener('change', toggleFemaleSection);
-    toggleFemaleSection();
+    if (genderSelect) {
+        genderSelect.addEventListener('change', toggleFemaleSection);
+        toggleFemaleSection();
+    }
 
     // Form submission
     const form = document.getElementById('eligibilityForm');

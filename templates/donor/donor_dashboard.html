@@ -23,118 +23,8 @@
     </div>
   </div>
   {% endif %}
-  
-  <!-- Pre-Eligibility Awareness Modal -->
-  {% if show_eligibility_modal %}
-  <div class="modal fade" id="eligibilityAwarenessModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="fas fa-question-circle me-2"></i>
-            Before You Start Your Donation Journey
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4">
-          <p class="lead mb-4 text-center">
-            <i class="fas fa-heart text-danger me-2"></i>
-            <strong>Everyone has a role in saving lives</strong> — whether through donation or support.
-            Let's find your path!
-          </p>
-          
-          <div class="row g-4">
-            <div class="col-md-6">
-              <div class="card h-100 border-primary">
-                <div class="card-body text-center">
-                  <div class="display-1 text-primary mb-3">
-                    <i class="fas fa-hand-holding-heart"></i>
-                  </div>
-                  <h4>I'm Ready to Donate</h4>
-                  <p class="text-muted">
-                    I believe I may be eligible and want to complete the eligibility form to start donating.
-                  </p>
-                  <a href="{% url 'donor:donor-eligibility' %}" class="btn btn-primary w-100">
-                    <i class="fas fa-clipboard-check me-2"></i>
-                    Complete Eligibility Form
-                  </a>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-6">
-              <div class="card h-100 border-success">
-                <div class="card-body text-center">
-                  <div class="display-1 text-success mb-3">
-                    <i class="fas fa-hands-helping"></i>
-                  </div>
-                  <h4>I Want to Support Differently</h4>
-                  <p class="text-muted">
-                    I may not be eligible to donate, but I still want to help save lives in other ways.
-                  </p>
-                  <button class="btn btn-success w-100" data-bs-target="#supportOptionsModal" data-bs-toggle="modal">
-                    <i class="fas fa-arrow-right me-2"></i>
-                    Explore Support Options
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Support Options Modal -->
-  <div class="modal fade" id="supportOptionsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-success text-white">
-          <h5 class="modal-title">
-            <i class="fas fa-heart me-2"></i>
-            Ways You Can Still Make a Difference
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4">
-          <p class="text-center mb-4">
-            <i class="fas fa-quote-left text-muted me-2"></i>
-            Every person has the power to make a difference, whether through donation, advocacy, or support.
-            <i class="fas fa-quote-right text-muted ms-2"></i>
-          </p>
-          
-          <div class="row g-4">
-            {% for option in volunteer_suggestions|slice:":6" %}
-            <div class="col-md-6">
-              <div class="card h-100">
-                <div class="card-body">
-                  <div class="d-flex align-items-center mb-3">
-                    <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
-                      <i class="{{ option.icon }} fa-2x text-success"></i>
-                    </div>
-                    <div>
-                      <h6 class="mb-1 fw-bold">{{ option.title }}</h6>
-                      {% if option.badge %}
-                      <span class="badge bg-warning text-dark">{{ option.badge }}</span>
-                      {% endif %}
-                    </div>
-                  </div>
-                  <p class="small text-muted mb-3">{{ option.description }}</p>
-                  <a href="{{ option.url }}" class="btn btn-outline-success btn-sm w-100">
-                    Learn More <i class="fas fa-arrow-right ms-2"></i>
-                  </a>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Current Location Card - Shows PRECISE location details only (NO COORDINATES, NO COUNTY) -->
+  <!-- Current Location Card - Shows PRECISE location details only (NO COORDINATES) -->
   {% if donor %}
   <div class="card mb-4" id="locationCard">
     <div class="card-body">
@@ -191,19 +81,7 @@
     </div>
   </div>
 
-  <!-- Quick Action Buttons -->
-  <div class="d-flex flex-wrap gap-2 mb-4">
-    {% for action in quick_actions %}
-      {% if action.show %}
-      <a href="javascript:void(0);" 
-         onclick="alert('This feature is coming soon! Thank you for your interest.'); return false;" 
-         class="btn btn-{{ action.color }} btn-quick-action">
-        <i class="fas {{ action.icon }} me-2"></i>{{ action.text }}
-      </a>
-      {% endif %}
-    {% endfor %}
-  </div>
-  
+
   <!-- Action Buttons Row -->
   <div class="row mb-4">
     <div class="col-md-6 mb-2 mb-md-0">
@@ -613,14 +491,6 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // ========================================
-  // SHOW ELIGIBILITY AWARENESS MODAL
-  // ========================================
-  {% if show_eligibility_modal %}
-    const eligibilityModal = new bootstrap.Modal(document.getElementById('eligibilityAwarenessModal'));
-    eligibilityModal.show();
-  {% endif %}
-
   // ========================================
   // COUNTDOWN TIMER FOR NEXT DONATION
   // ========================================

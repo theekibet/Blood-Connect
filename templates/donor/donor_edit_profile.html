@@ -3,10 +3,116 @@
 
 {% block title %}Edit Donor Profile - BloodConnect{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Location Update Button Styling (matching dashboard) */
+    .location-update-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .location-update-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4292 100%);
+    }
+    
+    .location-update-btn:disabled {
+        opacity: 0.7;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .location-update-btn i {
+        font-size: 0.9rem;
+    }
+    
+    /* Location Card Styling */
+    .location-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .location-icon-wrapper {
+        background: white;
+        width: 54px;
+        height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            <!-- Current Location Card - Prominently displayed at top -->
+            <div class="card location-card mb-4" id="locationCard">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <!-- Location Icon -->
+                        <div class="location-icon-wrapper">
+                            <i class="fas fa-map-pin fa-lg text-primary"></i>
+                        </div>
+                        
+                        <!-- Location Details -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                <div>
+                                    <h6 class="mb-2 fw-bold"> Your Current Location</h6>
+                                    
+                                    <!-- Precise Location Display -->
+                                    {% if donor.location_name %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-location-dot text-success"></i>
+                                            <span class="fw-medium">{{ donor.location_name }}</span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            This helps us find donation centers near you,after updating,save changes at the bottom of this page then go back to dashboard to check out nearby donation centres
+                                        </small>
+                                    {% else %}
+                                        <span class="text-muted fst-italic">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            No location detected yet. Click "Update Current Location" to set your precise location.
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Update Location Button -->
+                                <button id="updateLocationBtn" class="location-update-btn" type="button">
+                                    <i class="fas fa-sync-alt"></i> Update Current Location
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden coordinates storage -->
+                        {% if donor.latitude %}
+                            <span id="latText" class="d-none">{{ donor.latitude }}</span>
+                        {% endif %}
+                        {% if donor.longitude %}
+                            <span id="lonText" class="d-none">{{ donor.longitude }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        
             <div class="profile-card">
                 <div class="profile-header">
                     <div class="profile-header-content">
@@ -42,7 +148,7 @@
                     {% if bloodgroup_verified %}
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>Blood Group Verified:</strong> {{ verified_bloodgroup }}
+                        <strong>Blood Group Verified:</strong> {{ donor.bloodgroup }}
                         {% if verified_by %}
                             <br><small class="text-muted">Verified by {{ verified_by }} on {{ verified_at|date:"F j, Y" }}</small>
                         {% endif %}
@@ -86,13 +192,17 @@
                     </div>
                     {% endif %}
 
-                    <form method="post" class="profile-edit-form" enctype="multipart/form-data">
+                    <form method="post" class="profile-edit-form" enctype="multipart/form-data" id="profileForm">
                         {% csrf_token %}
                         
                         <!-- Hidden fields for user data -->
                         <input type="hidden" name="first_name" value="{{ user.first_name }}">
                         <input type="hidden" name="last_name" value="{{ user.last_name }}">
                         <input type="hidden" name="email" value="{{ user.email }}">
+                        
+                        <!-- Hidden Location Fields -->
+                        <input type="hidden" name="latitude" id="latitude" value="{{ donor.latitude|default:'' }}">
+                        <input type="hidden" name="longitude" id="longitude" value="{{ donor.longitude|default:'' }}">
                         
                         <!-- Profile Picture Upload Section -->
                         <div class="form-section">
@@ -181,7 +291,7 @@
                                 
                                 {% if bloodgroup_verified %}
                                     <input type="text" class="form-control bg-light" 
-                                           value="{{ verified_bloodgroup }}" readonly>
+                                           value="{{ donor.bloodgroup }}" readonly>
                                     <small class="readonly-hint">
                                         <i class="fas fa-lock"></i> Verified blood group cannot be changed
                                     </small>
@@ -255,21 +365,34 @@
                                 {% endif %}
                             </div>
                             
-                            <!-- County -->
+                            <!-- County - Non-editable once set -->
                             <div class="mb-3">
                                 <label class="form-label">
-                                    County <span class="text-danger">*</span>
+                                    County
+                                    {% if not donor.county %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
                                 </label>
-                                {{ profile_form.county }}
-                                {% if profile_form.county.errors %}
-                                    <div class="invalid-feedback d-block">{{ profile_form.county.errors }}</div>
+                                {% if donor.county %}
+                                    <!-- Hidden field to submit county value -->
+                                    <input type="hidden" name="county" value="{{ donor.county }}">
+                                    <!-- Readonly display field -->
+                                    <input type="text" class="form-control bg-light" 
+                                           value="{{ donor.county }}" readonly>
+                                    <small class="readonly-hint">
+                                        <i class="fas fa-lock"></i> County cannot be changed once set. Use "Update Current Location" button above for precise location.
+                                    </small>
+                                {% else %}
+                                    {{ profile_form.county }}
+                                    {% if profile_form.county.errors %}
+                                        <div class="invalid-feedback d-block">{{ profile_form.county.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Required to find donation centers near you. Cannot be changed once set.
+                                    </small>
                                 {% endif %}
-                                <small class="text-muted">Required to find donation centers near you</small>
                             </div>
-
-                            <!-- Location Fields (Hidden) -->
-                            <input type="hidden" name="latitude" id="latitude">
-                            <input type="hidden" name="longitude" id="longitude">
                         </div>
                         
                         <!-- Help text -->
@@ -300,23 +423,172 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Geolocation
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                document.getElementById('latitude').value = position.coords.latitude;
-                document.getElementById('longitude').value = position.coords.longitude;
-                console.log('📍 Location captured for better center matching');
-            },
-            function(error) {
-                console.log('Geolocation error:', error.message);
+    // ========================================
+    // CSRF TOKEN HELPER
+    // ========================================
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
             }
-        );
+        }
+        return cookieValue;
     }
 
-    // Profile picture preview
+    // ========================================
+    // UPDATE CURRENT LOCATION BUTTON
+    // ========================================
+    const updateBtn = document.getElementById('updateLocationBtn');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Detecting...';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lon = position.coords.longitude.toFixed(6);
+                    
+                    // Update hidden form fields
+                    document.getElementById('latitude').value = lat;
+                    document.getElementById('longitude').value = lon;
+                    
+                    // Update hidden coordinates in location card
+                    let latText = document.getElementById('latText');
+                    let lonText = document.getElementById('lonText');
+                    
+                    if (!latText) {
+                        latText = document.createElement('span');
+                        latText.id = 'latText';
+                        latText.className = 'd-none';
+                        document.getElementById('locationCard')?.appendChild(latText);
+                    }
+                    if (!lonText) {
+                        lonText = document.createElement('span');
+                        lonText.id = 'lonText';
+                        lonText.className = 'd-none';
+                        document.getElementById('locationCard')?.appendChild(lonText);
+                    }
+                    
+                    latText.textContent = lat;
+                    lonText.textContent = lon;
+
+                    const formData = new FormData();
+                    formData.append('latitude', lat);
+                    formData.append('longitude', lon);
+
+                    fetch("{% url 'save-user-location' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Update the location display
+                            const locationContainer = document.querySelector('#locationCard .flex-grow-1');
+                            
+                            if (locationContainer) {
+                                let locationDisplay = locationContainer.querySelector('.d-flex.align-items-center.gap-2');
+                                
+                                if (data.location_name) {
+                                    if (locationDisplay) {
+                                        // Update existing display
+                                        const locationSpan = locationDisplay.querySelector('.fw-medium');
+                                        if (locationSpan) {
+                                            locationSpan.textContent = data.location_name;
+                                        }
+                                    } else {
+                                        // Create new display
+                                        const locationDiv = locationContainer.querySelector('div:first-child div:first-child');
+                                        if (locationDiv) {
+                                            const noLocationMsg = locationDiv.querySelector('.fst-italic');
+                                            if (noLocationMsg) {
+                                                noLocationMsg.remove();
+                                            }
+                                            
+                                            const newDisplay = document.createElement('div');
+                                            newDisplay.className = 'd-flex align-items-center gap-2';
+                                            newDisplay.innerHTML = `
+                                                <i class="fas fa-location-dot text-success"></i>
+                                                <span class="fw-medium">${data.location_name}</span>
+                                            `;
+                                            locationDiv.appendChild(newDisplay);
+                                            
+                                            // Add helper text
+                                            const helperText = document.createElement('small');
+                                            helperText.className = 'text-muted d-block mt-1';
+                                            helperText.innerHTML = `
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                This helps us find donation centers near you
+                                            `;
+                                            locationDiv.appendChild(helperText);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            updateBtn.innerHTML = '<i class="fas fa-check me-1"></i> Updated!';
+                            
+                            setTimeout(() => {
+                                updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
+                                updateBtn.disabled = false;
+                            }, 3000);
+                        } else {
+                            throw new Error(data.message || 'Failed to update location');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to detect precise location. Please try again.');
+                        
+                        updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
+                        updateBtn.disabled = false;
+                    });
+                },
+                function(error) {
+                    let errorMessage = 'Error detecting location: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Please allow location access in your browser settings.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Location request timed out. Please try again.';
+                            break;
+                    }
+                    
+                    alert(errorMessage);
+                    updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
+                    updateBtn.disabled = false;
+                }
+            );
+        });
+    }
+
+    // ========================================
+    // PROFILE PICTURE PREVIEW
+    // ========================================
     const fileInput = document.getElementById('id_profile_pic');
     const profilePreview = document.getElementById('profilePreview');
     const removeCheckbox = document.getElementById('remove_profile_pic');
@@ -366,38 +638,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Warn before leaving with unsaved changes
-    const form = document.querySelector('form');
+    // ========================================
+    // WARN BEFORE LEAVING WITH UNSAVED CHANGES
+    // ========================================
+    const form = document.getElementById('profileForm');
     let formChanged = false;
     
-    form.addEventListener('input', function() {
-        formChanged = true;
-    });
-    
-    // Also track file input changes
-    if (fileInput) {
-        fileInput.addEventListener('change', function() {
+    if (form) {
+        form.addEventListener('input', function() {
             formChanged = true;
         });
-    }
-    
-    // Track checkbox changes
-    if (removeCheckbox) {
-        removeCheckbox.addEventListener('change', function() {
-            formChanged = true;
-        });
-    }
-    
-    window.addEventListener('beforeunload', function(e) {
-        if (formChanged) {
-            e.preventDefault();
-            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                formChanged = true;
+            });
         }
-    });
-    
-    form.addEventListener('submit', function() {
-        formChanged = false;
-    });
+        
+        if (removeCheckbox) {
+            removeCheckbox.addEventListener('change', function() {
+                formChanged = true;
+            });
+        }
+        
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+        
+        form.addEventListener('submit', function() {
+            formChanged = false;
+        });
+    }
 });
 </script>
 {% endblock %}

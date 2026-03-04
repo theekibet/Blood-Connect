@@ -1009,6 +1009,47 @@ def donor_dashboard_view(request):
     logger.info(f"Donor {donor.id} dashboard: unsafe={is_unsafe_donor}, safe={is_safe_donor}, first_time={is_first_time_donor}")
 
     # ==========================================
+    # GET UNSAFE REASON - FIX FOR MISSING FIELD
+    # ==========================================
+    unsafe_reason = None
+    if unsafe_donation:
+        try:
+            # Try to get reason from related LabTest model
+            from blood.models import LabTest
+            
+            lab_test = LabTest.objects.filter(
+                donation=unsafe_donation,
+                result='unsafe'
+            ).order_by('-tested_at').first()
+            
+            if lab_test:
+                # Try different possible field names
+                if hasattr(lab_test, 'unsafe_reason'):
+                    unsafe_reason = lab_test.unsafe_reason
+                elif hasattr(lab_test, 'reason'):
+                    unsafe_reason = lab_test.reason
+                elif hasattr(lab_test, 'notes'):
+                    unsafe_reason = lab_test.notes
+                elif hasattr(lab_test, 'remarks'):
+                    unsafe_reason = lab_test.remarks
+                else:
+                    unsafe_reason = "Medical reasons - please contact us for details"
+            else:
+                # No lab test found, check if donation has notes
+                if hasattr(unsafe_donation, 'collection_notes') and unsafe_donation.collection_notes:
+                    unsafe_reason = unsafe_donation.collection_notes
+                elif hasattr(unsafe_donation, 'phlebotomist_notes') and unsafe_donation.phlebotomist_notes:
+                    unsafe_reason = unsafe_donation.phlebotomist_notes
+                else:
+                    unsafe_reason = "Medical reasons - please contact us for details"
+        except ImportError:
+            logger.warning("LabTest model not found, using default unsafe reason")
+            unsafe_reason = "Medical reasons - please contact us for details"
+        except Exception as e:
+            logger.warning(f"Could not get unsafe reason: {e}")
+            unsafe_reason = "Medical reasons - please contact us for details"
+
+    # ==========================================
     # ENHANCED GREETING SYSTEM
     # ==========================================
     try:
@@ -1323,7 +1364,7 @@ def donor_dashboard_view(request):
         'hero_badge': hero_badge,
         'greeting_data': greeting_data,
         'current_date': timezone.now().date(),
-        'unsafe_reason': unsafe_donation.unsafe_reason if unsafe_donation else None,
+        'unsafe_reason': unsafe_reason,  # FIXED: Use the variable we created above instead of unsafe_donation.unsafe_reason
         'just_completed_onboarding': just_completed,
         
         # INCLUSIVE MESSAGING FEATURES
@@ -1348,7 +1389,6 @@ def donor_dashboard_view(request):
 
     logger.debug(f"Rendering donor dashboard for user '{user.username}' with {total_safe_donations} safe donations and {donor.points} points")
     return render(request, 'donor/donor_dashboard.html', context)
-
 
 # -------------------------------
 # DonateBloodView - COMPLETE UPDATED VERSION
@@ -1396,14 +1436,58 @@ def donate_blood_view(request):
     is_first_time_donor = not BloodDonate.objects.filter(donor=donor).exists()
     
     # ==========================================
+    # GET UNSAFE REASON - FIX FOR MISSING FIELD
+    # ==========================================
+    unsafe_reason = None
+    if is_unsafe_donor:
+        try:
+            # Try to get reason from related LabTest model
+            from blood.models import LabTest
+            
+            latest_unsafe = BloodDonate.objects.filter(
+                donor=donor,
+                status='tested_unsafe'
+            ).order_by('-date').first()
+            
+            if latest_unsafe:
+                lab_test = LabTest.objects.filter(
+                    donation=latest_unsafe,
+                    result='unsafe'
+                ).order_by('-tested_at').first()
+                
+                if lab_test:
+                    # Try different possible field names
+                    if hasattr(lab_test, 'unsafe_reason'):
+                        unsafe_reason = lab_test.unsafe_reason
+                    elif hasattr(lab_test, 'reason'):
+                        unsafe_reason = lab_test.reason
+                    elif hasattr(lab_test, 'notes'):
+                        unsafe_reason = lab_test.notes
+                    elif hasattr(lab_test, 'remarks'):
+                        unsafe_reason = lab_test.remarks
+                    else:
+                        unsafe_reason = "Medical reasons - please contact us for details"
+                else:
+                    # No lab test found, check if donation has notes
+                    if hasattr(latest_unsafe, 'collection_notes') and latest_unsafe.collection_notes:
+                        unsafe_reason = latest_unsafe.collection_notes
+                    elif hasattr(latest_unsafe, 'phlebotomist_notes') and latest_unsafe.phlebotomist_notes:
+                        unsafe_reason = latest_unsafe.phlebotomist_notes
+                    else:
+                        unsafe_reason = "Medical reasons - please contact us for details"
+            else:
+                unsafe_reason = "Medical reasons - please contact us for details"
+        except ImportError:
+            logger.warning("LabTest model not found, using default unsafe reason")
+            unsafe_reason = "Medical reasons - please contact us for details"
+        except Exception as e:
+            logger.warning(f"Could not get unsafe reason: {e}")
+            unsafe_reason = "Medical reasons - please contact us for details"
+    
+    # ==========================================
     # HANDLE UNSAFE DONOR
     # ==========================================
     if is_unsafe_donor:
-        latest_unsafe = BloodDonate.objects.filter(
-            donor=donor,
-            status='tested_unsafe'
-        ).order_by('-date').first()
-        
         donate_form = BloodDonateForm(donor=donor)
         
         context = {
@@ -1412,7 +1496,7 @@ def donate_blood_view(request):
             'active_donation': None,
             'bloodgroup_verified': donor.bloodgroup_verified,
             'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
-            'unsafe_reason': latest_unsafe.unsafe_reason if latest_unsafe else 'Medical reasons',
+            'unsafe_reason': unsafe_reason,  # FIXED: Use the variable we created
             'is_unsafe': True,
             'has_unsafe_donation': True,
             'show_contact_banner': True,
@@ -1434,7 +1518,7 @@ def donate_blood_view(request):
         return redirect('donor:donor-eligibility-status')
 
     # ==========================================
-    # CALCULATE NEXT ELIGIBLE DATE
+    # CALCULATE NEXT ELIGIBLE DATE - FIXED TIMEZONE HANDLING
     # ==========================================
     days_until_next = None
     next_donation_date = None
@@ -1443,18 +1527,35 @@ def donate_blood_view(request):
     seconds_until_next = 0
     
     if is_safe_donor and donor.last_donation_date:
-        next_donation_date = donor.last_donation_date + timedelta(days=56)
+        # Convert last_donation_date to a date object if it's a datetime
+        if isinstance(donor.last_donation_date, datetime):
+            last_donation_date = donor.last_donation_date.date()
+        else:
+            last_donation_date = donor.last_donation_date
+        
+        # Calculate next donation date (56 days after last donation)
+        next_donation_date = last_donation_date + timedelta(days=56)
+        
+        # Get today's date (timezone-aware)
         today = timezone.now().date()
+        
+        # Calculate days until next donation
         days_until_next = (next_donation_date - today).days if next_donation_date > today else 0
         
         if days_until_next > 0:
             # Calculate hours, minutes, seconds for countdown
-            next_datetime = datetime.combine(next_donation_date, datetime_time(0, 0))
+            # Make next_donation_date timezone-aware for proper comparison
+            next_datetime = timezone.make_aware(
+                datetime.combine(next_donation_date, datetime_time(0, 0))
+            )
             now = timezone.now()
             time_diff = next_datetime - now
-            hours_until_next = time_diff.seconds // 3600
-            minutes_until_next = (time_diff.seconds % 3600) // 60
-            seconds_until_next = time_diff.seconds % 60
+            
+            # Extract time components
+            total_seconds = int(time_diff.total_seconds())
+            hours_until_next = (total_seconds % 86400) // 3600
+            minutes_until_next = (total_seconds % 3600) // 60
+            seconds_until_next = total_seconds % 60
 
     # Check for active donation
     active_donation = BloodDonate.objects.filter(
@@ -1702,7 +1803,6 @@ def donate_blood_view(request):
     }
 
     return render(request, 'donor/donate_blood.html', context)
-# -------------------------------
 # Donation History
 # -------------------------------
 @login_required(login_url='donorlogin')
@@ -1867,6 +1967,7 @@ def donor_edit_profile_view(request):
     Edit donor profile. Handles both initial onboarding and later edits.
     During onboarding, certain fields are required.
     Blood group is OPTIONAL.
+    County is non-editable once set.
     """
     try:
         donor = Donor.objects.get(user=request.user)
@@ -1888,6 +1989,11 @@ def donor_edit_profile_view(request):
         post_data['first_name'] = user.first_name
         post_data['last_name'] = user.last_name
         post_data['email'] = user.email
+        
+        # IMPORTANT: If county is already set, ensure it's in POST data
+        # This handles the case where county field is readonly and not submitted
+        if donor.county and 'county' not in post_data:
+            post_data['county'] = donor.county
         
         form = DonorProfileForm(post_data, request.FILES, instance=donor)
         
@@ -1941,6 +2047,9 @@ def donor_edit_profile_view(request):
             # Show specific error messages
             for field, errors in form.errors.items():
                 for error in errors:
+                    # Skip county error if county is already set
+                    if field == 'county' and donor.county:
+                        continue
                     messages.error(request, f"{field}: {error}")
     else:
         form = DonorProfileForm(instance=donor, initial={

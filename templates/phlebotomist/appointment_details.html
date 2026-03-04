@@ -1,0 +1,845 @@
+{% extends 'phlebotomist/phlebotomistbase.html' %}
+{% load static %}
+
+{% block title %}Appointment Details - Phlebotomist{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header with back button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Bookings
+            </a>
+            <div>
+                <h1 class="display-5 fw-bold mb-1">Appointment Details</h1>
+                <p class="lead text-muted mb-0">View complete information about this donation</p>
+            </div>
+        </div>
+        <span class="badge status-badge 
+            {% if appointment.status == 'pending' %}bg-warning
+            {% elif appointment.status == 'approved' %}bg-success
+            {% elif appointment.status == 'collected' %}bg-primary
+            {% elif appointment.status == 'completed' %}bg-info
+            {% elif appointment.status == 'cancelled' %}bg-secondary
+            {% elif appointment.status == 'rejected' %}bg-danger
+            {% endif %} fs-6 p-3" id="statusBadge">
+            {{ appointment.get_status_display }}
+        </span>
+    </div>
+
+    <div class="row">
+        <!-- Main Details Column -->
+        <div class="col-md-8">
+            <!-- Donor Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-user me-2"></i>
+                    <h5 class="mb-0 d-inline">Donor Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">Full Name:</th>
+                                    <td><strong>{{ donor_details.full_name }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Username:</th>
+                                    <td>{{ donor_details.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>{{ donor_details.email }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Mobile:</th>
+                                    <td>{{ donor_details.mobile }}</td>
+                                </tr>
+                                <tr>
+                                    <th>National ID:</th>
+                                    <td>{{ donor_details.national_id }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">County:</th>
+                                    <td>{{ donor_details.county|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Blood Group:</th>
+                                    <td>
+                                        <span class="badge bg-info fs-6">{{ donor_details.bloodgroup }}</span>
+                                        {% if donor_details.bloodgroup_verified %}
+                                            <span class="badge bg-success">Verified</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Unverified</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Age:</th>
+                                    <td>{{ donor_details.age|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Donation:</th>
+                                    <td>
+                                        {% if donor_details.last_donation_date %}
+                                            {{ donor_details.last_donation_date|date:"M d, Y" }}
+                                        {% else %}
+                                            <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Total Donations:</th>
+                                    <td>{{ donor_details.total_donations }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appointment Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <h5 class="mb-0 d-inline">Appointment Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">Date & Time:</th>
+                                    <td>{{ appointment.date|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Center:</th>
+                                    <td>{{ appointment.center.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Center Location:</th>
+                                    <td>{{ appointment.center.city|default:appointment.center.address|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Phlebotomist:</th>
+                                    <td>{{ appointment.phlebotomist.user.get_full_name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">Created:</th>
+                                    <td>{{ appointment.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated:</th>
+                                    <td>{{ appointment.updated_at|date:"M d, Y H:i"|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Barcode:</th>
+                                    <td>
+                                        {% if appointment.barcode %}
+                                            <span class="badge bg-dark fs-6">{{ appointment.barcode }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blood Donation Details -->
+            {% if blood_details %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-tint me-2"></i>
+                    <h5 class="mb-0 d-inline">Blood Donation Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">Blood Group:</th>
+                                    <td><span class="badge bg-info fs-6">{{ blood_details.bloodgroup }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Volume:</th>
+                                    <td><strong>{{ blood_details.unit }} ml</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Donation Type:</th>
+                                    <td>{{ blood_details.donation_type|title }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Donation Date:</th>
+                                    <td>{{ blood_details.date|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        <span class="badge 
+                                            {% if blood_details.status == 'completed' %}bg-success
+                                            {% elif blood_details.status == 'collected' %}bg-primary
+                                            {% elif blood_details.status == 'approved' %}bg-info
+                                            {% elif blood_details.status == 'pending' %}bg-warning
+                                            {% elif blood_details.status == 'rejected' %}bg-danger
+                                            {% elif blood_details.status == 'cancelled' %}bg-secondary
+                                            {% endif %}">
+                                            {{ blood_details.status|title }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                {% if blood_details.temperature %}
+                                <tr>
+                                    <th style="width: 40%">Temperature:</th>
+                                    <td>{{ blood_details.temperature }} °C</td>
+                                </tr>
+                                {% endif %}
+                                {% if blood_details.pulse %}
+                                <tr>
+                                    <th>Pulse:</th>
+                                    <td>{{ blood_details.pulse }} bpm</td>
+                                </tr>
+                                {% endif %}
+                                {% if blood_details.blood_pressure %}
+                                <tr>
+                                    <th>Blood Pressure:</th>
+                                    <td>{{ blood_details.blood_pressure }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if blood_details.haemoglobin %}
+                                <tr>
+                                    <th>Haemoglobin:</th>
+                                    <td>{{ blood_details.haemoglobin }} g/dL</td>
+                                </tr>
+                                {% endif %}
+                                {% if blood_details.bleed_time_start and blood_details.bleed_time_end %}
+                                <tr>
+                                    <th>Bleed Time:</th>
+                                    <td>{{ blood_details.bleed_time_start }} - {{ blood_details.bleed_time_end }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if blood_details.arm_used or blood_details.vein_quality %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2">Collection Details</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                {% if blood_details.arm_used %}
+                                <tr>
+                                    <th style="width: 40%">Arm Used:</th>
+                                    <td>{{ blood_details.arm_used|title }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if blood_details.vein_quality %}
+                                <tr>
+                                    <th>Vein Quality:</th>
+                                    <td>{{ blood_details.vein_quality|title }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                {% if blood_details.attempts_count %}
+                                <tr>
+                                    <th style="width: 40%">Attempts:</th>
+                                    <td>{{ blood_details.attempts_count }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if blood_details.adverse_event and blood_details.adverse_event != 'none' %}
+                                <tr>
+                                    <th>Adverse Event:</th>
+                                    <td>
+                                        <span class="badge bg-danger">{{ blood_details.adverse_event|title }}</span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if blood_details.collection_notes %}
+                    <div class="mt-3">
+                        <h6 class="border-bottom pb-2">Collection Notes:</h6>
+                        <div class="bg-light p-3 rounded">
+                            {{ blood_details.collection_notes|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if blood_details.phlebotomist_notes %}
+                    <div class="mt-3">
+                        <h6 class="border-bottom pb-2">Phlebotomist Notes:</h6>
+                        <div class="bg-light p-3 rounded">
+                            {{ blood_details.phlebotomist_notes|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if blood_details.adverse_event_details %}
+                    <div class="mt-3">
+                        <h6 class="border-bottom pb-2">Adverse Event Details:</h6>
+                        <div class="bg-light p-3 rounded border border-danger">
+                            {{ blood_details.adverse_event_details|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stock Unit Details -->
+            {% if stock_details %}
+            <div class="card mb-4">
+                <div class="card-header 
+                    {% if stock_details.safety_status == 'safe' %}bg-success
+                    {% elif stock_details.safety_status == 'unsafe' %}bg-danger
+                    {% else %}bg-warning
+                    {% endif %} text-white">
+                    <i class="fas fa-box me-2"></i>
+                    <h5 class="mb-0 d-inline">Stock Unit Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">Stock ID:</th>
+                                    <td>#{{ stock_details.id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Blood Group:</th>
+                                    <td><span class="badge bg-info fs-6">{{ stock_details.bloodgroup }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Units:</th>
+                                    <td>{{ stock_details.unit }} ml</td>
+                                </tr>
+                                <tr>
+                                    <th>Expiry Date:</th>
+                                    <td>
+                                        {{ stock_details.expiry_date|date:"M d, Y" }}
+                                        {% if stock_details.expiry_date %}
+                                            {% if stock_details.expiry_date < now %}
+                                                <span class="badge bg-danger">Expired</span>
+                                            {% elif stock_details.expiry_date < now|date:"Y-m-d" %}
+                                                <span class="badge bg-warning">Expiring Soon</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 40%">Safety Status:</th>
+                                    <td>
+                                        {% if stock_details.safety_status == 'safe' %}
+                                            <span class="badge bg-success">Safe</span>
+                                        {% elif stock_details.safety_status == 'unsafe' %}
+                                            <span class="badge bg-danger">Unsafe</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if stock_details.is_quarantined %}
+                                <tr>
+                                    <th>Quarantined:</th>
+                                    <td><span class="badge bg-danger">Yes</span></td>
+                                </tr>
+                                {% endif %}
+                                {% if stock_details.unsafe_reason %}
+                                <tr>
+                                    <th>Unsafe Reason:</th>
+                                    <td>{{ stock_details.unsafe_reason }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if stock_details.safety_verified_by %}
+                                <tr>
+                                    <th>Verified By:</th>
+                                    <td>{{ stock_details.safety_verified_by }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Verified At:</th>
+                                    <td>{{ stock_details.safety_verified_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if stock_details.safety_notes %}
+                    <div class="mt-3">
+                        <h6 class="border-bottom pb-2">Safety Notes:</h6>
+                        <div class="bg-light p-3 rounded">
+                            {{ stock_details.safety_notes|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Column -->
+        <div class="col-md-4">
+            <!-- Action History Card -->
+            {% if action_history %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-history me-2"></i>
+                    <h5 class="mb-0 d-inline">Action History</h5>
+                </div>
+                <div class="card-body" id="actionHistoryContainer">
+                    <div class="timeline">
+                        {% for action in action_history %}
+                        <div class="timeline-item mb-3 pb-2 {% if not forloop.last %}border-bottom{% endif %}">
+                            <div class="d-flex">
+                                <div class="timeline-icon me-3">
+                                    {% if action.action == 'Approved' %}
+                                        <i class="fas fa-check-circle text-success fa-lg"></i>
+                                    {% elif action.action == 'Collected' %}
+                                        <i class="fas fa-syringe text-primary fa-lg"></i>
+                                    {% elif action.action == 'Rejected' %}
+                                        <i class="fas fa-ban text-danger fa-lg"></i>
+                                    {% elif action.action == 'Cancelled' %}
+                                        <i class="fas fa-times-circle text-warning fa-lg"></i>
+                                    {% elif action.action == 'Completed' %}
+                                        <i class="fas fa-check-double text-info fa-lg"></i>
+                                    {% else %}
+                                        <i class="fas fa-info-circle text-secondary fa-lg"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1 fw-bold">{{ action.action }}</h6>
+                                    <p class="mb-1 small">
+                                        <i class="fas fa-user me-1"></i>{{ action.by }}<br>
+                                        <i class="fas fa-tag me-1"></i>Role: {{ action.role|title }}<br>
+                                        <i class="fas fa-clock me-1"></i>{{ action.at|date:"M d, Y H:i" }}
+                                    </p>
+                                    {% if action.reason %}
+                                        <div class="alert alert-light p-2 mt-2 small border">
+                                            <strong>Reason:</strong> {{ action.reason }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions Card -->
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-bolt me-2"></i>
+                    <h5 class="mb-0 d-inline">Quick Actions</h5>
+                </div>
+                <div class="card-body" id="quickActionsContainer">
+                    <div class="d-grid gap-2">
+                        {% if appointment.status == 'approved' %}
+                            <a href="{% url 'phlebotomist:select_barcode' appointment.id %}" class="btn btn-primary">
+                                <i class="fas fa-syringe me-2"></i>Collect Blood
+                            </a>
+                        {% endif %}
+                        
+                        {% if appointment.status == 'pending' %}
+                            <button type="button" class="btn btn-success" 
+                                    onclick="openApproveModal('{{ appointment.id }}', '{{ donor_details.full_name|escapejs }}')">
+                                <i class="fas fa-check-circle me-2"></i>Approve
+                            </button>
+                            <button type="button" class="btn btn-danger" 
+                                    onclick="openRejectModal('{{ appointment.id }}', '{{ donor_details.full_name|escapejs }}')">
+                                <i class="fas fa-ban me-2"></i>Reject
+                            </button>
+                        {% endif %}
+                        
+                        {% if appointment.status == 'approved' %}
+                            <button type="button" class="btn btn-warning" 
+                                    onclick="openCancelModal('{{ appointment.id }}', '{{ donor_details.full_name|escapejs }}')">
+                                <i class="fas fa-times-circle me-2"></i>Cancel
+                            </button>
+                        {% endif %}
+                        
+                        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-list me-2"></i>Back to Bookings
+                        </a>
+                        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Info Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <h5 class="mb-0 d-inline">Status Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-warning me-2 small"></i>
+                            <strong>Pending:</strong> Awaiting approval
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-success me-2 small"></i>
+                            <strong>Approved:</strong> Ready for collection
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-primary me-2 small"></i>
+                            <strong>Collected:</strong> Sent to lab
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-info me-2 small"></i>
+                            <strong>Completed:</strong> Fully processed
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-secondary me-2 small"></i>
+                            <strong>Cancelled:</strong> Cancelled
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-danger me-2 small"></i>
+                            <strong>Rejected:</strong> Rejected
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for actions -->
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Approve Donation Appointment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to approve this donation appointment for <strong id="donorNameApprove"></strong>?</p>
+                <p class="text-muted small">Approving will confirm the donor is eligible and ready for blood collection.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitAction('approve')">
+                    <i class="fas fa-check-circle me-2"></i>Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-ban me-2"></i>Reject Donation Appointment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reject this donation appointment for <strong id="donorNameReject"></strong>?</p>
+                <div class="mb-3">
+                    <label for="rejectReason" class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="rejectReason" rows="3" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitAction('reject')">
+                    <i class="fas fa-ban me-2"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle me-2"></i>Cancel Donation Appointment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this donation appointment for <strong id="donorNameCancel"></strong>?</p>
+                <div class="mb-3">
+                    <label for="cancelReason" class="form-label">Reason for Cancellation <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="cancelReason" rows="3" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="submitAction('cancelled')">
+                    <i class="fas fa-times-circle me-2"></i>Cancel Appointment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="statusToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong class="me-auto">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+<script>
+let currentAppointmentId = '{{ appointment.id }}';
+let currentDonorName = '{{ donor_details.full_name|escapejs }}';
+
+function openApproveModal(appointmentId, donorName) {
+    document.getElementById('donorNameApprove').textContent = donorName;
+    new bootstrap.Modal(document.getElementById('approveModal')).show();
+}
+
+function openRejectModal(appointmentId, donorName) {
+    document.getElementById('donorNameReject').textContent = donorName;
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+function openCancelModal(appointmentId, donorName) {
+    document.getElementById('donorNameCancel').textContent = donorName;
+    new bootstrap.Modal(document.getElementById('cancelModal')).show();
+}
+
+function submitAction(action) {
+    const url = `/phlebotomist/appointment/${currentAppointmentId}/update-status/`;
+    const formData = new FormData();
+    
+    // Add CSRF token
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    formData.append('csrfmiddlewaretoken', csrftoken);
+    formData.append('action', action);
+    
+    // Add reason for reject/cancel
+    if (action === 'reject') {
+        const reason = document.getElementById('rejectReason').value.trim();
+        if (!reason) {
+            showToast('Error!', 'Please provide a reason for rejection', 'error');
+            return;
+        }
+        formData.append('reason', reason);
+    } else if (action === 'cancelled') {
+        const reason = document.getElementById('cancelReason').value.trim();
+        if (!reason) {
+            showToast('Error!', 'Please provide a reason for cancellation', 'error');
+            return;
+        }
+        formData.append('reason', reason);
+    }
+    
+    // Close the modal
+    const modalElement = document.getElementById(action === 'reject' ? 'rejectModal' : 
+                                              action === 'cancelled' ? 'cancelModal' : 'approveModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) modal.hide();
+    
+    // Show loading toast
+    showToast('Processing', 'Please wait...', 'info');
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success!', data.message || 'Action completed successfully', 'success');
+            
+            // Update the UI without page reload
+            updateUIAfterAction(action, data);
+        } else {
+            showToast('Error!', data.error || 'An error occurred', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error!', 'An unexpected error occurred', 'error');
+    });
+}
+
+function updateUIAfterAction(action, data) {
+    // Update status badge
+    const statusBadge = document.getElementById('statusBadge');
+    const newStatus = action === 'cancelled' ? 'cancelled' : action;
+    
+    // Update badge text
+    statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+    
+    // Update badge class
+    statusBadge.className = 'badge status-badge fs-6 p-3 ';
+    if (newStatus === 'approved') {
+        statusBadge.classList.add('bg-success');
+    } else if (newStatus === 'reject' || newStatus === 'rejected') {
+        statusBadge.classList.add('bg-danger');
+        statusBadge.textContent = 'Rejected';
+    } else if (newStatus === 'cancelled') {
+        statusBadge.classList.add('bg-secondary');
+    }
+    
+    // Update quick actions
+    updateQuickActions(newStatus);
+    
+    // Add to action history
+    addToActionHistory(action, data);
+}
+
+function updateQuickActions(newStatus) {
+    const container = document.getElementById('quickActionsContainer');
+    if (!container) return;
+    
+    let actionsHtml = '<div class="d-grid gap-2">';
+    
+    if (newStatus === 'approved') {
+        actionsHtml += `
+            <a href="/phlebotomist/appointment/${currentAppointmentId}/select-barcode/" class="btn btn-primary">
+                <i class="fas fa-syringe me-2"></i>Collect Blood
+            </a>
+            <button type="button" class="btn btn-warning" onclick="openCancelModal('${currentAppointmentId}', '${currentDonorName}')">
+                <i class="fas fa-times-circle me-2"></i>Cancel
+            </button>
+        `;
+    } else if (newStatus === 'pending') {
+        actionsHtml += `
+            <button type="button" class="btn btn-success" onclick="openApproveModal('${currentAppointmentId}', '${currentDonorName}')">
+                <i class="fas fa-check-circle me-2"></i>Approve
+            </button>
+            <button type="button" class="btn btn-danger" onclick="openRejectModal('${currentAppointmentId}', '${currentDonorName}')">
+                <i class="fas fa-ban me-2"></i>Reject
+            </button>
+        `;
+    } else if (newStatus === 'rejected' || newStatus === 'cancelled') {
+        // No actions for final states
+    }
+    
+    actionsHtml += `
+        <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="btn btn-outline-primary">
+            <i class="fas fa-list me-2"></i>Back to Bookings
+        </a>
+        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        </a>
+    </div>`;
+    
+    container.innerHTML = actionsHtml;
+}
+
+function addToActionHistory(action, data) {
+    const container = document.getElementById('actionHistoryContainer');
+    if (!container) return;
+    
+    const now = new Date();
+    const formattedTime = now.toLocaleString('en-US', { 
+        month: 'short', day: 'numeric', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
+    });
+    
+    const actionDisplay = action === 'cancelled' ? 'Cancelled' : 
+                         action === 'reject' ? 'Rejected' : 
+                         action.charAt(0).toUpperCase() + action.slice(1);
+    
+    const actionIcon = action === 'approved' ? 'check-circle text-success' :
+                      action === 'reject' ? 'ban text-danger' :
+                      action === 'cancelled' ? 'times-circle text-warning' : 'info-circle text-secondary';
+    
+    const reason = action === 'reject' ? document.getElementById('rejectReason')?.value :
+                  action === 'cancelled' ? document.getElementById('cancelReason')?.value : '';
+    
+    const historyHtml = `
+        <div class="timeline-item mb-3 pb-2 border-bottom">
+            <div class="d-flex">
+                <div class="timeline-icon me-3">
+                    <i class="fas fa-${actionIcon} fa-lg"></i>
+                </div>
+                <div class="timeline-content">
+                    <h6 class="mb-1 fw-bold">${actionDisplay}</h6>
+                    <p class="mb-1 small">
+                        <i class="fas fa-user me-1"></i>You<br>
+                        <i class="fas fa-tag me-1"></i>Role: Phlebotomist<br>
+                        <i class="fas fa-clock me-1"></i>${formattedTime}
+                    </p>
+                    ${reason ? `
+                        <div class="alert alert-light p-2 mt-2 small border">
+                            <strong>Reason:</strong> ${reason}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insert at the beginning
+    container.querySelector('.timeline').insertAdjacentHTML('afterbegin', historyHtml);
+}
+
+function showToast(title, message, type = 'info') {
+    const toastEl = document.getElementById('statusToast');
+    const toastHeader = toastEl.querySelector('.toast-header');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toastHeader.className = 'toast-header';
+    if (type === 'success') {
+        toastHeader.classList.add('bg-success', 'text-white');
+        toastHeader.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong class="me-auto">Success</strong>';
+    } else if (type === 'error') {
+        toastHeader.classList.add('bg-danger', 'text-white');
+        toastHeader.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i><strong class="me-auto">Error</strong>';
+    } else {
+        toastHeader.classList.add('bg-info', 'text-white');
+        toastHeader.innerHTML = '<i class="fas fa-info-circle me-2"></i><strong class="me-auto">Info</strong>';
+    }
+    
+    toastMessage.textContent = message;
+    new bootstrap.Toast(toastEl).show();
+}
+</script>
+
+
+{% endblock %}

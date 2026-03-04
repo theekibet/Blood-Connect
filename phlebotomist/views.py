@@ -1719,3 +1719,167 @@ def get_phlebotomists_by_center(request):
     print(f"📤 Sending data: {phlebotomist_data}")  # Debug line
     
     return JsonResponse({'phlebotomists': phlebotomist_data})
+@login_required(login_url='/phlebotomist/phlebotomistlogin/')
+@user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
+def phlebotomist_appointment_details(request, appointment_id):
+    """
+    View details of a specific donation appointment
+    """
+    phlebotomist = request.user.phlebotomist
+    
+    # Get the appointment
+    appointment = get_object_or_404(
+        Appointment.objects.select_related(
+            'donor',
+            'donor__user',
+            'phlebotomist',
+            'phlebotomist__user',
+            'center'
+        ),
+        id=appointment_id,
+        phlebotomist=phlebotomist
+    )
+    
+    # Get the blood donation if exists
+    blood_donation = None
+    stock_unit = None
+    
+    if appointment.request_content_type and appointment.request_object_id:
+        if appointment.request_content_type.model == 'blooddonate':
+            from donor.models import BloodDonate
+            blood_donation = BloodDonate.objects.filter(
+                id=appointment.request_object_id
+            ).select_related(
+                'donor',
+                'donor__user',
+                'donation_center'
+            ).first()
+            
+            if blood_donation:
+                from blood.models import StockUnit
+                stock_unit = StockUnit.objects.filter(
+                    blood_donation=blood_donation
+                ).select_related(
+                    'safety_verified_by'
+                ).first()
+    
+    # Get donor details
+    donor_details = {}
+    if appointment.donor:
+        donor = appointment.donor
+        donor_details = {
+            'id': donor.id,
+            'full_name': donor.user.get_full_name() if donor.user else 'Anonymous',
+            'username': donor.user.username if donor.user else 'N/A',
+            'email': donor.user.email if donor.user else 'N/A',
+            'mobile': getattr(donor, 'mobile', 'N/A'),
+            'national_id': getattr(donor, 'national_id', 'N/A'),
+            'county': getattr(donor, 'county', 'N/A'),
+            'bloodgroup': getattr(donor, 'bloodgroup', 'Not Tested'),
+            'bloodgroup_verified': getattr(donor, 'bloodgroup_verified', False),
+            'age': donor.age if hasattr(donor, 'age') else None,
+            'last_donation_date': getattr(donor, 'last_donation_date', None),
+            'total_donations': getattr(donor, 'total_donations', 0),
+        }
+    
+    # Get blood donation details
+    blood_details = {}
+    if blood_donation:
+        blood_details = {
+            'id': blood_donation.id,
+            'bloodgroup': getattr(blood_donation, 'bloodgroup', 'Unknown'),
+            'unit': getattr(blood_donation, 'unit', 0),
+            'status': getattr(blood_donation, 'status', 'unknown'),
+            'date': getattr(blood_donation, 'date', None),
+            'collection_notes': getattr(blood_donation, 'collection_notes', ''),
+            'donation_type': getattr(blood_donation, 'donation_type', 'whole_blood'),
+            'temperature': getattr(blood_donation, 'temperature', None),
+            'pulse': getattr(blood_donation, 'pulse', None),
+            'blood_pressure': getattr(blood_donation, 'blood_pressure', None),
+            'haemoglobin': getattr(blood_donation, 'haemoglobin', None),
+            'bleed_time_start': getattr(blood_donation, 'bleed_time_start', None),
+            'bleed_time_end': getattr(blood_donation, 'bleed_time_end', None),
+            'arm_used': getattr(blood_donation, 'arm_used', None),
+            'vein_quality': getattr(blood_donation, 'vein_quality', None),
+            'attempts_count': getattr(blood_donation, 'attempts_count', 1),
+            'phlebotomist_notes': getattr(blood_donation, 'phlebotomist_notes', ''),
+            'adverse_event': getattr(blood_donation, 'adverse_event', 'none'),
+            'adverse_event_details': getattr(blood_donation, 'adverse_event_details', ''),
+        }
+    
+    # Get stock unit details
+    stock_details = {}
+    if stock_unit:
+        stock_details = {
+            'id': stock_unit.id,
+            'bloodgroup': stock_unit.bloodgroup,
+            'unit': stock_unit.unit,
+            'expiry_date': stock_unit.expiry_date,
+            'safety_status': getattr(stock_unit, 'safety_status', 'pending'),
+            'is_quarantined': getattr(stock_unit, 'is_quarantined', False),
+            'unsafe_reason': getattr(stock_unit, 'unsafe_reason', ''),
+            'safety_notes': getattr(stock_unit, 'safety_notes', ''),
+            'safety_verified_by': stock_unit.safety_verified_by.get_full_name() if stock_unit.safety_verified_by else None,
+            'safety_verified_at': getattr(stock_unit, 'safety_verified_at', None),
+            'test_results': getattr(stock_unit, 'test_results', {}),
+        }
+    
+    # Get action history - FIXED: Removed references to *_role fields
+    action_history = []
+    
+    if appointment.approved_by:
+        action_history.append({
+            'action': 'Approved',
+            'by': appointment.approved_by.get_full_name() or appointment.approved_by.username,
+            'at': getattr(appointment, 'approved_at', None),
+            'role': 'phlebotomist',  # Default role since field doesn't exist
+        })
+    
+    if appointment.collected_by:
+        action_history.append({
+            'action': 'Collected',
+            'by': appointment.collected_by.get_full_name() or appointment.collected_by.username,
+            'at': getattr(appointment, 'collected_at', None),
+            'role': 'phlebotomist',  # Default role since field doesn't exist
+        })
+    
+    if appointment.rejected_by:
+        action_history.append({
+            'action': 'Rejected',
+            'by': appointment.rejected_by.get_full_name() or appointment.rejected_by.username,
+            'at': getattr(appointment, 'rejected_at', None),
+            'reason': getattr(appointment, 'rejection_reason', 'No reason provided'),
+            'role': 'phlebotomist',  # Default role since field doesn't exist
+        })
+    
+    if hasattr(appointment, 'cancelled_by_user') and appointment.cancelled_by_user:
+        action_history.append({
+            'action': 'Cancelled',
+            'by': appointment.cancelled_by_user.get_full_name() or appointment.cancelled_by_user.username,
+            'at': getattr(appointment, 'cancelled_at', None),
+            'reason': getattr(appointment, 'cancellation_reason', 'No reason provided'),
+            'role': 'phlebotomist',  # Default role since field doesn't exist
+        })
+    
+    # Also check for status_changed_by
+    if hasattr(appointment, 'status_changed_by') and appointment.status_changed_by:
+        # Only add if not already captured by specific actions
+        if appointment.status not in [a['action'].lower() for a in action_history if 'action' in a]:
+            action_history.append({
+                'action': appointment.status.title(),
+                'by': appointment.status_changed_by.get_full_name() or appointment.status_changed_by.username,
+                'at': getattr(appointment, 'status_changed_at', None),
+                'role': getattr(appointment, 'status_changed_by_role', 'unknown'),
+            })
+    
+    context = {
+        'appointment': appointment,
+        'donor_details': donor_details,
+        'blood_details': blood_details,
+        'stock_details': stock_details,
+        'action_history': action_history,
+        'phlebotomist': phlebotomist,
+        'now': timezone.now(),
+    }
+    
+    return render(request, 'phlebotomist/appointment_details.html', context)

@@ -239,8 +239,8 @@ class DonorProfileForm(forms.ModelForm):
         choices=[('', "I don't know yet")] + list(BLOODGROUP_CHOICES),
         widget=forms.Select(attrs={'class': 'form-select'}),
         label="Blood Group",
-        required=False,  # OPTIONAL - not required for onboarding
-        help_text="Don't know your blood type? Leave this blank - it will be verified during your first donation."
+        required=False,  
+        help_text="Don't know your blood type? Leave this blank - it will be verified during your first donation appointment."
     )
 
     # Gender - Optional
@@ -282,7 +282,6 @@ class DonorProfileForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         required=True,
         label="County",
-        help_text="Required to find donation centers near you",
         error_messages={'required': 'Please select your county.'}
     )
 
