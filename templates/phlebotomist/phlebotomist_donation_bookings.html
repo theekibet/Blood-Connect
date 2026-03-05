@@ -4,6 +4,9 @@
 {% block title %}Donation Bookings - Phlebotomist{% endblock %}
 
 {% block content %}
+<!-- Load SweetAlert2 for this page -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="container-fluid py-4">
     <!-- Header -->
     <div class="d-flex align-items-center mb-4">
@@ -297,12 +300,12 @@
                                     <div class="btn-group btn-group-sm" role="group">
                                         {% if item.appointment.status == 'pending' %}
                                             <button type="button" class="btn btn-success" 
-                                                    onclick="openApproveModal('{{ item.appointment.id }}', '{{ item.donor_details.full_name|escapejs }}')"
+                                                    onclick="approveAppointment('{{ item.appointment.id }}', '{{ item.donor_details.full_name|escapejs }}')"
                                                     title="Approve Appointment">
                                                 <i class="fas fa-check-circle"></i> Approve
                                             </button>
                                             <button type="button" class="btn btn-danger" 
-                                                    onclick="openRejectModal('{{ item.appointment.id }}', '{{ item.donor_details.full_name|escapejs }}')"
+                                                    onclick="rejectAppointment('{{ item.appointment.id }}', '{{ item.donor_details.full_name|escapejs }}')"
                                                     title="Reject Appointment">
                                                 <i class="fas fa-ban"></i> Reject
                                             </button>
@@ -314,7 +317,7 @@
                                                 <i class="fas fa-syringe"></i> Collect
                                             </a>
                                             <button type="button" class="btn btn-warning" 
-                                                    onclick="openCancelModal('{{ item.appointment.id }}', '{{ item.donor_details.full_name|escapejs }}')"
+                                                    onclick="cancelAppointment('{{ item.appointment.id }}', '{{ item.donor_details.full_name|escapejs }}')"
                                                     title="Cancel Appointment">
                                                 <i class="fas fa-times-circle"></i> Cancel
                                             </button>
@@ -346,40 +349,15 @@
                 </div>
             {% else %}
                 <div class="text-center py-5">
-                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
-                    <h5>No Bookings Found</h5>
-                    <p class="text-muted">There are no donation appointments matching your criteria.</p>
-                    <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="btn btn-primary mt-3">
-                        <i class="fas fa-tachometer-alt me-2"></i>Back to Dashboard
-                    </a>
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No donation appointments found</h5>
+                    <p class="text-muted">Appointments will appear here when donors schedule donations.</p>
                 </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Blood Group Distribution -->
-    {% if blood_group_stats %}
-    <div class="card mt-4">
-        <div class="card-header">
-            <i class="fas fa-chart-pie me-2"></i>
-            <h5 class="mb-0">Blood Group Distribution</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                {% for bg, count in blood_group_stats.items %}
-                <div class="col-md-3 mb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="badge bg-info p-2">{{ bg }}</span>
-                        <span>{{ count }} appointment(s)</span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Safety Stats -->
+    <!-- Safety Statistics -->
     {% if safety_stats %}
     <div class="card mt-4">
         <div class="card-header">
@@ -418,272 +396,221 @@
     {% endif %}
 </div>
 
-<!-- Approve Modal -->
-<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-check-circle me-2"></i>Approve Donation Appointment
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="approveForm" method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="approve">
-                <div class="modal-body">
-                    <p>Are you sure you want to approve this donation appointment for <strong id="donorNameApprove"></strong>?</p>
-                    <p class="text-muted small">Approving will confirm the donor is eligible and ready for blood collection.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check-circle me-2"></i>Approve Appointment
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-ban me-2"></i>Reject Donation Appointment
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="rejectForm" method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="reject">
-                <div class="modal-body">
-                    <p>Are you sure you want to reject this donation appointment for <strong id="donorNameReject"></strong>?</p>
-                    <div class="mb-3">
-                        <label for="rejectReason" class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="rejectReason" name="reason" rows="3" required placeholder="Please provide a reason for rejection..."></textarea>
-                        <div class="form-text">This reason will be shared with the donor.</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-ban me-2"></i>Reject Appointment
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Cancel Modal -->
-<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">
-                    <i class="fas fa-times-circle me-2"></i>Cancel Donation Appointment
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="cancelForm" method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="cancelled">
-                <div class="modal-body">
-                    <p>Are you sure you want to cancel this donation appointment for <strong id="donorNameCancel"></strong>?</p>
-                    <div class="mb-3">
-                        <label for="cancelReason" class="form-label">Reason for Cancellation <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="cancelReason" name="reason" rows="3" required placeholder="Please provide a reason for cancellation..."></textarea>
-                        <div class="form-text">This reason will be shared with the donor.</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Close
-                    </button>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-times-circle me-2"></i>Cancel Appointment
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Success/Error Toast -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="statusToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong class="me-auto">Notification</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body" id="toastMessage">
-        </div>
-    </div>
-</div>
-
 <script>
-// Global variables to store current appointment ID
-let currentAppointmentId = null;
+// ========================================
+// PHLEBOTOMIST APPOINTMENTS - SWEETALERT2
+// No modals, no bugs, instant feedback
+// ========================================
 
-// Open Approve Modal
-function openApproveModal(appointmentId, donorName) {
-    currentAppointmentId = appointmentId;
-    document.getElementById('donorNameApprove').textContent = donorName;
-    const modal = new bootstrap.Modal(document.getElementById('approveModal'));
-    modal.show();
+// ✅ APPROVE APPOINTMENT
+function approveAppointment(appointmentId, donorName) {
+    Swal.fire({
+        title: 'Approve Donation?',
+        html: `Approve appointment for <strong>${donorName}</strong>?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Approve',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            const formData = new FormData();
+            formData.append('action', 'approve');
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+            
+            return fetch(`/phlebotomist/appointment/${appointmentId}/update-status/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to approve');
+                }
+                return data;
+            })
+            .catch(error => {
+                Swal.showValidationMessage(`Error: ${error.message || error}`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Approved!',
+                text: result.value.message || 'Appointment approved successfully',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
 }
 
-// Open Reject Modal
-function openRejectModal(appointmentId, donorName) {
-    currentAppointmentId = appointmentId;
-    document.getElementById('donorNameReject').textContent = donorName;
-    const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
-    modal.show();
+// ✅ REJECT APPOINTMENT
+function rejectAppointment(appointmentId, donorName) {
+    Swal.fire({
+        title: 'Reject Donation?',
+        html: `Reject appointment for <strong>${donorName}</strong>?`,
+        input: 'textarea',
+        inputLabel: 'Reason for rejection (required)',
+        inputPlaceholder: 'Enter reason for rejection...',
+        inputAttributes: {
+            'aria-label': 'Enter rejection reason',
+            'rows': 3
+        },
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-times me-2"></i>Yes, Reject',
+        cancelButtonText: 'Cancel',
+        inputValidator: (value) => {
+            if (!value || value.trim() === '') {
+                return 'Please provide a reason for rejection';
+            }
+        },
+        showLoaderOnConfirm: true,
+        preConfirm: (reason) => {
+            const formData = new FormData();
+            formData.append('action', 'reject');
+            formData.append('reason', reason.trim());
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+            
+            return fetch(`/phlebotomist/appointment/${appointmentId}/update-status/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to reject');
+                }
+                return data;
+            })
+            .catch(error => {
+                Swal.showValidationMessage(`Error: ${error.message || error}`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Rejected!',
+                text: result.value.message || 'Appointment rejected successfully',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
 }
 
-// Open Cancel Modal
-function openCancelModal(appointmentId, donorName) {
-    currentAppointmentId = appointmentId;
-    document.getElementById('donorNameCancel').textContent = donorName;
-    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
-    modal.show();
+// ✅ CANCEL APPOINTMENT
+function cancelAppointment(appointmentId, donorName) {
+    Swal.fire({
+        title: 'Cancel Appointment?',
+        html: `Cancel appointment for <strong>${donorName}</strong>?`,
+        input: 'textarea',
+        inputLabel: 'Reason for cancellation (required)',
+        inputPlaceholder: 'Enter reason for cancellation...',
+        inputAttributes: {
+            'aria-label': 'Enter cancellation reason',
+            'rows': 3
+        },
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#6c757d',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-ban me-2"></i>Yes, Cancel',
+        cancelButtonText: 'No, Keep It',
+        inputValidator: (value) => {
+            if (!value || value.trim() === '') {
+                return 'Please provide a reason for cancellation';
+            }
+        },
+        showLoaderOnConfirm: true,
+        preConfirm: (reason) => {
+            const formData = new FormData();
+            formData.append('action', 'cancelled');
+            formData.append('reason', reason.trim());
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+            
+            return fetch(`/phlebotomist/appointment/${appointmentId}/update-status/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to cancel');
+                }
+                return data;
+            })
+            .catch(error => {
+                Swal.showValidationMessage(`Error: ${error.message || error}`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Cancelled!',
+                text: result.value.message || 'Appointment cancelled successfully',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
 }
 
-// View Details
+// ✅ VIEW DETAILS
 function viewDetails(appointmentId) {
-    // You can implement a details modal or redirect to a detail page
     window.location.href = `/phlebotomist/appointment/${appointmentId}/details/`;
 }
 
-// Handle form submissions
-document.addEventListener('DOMContentLoaded', function() {
-    // Approve Form
-    document.getElementById('approveForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (currentAppointmentId) {
-            submitForm(this, currentAppointmentId, 'approve');
-        }
-    });
-
-    // Reject Form
-    document.getElementById('rejectForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (currentAppointmentId) {
-            // Validate reason field
-            const reason = document.getElementById('rejectReason').value.trim();
-            if (!reason) {
-                showToast('Error!', 'Please provide a reason for rejection', 'error');
-                return;
+// ✅ HELPER: Get CSRF Token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-            submitForm(this, currentAppointmentId, 'reject');
         }
-    });
-
-    // Cancel Form
-    document.getElementById('cancelForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (currentAppointmentId) {
-            // Validate reason field
-            const reason = document.getElementById('cancelReason').value.trim();
-            if (!reason) {
-                showToast('Error!', 'Please provide a reason for cancellation', 'error');
-                return;
-            }
-            submitForm(this, currentAppointmentId, 'cancelled');
-        }
-    });
-});
-
-function submitForm(form, appointmentId, action) {
-    const formData = new FormData(form);
-    const url = `/phlebotomist/appointment/${appointmentId}/update-status/`;
-    
-    // Show loading state
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-    submitBtn.disabled = true;
-
-    fetch(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Hide modal
-        let modalId = 'approveModal';
-        if (action === 'reject') modalId = 'rejectModal';
-        if (action === 'cancelled') modalId = 'cancelModal';
-        
-        const modalElement = document.getElementById(modalId);
-        const modal = bootstrap.Modal.getInstance(modalElement);
-        if (modal) {
-            modal.hide();
-        }
-        
-        if (data.success) {
-            showToast('Success!', data.message || 'Action completed successfully', 'success');
-            // Reload page after 2 seconds to show updated status
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            showToast('Error!', data.error || 'An error occurred', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error!', 'An unexpected error occurred', 'error');
-    })
-    .finally(() => {
-        // Restore button state
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    });
-}
-
-function showToast(title, message, type = 'info') {
-    const toastEl = document.getElementById('statusToast');
-    const toastHeader = toastEl.querySelector('.toast-header');
-    const toastMessage = document.getElementById('toastMessage');
-    
-    // Set colors based on type
-    toastHeader.className = 'toast-header';
-    if (type === 'success') {
-        toastHeader.classList.add('bg-success', 'text-white');
-        toastHeader.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong class="me-auto">Success</strong>';
-    } else if (type === 'error') {
-        toastHeader.classList.add('bg-danger', 'text-white');
-        toastHeader.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i><strong class="me-auto">Error</strong>';
-    } else {
-        toastHeader.classList.add('bg-info', 'text-white');
-        toastHeader.innerHTML = '<i class="fas fa-info-circle me-2"></i><strong class="me-auto">Info</strong>';
     }
-    
-    toastMessage.textContent = message;
-    
-    const toast = new bootstrap.Toast(toastEl);
-    toast.show();
+    return cookieValue;
 }
 
-// Auto-dismiss alerts after 5 seconds
-setTimeout(function() {
-    document.querySelectorAll('.alert').forEach(alert => {
-        alert.classList.remove('show');
-        setTimeout(() => alert.remove(), 300);
-    });
-}, 5000);
+// Auto-dismiss Django messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 300);
+        });
+    }, 5000);
+});
 </script>
 
 <style>

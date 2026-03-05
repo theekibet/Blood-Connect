@@ -96,12 +96,26 @@
                                     {% endif %}
                                 </div>
                             </div>
+                            
+                            <!-- ===== UPDATED: Mobile Number Display ===== -->
                             <div class="detail-item">
                                 <div class="detail-label">
                                     <i class="fas fa-phone"></i> Mobile Number
                                 </div>
-                                <div class="detail-value">{{ donor.mobile|default:"Not provided" }}</div>
+                                <div class="detail-value">
+                                    {% if donor.mobile %}
+                                        {% if donor.mobile|slice:":4" == "+254" %}
+                                            <!-- Convert +254712345678 to 0712345678 for display -->
+                                            0{{ donor.mobile|slice:"4:" }}
+                                        {% else %}
+                                            {{ donor.mobile }}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not provided</span>
+                                    {% endif %}
+                                </div>
                             </div>
+                            
                             <div class="detail-item">
                                 <div class="detail-label">
                                     <i class="fas fa-id-card"></i> National ID

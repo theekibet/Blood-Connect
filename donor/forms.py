@@ -257,7 +257,7 @@ class DonorProfileForm(forms.ModelForm):
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your national ID number'
+            'placeholder': '12345678'
         }),
         label="National ID Number",
         help_text="8 digits (required for identity verification)",
@@ -272,41 +272,38 @@ class DonorProfileForm(forms.ModelForm):
             'type': 'date',
         }),
         label="Date of Birth",
-        help_text="Required to verify age (must be 18+)",
         error_messages={'required': 'Date of birth is required to verify eligibility.'}
     )
 
     # County - REQUIRED
     county = forms.ChoiceField(
-        choices=[('', 'Select your county')] + list(KENYAN_COUNTIES),
+        choices=[('', 'Select your county of residence')] + list(KENYAN_COUNTIES),
         widget=forms.Select(attrs={'class': 'form-select'}),
         required=True,
         label="County",
         error_messages={'required': 'Please select your county.'}
     )
 
-    # Sub-County - Optional
-    sub_county = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter your sub-county (optional)'
-        }),
-        label="Sub-County (Optional)"
-    )
-
-    # Mobile - REQUIRED
+    # ===== UPDATED: Mobile with 0712345678 format =====
     mobile = forms.CharField(
-        max_length=20,
+        max_length=10,  # Exactly 10 digits (0 + 9 digits)
+        min_length=10,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '+254712345678'
+            'placeholder': '0712345678',
+            'maxlength': '10',
+            'pattern': '07[0-9]{8}',
+            'title': 'Enter 10 digits starting with 07',
+            'inputmode': 'numeric'
         }),
         label="Mobile Number",
-        help_text="Required for appointment reminders (Format: +254712345678)",
-        error_messages={'required': 'Mobile number is required for appointment communication.'}
+        help_text="Format: 0712345678 (10 digits starting with 07)",
+        error_messages={
+            'required': 'Mobile number is required for appointment communication.',
+            'max_length': 'Mobile number must be exactly 10 digits.',
+            'min_length': 'Mobile number must be exactly 10 digits.'
+        }
     )
 
     # Profile Picture - Optional
@@ -324,7 +321,7 @@ class DonorProfileForm(forms.ModelForm):
         model = Donor
         fields = [
             'bloodgroup', 'gender', 'national_id', 'dob', 
-            'county', 'sub_county', 'mobile', 'profile_pic'
+            'county', 'mobile', 'profile_pic'  
         ]
 
     def __init__(self, *args, **kwargs):
@@ -365,6 +362,14 @@ class DonorProfileForm(forms.ModelForm):
                 })
                 self.fields['dob'].help_text = "Cannot be changed after initial entry"
                 self.fields['dob'].required = False
+            
+            # Format mobile number for display (remove any existing formatting)
+            if self.instance.mobile:
+                # If stored as +254..., convert to 07... for display
+                if self.instance.mobile.startswith('+254'):
+                    self.fields['mobile'].initial = '0' + self.instance.mobile[4:]
+                else:
+                    self.fields['mobile'].initial = self.instance.mobile
 
     def clean_national_id(self):
         """Validate national ID"""
@@ -377,7 +382,8 @@ class DonorProfileForm(forms.ModelForm):
         if not national_id:
             raise ValidationError("National ID is required.")
         
-        national_id = national_id.strip()
+        # Remove any spaces or dashes
+        national_id = re.sub(r'[\s\-]', '', national_id)
         
         # Check uniqueness
         if Donor.objects.filter(national_id=national_id).exclude(pk=self.instance.pk).exists():
@@ -385,26 +391,44 @@ class DonorProfileForm(forms.ModelForm):
         
         # Validate format (8 digits)
         if not re.match(r'^\d{8}$', national_id):
-            raise ValidationError("National ID must be exactly 8 digits.")
+            raise ValidationError("National ID must be exactly 8 digits (e.g., 12345678).")
         
         return national_id
 
+    # ===== UPDATED: Mobile validation for 0712345678 format =====
     def clean_mobile(self):
-        """Validate mobile number"""
+        """Validate mobile number - must be 0712345678 format (0 followed by 9 digits)"""
         mobile = self.cleaned_data.get('mobile')
         
         if not mobile:
             raise ValidationError("Mobile number is required.")
         
-        mobile = mobile.strip()
+        # Remove any spaces, dashes, parentheses
+        mobile = re.sub(r'[\s\-\(\)]', '', mobile)
         
-        # Check uniqueness
+        # Check if it's empty after stripping
+        if not mobile:
+            raise ValidationError("Mobile number is required.")
+        
+        # Check length (must be 10 digits: 0 + 9 digits)
+        if len(mobile) != 10:
+            raise ValidationError(f"Mobile number must be 10 digits. You entered {len(mobile)} digits.")
+        
+        # Check if all characters are digits
+        if not mobile.isdigit():
+            raise ValidationError("Mobile number must contain only digits.")
+        
+        # Check if it starts with 0
+        if not mobile.startswith('0'):
+            raise ValidationError("Mobile number must start with 0 (e.g., 0712345678)")
+        
+        # Check if it starts with 07 (common Kenyan prefix)
+        if not mobile.startswith('07'):
+            raise ValidationError("Mobile number should start with 07 (e.g., 0712345678)")
+        
+        # Check uniqueness (exclude current donor)
         if Donor.objects.filter(mobile=mobile).exclude(pk=self.instance.pk).exists():
             raise ValidationError("This mobile number is already registered.")
-        
-        # Validate format (+254XXXXXXXXX)
-        if not re.match(r'^\+254\d{9}$', mobile):
-            raise ValidationError("Mobile number must be in format: +254712345678")
         
         return mobile
 
@@ -457,10 +481,16 @@ class DonorProfileForm(forms.ModelForm):
         """Save donor profile"""
         instance = super().save(commit=False)
         
+        # Convert 07... to +254... for storage (optional - keeps consistent format)
+        if instance.mobile and instance.mobile.startswith('0'):
+            # Store as +2547... for consistency
+            instance.mobile = '+254' + instance.mobile[1:]
+        
         if commit:
             instance.save()
         
         return instance
+
 
 # Validator functions
 def validate_age(value):

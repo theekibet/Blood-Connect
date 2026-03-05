@@ -10,7 +10,8 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db.models import Sum
 from django.conf import settings
-
+import logging
+logger = logging.getLogger(__name__)
 class HoneypotAttempt(models.Model):
     """Track fake admin login attempts"""
     ip = models.GenericIPAddressField()
@@ -71,7 +72,10 @@ class Stock(models.Model):
 # ------------------------
 # Stock Unit Model
 # ------------------------
+
 class StockUnit(models.Model):
+    """Individual blood unit in inventory - expiry set by lab tech after testing"""
+    
     BLOOD_GROUP_CHOICES = Stock.BLOOD_GROUP_CHOICES
     
     SAFETY_STATUS_CHOICES = [
@@ -86,24 +90,47 @@ class StockUnit(models.Model):
         ('lab_tech', 'Lab Technologist'),
         ('system', 'System'),
     ]
+    
+    # Component type - determines expiry length
+    COMPONENT_TYPE_CHOICES = [
+        ('whole_blood', '🩸 Whole Blood (35 days)'),
+        ('rbc', '🔴 Packed Red Blood Cells (42 days)'),
+        ('platelets', '🟡 Platelets (5 days)'),
+        ('ffp', '❄️ Fresh Frozen Plasma (1 year)'),
+        ('cryo', '🧊 Cryoprecipitate (1 year)'),
+    ]
 
     bloodgroup = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES)
     unit = models.PositiveIntegerField(default=0)
     center = models.ForeignKey('blood.DonationCenter', on_delete=models.CASCADE)
-    expiry_date = models.DateField()
+    
+    # ===== EXPIRY DATE - NULL for unsafe blood =====
+    expiry_date = models.DateField(
+        null=True,  # ← CHANGED: Allow null for unsafe blood
+        blank=True,  # ← CHANGED: Allow blank for unsafe blood
+        help_text='When the blood expires. NULL for unsafe/discarded blood.'
+    )
+    
+    # ===== COMPONENT TYPE - Added to calculate expiry =====
+    component_type = models.CharField(
+        max_length=20,
+        choices=COMPONENT_TYPE_CHOICES,
+        default='whole_blood',
+        help_text='Type of blood component - determines expiry period'
+    )
     
     # ===== BARCODE - MUST come from pre-generated blood bag =====
     barcode = models.CharField(
         max_length=100, 
         unique=True, 
-        blank=False,  # Changed to False - barcode is required
-        null=False,   # Changed to False - barcode is required
+        blank=False,
+        null=False,
         help_text='Barcode from pre-generated blood bag'
     )
     
     added_on = models.DateTimeField(auto_now_add=True)
     
-    # ===== NEW: Link to the pre-generated blood bag barcode =====
+    # ===== Link to the pre-generated blood bag barcode =====
     blood_bag_barcode = models.OneToOneField(
         'blood.BloodBagBarcode',
         on_delete=models.SET_NULL,
@@ -166,9 +193,15 @@ class StockUnit(models.Model):
         blank=True,
         null=True,
         choices=[
-            ('contamination', 'Contamination Detected'),
-            ('disease_markers', 'Disease Markers Present'),
-            ('quality_issues', 'Quality Issues'),
+            ('hiv_positive', 'HIV Positive'),
+            ('hepatitis_b_positive', 'Hepatitis B Positive'),
+            ('hepatitis_c_positive', 'Hepatitis C Positive'),
+            ('syphilis_positive', 'Syphilis Positive'),
+            ('malaria_positive', 'Malaria Positive'),
+            ('multiple_markers', 'Multiple Disease Markers'),
+            ('contamination', 'Bacterial Contamination'),
+            ('hemolysis', 'Hemolysis Detected'),
+            ('lipemic', 'Lipemic Sample'),
             ('improper_storage', 'Improper Storage'),
             ('expired', 'Expired'),
             ('other', 'Other Reason'),
@@ -213,13 +246,28 @@ class StockUnit(models.Model):
         verbose_name = "Stock Unit"
         verbose_name_plural = "Stock Units"
         ordering = ['-added_on']
+        indexes = [
+            models.Index(fields=['expiry_date']),
+            models.Index(fields=['safety_status']),
+            models.Index(fields=['bloodgroup']),
+        ]
 
     def clean(self):
-        # Allow zero units, disallow negative
+        # Unit validation
         if self.unit < 0:
             raise ValidationError("Unit must be zero or a positive integer.")
-        if self.expiry_date < timezone.now().date():
-            raise ValidationError("Expiry date cannot be in the past.")
+        
+        # For safe blood, expiry date must be set and valid
+        if self.safety_status == 'safe':
+            if not self.expiry_date:
+                raise ValidationError("Expiry date is required for safe blood.")
+            if self.expiry_date < timezone.now().date():
+                raise ValidationError("Expiry date cannot be in the past.")
+        
+        # For unsafe blood, expiry date should be null
+        if self.safety_status == 'unsafe' and self.expiry_date:
+            # Auto-clear expiry date for unsafe blood
+            self.expiry_date = None
         
         # Validate that barcode is provided
         if not self.barcode:
@@ -232,16 +280,52 @@ class StockUnit(models.Model):
         # Auto-quarantine unsafe blood
         if self.safety_status == 'unsafe':
             self.is_quarantined = True
+            self.unit = 0  # Zero out units for unsafe blood
 
     @property
     def is_available_for_use(self):
         """Check if stock unit is available for issuance"""
-        return (
-            self.safety_status == 'safe' and
-            not self.is_quarantined and
-            self.unit > 0 and
-            self.expiry_date >= timezone.now().date()
-        )
+        if self.safety_status != 'safe':
+            return False
+        if self.is_quarantined:
+            return False
+        if self.unit <= 0:
+            return False
+        if not self.expiry_date:
+            return False
+        return self.expiry_date >= timezone.now().date()
+    
+    @property
+    def is_expired(self):
+        """Check if blood is expired (for safe blood only)"""
+        if not self.expiry_date or self.safety_status != 'safe':
+            return False
+        return self.expiry_date < timezone.now().date()
+    
+    @property
+    def days_until_expiry(self):
+        """Get days until expiry (for safe blood only)"""
+        if not self.expiry_date or self.safety_status != 'safe':
+            return None
+        return (self.expiry_date - timezone.now().date()).days
+    
+    @property
+    def expiry_status(self):
+        """Get human-readable expiry status with icon"""
+        if self.safety_status != 'safe':
+            return "⏸️ Not applicable"
+        if not self.expiry_date:
+            return "❓ No expiry set"
+        
+        days = self.days_until_expiry
+        if days < 0:
+            return "⚠️ EXPIRED"
+        elif days < 7:
+            return f"🔴 Expiring soon ({days} days)"
+        elif days < 14:
+            return f"🟡 {days} days remaining"
+        else:
+            return f"🟢 {days} days remaining"
     
     @property
     def safety_status_display(self):
@@ -252,8 +336,21 @@ class StockUnit(models.Model):
             'unsafe': '⚠️',
         }
         return f"{status_icons.get(self.safety_status, '')} {self.get_safety_status_display()}"
+    
+    @property
+    def summary(self):
+        """Quick summary for display"""
+        parts = [
+            f"{self.bloodgroup}",
+            f"{self.unit}ml",
+            f"{self.get_component_type_display()}",
+            self.safety_status_display,
+        ]
+        if self.safety_status == 'safe' and self.expiry_date:
+            parts.append(self.expiry_status)
+        return " | ".join(parts)
 
-    def mark_safe(self, verified_by_user, role='phlebotomist', notes=None):
+    def mark_safe(self, verified_by_user, role='lab_tech', notes=None):
         """Mark this stock unit as safe for use"""
         self.safety_status = 'safe'
         self.safety_verified_by = verified_by_user
@@ -273,9 +370,9 @@ class StockUnit(models.Model):
         
         # Also update the blood bag barcode status
         if self.blood_bag_barcode:
-            self.blood_bag_barcode.mark_tested()
+            self.blood_bag_barcode.mark_tested_safe()
     
-    def mark_unsafe(self, verified_by_user, role='phlebotomist', reason=None, notes=None):
+    def mark_unsafe(self, verified_by_user, role='lab_tech', reason=None, notes=None):
         """Mark this stock unit as unsafe and quarantine it"""
         self.safety_status = 'unsafe'
         self.safety_verified_by = verified_by_user
@@ -287,6 +384,7 @@ class StockUnit(models.Model):
             self.safety_notes = notes
         self.is_quarantined = True
         self.unit = 0  # Zero out the unit to prevent use
+        self.expiry_date = None  # Clear expiry date for unsafe blood
         self.save(update_fields=[
             'safety_status',
             'safety_verified_by',
@@ -295,22 +393,37 @@ class StockUnit(models.Model):
             'unsafe_reason',
             'safety_notes',
             'is_quarantined',
-            'unit'
+            'unit',
+            'expiry_date'
         ])
         
         # Also update the blood bag barcode status
         if self.blood_bag_barcode:
-            self.blood_bag_barcode.discard()
+            self.blood_bag_barcode.mark_discarded(reason)
 
     def save(self, *args, **kwargs):
         self.clean()
-        # Removed barcode generation - barcode must come from blood bag
         super().save(*args, **kwargs)
 
     def __str__(self):
-        safety = f"[{self.get_safety_status_display()}]"
-        bag_info = f" (Bag: {self.blood_bag_barcode.barcode})" if self.blood_bag_barcode else ""
-        return f"{self.bloodgroup} - {self.unit}ml at {self.center.name} {safety}{bag_info} (Expires: {self.expiry_date})"
+        # Base string
+        base = f"{self.bloodgroup} - {self.unit}ml at {self.center.name}"
+        
+        # Add component type
+        component = self.get_component_type_display().split(' ')[0]  # Get just the type
+        
+        # Add safety status
+        safety = self.safety_status_display
+        
+        # Add expiry info for safe blood
+        if self.safety_status == 'safe' and self.expiry_date:
+            expiry = f"Expires: {self.expiry_date} ({self.days_until_expiry} days)"
+            return f"{base} [{component}] {safety} | {expiry}"
+        elif self.safety_status == 'unsafe':
+            reason = dict(self.unsafe_reason).get(self.unsafe_reason, 'Unsafe')
+            return f"{base} [{component}] {safety} | Reason: {reason}"
+        else:
+            return f"{base} [{component}] {safety}"
 # Signal to update Stock aggregate whenever StockUnit changes
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -696,7 +809,7 @@ class FactContribution(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-# blood/models.py - Add this new model
+
 
 class BloodBagBarcode(models.Model):
     """Pre-generated barcodes for blood collection bags"""
@@ -705,29 +818,33 @@ class BloodBagBarcode(models.Model):
         ('available', 'Available'),
         ('assigned', 'Assigned to Donor'),
         ('collected', 'Blood Collected'),
-        ('tested', 'Tested'),
-        ('discarded', 'Discarded'),
+        ('tested', 'Tested - Safe'),  # More descriptive
+        ('discarded', 'Discarded - Unsafe'),  # More descriptive
+    ]
+    
+    BAG_TYPE_CHOICES = [
+        ('single', 'Single Blood Bag'),
+        ('double', 'Double Blood Bag'),
+        ('triple', 'Triple Blood Bag'),
+        ('pediatric', 'Pediatric Blood Bag'),
+    ]
+    
+    ANTICOAGULANT_CHOICES = [
+        ('cpd', 'CPD (Citrate Phosphate Dextrose)'),
+        ('cpda1', 'CPDA-1'),
+        ('sagm', 'SAG-Mannitol'),
     ]
     
     barcode = models.CharField(max_length=50, unique=True, db_index=True)
     bag_type = models.CharField(
         max_length=20,
-        choices=[
-            ('single', 'Single Blood Bag'),
-            ('double', 'Double Blood Bag'),
-            ('triple', 'Triple Blood Bag'),
-            ('pediatric', 'Pediatric Blood Bag'),
-        ],
+        choices=BAG_TYPE_CHOICES,
         default='single'
     )
     volume_ml = models.IntegerField(default=450, help_text="Standard volume in ml")
     anticoagulant = models.CharField(
         max_length=50,
-        choices=[
-            ('cpd', 'CPD (Citrate Phosphate Dextrose)'),
-            ('cpda1', 'CPDA-1'),
-            ('sagm', 'SAG-Mannitol'),
-        ],
+        choices=ANTICOAGULANT_CHOICES,
         default='cpd'
     )
     
@@ -770,11 +887,6 @@ class BloodBagBarcode(models.Model):
         related_name='blood_bag_barcode'
     )
     
-    # Manufacturing details
-    manufacturer = models.CharField(max_length=100, blank=True)
-    lot_number = models.CharField(max_length=50, blank=True)
-    manufacture_date = models.DateField(null=True, blank=True)
-    expiry_date = models.DateField(null=True, blank=True)
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -794,30 +906,79 @@ class BloodBagBarcode(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.barcode} - {self.get_status_display()}"
+        status_icon = {
+            'available': '📦',
+            'assigned': '📝',
+            'collected': '🩸',
+            'tested': '✅',
+            'discarded': '🗑️',
+        }.get(self.status, '📋')
+        
+        return f"{status_icon} {self.barcode} - {self.get_status_display()}"
 
     def assign_to_donor(self, donor, user):
         """Assign this barcode to a donor"""
+        if self.status != 'available':
+            raise ValidationError(f"Cannot assign barcode with status '{self.status}'. Only available barcodes can be assigned.")
+        
         self.status = 'assigned'
         self.assigned_to_donor = donor
         self.assigned_by = user
         self.assigned_at = timezone.now()
         self.save()
+        
+        # Log the assignment
+        logger.info(f"Barcode {self.barcode} assigned to donor {donor.id} by {user.username}")
     
     def mark_collected(self, user, blood_donation):
         """Mark this barcode as collected"""
+        if self.status != 'assigned':
+            raise ValidationError(f"Cannot mark barcode with status '{self.status}' as collected. Only assigned barcodes can be collected.")
+        
         self.status = 'collected'
         self.collected_by = user
         self.collected_at = timezone.now()
         self.blood_donation = blood_donation
         self.save()
+        
+        logger.info(f"Barcode {self.barcode} collected by {user.username} for donation {blood_donation.id}")
     
-    def mark_tested(self):
-        """Mark as tested (safe or unsafe)"""
+    def mark_tested_safe(self):
+        """Mark as tested and safe"""
+        if self.status != 'collected':
+            raise ValidationError(f"Cannot mark barcode with status '{self.status}' as tested. Only collected barcodes can be tested.")
+        
         self.status = 'tested'
         self.save()
+        
+        logger.info(f"Barcode {self.barcode} marked as tested (SAFE)")
     
-    def discard(self):
-        """Mark as discarded"""
+    def mark_discarded(self, reason=None):
+        """Mark as discarded (unsafe blood)"""
         self.status = 'discarded'
         self.save()
+        
+        logger.info(f"Barcode {self.barcode} discarded. Reason: {reason or 'Unsafe blood'}")
+    
+    @property
+    def is_available(self):
+        """Check if barcode is available for assignment"""
+        return self.status == 'available'
+    
+    @property
+    def is_in_use(self):
+        """Check if barcode is in use (assigned or collected)"""
+        return self.status in ['assigned', 'collected']
+    
+    @property
+    def lifecycle_stage(self):
+        """Get human-readable lifecycle stage"""
+        stages = {
+            'available': '📦 Ready for use',
+            'assigned': '📝 Assigned to donor',
+            'collected': '🩸 Blood collected - awaiting testing',
+            'tested': '✅ Tested and safe - in inventory',
+            'discarded': '🗑️ Discarded - not usable',
+        }
+        return stages.get(self.status, self.status)
+

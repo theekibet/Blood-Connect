@@ -1924,6 +1924,9 @@ def cancel_donation_request_view(request, donation_id):
 # -------------------------------
 # Profile View (READ-ONLY - View Only)
 # -------------------------------
+# -------------------------------
+# Profile View (READ-ONLY - View Only)
+# -------------------------------
 @login_required(login_url='donor:donorlogin')
 @onboarding_complete_required
 def donor_profile_view(request):
@@ -1942,7 +1945,13 @@ def donor_profile_view(request):
     profile_pic_url = None
     if donor.profile_pic and hasattr(donor.profile_pic, 'url') and donor.profile_pic.name:
         profile_pic_url = donor.profile_pic.url
-
+    
+    # ===== FORMAT MOBILE NUMBER FOR DISPLAY =====
+    mobile_display = donor.mobile
+    if donor.mobile and donor.mobile.startswith('+254'):
+        # Convert +254712345678 to 0712345678 for display
+        mobile_display = '0' + donor.mobile[4:]
+    
     context = {
         'donor': donor,
         'user': user,
@@ -1953,10 +1962,13 @@ def donor_profile_view(request):
         'verified_by': donor.bloodgroup_verified_by.get_full_name() if donor.bloodgroup_verified_by else None,
         'verified_at': donor.bloodgroup_verified_at,
         'profile_pic_url': profile_pic_url,
+        'mobile_display': mobile_display,  # Add formatted mobile number
     }
     return render(request, 'donor/donor_profile.html', context)
 
-
+# -------------------------------
+# Edit Profile View (EDITABLE - Profile Completion)
+# -------------------------------
 # -------------------------------
 # Edit Profile View (EDITABLE - Profile Completion)
 # -------------------------------
@@ -2081,6 +2093,11 @@ def donor_edit_profile_view(request):
     if not donor.bloodgroup:
         missing_fields_list.append("Blood Group (optional)")
     
+    # ===== FORMAT MOBILE NUMBER FOR DISPLAY IN THE FORM =====
+    mobile_display = donor.mobile
+    if donor.mobile and donor.mobile.startswith('+254'):
+        mobile_display = '0' + donor.mobile[4:]
+    
     context = {
         'profile_form': form,
         'donor': donor,
@@ -2094,6 +2111,7 @@ def donor_edit_profile_view(request):
         'missing_fields': missing_fields_list,
         'profile_pic_url': donor.profile_pic.url if donor.profile_pic and hasattr(donor.profile_pic, 'url') else None,
         'page_title': 'Complete Your Profile' if is_onboarding else 'Edit Profile',
+        'mobile_display': mobile_display,  # Add formatted mobile number
     }
     return render(request, 'donor/donor_edit_profile.html', context)
 

@@ -55,7 +55,40 @@
         border-radius: 50%;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
+    
+    /* Simple placeholder styling */
+    input::placeholder {
+        color: #6c757d;
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    .format-badge {
+        display: inline-block;
+        background-color: #e9ecef;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-family: monospace;
+        margin-left: 5px;
+    }
+
+    /* Mobile input styling */
+    .mobile-input-group {
+        position: relative;
+    }
+    
+    .mobile-format-hint {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    .mobile-format-hint i {
+        color: #0d6efd;
+    }
 </style>
+
 {% endblock %}
 
 {% block content %}
@@ -85,7 +118,7 @@
                                         </div>
                                         <small class="text-muted d-block mt-1">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            This helps us find donation centers near you,after updating,save changes at the bottom of this page then go back to dashboard to check out nearby donation centres
+                                            This helps us find donation centers near you, after updating, save changes at the bottom of this page then go back to dashboard to check out nearby donation centres
                                         </small>
                                     {% else %}
                                         <span class="text-muted fst-italic">
@@ -307,19 +340,33 @@
                                 {% endif %}
                             </div>
                             
-                            <!-- Mobile -->
+                            <!-- ===== FIXED: Mobile with 0712345678 format for display AND editing ===== -->
                             <div class="mb-3">
                                 <label class="form-label">
                                     Mobile Number <span class="text-danger">*</span>
                                 </label>
-                                {{ profile_form.mobile }}
+                                <input type="tel" 
+                                       name="mobile" 
+                                       id="id_mobile"
+                                       class="form-control {% if profile_form.mobile.errors %}is-invalid{% endif %}" 
+                                       placeholder="0712345678"
+                                       value="{% if donor.mobile and donor.mobile|slice:':4' == '+254' %}0{{ donor.mobile|slice:'4:' }}{% else %}{{ donor.mobile|default:'' }}{% endif %}"
+                                       maxlength="10"
+                                       pattern="07[0-9]{8}"
+                                       title="Enter 10 digits starting with 07"
+                                       inputmode="numeric"
+                                       required>
                                 {% if profile_form.mobile.errors %}
-                                    <div class="invalid-feedback d-block">{{ profile_form.mobile.errors }}</div>
+                                    <div class="invalid-feedback d-block">{{ profile_form.mobile.errors.0 }}</div>
                                 {% endif %}
-                                <small class="text-muted">Format: +254712345678</small>
+                                <div class="mobile-format-hint">
+                                    <i class="fas fa-info-circle me-1"></i> 
+                                    <strong>Format:</strong> <span class="format-badge">0712345678</span> 
+                                    (10 digits starting with 07)
+                                </div>
                             </div>
                             
-                            <!-- National ID -->
+                            <!-- National ID with placeholder showing format -->
                             <div class="mb-3">
                                 <label class="form-label">
                                     National ID 
@@ -334,11 +381,23 @@
                                         <i class="fas fa-lock"></i> National ID cannot be changed
                                     </small>
                                 {% else %}
-                                    {{ profile_form.national_id }}
+                                    <input type="text" 
+                                           name="national_id" 
+                                           id="id_national_id"
+                                           class="form-control {% if profile_form.national_id.errors %}is-invalid{% endif %}" 
+                                           placeholder="12345678"
+                                           value="{{ profile_form.national_id.value|default:'' }}"
+                                           maxlength="8"
+                                           pattern="\d{8}"
+                                           title="8 digits required"
+                                           inputmode="numeric"
+                                           required>
                                     {% if profile_form.national_id.errors %}
-                                        <div class="invalid-feedback d-block">{{ profile_form.national_id.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ profile_form.national_id.errors.0 }}</div>
                                     {% endif %}
-                                    <small class="text-muted">8 digits (required for identity verification)</small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 8 digits (e.g., 12345678)
+                                    </small>
                                 {% endif %}
                             </div>
                             
@@ -378,7 +437,7 @@
                                     <input type="hidden" name="county" value="{{ donor.county }}">
                                     <!-- Readonly display field -->
                                     <input type="text" class="form-control bg-light" 
-                                           value="{{ donor.county }}" readonly>
+                                           value="{{ donor.get_county_display|default:donor.county }}" readonly>
                                     <small class="readonly-hint">
                                         <i class="fas fa-lock"></i> County cannot be changed once set. Use "Update Current Location" button above for precise location.
                                     </small>
@@ -424,6 +483,7 @@
 </div>
 
 {% endblock %}
+
 
 {% block extra_js %}
 <script>
@@ -635,6 +695,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     removeCheckbox.checked = false;
                 }
             }
+        });
+    }
+
+    // ========================================
+    // MOBILE INPUT VALIDATION
+    // ========================================
+    const mobileInput = document.getElementById('id_mobile');
+    if (mobileInput) {
+        mobileInput.addEventListener('input', function(e) {
+            let value = this.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 10) {
+                value = value.slice(0, 10); // Limit to 10 digits
+            }
+            this.value = value;
+        });
+    }
+
+    // ========================================
+    // NATIONAL ID VALIDATION
+    // ========================================
+    const nationalIdInput = document.getElementById('id_national_id');
+    if (nationalIdInput) {
+        nationalIdInput.addEventListener('input', function(e) {
+            let value = this.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 8) {
+                value = value.slice(0, 8); // Limit to 8 digits
+            }
+            this.value = value;
         });
     }
 

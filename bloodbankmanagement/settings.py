@@ -8,25 +8,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 import sys
-import warnings
 
 # Load .env (local) or environment variables
 load_dotenv()
-
-# =============================
-# DEBUG ENVIRONMENT VARIABLES
-# =============================
-print("="*60)
-print("🔍 ENVIRONMENT VARIABLES DEBUG")
-print("="*60)
-print(f"RENDER_EXTERNAL_HOSTNAME: {os.getenv('RENDER_EXTERNAL_HOSTNAME')}")
-print(f"REDIS_URL from os.getenv: {os.getenv('REDIS_URL')}")
-print(f"REDIS_URL from os.environ.get: {os.environ.get('REDIS_URL')}")
-print(f"All env vars containing REDIS: {[k for k in os.environ.keys() if 'REDIS' in k]}")
-print(f"Current Working Directory: {os.getcwd()}")
-print(f"BASE_DIR: {Path(__file__).resolve().parent.parent}")
-print("="*60)
-sys.stdout.flush()  # Force print to show in logs
 
 # =============================
 # BASE DIRECTORIES
@@ -71,8 +55,8 @@ INSTALLED_APPS = [
     # Third-party
     'widget_tweaks',
     'django_extensions',
-    'django_ratelimit',  # For rate limiting honeypot
-    'django_redis',  # Redis cache backend
+    'django_ratelimit',
+    'django_redis',
     
     # Local apps
     'blood',
@@ -179,52 +163,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REDIS/CACHE CONFIGURATION
 # =============================
 
-# Try multiple methods to get Redis URL
-print("="*60)
-print("🔍 REDIS CONFIGURATION DEBUG")
-print("="*60)
-
-# Method 1: Direct from os.environ
-REDIS_URL = os.environ.get('REDIS_URL')
-print(f"Method 1 (os.environ.get): {REDIS_URL}")
-
-# Method 2: From os.getenv
-if not REDIS_URL:
-    REDIS_URL = os.getenv('REDIS_URL')
-    print(f"Method 2 (os.getenv): {REDIS_URL}")
-
-# Method 3: Check if it's under a different name
-if not REDIS_URL:
-    REDIS_URL = os.getenv('REDIS_TLS_URL') or os.getenv('REDIS_INTERNAL_URL')
-    print(f"Method 3 (alternate names): {REDIS_URL}")
-
-# Method 4: Hardcode for testing (uncomment if needed)
-# if not REDIS_URL:
-#     REDIS_URL = 'redis://red-d6ka3g95pdvs73ckpfng:6379'
-#     print(f"Method 4 (hardcoded): {REDIS_URL}")
-
-# Final fallback to localhost
-if not REDIS_URL:
-    REDIS_URL = 'redis://127.0.0.1:6379/1'
-    print(f"⚠️  Using fallback localhost: {REDIS_URL}")
-
-print(f"🔥 FINAL REDIS URL: {REDIS_URL}")
+# Get Redis URL from environment, fallback to localhost for development
+REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
 
 # Check if we're on Render
 ON_RENDER = bool(os.getenv('RENDER_EXTERNAL_HOSTNAME'))
-print(f"ON_RENDER: {ON_RENDER}")
-
-if ON_RENDER and '127.0.0.1' in REDIS_URL:
-    print("❌ ERROR: On Render but still using localhost Redis!")
-    print("   Please check your REDIS_URL environment variable in Render dashboard")
-    print("   Expected: redis://red-d6ka3g95pdvs73ckpfng:6379")
-    print("   Got: {REDIS_URL}")
-    
-if ON_RENDER and not os.getenv('REDIS_URL'):
-    print("⚠️  WARNING: On Render but REDIS_URL not set in environment!")
-    
-print("="*60)
-sys.stdout.flush()
 
 CACHES = {
     'default': {
@@ -232,32 +175,31 @@ CACHES = {
         'LOCATION': REDIS_URL,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            # Add these for better production performance
+            # Connection pool settings for better performance
             'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
             'CONNECTION_POOL_CLASS_KWARGS': {
-                'max_connections': 50,  # Match your Redis instance limit
+                'max_connections': 50,
                 'timeout': 20,
             },
-            'SOCKET_CONNECT_TIMEOUT': 5,  # 5 seconds
-            'SOCKET_TIMEOUT': 5,  # 5 seconds
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
             'RETRY_ON_TIMEOUT': True,
             'IGNORE_EXCEPTIONS': True,  # Don't crash if Redis is down
         },
-        'KEY_PREFIX': 'bloodconnect',  # Add prefix to avoid key collisions
+        'KEY_PREFIX': 'bloodconnect',
         'TIMEOUT': 300,  # 5 minutes default timeout
     }
 }
 
-# Optional: Add a fallback cache for when Redis is unavailable
+# Optional: Add a fallback cache for when Redis is unavailable in production
 if ON_RENDER and not os.getenv('REDIS_URL'):
-    # In production, if REDIS_URL is missing, use a dummy cache as fallback
     CACHES['default'] = {
         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 
 # Tell django-ratelimit which cache to use
 RATELIMIT_USE_CACHE = 'default'
-RATELIMIT_ENABLE = True  # Enable rate limiting
+RATELIMIT_ENABLE = True
 
 # =============================
 # PASSWORD VALIDATION
@@ -383,7 +325,7 @@ LOGGING = {
             'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
-        'honeypot': {  # Special formatter for honeypot logs
+        'honeypot': {
             'format': '\n🔴 HONEYPOT ATTACK - {asctime}\n   IP: {message}\n   {levelname}',
             'style': '{',
         },
@@ -396,13 +338,13 @@ LOGGING = {
             'stream': sys.stdout,
             'formatter': 'simple',
         },
-        'honeypot_file': {  # Separate file for honeypot logs
+        'honeypot_file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'honeypot.log',
             'formatter': 'honeypot',
         },
-        'honeypot_email': {  # Email alerts for serious attempts
+        'honeypot_email': {
             'level': 'WARNING',
             'class': 'django.utils.log.AdminEmailHandler',
             'include_html': True,
@@ -430,7 +372,7 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': False,
         },
-        'blood.views': {  # Logger for honeypot views
+        'blood.views': {
             'handlers': ['console', 'honeypot_file', 'honeypot_email'],
             'level': 'WARNING',
             'propagate': False,
@@ -449,11 +391,11 @@ DONOR_MAX_AGE = 65
 # =============================
 # HONEYPOT SETTINGS
 # =============================
-HONEYPOT_ENABLED = True  # Master switch for honeypot
-HONEYPOT_LOG_ALL_ATTEMPTS = True  # Log all attempts to database
-HONEYPOT_EMAIL_ALERTS = True  # Send email alerts for suspicious attempts
-HONEYPOT_DELAY_ATTEMPTS = True  # Add delay to slow down brute force
-HONEYPOT_MAX_ATTEMPTS_PER_IP = 10  # Max attempts before special messages
+HONEYPOT_ENABLED = True
+HONEYPOT_LOG_ALL_ATTEMPTS = True
+HONEYPOT_EMAIL_ALERTS = True
+HONEYPOT_DELAY_ATTEMPTS = True
+HONEYPOT_MAX_ATTEMPTS_PER_IP = 10
 
 # =============================
 # STARTUP VALIDATION
@@ -500,9 +442,3 @@ LOGIN_REDIRECT_URL = 'donor:donor-dashboard'
 LOGOUT_REDIRECT_URL = 'home'
 
 ADMIN_SECRET_URL = os.getenv('ADMIN_SECRET_URL', 'dev-admin-only')
-
-# Final debug print
-print("="*60)
-print("✅ Settings.py loaded completely")
-print("="*60)
-sys.stdout.flush()

@@ -346,19 +346,214 @@ class LabTechnologistProfileForm(forms.ModelForm):
         
         return instance
 class BloodTestForm(forms.ModelForm):
+    """
+    Form for lab technologists to record blood test results.
+    Includes component type selection which determines expiry date.
+    """
+    
+    COMPONENT_TYPES = [
+        ('whole_blood', '🩸 Whole Blood (35 days)'),
+        ('rbc', '🔴 Packed Red Blood Cells (42 days)'),
+        ('platelets', '🟡 Platelets (5 days) - Requires Agitation'),
+        ('ffp', '❄️ Fresh Frozen Plasma (1 year)'),
+        ('cryo', '🧊 Cryoprecipitate (1 year)'),
+    ]
+    
+    TEST_RESULT_CHOICES = [
+        ('negative', 'Negative ✅'),
+        ('positive', 'Positive ❌'),
+        ('pending', 'Pending ⏳'),
+    ]
+    
+    component_type = forms.ChoiceField(
+        choices=COMPONENT_TYPES,
+        initial='whole_blood',
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'component_type'}),
+        help_text='Select blood component type - this determines expiry date'
+    )
+    
+    # Override test fields with better widgets and help text
+    hiv = forms.ChoiceField(
+        choices=TEST_RESULT_CHOICES,
+        initial='negative',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='HIV-1/HIV-2 antibody test'
+    )
+    
+    hepatitis_b = forms.ChoiceField(
+        choices=TEST_RESULT_CHOICES,
+        initial='negative',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='HBsAg (Hepatitis B surface antigen)'
+    )
+    
+    hepatitis_c = forms.ChoiceField(
+        choices=TEST_RESULT_CHOICES,
+        initial='negative',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Anti-HCV antibody test'
+    )
+    
+    syphilis = forms.ChoiceField(
+        choices=TEST_RESULT_CHOICES,
+        initial='negative',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Syphilis serology (RPR/TPHA)'
+    )
+    
+    malaria = forms.ChoiceField(
+        choices=TEST_RESULT_CHOICES,
+        initial='negative',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Malaria antigen/parasite test'
+    )
+    
+    # Additional optional tests
+    other_tests = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+        help_text='Other tests performed (e.g., HTLV, Chagas, etc.)'
+    )
+    
+    unsafe_reason = forms.ChoiceField(
+        required=False,
+        choices=[
+            ('', '---------'),
+            ('hiv_positive', 'HIV Positive'),
+            ('hepatitis_b_positive', 'Hepatitis B Positive'),
+            ('hepatitis_c_positive', 'Hepatitis C Positive'),
+            ('syphilis_positive', 'Syphilis Positive'),
+            ('malaria_positive', 'Malaria Positive'),
+            ('multiple_markers', 'Multiple Disease Markers'),
+            ('contamination', 'Bacterial Contamination'),
+            ('hemolysis', 'Hemolysis Detected'),
+            ('lipemic', 'Lipemic Sample'),
+            ('other', 'Other Reason'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'unsafe_reason'}),
+        help_text='Required only if any test is positive'
+    )
+    
+    unsafe_reason_other = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify other reason'}),
+        help_text='If "Other Reason" selected above, please specify'
+    )
+    
     class Meta:
         model = BloodTest
         fields = [
             'blood_group',
             'hiv', 'hepatitis_b', 'hepatitis_c',
-            'syphilis', 'malaria',
-            'notes'
+            'syphilis', 'malaria', 'other_tests',
+            'notes', 'component_type'
         ]
         widgets = {
-            'notes': forms.Textarea(attrs={'rows': 3}),
+            'blood_group': forms.Select(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
         labels = {
             'hiv': 'HIV Test',
             'hepatitis_b': 'Hepatitis B',
             'hepatitis_c': 'Hepatitis C',
+            'syphilis': 'Syphilis',
+            'malaria': 'Malaria',
+            'other_tests': 'Other Tests',
+            'blood_group': 'Blood Group',
         }
+        help_texts = {
+            'blood_group': 'Confirmed blood group after testing',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Add CSS classes for better styling
+        for field_name, field in self.fields.items():
+            if not isinstance(field.widget, (forms.Select, forms.Textarea, forms.TextInput)):
+                continue
+            
+        # If this is an edit of an existing test, show the current values
+        if self.instance and self.instance.pk:
+            # Determine if any test was positive
+            test_fields = ['hiv', 'hepatitis_b', 'hepatitis_c', 'syphilis', 'malaria']
+            has_positive = any(getattr(self.instance, field) == 'positive' for field in test_fields)
+            
+            if has_positive:
+                # Find which test was positive
+                for field in test_fields:
+                    if getattr(self.instance, field) == 'positive':
+                        self.fields['unsafe_reason'].initial = f"{field}_positive"
+                        break
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Get test results
+        hiv = cleaned_data.get('hiv')
+        hepatitis_b = cleaned_data.get('hepatitis_b')
+        hepatitis_c = cleaned_data.get('hepatitis_c')
+        syphilis = cleaned_data.get('syphilis')
+        malaria = cleaned_data.get('malaria')
+        
+        # Check if ANY test is positive
+        test_results = [hiv, hepatitis_b, hepatitis_c, syphilis, malaria]
+        any_positive = any(result == 'positive' for result in test_results)
+        
+        # Get unsafe reason fields
+        unsafe_reason = cleaned_data.get('unsafe_reason')
+        unsafe_reason_other = cleaned_data.get('unsafe_reason_other')
+        
+        # Validation: If any test positive, unsafe reason is required
+        if any_positive:
+            if not unsafe_reason:
+                raise ValidationError(
+                    "Unsafe reason is required when any test is positive."
+                )
+            
+            if unsafe_reason == 'other' and not unsafe_reason_other:
+                raise ValidationError(
+                    "Please specify the other reason for unsafe result."
+                )
+        
+        # Validation: Blood group is required
+        blood_group = cleaned_data.get('blood_group')
+        if not blood_group:
+            raise ValidationError("Blood group is required.")
+        
+        return cleaned_data
+
+    def save(self, commit=True):
+        """Override save to handle unsafe reason"""
+        instance = super().save(commit=False)
+        
+        # Determine overall result based on tests
+        test_fields = ['hiv', 'hepatitis_b', 'hepatitis_c', 'syphilis', 'malaria']
+        any_positive = any(getattr(instance, field) == 'positive' for field in test_fields)
+        
+        if any_positive:
+            instance.result = 'unsafe'
+            
+            # Store the unsafe reason in notes if needed
+            unsafe_reason = self.cleaned_data.get('unsafe_reason')
+            if unsafe_reason:
+                reason_text = dict(self.fields['unsafe_reason'].choices).get(unsafe_reason, '')
+                
+                if unsafe_reason == 'other':
+                    other_text = self.cleaned_data.get('unsafe_reason_other', '')
+                    reason_text = f"Other: {other_text}"
+                
+                # Append to notes
+                if instance.notes:
+                    instance.notes += f"\n\nUNSAFE REASON: {reason_text}"
+                else:
+                    instance.notes = f"UNSAFE REASON: {reason_text}"
+        else:
+            instance.result = 'safe'
+        
+        if commit:
+            instance.save()
+            self.save_m2m()
+        
+        return instance

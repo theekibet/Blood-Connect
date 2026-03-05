@@ -48,17 +48,55 @@
                                        required>
                                 <span class="input-group-text" id="charCounter">0/150</span>
                             </div>
+                            
+                            <!-- Error Message with Taken Username -->
                             {% if form.username.errors %}
                                 <div class="invalid-feedback d-block">
                                     <i class="fas fa-exclamation-circle me-1"></i>
                                     {% for error in form.username.errors %}
-                                        {{ error }}
+                                        {% if "already exists" in error|lower or "taken" in error|lower %}
+                                            <span class="taken-username-error">
+                                                "{{ form.username.value }}" is already taken. 
+                                                Try one of these instead:
+                                            </span>
+                                        {% else %}
+                                            {{ error }}
+                                        {% endif %}
                                     {% endfor %}
                                 </div>
                             {% endif %}
                         </div>
                         
-                        <!-- Requirements List -->
+                        <!-- Suggestions - Only shown when there's an error AND suggestions exist -->
+                        {% if form.username.errors and suggestions %}
+                        <div class="suggestions-container mb-4 animate__animated animate__fadeIn">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning bg-opacity-10 border-warning">
+                                    <h6 class="mb-0 text-warning">
+                                        <i class="fas fa-lightbulb me-2"></i>
+                                        Available Suggestions
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="small text-muted mb-3">
+                                        The username "<strong>{{ form.username.value }}</strong>" is already taken. 
+                                        Here are some available options:
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for suggestion in suggestions %}
+                                        <span class="badge bg-light text-dark p-3 suggestion-badge" 
+                                              onclick="selectSuggestion('{{ suggestion }}')"
+                                              style="cursor: pointer; font-size: 1rem; transition: all 0.2s;">
+                                            <i class="fas fa-plus-circle me-1 text-success"></i>{{ suggestion }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Requirements List - Always visible -->
                         <div class="card bg-light mb-4">
                             <div class="card-body">
                                 <h6 class="mb-3">
@@ -85,29 +123,6 @@
                                 </ul>
                             </div>
                         </div>
-                        
-                        <!-- Suggestions -->
-                        {% if suggestions %}
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <i class="fas fa-lightbulb text-warning me-2"></i>
-                                Available Suggestions
-                            </label>
-                            <div class="d-flex flex-wrap gap-2">
-                                {% for suggestion in suggestions %}
-                                <span class="badge bg-light text-dark p-3 suggestion-badge" 
-                                      onclick="selectSuggestion('{{ suggestion }}')"
-                                      style="cursor: pointer; font-size: 1rem;">
-                                    <i class="fas fa-plus-circle me-1"></i>{{ suggestion }}
-                                </span>
-                                {% endfor %}
-                            </div>
-                            <small class="text-muted d-block mt-2">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Click any suggestion to use it
-                            </small>
-                        </div>
-                        {% endif %}
                         
                         <!-- Submit Button -->
                         <div class="form-actions">
@@ -137,6 +152,7 @@
         </div>
     </div>
 </div>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -173,13 +189,33 @@ document.addEventListener('DOMContentLoaded', function() {
         usernameInput.focus();
         updateCharCount();
         
+        // Remove any existing error states
+        usernameInput.classList.remove('is-invalid');
+        const errorDiv = document.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+        
         // Highlight the selected suggestion
         document.querySelectorAll('.suggestion-badge').forEach(badge => {
             badge.classList.remove('bg-primary', 'text-white');
             if (badge.textContent.trim().includes(suggestion)) {
                 badge.classList.add('bg-primary', 'text-white');
+                badge.querySelector('i').classList.remove('text-success');
+                badge.querySelector('i').classList.add('text-white');
+            } else {
+                badge.classList.remove('bg-primary', 'text-white');
+                const icon = badge.querySelector('i');
+                if (icon) {
+                    icon.classList.add('text-success');
+                    icon.classList.remove('text-white');
+                }
             }
         });
+        
+        // Optionally auto-submit after selecting suggestion
+        // Uncomment the line below if you want auto-submit
+        // form.submit();
     }
     
     // Form submission with loading state
@@ -201,6 +237,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Clear suggestions when user starts typing a new username
+    let typingTimer;
+    usernameInput.addEventListener('keyup', function() {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() {
+            const suggestionsContainer = document.querySelector('.suggestions-container');
+            if (suggestionsContainer) {
+                // Optional: Hide suggestions when user starts typing something completely different
+                // Uncomment if you want this behavior
+                // suggestionsContainer.style.opacity = '0.5';
+            }
+        }, 500);
+    });
 });
 </script>
+
+<!-- Add Font Awesome if not already included -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 {% endblock %}

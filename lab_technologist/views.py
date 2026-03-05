@@ -389,10 +389,11 @@ def pending_tests(request):
     }
     return render(request, 'lab_technologist/pending_tests.html', context)
 
+
 @login_required
 @transaction.atomic
 def perform_test(request, collection_id):
-    """Perform test on a blood collection with barcode tracking"""
+    """Perform test on a blood collection and set expiry ONLY if safe"""
     
     blood = get_object_or_404(BloodDonate, id=collection_id, status='collected')
     
@@ -402,160 +403,81 @@ def perform_test(request, collection_id):
         blood_donation=blood
     ).first()
     
-    # Check if already tested
-    if hasattr(blood, 'lab_test'):
-        messages.warning(request, 'This blood has already been tested.')
-        return redirect('lab_technologist:test_result', test_id=blood.lab_test.id)
-    
     if request.method == 'POST':
         form = BloodTestForm(request.POST)
         if form.is_valid():
             test = form.save(commit=False)
             test.blood_collection = blood
             test.tested_by = request.user.lab_tech_profile
-            test.save()  # This calls determine_safety() automatically
+            test.save()
             
-            # Get unsafe reason from form if provided
             unsafe_reason = request.POST.get('unsafe_reason', '').strip()
             
-            # ===== PERMANENTLY VERIFY DONOR'S BLOOD GROUP (REGARDLESS OF SAFE/UNSAFE) =====
-            # This happens BEFORE stock handling so we know if this was first verification
+            # ===== PERMANENTLY VERIFY DONOR'S BLOOD GROUP =====
             donor = blood.donor
-            was_first_verification = False
+            if donor and not donor.bloodgroup_verified:
+                donor.bloodgroup = test.blood_group
+                donor.bloodgroup_verified = True
+                donor.bloodgroup_verified_by = request.user
+                donor.bloodgroup_verified_at = timezone.now()
+                donor.save()
             
-            if donor:
-                if not donor.bloodgroup_verified:
-                    # First time verification - set and lock
-                    donor.bloodgroup = test.blood_group
-                    donor.bloodgroup_verified = True
-                    donor.bloodgroup_verified_by = request.user
-                    donor.bloodgroup_verified_at = timezone.now()
-                    donor.save()
-                    was_first_verification = True
-                    
-                    logger.info(f"✅ PERMANENTLY VERIFIED donor {donor.id} blood group: {test.blood_group}")
-                    
-                    # Create notification for donor
-                    from utils.models import Notification
-                    from django.contrib.contenttypes.models import ContentType
-                    
-                    Notification.objects.create(
-                        title="Blood Group Verified",
-                        message=(
-                            f"Your blood group has been permanently verified as {test.blood_group} "
-                            f"based on laboratory testing. This information is now locked and "
-                            f"will be used for all future donations."
-                        ),
-                        recipient_content_type=ContentType.objects.get_for_model(donor),
-                        recipient_object_id=donor.id,
-                        sender_content_type=ContentType.objects.get_for_model(request.user),
-                        sender_object_id=request.user.id,
-                    )
-                    
-                elif donor.bloodgroup != test.blood_group and donor.bloodgroup_verified:
-                    # This should never happen - blood group mismatch with verified donor
-                    # Log it as critical error
-                    logger.error(f"⚠️ CRITICAL: Donor {donor.id} has verified blood group {donor.bloodgroup} "
-                               f"but test shows {test.blood_group}. Manual review required!")
-                    
-                    # Create alert for admin
-                    from utils.models import Notification
-                    from django.contrib.contenttypes.models import ContentType
-                    
-                    Notification.objects.create(
-                        title="⚠️ BLOOD GROUP MISMATCH DETECTED",
-                        message=(
-                            f"Donor {donor.user.get_full_name()} has verified blood group {donor.bloodgroup} "
-                            f"but lab test shows {test.blood_group}. Immediate review required!"
-                        ),
-                        recipient_content_type=ContentType.objects.get_for_model(request.user),
-                        recipient_object_id=request.user.id,
-                    )
-            
-            # ===== NOW HANDLE STOCK BASED ON TEST RESULT =====
+            # ===== NOW HANDLE STOCK WITH EXPIRY DATE =====
             if test.result == 'safe':
-                # Create stock unit for safe blood - using the pre-generated barcode
+                # ===== CRITICAL: Calculate expiry date NOW =====
+                # Get component type (you may need to add this to your form)
+                component_type = request.POST.get('component_type', 'whole_blood')
+                
+                # Calculate expiry based on collection date
+                from blood.utils.expiry_utils import calculate_expiry_date
+                expiry_date = calculate_expiry_date(
+                    collection_date=blood.date.date(),  # Use collection date
+                    component_type=component_type
+                )
+                
+                # Create stock unit with CORRECT expiry date
                 stock_unit = StockUnit.objects.create(
                     bloodgroup=test.blood_group,
                     unit=blood.unit,
                     center=blood.donation_center,
-                    expiry_date=timezone.now().date() + timedelta(days=46),
+                    expiry_date=expiry_date,  # ← NOW set here, not at generation!
                     blood_donation=blood,
-                    blood_bag_barcode=blood_bag,  # Link to the pre-generated barcode
-                    barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",  # Use bag barcode or generate
+                    blood_bag_barcode=blood_bag,
+                    barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",
                     safety_status='safe',
                     safety_verified_by=request.user,
                     safety_verified_by_role='lab_tech',
                     safety_verified_at=timezone.now(),
-                    safety_notes=f"Tested by lab: All markers negative. Test ID: {test.id}",
+                    safety_notes=f"Tested safe on {timezone.now().date()}. Expires: {expiry_date}",
                     is_quarantined=False,
-                    added_to_inventory_by=request.user,
-                    added_to_inventory_by_role='lab_tech',
-                    added_to_inventory_at=timezone.now()
-                )
-                
-                # Create stock transaction record
-                StockTransaction.objects.create(
-                    stockunit=stock_unit,
-                    quantity_added=blood.unit,
-                    quantity_deducted=None,
-                    transaction_type='addition',
-                    user=request.user,
-                    notes=f"Added to inventory after lab testing - Test ID: {test.id}, Result: SAFE, Barcode: {stock_unit.barcode}"
                 )
                 
                 # Update blood bag barcode status
                 if blood_bag:
-                    blood_bag.status = 'tested'
+                    blood_bag.status = 'tested'  # Tested - Safe
                     blood_bag.save()
                 
                 # Update blood donation status
                 blood.status = 'tested_safe'
                 blood.save()
                 
-                # Update appointment status
-                from phlebotomist.models import Appointment
-                try:
-                    appointment = Appointment.objects.get(
-                        request_object_id=blood.id,
-                        request_content_type__model='blooddonate'
-                    )
-                    appointment.status = 'completed'
-                    appointment.completed_by = request.user
-                    appointment.completed_by_role = 'lab_tech'
-                    appointment.completed_at = timezone.now()
-                    appointment.safety_status = 'safe'
-                    appointment.safety_verified_by = request.user
-                    appointment.safety_verified_by_role = 'lab_tech'
-                    appointment.safety_verified_at = timezone.now()
-                    appointment.save()
-                except Appointment.DoesNotExist:
-                    logger.warning(f"No appointment found for blood donation {blood.id}")
-                
-                # Award points to donor
-                if blood.donor:
-                    blood.donor.points += 10
-                    blood.donor.last_donation_date = blood.date
-                    blood.donor.save()
+                # Calculate days until expiry for display
+                days_until = (expiry_date - timezone.now().date()).days
                 
                 messages.success(
                     request, 
-                    f'✅ Test completed. Blood marked SAFE and added to inventory. '
-                    f'Donor blood group has been {"verified" if was_first_verification else "confirmed"}. '
-                    f'Barcode: {stock_unit.barcode}'
+                    f'✅ Blood marked SAFE. Added to inventory with barcode {stock_unit.barcode}. '
+                    f'Expires: {expiry_date} ({days_until} days from now)'
                 )
                 
             else:  # unsafe
-                # Use reason from form or default
-                if not unsafe_reason:
-                    unsafe_reason = 'Tested positive for disease markers'
-                
-                # Create stock unit for unsafe blood (quarantined)
+                # UNSAFE blood - NO EXPIRY DATE SET
+                # Create stock unit with zero units and no expiry (or set to None)
                 stock_unit = StockUnit.objects.create(
                     bloodgroup=test.blood_group,
-                    unit=0,  # Zero units for unsafe blood
+                    unit=0,  # Zero units
                     center=blood.donation_center,
-                    expiry_date=timezone.now().date() + timedelta(days=46),
+                    expiry_date=None,  # ← NO expiry for unsafe blood!
                     blood_donation=blood,
                     blood_bag_barcode=blood_bag,
                     barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",
@@ -564,91 +486,43 @@ def perform_test(request, collection_id):
                     safety_verified_by_role='lab_tech',
                     safety_verified_at=timezone.now(),
                     unsafe_reason=unsafe_reason,
-                    safety_notes=f"Tested by lab: {unsafe_reason}. Test ID: {test.id}",
+                    safety_notes=f"UNSAFE: {unsafe_reason}. Discarded on {timezone.now().date()}",
                     is_quarantined=True
-                )
-                
-                # Create stock transaction record for unsafe blood
-                StockTransaction.objects.create(
-                    stockunit=stock_unit,
-                    quantity_added=None,
-                    quantity_deducted=blood.unit,
-                    transaction_type='deduction',
-                    user=request.user,
-                    notes=f"Unsafe blood discarded - Test ID: {test.id}, Result: UNSAFE, Reason: {unsafe_reason}, Barcode: {stock_unit.barcode}"
                 )
                 
                 # Update blood bag barcode status
                 if blood_bag:
-                    blood_bag.status = 'discarded'
+                    blood_bag.status = 'discarded'  # Discarded - Unsafe
                     blood_bag.save()
                 
                 # Update blood donation status
                 blood.status = 'tested_unsafe'
                 blood.save()
                 
-                # Update appointment status
-                from phlebotomist.models import Appointment
-                try:
-                    appointment = Appointment.objects.get(
-                        request_object_id=blood.id,
-                        request_content_type__model='blooddonate'
-                    )
-                    appointment.status = 'completed'
-                    appointment.completed_by = request.user
-                    appointment.completed_by_role = 'lab_tech'
-                    appointment.completed_at = timezone.now()
-                    appointment.safety_status = 'unsafe'
-                    appointment.safety_verified_by = request.user
-                    appointment.safety_verified_by_role = 'lab_tech'
-                    appointment.safety_verified_at = timezone.now()
-                    appointment.save()
-                except Appointment.DoesNotExist:
-                    logger.warning(f"No appointment found for blood donation {blood.id}")
-                
-                # Notify donor about unsafe result (without revealing specific disease)
-                if blood.donor:
-                    from utils.models import Notification
-                    from django.contrib.contenttypes.models import ContentType
-                    
-                    Notification.objects.create(
-                        title="Blood Donation Test Results",
-                        message=(
-                            f"Thank you for your recent blood donation. Our laboratory testing has been completed. "
-                            f"Please contact the blood bank for further information about your results."
-                        ),
-                        recipient_content_type=ContentType.objects.get_for_model(blood.donor),
-                        recipient_object_id=blood.donor.id,
-                        sender_content_type=ContentType.objects.get_for_model(request.user),
-                        sender_object_id=request.user.id,
-                    )
-                
                 messages.warning(
                     request, 
-                    f'⚠️ Test completed. Blood marked UNSAFE and quarantined. '
-                    f'Donor blood group has been {"verified" if was_first_verification else "confirmed"}. '
-                    f'Reason: {unsafe_reason}'
+                    f'⚠️ Blood marked UNSAFE and discarded. No expiry date set.'
                 )
             
             return redirect('lab_technologist:test_result', test_id=test.id)
+    
     else:
-        # Pre-fill with donor's blood group if available
+        # GET request - show form
         initial = {}
         if blood.donor and blood.donor.bloodgroup:
             initial['blood_group'] = blood.donor.bloodgroup
         
-        # Get barcode info for display
-        barcode_info = blood_bag.barcode if blood_bag else 'No barcode assigned'
-        bag_type = blood_bag.get_bag_type_display() if blood_bag and hasattr(blood_bag, 'get_bag_type_display') else 'Standard'
-        
         form = BloodTestForm(initial=initial)
+        
+        # Get barcode info
+        barcode_info = blood_bag.barcode if blood_bag else 'No barcode assigned'
     
     return render(request, 'lab_technologist/perform_test.html', {
         'form': form,
         'blood': blood,
         'donor': blood.donor,
         'barcode': blood_bag.barcode if blood_bag else None,
-        'bag_type': bag_type,
+        'bag_type': blood_bag.get_bag_type_display() if blood_bag else 'Standard',
     })
 
 @login_required

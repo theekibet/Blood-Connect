@@ -8,7 +8,7 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <!-- Test Result Card -->
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <i class="fas fa-file-medical me-2"></i>
@@ -26,52 +26,139 @@
                 </div>
                 
                 <div class="card-body">
-                    <!-- Result Alert -->
+                    <!-- Result Alert with Expiry Info -->
                     <div class="alert {% if test.result == 'safe' %}alert-success{% elif test.result == 'unsafe' %}alert-danger{% else %}alert-warning{% endif %} mb-4">
-                        <i class="fas {% if test.result == 'safe' %}fa-check-circle{% elif test.result == 'unsafe' %}fa-exclamation-triangle{% else %}fa-hourglass-half{% endif %} me-2"></i>
-                        <strong>Result:</strong> This blood sample has been tested and found to be 
-                        <strong>{{ test.get_result_display|upper }}</strong>.
-                    </div>
-                    
-                    <!-- Test Details -->
-                    <div class="details-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Test ID</div>
-                            <div class="detail-value"><code>#{{ test.id }}</code></div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Donor Name</div>
-                            <div class="detail-value">
-                                {% if test.blood_collection.donor %}
-                                    {{ test.blood_collection.donor.user.get_full_name }}
+                        <div class="d-flex align-items-center">
+                            <i class="fas {% if test.result == 'safe' %}fa-check-circle{% elif test.result == 'unsafe' %}fa-exclamation-triangle{% else %}fa-hourglass-half{% endif %} fa-2x me-3"></i>
+                            <div>
+                                <strong>Result:</strong> This blood sample has been tested and found to be 
+                                <strong>{{ test.get_result_display|upper }}</strong>.
+                                
+                                {% if test.result == 'safe' and stock_unit %}
                                     <br>
-                                    <small class="text-muted">ID: {{ test.blood_collection.donor.id }}</small>
-                                {% else %}
-                                    <span class="text-muted">Unknown Donor</span>
+                                    <span class="mt-2 d-block">
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        <strong>Expires:</strong> {{ stock_unit.expiry_date|date:"M d, Y" }}
+                                        ({{ stock_unit.days_until_expiry }} days remaining)
+                                    </span>
+                                {% elif test.result == 'unsafe' %}
+                                    <br>
+                                    <span class="mt-2 d-block">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Reason:</strong> {{ stock_unit.unsafe_reason|default:"Tested positive for disease markers" }}
+                                    </span>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Blood Group</div>
-                            <div class="detail-value">
-                                <span class="badge bg-info p-2">{{ test.blood_group|default:"Not specified" }}</span>
+                    </div>
+                    
+                    <!-- BARCODE INFORMATION - NEW SECTION -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-qrcode me-2"></i>
+                                Blood Bag Barcode Information
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th width="40%">Barcode:</th>
+                                            <td>
+                                                <code class="bg-dark text-light p-1 rounded">{{ blood_bag.barcode|default:"N/A" }}</code>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Bag Type:</th>
+                                            <td>{{ blood_bag.get_bag_type_display|default:"Standard" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Volume:</th>
+                                            <td>{{ blood_bag.volume_ml|default:450 }} ml</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th width="40%">Anticoagulant:</th>
+                                            <td>{{ blood_bag.get_anticoagulant_display|default:"CPD" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Bag Status:</th>
+                                            <td>
+                                                <span class="badge {% if blood_bag.status == 'tested' %}bg-success{% elif blood_bag.status == 'discarded' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                    {{ blood_bag.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Test Date</div>
-                            <div class="detail-value">{{ test.test_date|date:"M d, Y H:i" }}</div>
+                    </div>
+                    
+                    <!-- Test Details -->
+                    <h6 class="mb-3">Test Information</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">Test ID:</th>
+                                    <td><code>#{{ test.id }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Test Date:</th>
+                                    <td>{{ test.test_date|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Tested By:</th>
+                                    <td>{{ test.tested_by.user.get_full_name|default:"Unknown" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Component Type:</th>
+                                    <td>
+                                        {% if component_type %}
+                                            <span class="badge bg-info">{{ component_type }}</span>
+                                        {% else %}
+                                            {{ stock_unit.get_component_type_display|default:"Whole Blood" }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Tested By</div>
-                            <div class="detail-value">{{ test.tested_by.user.get_full_name|default:"Unknown" }}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Collection Date</div>
-                            <div class="detail-value">{{ test.blood_collection.date|date:"M d, Y" }}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Donation Center</div>
-                            <div class="detail-value">{{ test.blood_collection.donation_center.name|default:"Not assigned" }}</div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">Donor Name:</th>
+                                    <td>
+                                        {% if test.blood_collection.donor %}
+                                            {{ test.blood_collection.donor.user.get_full_name }}
+                                            <br>
+                                            <small class="text-muted">ID: {{ test.blood_collection.donor.id }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Unknown Donor</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Blood Group:</th>
+                                    <td>
+                                        <span class="badge bg-info p-2">{{ test.blood_group|default:"Not specified" }}</span>
+                                        {% if test.blood_collection.donor.bloodgroup_verified %}
+                                            <i class="fas fa-check-circle text-success ms-1" title="Donor blood group verified"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Donation Date:</th>
+                                    <td>{{ test.blood_collection.date|date:"M d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Donation Center:</th>
+                                    <td>{{ test.blood_collection.donation_center.name|default:"Not assigned" }}</td>
+                                </tr>
+                            </table>
                         </div>
                     </div>
                     
@@ -91,14 +178,14 @@
                                 <tr>
                                     <td>HIV</td>
                                     <td>
-                                        {% if test.hiv == True %}Positive
-                                        {% elif test.hiv == False %}Negative
+                                        {% if test.hiv == 'positive' %}Positive
+                                        {% elif test.hiv == 'negative' %}Negative
                                         {% else %}Not Tested{% endif %}
                                     </td>
                                     <td>
-                                        {% if test.hiv == True %}
+                                        {% if test.hiv == 'positive' %}
                                             <span class="badge bg-danger">Reactive</span>
-                                        {% elif test.hiv == False %}
+                                        {% elif test.hiv == 'negative' %}
                                             <span class="badge bg-success">Non-reactive</span>
                                         {% else %}
                                             <span class="badge bg-secondary">-</span>
@@ -108,14 +195,14 @@
                                 <tr>
                                     <td>Hepatitis B</td>
                                     <td>
-                                        {% if test.hepatitis_b == True %}Positive
-                                        {% elif test.hepatitis_b == False %}Negative
+                                        {% if test.hepatitis_b == 'positive' %}Positive
+                                        {% elif test.hepatitis_b == 'negative' %}Negative
                                         {% else %}Not Tested{% endif %}
                                     </td>
                                     <td>
-                                        {% if test.hepatitis_b == True %}
+                                        {% if test.hepatitis_b == 'positive' %}
                                             <span class="badge bg-danger">Reactive</span>
-                                        {% elif test.hepatitis_b == False %}
+                                        {% elif test.hepatitis_b == 'negative' %}
                                             <span class="badge bg-success">Non-reactive</span>
                                         {% else %}
                                             <span class="badge bg-secondary">-</span>
@@ -125,14 +212,14 @@
                                 <tr>
                                     <td>Hepatitis C</td>
                                     <td>
-                                        {% if test.hepatitis_c == True %}Positive
-                                        {% elif test.hepatitis_c == False %}Negative
+                                        {% if test.hepatitis_c == 'positive' %}Positive
+                                        {% elif test.hepatitis_c == 'negative' %}Negative
                                         {% else %}Not Tested{% endif %}
                                     </td>
                                     <td>
-                                        {% if test.hepatitis_c == True %}
+                                        {% if test.hepatitis_c == 'positive' %}
                                             <span class="badge bg-danger">Reactive</span>
-                                        {% elif test.hepatitis_c == False %}
+                                        {% elif test.hepatitis_c == 'negative' %}
                                             <span class="badge bg-success">Non-reactive</span>
                                         {% else %}
                                             <span class="badge bg-secondary">-</span>
@@ -142,14 +229,14 @@
                                 <tr>
                                     <td>Syphilis</td>
                                     <td>
-                                        {% if test.syphilis == True %}Positive
-                                        {% elif test.syphilis == False %}Negative
+                                        {% if test.syphilis == 'positive' %}Positive
+                                        {% elif test.syphilis == 'negative' %}Negative
                                         {% else %}Not Tested{% endif %}
                                     </td>
                                     <td>
-                                        {% if test.syphilis == True %}
+                                        {% if test.syphilis == 'positive' %}
                                             <span class="badge bg-danger">Reactive</span>
-                                        {% elif test.syphilis == False %}
+                                        {% elif test.syphilis == 'negative' %}
                                             <span class="badge bg-success">Non-reactive</span>
                                         {% else %}
                                             <span class="badge bg-secondary">-</span>
@@ -159,14 +246,14 @@
                                 <tr>
                                     <td>Malaria</td>
                                     <td>
-                                        {% if test.malaria == True %}Positive
-                                        {% elif test.malaria == False %}Negative
+                                        {% if test.malaria == 'positive' %}Positive
+                                        {% elif test.malaria == 'negative' %}Negative
                                         {% else %}Not Tested{% endif %}
                                     </td>
                                     <td>
-                                        {% if test.malaria == True %}
+                                        {% if test.malaria == 'positive' %}
                                             <span class="badge bg-danger">Reactive</span>
-                                        {% elif test.malaria == False %}
+                                        {% elif test.malaria == 'negative' %}
                                             <span class="badge bg-success">Non-reactive</span>
                                         {% else %}
                                             <span class="badge bg-secondary">-</span>
@@ -177,9 +264,116 @@
                         </table>
                     </div>
                     
+                    <!-- Stock Unit Information for Safe Blood -->
+                    {% if stock_unit and test.result == 'safe' %}
+                    <div class="card mt-4 border-success">
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-box me-2"></i>
+                            Inventory Stock Unit Created
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Stock ID:</th>
+                                            <td><code>#{{ stock_unit.id }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Barcode:</th>
+                                            <td><code>{{ stock_unit.barcode }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Blood Group:</th>
+                                            <td>{{ stock_unit.bloodgroup }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Volume:</th>
+                                            <td>{{ stock_unit.unit }} ml</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Expiry Date:</th>
+                                            <td>
+                                                <strong>{{ stock_unit.expiry_date|date:"M d, Y" }}</strong>
+                                                {% if stock_unit.days_until_expiry %}
+                                                    <span class="badge {% if stock_unit.days_until_expiry < 7 %}bg-danger{% elif stock_unit.days_until_expiry < 14 %}bg-warning{% else %}bg-success{% endif %} ms-2">
+                                                        {{ stock_unit.days_until_expiry }} days left
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Added to Inventory:</th>
+                                            <td>{{ stock_unit.added_to_inventory_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Added By:</th>
+                                            <td>{{ stock_unit.added_to_inventory_by.get_full_name|default:"System" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Expiry Progress Bar -->
+                            {% if stock_unit.days_until_expiry %}
+                            <div class="mt-3">
+                                <label class="form-label">Expiry Timeline:</label>
+                                <div class="progress" style="height: 10px;">
+                                    {% with total_days=stock_unit.days_until_expiry %}
+                                        {% if component_expiry_days %}
+                                            {% with percentage=total_days|div:component_expiry_days|mul:100 %}
+                                                <div class="progress-bar {% if total_days < 7 %}bg-danger{% elif total_days < 14 %}bg-warning{% else %}bg-success{% endif %}" 
+                                                     style="width: {{ percentage }}%"></div>
+                                            {% endwith %}
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                <small class="text-muted">
+                                    {% if stock_unit.days_until_expiry < 7 %}
+                                        ⚠️ Expiring soon! Use within {{ stock_unit.days_until_expiry }} days.
+                                    {% elif stock_unit.days_until_expiry < 14 %}
+                                        🟡 {{ stock_unit.days_until_expiry }} days until expiry.
+                                    {% else %}
+                                        🟢 Fresh unit - {{ stock_unit.days_until_expiry }} days until expiry.
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Quarantine Information for Unsafe Blood -->
+                    {% if stock_unit and test.result == 'unsafe' %}
+                    <div class="card mt-4 border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Quarantined / Discarded Unit
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger mb-0">
+                                <i class="fas fa-ban me-2"></i>
+                                <strong>This blood unit has been QUARANTINED and DISCARDED.</strong>
+                                <p class="mb-0 mt-2">
+                                    <strong>Reason:</strong> {{ stock_unit.unsafe_reason|default:"Tested positive for disease markers" }}
+                                </p>
+                                {% if stock_unit.safety_notes %}
+                                <p class="mb-0 mt-2">
+                                    <strong>Notes:</strong> {{ stock_unit.safety_notes }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     {% if test.notes %}
                         <div class="mt-3 p-3 bg-light rounded">
-                            <strong>Notes:</strong>
+                            <strong>Test Notes:</strong>
                             <p class="mb-0 mt-2">{{ test.notes|linebreaks }}</p>
                         </div>
                     {% endif %}
@@ -191,29 +385,100 @@
                         </a>
                         
                         {% if test.result == 'pending' %}
-                            <form method="post" action="{% url 'lab_technologist:mark_safe' test.id %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success" 
-                                        onclick="return confirm('Mark this blood as SAFE?')">
-                                    <i class="fas fa-check-circle me-2"></i>Mark Safe
-                                </button>
-                            </form>
-                            <form method="post" action="{% url 'lab_technologist:mark_unsafe' test.id %}" class="d-inline">
-                                {% csrf_token %}
-                                <div class="input-group">
-                                    <input type="text" name="unsafe_reason" class="form-control" 
-                                           placeholder="Reason for unsafe" required>
-                                    <button type="submit" class="btn btn-danger" 
-                                            onclick="return confirm('Mark this blood as UNSAFE? This will discard the unit.')">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>Mark Unsafe
+                            <div class="float-end">
+                                <form method="post" action="{% url 'lab_technologist:mark_safe' test.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success" 
+                                            onclick="return confirm('Mark this blood as SAFE? This will add it to inventory with expiry date.')">
+                                        <i class="fas fa-check-circle me-2"></i>Mark Safe
                                     </button>
-                                </div>
-                            </form>
+                                </form>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#unsafeModal">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Mark Unsafe
+                                </button>
+                            </div>
                         {% endif %}
+                        
+                        <!-- Print Button -->
+                        <button onclick="window.print()" class="btn btn-outline-primary ms-2">
+                            <i class="fas fa-print me-2"></i>Print Result
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Unsafe Blood Modal -->
+<div class="modal fade" id="unsafeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Mark Blood as Unsafe
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'lab_technologist:mark_unsafe' test.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Marking blood as unsafe will quarantine it and remove it from available inventory.
+                        No expiry date will be set.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="unsafe_reason" class="form-label">Reason for Unsafe *</label>
+                        <select name="unsafe_reason" id="unsafe_reason" class="form-select" required>
+                            <option value="">Select reason...</option>
+                            <option value="hiv_positive">HIV Positive</option>
+                            <option value="hepatitis_b_positive">Hepatitis B Positive</option>
+                            <option value="hepatitis_c_positive">Hepatitis C Positive</option>
+                            <option value="syphilis_positive">Syphilis Positive</option>
+                            <option value="malaria_positive">Malaria Positive</option>
+                            <option value="multiple_markers">Multiple Disease Markers</option>
+                            <option value="contamination">Bacterial Contamination</option>
+                            <option value="hemolysis">Hemolysis Detected</option>
+                            <option value="lipemic">Lipemic Sample</option>
+                            <option value="other">Other Reason</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="otherReasonDiv" style="display: none;">
+                        <label for="unsafe_reason_other" class="form-label">Specify Other Reason</label>
+                        <input type="text" name="unsafe_reason_other" id="unsafe_reason_other" class="form-control">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('This will discard the blood unit permanently. Continue?')">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Mark Unsafe & Discard
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('unsafe_reason').addEventListener('change', function() {
+    const otherDiv = document.getElementById('otherReasonDiv');
+    if (this.value === 'other') {
+        otherDiv.style.display = 'block';
+        document.getElementById('unsafe_reason_other').required = true;
+    } else {
+        otherDiv.style.display = 'none';
+        document.getElementById('unsafe_reason_other').required = false;
+    }
+});
+</script>
+
 {% endblock %}
