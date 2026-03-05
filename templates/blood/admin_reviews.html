@@ -1,0 +1,110 @@
+<!-- templates/blood/admin_reviews.html -->
+{% extends 'shared/base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>User Reviews Dashboard</h2>
+            <p class="text-muted">Total Reviews: {{ total_reviews }} | Avg Rating: {{ avg_rating }}★ | 5-Star: {{ five_star_count }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'admin_testimonials' %}" class="btn btn-outline-primary">
+                Manage Homepage Testimonials
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- ALL REVIEWS LIST -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>All User Reviews</h5>
+                </div>
+                <div class="card-body">
+                    {% for review in reviews %}
+                    <div class="border-bottom mb-3 pb-3 {% if not review.is_read %}bg-light{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+                                <span class="text-muted ms-2">{{ review.created_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div>
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= review.rating %}
+                                    <i class="fas fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="far fa-star text-warning"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="mt-2">{{ review.comment }}</p>
+                        
+                        {% if not review.featured_as_testimonial %}
+                        <a href="{% url 'feature_review' review.id %}" 
+                           class="btn btn-sm btn-success"
+                           onclick="return confirm('Feature this on homepage?')">
+                            <i class="fas fa-star"></i> Feature on Homepage
+                        </a>
+                        {% else %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check"></i> Featured as Testimonial
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No reviews yet.</p>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if reviews.has_other_pages %}
+                <div class="card-footer">
+                    <nav>
+                        <ul class="pagination">
+                            {% if reviews.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ reviews.previous_page_number }}">Previous</a></li>
+                            {% endif %}
+                            {% for i in reviews.paginator.page_range %}
+                            <li class="page-item {% if reviews.number == i %}active{% endif %}">
+                                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                            </li>
+                            {% endfor %}
+                            {% if reviews.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ reviews.next_page_number }}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- SIDEBAR: Currently Featured -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5>Currently Featured on Homepage</h5>
+                </div>
+                <div class="card-body">
+                    {% for t in featured %}
+                    <div class="mb-3 pb-2 border-bottom">
+                        <strong>{{ t.name }}</strong>
+                        <p class="small text-muted mb-1">{{ t.testimonial|truncatechars:80 }}</p>
+                        <a href="{% url 'admin:blood_testimonial_change' t.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No featured testimonials yet.</p>
+                    {% endfor %}
+                    
+                    <a href="{% url 'admin:blood_testimonial_changelist' %}" class="btn btn-primary btn-sm w-100">
+                        Manage All Testimonials
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

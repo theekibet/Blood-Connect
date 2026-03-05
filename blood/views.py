@@ -15,7 +15,7 @@ from donor import forms as dforms
 from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from .forms import ContactForm
-from .models import ContactMessage, Contact ,BloodDriveEvent, Banner,  Testimonial,HomePageStats
+from .models import ContactMessage, Contact ,BloodDriveEvent,  Testimonial,HomePageStats
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from donor.models import DonorEligibility
@@ -26,10 +26,9 @@ from hospital.models import HospitalBloodRequest
 from hospital.models import HospitalUser, Hospital
 from donor.models import DonorEligibility, BloodDonate
 from django.db.models import Max
-from donor.models import Donor 
+from donor.models import Donor
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
-from .models import QuizAttempt
 from utils.models import Notification
 from django.contrib.contenttypes.models import ContentType
 from blood import models as blood_models
@@ -81,8 +80,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 import time
 from django_ratelimit.decorators import ratelimit
 from .models import HoneypotAttempt
-
-
+from .models import UserReview, ReviewSurvey
+from .forms import UserReviewForm
+from .forms import ReviewSurveyForm
 from django.db.models import Avg
 
 logger = logging.getLogger(__name__)
@@ -91,12 +91,13 @@ logger = logging.getLogger(__name__)
 # PUBLIC VIEWS (Keep these)
 # ==========================================
 
+
 def home_view(request):
     try:
         # ==========================================
         # Ensure default donation center exists
         # ==========================================
-        from blood.models import DonationCenter, Stock, StockUnit, BloodDriveEvent, Banner, Testimonial, HomePageStats
+        from blood.models import DonationCenter, Stock, StockUnit, BloodDriveEvent, Testimonial, HomePageStats
         from donor.models import Donor
         from hospital.models import HospitalBloodRequest
         
@@ -196,13 +197,53 @@ def home_view(request):
             ]
         
         # ==========================================
-        # DYNAMIC CONTENT FROM ADMIN
+        # TESTIMONIALS - DEDUPLICATED WITH AVATAR PRIORITY
         # ==========================================
-        # Get featured testimonials
-        testimonials = Testimonial.objects.filter(
+        
+        # Get all active featured testimonials
+        all_testimonials = Testimonial.objects.filter(
             is_active=True,
             is_featured=True
-        )[:6]
+        )
+        
+        # Deduplicate by name (case-insensitive) and prioritize those with avatars
+        unique_testimonials = {}
+        for testimonial in all_testimonials:
+            # Normalize name for comparison (lowercase, strip whitespace)
+            name_key = testimonial.name.lower().strip()
+            
+            # If we haven't seen this name before, add it
+            if name_key not in unique_testimonials:
+                unique_testimonials[name_key] = testimonial
+            else:
+                # We've seen this name before - check if current one has avatar
+                existing = unique_testimonials[name_key]
+                
+                # If existing has no avatar but new one does, replace it
+                if not existing.avatar and testimonial.avatar:
+                    unique_testimonials[name_key] = testimonial
+                # If both have avatars, keep the one with higher rating or newer
+                elif existing.avatar and testimonial.avatar:
+                    # Keep the one with higher rating
+                    if testimonial.rating > existing.rating:
+                        unique_testimonials[name_key] = testimonial
+                    # If ratings are equal, keep the newer one
+                    elif testimonial.rating == existing.rating and testimonial.created_at > existing.created_at:
+                        unique_testimonials[name_key] = testimonial
+        
+        # Convert back to list and shuffle for variety
+        testimonials = list(unique_testimonials.values())
+        
+        # Shuffle to mix them up
+        import random
+        random.shuffle(testimonials)
+        
+        # Limit to maximum 6 testimonials
+        testimonials = testimonials[:6]
+        
+        # If no testimonials at all, provide empty list
+        if not testimonials:
+            testimonials = []
         
         # ==========================================
         # RENDER HOME PAGE
@@ -224,7 +265,6 @@ def home_view(request):
     except Exception as e:
         logger.error(f"Error in home_view: {e}", exc_info=True)
         return HttpResponseServerError("Something went wrong. Please try again later.")
-
 def blood_drive_detail(request, pk):
     """Detail view for individual blood drive events"""
     try:
@@ -1444,3 +1484,272 @@ def admin_post_notification(request):
 
 
 
+@login_required
+def submit_review(request):
+    """Multi-step review process with optional survey"""
+    user = request.user
+    step = int(request.GET.get('step', 1))
+    
+    # Get or create review
+    try:
+        review = UserReview.objects.get(user=user)
+        is_new = False
+    except UserReview.DoesNotExist:
+        review = None
+        is_new = True
+    
+    # Handle form submissions
+    if request.method == 'POST':
+        if step == 1:
+            # Save rating
+            rating = request.POST.get('rating')
+            if rating:
+                if review:
+                    review.rating = rating
+                    review.save()
+                else:
+                    review = UserReview.objects.create(
+                        user=user,
+                        rating=rating,
+                        comment=''
+                    )
+            return JsonResponse({'status': 'success', 'next_step': 2})
+            
+        elif step == 2:
+            # Save comment
+            comment = request.POST.get('comment')
+            if review and comment:
+                review.comment = comment
+                review.save()
+            return JsonResponse({'status': 'success', 'next_step': 3})
+            
+        elif step == 3:
+            # User chose whether to take survey
+            take_survey = request.POST.get('take_survey')
+            if take_survey == 'yes':
+                return JsonResponse({'status': 'success', 'next_step': 4})
+            else:
+                # No survey - redirect to dashboard
+                messages.success(request, "Thank you for your feedback! 🎉")
+                return JsonResponse({'status': 'success', 'redirect': '/donor/donor-dashboard'})
+            
+        elif step == 4:
+            # Save survey
+            survey_form = ReviewSurveyForm(request.POST)
+            if survey_form.is_valid() and review:
+                # Check if survey exists
+                try:
+                    survey = ReviewSurvey.objects.get(review=review)
+                    # Update existing survey
+                    for field, value in survey_form.cleaned_data.items():
+                        setattr(survey, field, value)
+                    survey.save()
+                except ReviewSurvey.DoesNotExist:
+                    # Create new survey
+                    survey = survey_form.save(commit=False)
+                    survey.review = review
+                    survey.save()
+                
+                messages.success(request, "Thank you for your detailed feedback! 🎉")
+                return JsonResponse({'status': 'success', 'redirect': '/donor/donor-dashboard'})
+    
+    # GET request - show forms
+    if step == 1:
+        # Create rating form
+        from django import forms
+        class RatingForm(forms.Form):
+            rating = forms.ChoiceField(
+                choices=[(i, f"{i} Star{'s' if i > 1 else ''}") for i in range(1, 6)],
+                widget=forms.Select(attrs={'class': 'form-control rating-select'}),
+                initial=review.rating if review else 3
+            )
+        form = RatingForm()
+        survey_form = None
+        show_survey_choice = False
+        
+    elif step == 2:
+        # Create comment form
+        from django import forms
+        class CommentForm(forms.Form):
+            comment = forms.CharField(
+                widget=forms.Textarea(attrs={
+                    'class': 'form-control',
+                    'rows': 4,
+                    'placeholder': 'Share your experience...'
+                }),
+                initial=review.comment if review else ''
+            )
+        form = CommentForm()
+        survey_form = None
+        show_survey_choice = False
+        
+    elif step == 3:
+        # Ask if they want to take survey
+        form = None
+        survey_form = None
+        show_survey_choice = True
+        
+    elif step == 4:
+        # Survey step
+        form = None
+        show_survey_choice = False
+        try:
+            survey = ReviewSurvey.objects.get(review=review) if review else None
+        except ReviewSurvey.DoesNotExist:
+            survey = None
+        
+        survey_form = ReviewSurveyForm(instance=survey)
+    
+    context = {
+        'step': step,
+        'has_review': review is not None,
+        'review': review,
+        'form': form,
+        'survey_form': survey_form,
+        'show_survey_choice': show_survey_choice,
+        'initial_rating': review.rating if review else 3,
+        'initial_comment': review.comment if review else '',
+    }
+    
+    return render(request, 'shared/submit_review.html', context)
+
+@staff_member_required
+def admin_reviews_dashboard(request):
+    """Admin sees ALL reviews here"""
+    # Mark all as read when admin views them
+    UserReview.objects.filter(is_read=False).update(is_read=True)
+    
+    # Get all reviews with stats
+    all_reviews = UserReview.objects.all().select_related('user')
+    
+    # Stats
+    total_reviews = all_reviews.count()
+    avg_rating = all_reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    five_star_count = all_reviews.filter(rating=5).count()
+    
+    # Pagination
+    paginator = Paginator(all_reviews, 20)
+    page = request.GET.get('page')
+    reviews = paginator.get_page(page)
+    
+    # Get featured testimonials
+    featured = Testimonial.objects.filter(is_active=True)[:10]
+    
+    context = {
+        'reviews': reviews,
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        'five_star_count': five_star_count,
+        'featured': featured,
+    }
+    return render(request, 'blood/admin_reviews.html', context)
+
+
+@staff_member_required
+def feature_review_as_testimonial(request, review_id):
+    """Admin picks a review to feature as homepage testimonial"""
+    review = get_object_or_404(UserReview, id=review_id)
+    
+    # Check if already featured
+    if hasattr(review, 'featured_testimonial'):
+        messages.warning(request, "This review is already featured!")
+        return redirect('admin_reviews_dashboard')
+    
+    # Get user's profile picture based on their profile type
+    avatar = None
+    user = review.user
+    
+    # Check different profile types for avatar
+    if hasattr(user, 'donor') and user.donor.profile_pic:
+        avatar = user.donor.profile_pic
+    elif hasattr(user, 'phlebotomist') and user.phlebotomist.profile_pic:
+        avatar = user.phlebotomist.profile_pic
+    elif hasattr(user, 'hospitaluser') and user.hospitaluser.profile_pic:
+        avatar = user.hospitaluser.profile_pic
+    
+    # Create testimonial from review
+    testimonial = Testimonial.objects.create(
+        # If you have source_review field:
+        # source_review=review,
+        name=review.user.get_full_name() or review.user.username,
+        role="Donor" if hasattr(review.user, 'donor') else "User",
+        testimonial=review.comment,
+        rating=review.rating,
+        avatar=avatar,  # <-- THIS ADDS THE PROFILE PICTURE
+        is_active=True,
+        is_featured=True
+    )
+    
+    messages.success(request, f"Review by {testimonial.name} is now featured on homepage!")
+    return redirect('admin_reviews_dashboard')
+@login_required
+@require_POST
+def save_review_step(request):
+    """AJAX endpoint to save review data progressively"""
+    user = request.user
+    step = request.POST.get('step')
+    
+    try:
+        review = UserReview.objects.get(user=user)
+    except UserReview.DoesNotExist:
+        review = None
+    
+    if step == '1':
+        # Save rating
+        rating = request.POST.get('rating')
+        if rating:
+            if review:
+                review.rating = rating
+                review.save()
+            else:
+                review = UserReview.objects.create(
+                    user=user,
+                    rating=rating,
+                    comment=''
+                )
+        return JsonResponse({'status': 'success'})
+    
+    elif step == '2':
+        # Save comment
+        comment = request.POST.get('comment')
+        if review and comment:
+            review.comment = comment
+            review.save()
+        return JsonResponse({'status': 'success'})
+    
+    return JsonResponse({'status': 'error'}, status=400)
+
+from blood.utils.barcode_utils import generate_batch_barcodes
+from .models import BloodBagBarcode
+def generate_initial_barcodes(request):
+    """Simple one-time view to generate initial barcodes"""
+    # Security: Only allow if no barcodes exist
+    if BloodBagBarcode.objects.exists():
+        return HttpResponse("Barcodes already exist! No action taken.")
+    
+    count = 50
+    barcodes = []
+    
+    for i in range(count):
+        # Generate unique barcode
+        date_part = datetime.now().strftime('%Y%m%d')
+        random_part = ''.join([str(random.randint(0, 9)) for _ in range(5)])
+        barcode_str = f"BLD-{date_part}-{random_part}"
+        
+        # Ensure uniqueness
+        while BloodBagBarcode.objects.filter(barcode=barcode_str).exists():
+            random_part = ''.join([str(random.randint(0, 9)) for _ in range(5)])
+            barcode_str = f"BLD-{date_part}-{random_part}"
+        
+        # Create barcode
+        barcode = BloodBagBarcode.objects.create(
+            barcode=barcode_str,
+            bag_type='single',
+            volume_ml=450,
+            anticoagulant='cpd',
+            status='available',
+            created_by=None
+        )
+        barcodes.append(barcode)
+    
+    return HttpResponse(f"✅ Generated {len(barcodes)} initial barcodes! You can now use the admin actions.")

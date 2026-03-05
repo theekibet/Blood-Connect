@@ -48,6 +48,21 @@
                         </a>
                     </div>
 
+                    <!-- ===== REVIEW STAR ICON - Universal for all authenticated users ===== -->
+                    {% if user.is_authenticated %}
+                    <div class="nav-item">
+                        <a class="nav-link" href="{{ review_url }}" title="{% if has_review %}Edit your review{% else %}Write a review{% endif %}">
+                            <div class="nav-icon">
+                                <i class="fas fa-star {% if has_review %}text-warning{% endif %}"></i>
+                                {% if has_review %}
+                                    <span class="status-badge eligible" style="background: #28a745; width: 8px; height: 8px; top: 2px; right: 2px;"></span>
+                                {% endif %}
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %}
+                    <!-- ===== END REVIEW STAR ICON ===== -->
+
                     <!-- Role-Specific Navbar Icons from Context Processor -->
                     {% for icon in navbar_icons %}
                         <div class="nav-item">
@@ -112,6 +127,14 @@
                                 <strong>{{ user.get_full_name|default:user.username }}</strong><br>
                                 <small class="text-muted">{{ user_role|title }}</small>
                             </div>
+                            <div class="dropdown-divider"></div>
+                            
+                            <!-- Add Review Option in Dropdown -->
+                            <a class="dropdown-item" href="{{ review_url }}">
+                                <i class="fas fa-star {% if has_review %}text-warning{% else %}text-muted{% endif %}"></i> 
+                                {% if has_review %}Edit Your Review{% else %}Write a Review{% endif %}
+                            </a>
+                            
                             <div class="dropdown-divider"></div>
                             
                             <!-- Profile Menu Items from Context Processor -->

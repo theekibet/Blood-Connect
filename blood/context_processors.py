@@ -29,6 +29,21 @@ def user_role_context(request):
     user = request.user
     context['user_initial'] = user.first_name[0] if user.first_name else user.username[0].upper()
     
+    # ===== SET REVIEW URL FOR ALL AUTHENTICATED USERS =====
+    try:
+        from django.urls import reverse
+        context['review_url'] = reverse('submit_review')
+    except:
+        # Fallback hardcoded URL if reverse fails
+        context['review_url'] = '/submit-review/'
+    
+    # Check if user has a review (for star indicator)
+    try:
+        from blood.models import UserReview
+        context['has_review'] = UserReview.objects.filter(user=user).exists()
+    except:
+        context['has_review'] = False
+    
     # ===== CHECK ONBOARDING STATUS FOR DONORS =====
     if hasattr(user, 'donor'):
         donor = user.donor
@@ -318,6 +333,7 @@ def user_role_context(request):
         context['notification_count'] = 0
     
     return context
+
 def admin_secret_url(request):
     """Make the admin secret URL available to templates"""
     return {

@@ -4,8 +4,10 @@
 {% block title %}Edit Donor Profile - BloodConnect{% endblock %}
 
 {% block extra_css %}
+<!-- Cropper.js CSS - lightweight -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+
 <style>
-    /* Location Update Button Styling (matching dashboard) */
     .location-update-btn {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
@@ -25,20 +27,12 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         color: white;
-        background: linear-gradient(135deg, #5a6fd8 0%, #6a4292 100%);
     }
     
     .location-update-btn:disabled {
         opacity: 0.7;
-        transform: none;
-        box-shadow: none;
     }
     
-    .location-update-btn i {
-        font-size: 0.9rem;
-    }
-    
-    /* Location Card Styling */
     .location-card {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         border: none;
@@ -56,7 +50,6 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     
-    /* Simple placeholder styling */
     input::placeholder {
         color: #6c757d;
         font-size: 0.9rem;
@@ -73,44 +66,167 @@
         margin-left: 5px;
     }
 
-    /* Mobile input styling */
-    .mobile-input-group {
-        position: relative;
-    }
-    
     .mobile-format-hint {
         font-size: 0.85rem;
         color: #6c757d;
         margin-top: 4px;
     }
     
-    .mobile-format-hint i {
-        color: #0d6efd;
+    /* Simple Crop Modal */
+    .crop-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+    }
+
+    .crop-modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .crop-container {
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        background: #000;
+    }
+
+    .crop-container img {
+        max-width: 100%;
+        display: block;
+    }
+
+    .crop-controls {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        z-index: 10000;
+    }
+
+    .crop-btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .crop-btn-cancel {
+        background: #6c757d;
+        color: white;
+    }
+
+    .crop-btn-save {
+        background: #28a745;
+        color: white;
+    }
+
+    /* Profile Picture Section */
+    .profile-pic-preview {
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 20px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid #667eea;
+        position: relative;
+    }
+
+    .profile-pic-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .avatar-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        font-weight: 700;
+    }
+
+    .upload-btn {
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .remove-btn {
+        padding: 12px 24px;
+        background: white;
+        color: #dc3545;
+        border: 2px solid #dc3545;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .remove-btn:hover {
+        background: #dc3545;
+        color: white;
+    }
+
+    /* Loading spinner */
+    .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        margin-right: 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 </style>
-
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <!-- Current Location Card - Prominently displayed at top -->
+            <!-- Location Card -->
             <div class="card location-card mb-4" id="locationCard">
                 <div class="card-body">
                     <div class="d-flex align-items-start gap-3">
-                        <!-- Location Icon -->
                         <div class="location-icon-wrapper">
                             <i class="fas fa-map-pin fa-lg text-primary"></i>
                         </div>
                         
-                        <!-- Location Details -->
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                                 <div>
-                                    <h6 class="mb-2 fw-bold"> Your Current Location</h6>
+                                    <h6 class="mb-2 fw-bold">🎯 Your Current Location</h6>
                                     
-                                    <!-- Precise Location Display -->
                                     {% if donor.location_name %}
                                         <div class="d-flex align-items-center gap-2">
                                             <i class="fas fa-location-dot text-success"></i>
@@ -118,24 +234,22 @@
                                         </div>
                                         <small class="text-muted d-block mt-1">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            This helps us find donation centers near you, after updating, save changes at the bottom of this page then go back to dashboard to check out nearby donation centres
+                                            This helps us find donation centers near you
                                         </small>
                                     {% else %}
                                         <span class="text-muted fst-italic">
                                             <i class="fas fa-exclamation-triangle me-1"></i>
-                                            No location detected yet. Click "Update Current Location" to set your precise location.
+                                            No location detected yet
                                         </span>
                                     {% endif %}
                                 </div>
                                 
-                                <!-- Update Location Button -->
                                 <button id="updateLocationBtn" class="location-update-btn" type="button">
-                                    <i class="fas fa-sync-alt"></i> Update Current Location
+                                    <i class="fas fa-sync-alt"></i> Update Location
                                 </button>
                             </div>
                         </div>
                         
-                        <!-- Hidden coordinates storage -->
                         {% if donor.latitude %}
                             <span id="latText" class="d-none">{{ donor.latitude }}</span>
                         {% endif %}
@@ -168,27 +282,20 @@
                 </div>
 
                 <div class="profile-body">
-                    <!-- Welcome message for first-time users -->
                     {% if is_first_time %}
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Welcome!</strong> Complete your profile to start your donation journey.
-                        Don't worry if you don't know your blood type - you can leave it blank and we'll verify it during your first donation.
                     </div>
                     {% endif %}
 
-                    <!-- Verification Status Alert -->
                     {% if bloodgroup_verified %}
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i>
                         <strong>Blood Group Verified:</strong> {{ donor.bloodgroup }}
-                        {% if verified_by %}
-                            <br><small class="text-muted">Verified by {{ verified_by }} on {{ verified_at|date:"F j, Y" }}</small>
-                        {% endif %}
                     </div>
                     {% endif %}
 
-                    <!-- Profile Completion Progress (during onboarding) -->
                     {% if is_first_time %}
                     <div class="mb-4">
                         <h6 class="mb-2">Profile Completion</h6>
@@ -204,7 +311,6 @@
                     </div>
                     {% endif %}
 
-                    <!-- Form Errors -->
                     {% if profile_form.errors %}
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-circle me-2"></i>
@@ -212,13 +318,7 @@
                         <ul class="mb-0 mt-2">
                             {% for field, errors in profile_form.errors.items %}
                                 {% for error in errors %}
-                                    <li>
-                                        {% if field == 'bloodgroup' %}
-                                            Blood Group: {{ error }}
-                                        {% else %}
-                                            {{ field|title }}: {{ error }}
-                                        {% endif %}
-                                    </li>
+                                    <li>{{ field|title }}: {{ error }}</li>
                                 {% endfor %}
                             {% endfor %}
                         </ul>
@@ -228,60 +328,52 @@
                     <form method="post" class="profile-edit-form" enctype="multipart/form-data" id="profileForm">
                         {% csrf_token %}
                         
-                        <!-- Hidden fields for user data -->
                         <input type="hidden" name="first_name" value="{{ user.first_name }}">
                         <input type="hidden" name="last_name" value="{{ user.last_name }}">
                         <input type="hidden" name="email" value="{{ user.email }}">
-                        
-                        <!-- Hidden Location Fields -->
                         <input type="hidden" name="latitude" id="latitude" value="{{ donor.latitude|default:'' }}">
                         <input type="hidden" name="longitude" id="longitude" value="{{ donor.longitude|default:'' }}">
+                        <input type="hidden" name="cropped_image" id="croppedImageInput">
                         
-                        <!-- Profile Picture Upload Section -->
+                        <!-- Profile Picture -->
                         <div class="form-section">
                             <h5 class="form-section-title">
                                 <i class="fas fa-camera"></i> Profile Picture
                             </h5>
                             
-                            <div class="text-center mb-4">
-                                <!-- Current Picture Display -->
-                                <div class="mb-3 position-relative d-inline-block">
+                            <div class="text-center">
+                                <div class="profile-pic-preview">
                                     {% if profile_pic_url %}
-                                        <img src="{{ profile_pic_url }}" alt="Current Profile Picture" 
-                                             id="currentProfilePic"
-                                             style="width: 150px; height: 150px; object-fit: cover; border-radius: 50%; border: 3px solid var(--blood-red);">
+                                        <img src="{{ profile_pic_url }}" id="currentProfilePic">
                                     {% else %}
-                                        <div class="avatar-placeholder" 
-                                             style="width: 150px; height: 150px; font-size: 4rem; margin: 0 auto; border: 3px solid var(--blood-red);">
+                                        <div class="avatar-placeholder" id="currentProfilePic">
                                             {{ user.first_name|first|default:user.username|first|upper }}
                                         </div>
                                     {% endif %}
                                 </div>
                                 
-                                <!-- File Upload -->
                                 <div class="mb-3">
-                                    <label for="id_profile_pic" class="btn btn-outline-primary">
-                                        <i class="fas fa-upload me-2"></i>Choose New Picture
-                                    </label>
-                                    <input type="file" name="profile_pic" id="id_profile_pic" class="d-none" accept="image/*">
+                                    <button type="button" class="upload-btn" id="choosePictureBtn">
+                                        <i class="fas fa-upload"></i> Choose Picture
+                                    </button>
                                     
                                     {% if profile_pic_url %}
-                                        <div class="form-check mt-3">
-                                            <input type="checkbox" class="form-check-input" id="remove_profile_pic" name="remove_profile_pic">
-                                            <label class="form-check-label text-danger" for="remove_profile_pic">
-                                                <i class="fas fa-trash-alt me-1"></i>Remove current picture
-                                            </label>
-                                        </div>
+                                        <button type="button" class="remove-btn" id="removePictureBtn">
+                                            <i class="fas fa-trash-alt"></i> Remove
+                                        </button>
+                                        <input type="hidden" name="remove_profile_pic" id="removePictureInput" value="">
                                     {% endif %}
-                                    
-                                    <small class="text-muted d-block mt-2">
-                                        <i class="fas fa-info-circle me-1"></i>Accepted: JPG, PNG, GIF (Max 5MB)
-                                    </small>
                                 </div>
+                                
+                                <input type="file" id="profilePictureInput" accept="image/jpeg,image/jpg,image/png" style="display: none;">
+                                
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> JPG or PNG • Max 5MB
+                                </small>
                             </div>
                         </div>
                         
-                        <!-- Personal Information (Read-only) -->
+                        <!-- Personal Information -->
                         <div class="form-section">
                             <h5 class="form-section-title">
                                 <i class="fas fa-user"></i> Personal Information
@@ -335,12 +427,12 @@
                                     {% endif %}
                                     <small class="text-muted">
                                         <i class="fas fa-info-circle"></i> 
-                                        Don't know your blood type? Leave blank - we'll verify during first donation.
+                                        Don't know your blood type? Leave blank
                                     </small>
                                 {% endif %}
                             </div>
                             
-                            <!-- ===== FIXED: Mobile with 0712345678 format for display AND editing ===== -->
+                            <!-- Mobile Number -->
                             <div class="mb-3">
                                 <label class="form-label">
                                     Mobile Number <span class="text-danger">*</span>
@@ -353,20 +445,17 @@
                                        value="{% if donor.mobile and donor.mobile|slice:':4' == '+254' %}0{{ donor.mobile|slice:'4:' }}{% else %}{{ donor.mobile|default:'' }}{% endif %}"
                                        maxlength="10"
                                        pattern="07[0-9]{8}"
-                                       title="Enter 10 digits starting with 07"
-                                       inputmode="numeric"
                                        required>
                                 {% if profile_form.mobile.errors %}
                                     <div class="invalid-feedback d-block">{{ profile_form.mobile.errors.0 }}</div>
                                 {% endif %}
                                 <div class="mobile-format-hint">
                                     <i class="fas fa-info-circle me-1"></i> 
-                                    <strong>Format:</strong> <span class="format-badge">0712345678</span> 
-                                    (10 digits starting with 07)
+                                    Format: <span class="format-badge">0712345678</span>
                                 </div>
                             </div>
                             
-                            <!-- National ID with placeholder showing format -->
+                            <!-- National ID -->
                             <div class="mb-3">
                                 <label class="form-label">
                                     National ID 
@@ -378,7 +467,7 @@
                                     <input type="text" class="form-control bg-light" 
                                            value="{{ donor.national_id }}" readonly>
                                     <small class="readonly-hint">
-                                        <i class="fas fa-lock"></i> National ID cannot be changed
+                                        <i class="fas fa-lock"></i> Cannot be changed
                                     </small>
                                 {% else %}
                                     <input type="text" 
@@ -389,8 +478,6 @@
                                            value="{{ profile_form.national_id.value|default:'' }}"
                                            maxlength="8"
                                            pattern="\d{8}"
-                                           title="8 digits required"
-                                           inputmode="numeric"
                                            required>
                                     {% if profile_form.national_id.errors %}
                                         <div class="invalid-feedback d-block">{{ profile_form.national_id.errors.0 }}</div>
@@ -413,18 +500,18 @@
                                     <input type="text" class="form-control bg-light" 
                                            value="{{ donor.dob|date:'Y-m-d' }}" readonly>
                                     <small class="readonly-hint">
-                                        <i class="fas fa-lock"></i> Date of birth cannot be changed
+                                        <i class="fas fa-lock"></i> Cannot be changed
                                     </small>
                                 {% else %}
                                     {{ profile_form.dob }}
                                     {% if profile_form.dob.errors %}
                                         <div class="invalid-feedback d-block">{{ profile_form.dob.errors }}</div>
                                     {% endif %}
-                                    <small class="text-muted">Required to verify age (must be 18+)</small>
+                                    <small class="text-muted">Required (must be 18+)</small>
                                 {% endif %}
                             </div>
                             
-                            <!-- County - Non-editable once set -->
+                            <!-- County -->
                             <div class="mb-3">
                                 <label class="form-label">
                                     County
@@ -433,13 +520,11 @@
                                     {% endif %}
                                 </label>
                                 {% if donor.county %}
-                                    <!-- Hidden field to submit county value -->
                                     <input type="hidden" name="county" value="{{ donor.county }}">
-                                    <!-- Readonly display field -->
                                     <input type="text" class="form-control bg-light" 
                                            value="{{ donor.get_county_display|default:donor.county }}" readonly>
                                     <small class="readonly-hint">
-                                        <i class="fas fa-lock"></i> County cannot be changed once set. Use "Update Current Location" button above for precise location.
+                                        <i class="fas fa-lock"></i> Cannot be changed once set
                                     </small>
                                 {% else %}
                                     {{ profile_form.county }}
@@ -448,17 +533,15 @@
                                     {% endif %}
                                     <small class="text-muted">
                                         <i class="fas fa-info-circle"></i> 
-                                        Required to find donation centers near you. Cannot be changed once set.
+                                        Required to find donation centers near you
                                     </small>
                                 {% endif %}
                             </div>
                         </div>
                         
-                        <!-- Help text -->
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
                             <strong>Note:</strong> Fields marked with <span class="text-danger">*</span> are required.
-                            Blood group is optional - you can leave it blank if you're unsure.
                         </div>
                         
                         <!-- Form Actions -->
@@ -469,7 +552,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>
                                 {% if is_first_time %}
-                                    Complete Profile & Continue
+                                    Complete Profile
                                 {% else %}
                                     Save Changes
                                 {% endif %}
@@ -482,15 +565,27 @@
     </div>
 </div>
 
+<!-- Simple Crop Modal -->
+<div id="cropModal" class="crop-modal">
+    <div class="crop-container">
+        <img id="cropImage" src="" alt="Crop">
+    </div>
+    <div class="crop-controls">
+        <button type="button" class="crop-btn crop-btn-cancel" id="cancelCrop">Cancel</button>
+        <button type="button" class="crop-btn crop-btn-save" id="saveCrop">
+            <span id="saveText">Save</span>
+        </button>
+    </div>
+</div>
+
 {% endblock %}
 
-
 {% block extra_js %}
+<!-- Cropper.js - only loaded when needed -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ========================================
-    // CSRF TOKEN HELPER
-    // ========================================
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -506,259 +601,235 @@ document.addEventListener('DOMContentLoaded', function() {
         return cookieValue;
     }
 
-    // ========================================
-    // UPDATE CURRENT LOCATION BUTTON
-    // ========================================
+    // Simple Image Cropping
+    let cropper = null;
+    const profileInput = document.getElementById('profilePictureInput');
+    const chooseBtn = document.getElementById('choosePictureBtn');
+    const removeBtn = document.getElementById('removePictureBtn');
+    const removePictureInput = document.getElementById('removePictureInput');
+    const currentProfilePic = document.getElementById('currentProfilePic');
+    const cropModal = document.getElementById('cropModal');
+    const cropImage = document.getElementById('cropImage');
+    const cancelCrop = document.getElementById('cancelCrop');
+    const saveCrop = document.getElementById('saveCrop');
+    const saveText = document.getElementById('saveText');
+    const croppedImageInput = document.getElementById('croppedImageInput');
+    
+    if (chooseBtn) {
+        chooseBtn.addEventListener('click', () => profileInput.click());
+    }
+    
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+            if (confirm('Remove profile picture?')) {
+                removePictureInput.value = 'true';
+                croppedImageInput.value = '';
+                
+                const placeholder = document.createElement('div');
+                placeholder.className = 'avatar-placeholder';
+                placeholder.id = 'currentProfilePic';
+                placeholder.textContent = '{{ user.first_name|first|default:user.username|first|upper }}';
+                
+                currentProfilePic.parentNode.innerHTML = '';
+                currentProfilePic.parentNode.appendChild(placeholder);
+                removeBtn.style.display = 'none';
+            }
+        });
+    }
+    
+    if (profileInput) {
+        profileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate
+            if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+                alert('Only JPG and PNG allowed');
+                this.value = '';
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File must be under 5MB');
+                this.value = '';
+                return;
+            }
+            
+            // Load image
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                cropImage.src = e.target.result;
+                cropModal.classList.add('active');
+                
+                // Init cropper
+                if (cropper) cropper.destroy();
+                
+                cropper = new Cropper(cropImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    responsive: true,
+                    background: false,
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    if (cancelCrop) {
+        cancelCrop.addEventListener('click', function() {
+            cropModal.classList.remove('active');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            profileInput.value = '';
+        });
+    }
+    
+    if (saveCrop) {
+        saveCrop.addEventListener('click', function() {
+            if (!cropper) return;
+            
+            saveCrop.disabled = true;
+            saveText.innerHTML = '<span class="spinner"></span>Processing...';
+            
+            // Get cropped image - 300x300 for faster processing
+            const canvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 300,
+                imageSmoothingQuality: 'high'
+            });
+            
+            // Convert to blob with compression
+            canvas.toBlob(function(blob) {
+                if (blob.size > 5 * 1024 * 1024) {
+                    alert('Image too large after crop');
+                    saveCrop.disabled = false;
+                    saveText.textContent = 'Save';
+                    return;
+                }
+                
+                // Convert to base64
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    croppedImageInput.value = reader.result;
+                    
+                    // Update preview
+                    if (currentProfilePic.tagName === 'IMG') {
+                        currentProfilePic.src = reader.result;
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = reader.result;
+                        img.id = 'currentProfilePic';
+                        currentProfilePic.parentNode.innerHTML = '';
+                        currentProfilePic.parentNode.appendChild(img);
+                    }
+                    
+                    if (removePictureInput) removePictureInput.value = '';
+                    if (removeBtn) removeBtn.style.display = 'inline-flex';
+                    
+                    // Close modal
+                    cropModal.classList.remove('active');
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+                    
+                    saveCrop.disabled = false;
+                    saveText.textContent = 'Save';
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/jpeg', 0.85); // 85% quality for smaller size
+        });
+    }
+
+    // Location Update
     const updateBtn = document.getElementById('updateLocationBtn');
     if (updateBtn) {
         updateBtn.addEventListener('click', function() {
             if (!navigator.geolocation) {
-                alert('Geolocation is not supported by your browser.');
+                alert('Geolocation not supported');
                 return;
             }
 
             updateBtn.disabled = true;
-            updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Detecting...';
+            updateBtn.innerHTML = '<span class="spinner"></span> Detecting...';
 
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     const lat = position.coords.latitude.toFixed(6);
                     const lon = position.coords.longitude.toFixed(6);
                     
-                    // Update hidden form fields
                     document.getElementById('latitude').value = lat;
                     document.getElementById('longitude').value = lon;
                     
-                    // Update hidden coordinates in location card
-                    let latText = document.getElementById('latText');
-                    let lonText = document.getElementById('lonText');
-                    
-                    if (!latText) {
-                        latText = document.createElement('span');
-                        latText.id = 'latText';
-                        latText.className = 'd-none';
-                        document.getElementById('locationCard')?.appendChild(latText);
-                    }
-                    if (!lonText) {
-                        lonText = document.createElement('span');
-                        lonText.id = 'lonText';
-                        lonText.className = 'd-none';
-                        document.getElementById('locationCard')?.appendChild(lonText);
-                    }
-                    
-                    latText.textContent = lat;
-                    lonText.textContent = lon;
-
                     const formData = new FormData();
                     formData.append('latitude', lat);
                     formData.append('longitude', lon);
 
                     fetch("{% url 'save-user-location' %}", {
                         method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') },
                         body: formData
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
-                            // Update the location display
-                            const locationContainer = document.querySelector('#locationCard .flex-grow-1');
-                            
-                            if (locationContainer) {
-                                let locationDisplay = locationContainer.querySelector('.d-flex.align-items-center.gap-2');
-                                
-                                if (data.location_name) {
-                                    if (locationDisplay) {
-                                        // Update existing display
-                                        const locationSpan = locationDisplay.querySelector('.fw-medium');
-                                        if (locationSpan) {
-                                            locationSpan.textContent = data.location_name;
-                                        }
-                                    } else {
-                                        // Create new display
-                                        const locationDiv = locationContainer.querySelector('div:first-child div:first-child');
-                                        if (locationDiv) {
-                                            const noLocationMsg = locationDiv.querySelector('.fst-italic');
-                                            if (noLocationMsg) {
-                                                noLocationMsg.remove();
-                                            }
-                                            
-                                            const newDisplay = document.createElement('div');
-                                            newDisplay.className = 'd-flex align-items-center gap-2';
-                                            newDisplay.innerHTML = `
-                                                <i class="fas fa-location-dot text-success"></i>
-                                                <span class="fw-medium">${data.location_name}</span>
-                                            `;
-                                            locationDiv.appendChild(newDisplay);
-                                            
-                                            // Add helper text
-                                            const helperText = document.createElement('small');
-                                            helperText.className = 'text-muted d-block mt-1';
-                                            helperText.innerHTML = `
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                This helps us find donation centers near you
-                                            `;
-                                            locationDiv.appendChild(helperText);
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            updateBtn.innerHTML = '<i class="fas fa-check me-1"></i> Updated!';
-                            
+                            updateBtn.innerHTML = '<i class="fas fa-check"></i> Updated!';
                             setTimeout(() => {
-                                updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
+                                updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
                                 updateBtn.disabled = false;
-                            }, 3000);
+                            }, 2000);
                         } else {
-                            throw new Error(data.message || 'Failed to update location');
+                            throw new Error('Failed');
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
-                        alert('Failed to detect precise location. Please try again.');
-                        
-                        updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
+                        alert('Failed to update location');
+                        updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
                         updateBtn.disabled = false;
                     });
                 },
                 function(error) {
-                    let errorMessage = 'Error detecting location: ';
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage += 'Please allow location access in your browser settings.';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage += 'Location information unavailable.';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage += 'Location request timed out. Please try again.';
-                            break;
-                    }
-                    
-                    alert(errorMessage);
-                    updateBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Update Current Location';
+                    alert('Location error: ' + (error.code === 1 ? 'Permission denied' : 'Unavailable'));
+                    updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update Location';
                     updateBtn.disabled = false;
                 }
             );
         });
     }
 
-    // ========================================
-    // PROFILE PICTURE PREVIEW
-    // ========================================
-    const fileInput = document.getElementById('id_profile_pic');
-    const profilePreview = document.getElementById('profilePreview');
-    const removeCheckbox = document.getElementById('remove_profile_pic');
-
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Validate file size (max 5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB');
-                    this.value = '';
-                    return;
-                }
-                
-                // Validate file type
-                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('Only JPG, PNG, and GIF files are allowed');
-                    this.value = '';
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    if (profilePreview.tagName === 'IMG') {
-                        profilePreview.src = e.target.result;
-                    } else {
-                        // Replace avatar placeholder with img
-                        const newImg = document.createElement('img');
-                        newImg.src = e.target.result;
-                        newImg.alt = '{{ user.get_full_name }}';
-                        newImg.id = 'profilePreview';
-                        newImg.style.width = '100%';
-                        newImg.style.height = '100%';
-                        newImg.style.objectFit = 'cover';
-                        profilePreview.parentNode.replaceChild(newImg, profilePreview);
-                    }
-                }
-                reader.readAsDataURL(file);
-                
-                // Uncheck remove checkbox if user selects new image
-                if (removeCheckbox) {
-                    removeCheckbox.checked = false;
-                }
-            }
-        });
-    }
-
-    // ========================================
-    // MOBILE INPUT VALIDATION
-    // ========================================
+    // Input validation
     const mobileInput = document.getElementById('id_mobile');
     if (mobileInput) {
-        mobileInput.addEventListener('input', function(e) {
-            let value = this.value.replace(/\D/g, ''); // Remove non-digits
-            if (value.length > 10) {
-                value = value.slice(0, 10); // Limit to 10 digits
-            }
-            this.value = value;
+        mobileInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 10);
         });
     }
 
-    // ========================================
-    // NATIONAL ID VALIDATION
-    // ========================================
     const nationalIdInput = document.getElementById('id_national_id');
     if (nationalIdInput) {
-        nationalIdInput.addEventListener('input', function(e) {
-            let value = this.value.replace(/\D/g, ''); // Remove non-digits
-            if (value.length > 8) {
-                value = value.slice(0, 8); // Limit to 8 digits
-            }
-            this.value = value;
+        nationalIdInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 8);
         });
     }
 
-    // ========================================
-    // WARN BEFORE LEAVING WITH UNSAVED CHANGES
-    // ========================================
-    const form = document.getElementById('profileForm');
+    // Warn on unsaved changes
     let formChanged = false;
+    const form = document.getElementById('profileForm');
     
     if (form) {
-        form.addEventListener('input', function() {
-            formChanged = true;
-        });
-        
-        if (fileInput) {
-            fileInput.addEventListener('change', function() {
-                formChanged = true;
-            });
-        }
-        
-        if (removeCheckbox) {
-            removeCheckbox.addEventListener('change', function() {
-                formChanged = true;
-            });
-        }
+        form.addEventListener('input', () => formChanged = true);
         
         window.addEventListener('beforeunload', function(e) {
             if (formChanged) {
                 e.preventDefault();
-                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                e.returnValue = '';
             }
         });
         
-        form.addEventListener('submit', function() {
-            formChanged = false;
-        });
+        form.addEventListener('submit', () => formChanged = false);
     }
 });
 </script>

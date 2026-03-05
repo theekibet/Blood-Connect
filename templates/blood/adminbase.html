@@ -45,6 +45,25 @@
 {% endblock %}
 
 {% block sidebar_menu %}
+<!-- ===== DEBUG INFORMATION - Visible in browser ===== -->
+<div style="background: #ffc107; color: #000; padding: 15px; margin: 10px; border: 3px solid red; font-size: 16px; font-weight: bold; z-index: 9999; position: relative; border-radius: 5px;">
+    <h3 style="margin-top: 0;">🔍 DEBUG INFO:</h3>
+    <p><strong>ADMIN_SECRET_URL from context:</strong> "{{ ADMIN_SECRET_URL }}"</p>
+    <p><strong>Generated URL for barcodes:</strong> /{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/</p>
+    <p><strong>Request path:</strong> {{ request.path }}</p>
+    <p><strong>Is ADMIN_SECRET_URL defined?</strong> {% if ADMIN_SECRET_URL %}✅ YES (Value: <strong>{{ ADMIN_SECRET_URL }}</strong>){% else %}❌ NO (EMPTY!){% endif %}</p>
+    <p><strong>Context processors working?</strong> {% if ADMIN_SECRET_URL %}✅{% else %}❌{% endif %}</p>
+    <p><strong>Available URL names:</strong> 
+        {% url 'admin:blood_bloodbagbarcode_changelist' as test_url %}
+        {% if test_url %}✅ admin:blood_bloodbagbarcode_changelist exists<br>   URL: <strong>{{ test_url }}</strong>{% else %}❌ Not found{% endif %}
+    </p>
+    <p><strong>Blood Barcodes link would be:</strong> 
+        {% if ADMIN_SECRET_URL %}/{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/{% else %}MISSING SECRET URL{% endif %}
+    </p>
+    <button onclick="this.parentElement.style.display='none'" style="padding: 8px 15px; margin-top: 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Close Debug</button>
+</div>
+<!-- ===== END DEBUG INFO ===== -->
+
     <!-- Analytics Dashboard -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">DASHBOARD</div>
@@ -102,9 +121,25 @@
             <i class="fas fa-building"></i>
             <span>Donation Centers</span>
         </a>
-        <a href="/{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/" class="sidebar-menu-item {% if '/blood/bloodbagbarcode' in request.path %}active{% endif %}">
-            <i class="fas fa-barcode"></i>
-            <span>Blood Barcodes</span>
+        
+        <!-- Blood Barcodes Section with Generate Option -->
+        <div style="margin-left: 10px; margin-top: 5px; margin-bottom: 5px; padding-left: 10px; border-left: 2px solid #dee2e6;">
+            <a href="/{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/" class="sidebar-menu-item {% if '/blood/bloodbagbarcode' in request.path and not 'generate' in request.path %}active{% endif %}" style="padding: 8px 10px;">
+                <i class="fas fa-barcode"></i>
+                <span>View All Barcodes</span>
+            </a>
+            
+            {% url 'admin:blood_bloodbagbarcode_generate' as generate_url %}
+            <a href="{% if generate_url %}{{ generate_url }}{% else %}/{{ ADMIN_SECRET_URL }}/blood/bloodbagbarcode/generate-barcodes/{% endif %}" class="sidebar-menu-item {% if 'generate' in request.path %}active{% endif %}" style="padding: 8px 10px;">
+                <i class="fas fa-plus-circle" style="color: #28a745;"></i>
+                <span>Generate Barcodes</span>
+            </a>
+        </div>
+
+        <!-- User Reviews -->
+        <a href="{% url 'admin:blood_userreview_changelist' %}" class="sidebar-menu-item {% if '/blood/userreview' in request.path %}active{% endif %}">
+            <i class="fas fa-star"></i>
+            <span>User Reviews</span>
         </a>
     </div>
 
@@ -148,10 +183,6 @@
         <a href="/{{ ADMIN_SECRET_URL }}/blood/testimonial/" class="sidebar-menu-item {% if '/blood/testimonial' in request.path %}active{% endif %}">
             <i class="fas fa-quote-right"></i>
             <span>Testimonials</span>
-        </a>
-        <a href="/{{ ADMIN_SECRET_URL }}/blood/banner/" class="sidebar-menu-item {% if '/blood/banner' in request.path %}active{% endif %}">
-            <i class="fas fa-image"></i>
-            <span>Banners</span>
         </a>
         <a href="/{{ ADMIN_SECRET_URL }}/blood/homepagestats/" class="sidebar-menu-item {% if '/blood/homepagestats' in request.path %}active{% endif %}">
             <i class="fas fa-chart-line"></i>
@@ -229,12 +260,64 @@
 {% endblock %}
 
 {% block extra_css %}
+<style>
+    .badge-danger {
+        background-color: #dc3545;
+        color: white;
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        margin-left: 5px;
+    }
+    .sidebar-menu-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        color: #495057;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-bottom: 2px;
+        transition: all 0.2s;
+    }
+    .sidebar-menu-item i {
+        width: 20px;
+        margin-right: 10px;
+        font-size: 14px;
+    }
+    .sidebar-menu-item:hover {
+        background-color: #e9ecef;
+        color: #0056b3;
+    }
+    .sidebar-menu-item.active {
+        background-color: #007bff;
+        color: white;
+    }
+    .sidebar-menu-item.active i {
+        color: white;
+    }
+    .sidebar-section {
+        margin-bottom: 20px;
+    }
+    .sidebar-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        padding: 0 15px 5px;
+        margin-top: 15px;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Admin base template loaded with dynamic admin URL: {{ ADMIN_SECRET_URL }}');
+        
+        // Log debug info to console as well
+        console.log('🔍 DEBUG - ADMIN_SECRET_URL:', '{{ ADMIN_SECRET_URL }}');
+        console.log('🔍 DEBUG - Request path:', '{{ request.path }}');
         
         // Update honeypot badge if needed
         {% if total_honeypot_attempts|default:0 > 0 %}

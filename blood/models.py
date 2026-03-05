@@ -600,43 +600,6 @@ class BloodDriveEvent(models.Model):
         return self.event_date > timezone.now()
 
 
-class Banner(models.Model):
-    """Moving/rotating banners for announcements"""
-    BANNER_TYPES = [
-        ('info', 'Information'),
-        ('urgent', 'Urgent'),
-        ('success', 'Success Story'),
-        ('event', 'Event'),
-    ]
-    
-    title = models.CharField(max_length=200)
-    message = models.TextField(max_length=500)
-    banner_type = models.CharField(max_length=20, choices=BANNER_TYPES, default='info')
-    link_text = models.CharField(max_length=50, blank=True, help_text="Button text (optional)")
-    link_url = models.URLField(blank=True, help_text="Button link (optional)")
-    background_image = models.ImageField(upload_to='banners/', blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    start_date = models.DateTimeField(default=timezone.now)
-    end_date = models.DateTimeField(null=True, blank=True, help_text="Leave blank for no expiry")
-    display_order = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['display_order', '-created_at']
-        verbose_name = "Banner"
-        verbose_name_plural = "Banners"
-
-    def __str__(self):
-        return self.title
-
-    @property
-    def is_current(self):
-        now = timezone.now()
-        if self.end_date:
-            return self.start_date <= now <= self.end_date
-        return self.start_date <= now
-
-
 class Testimonial(models.Model):
     """User testimonials and success stories"""
     name = models.CharField(max_length=100)
@@ -648,6 +611,13 @@ class Testimonial(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     display_order = models.IntegerField(default=0)
+    source_review = models.OneToOneField(
+        'UserReview',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='featured_testimonial'
+    )
 
     class Meta:
         ordering = ['display_order', '-created_at']
@@ -656,7 +626,80 @@ class Testimonial(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.role}"
-
+    
+    def save(self, *args, **kwargs):
+        # If this testimonial is from a review and has no avatar, try to get it from user profile
+        if self.source_review and not self.avatar:
+            user = self.source_review.user
+            
+            # Check donor profile
+            if hasattr(user, 'donor') and user.donor.profile_pic:
+                self.avatar = user.donor.profile_pic
+            # Check phlebotomist profile
+            elif hasattr(user, 'phlebotomist') and user.phlebotomist.profile_pic:
+                self.avatar = user.phlebotomist.profile_pic
+            # Check hospital user profile
+            elif hasattr(user, 'hospitaluser') and user.hospitaluser.profile_pic:
+                self.avatar = user.hospitaluser.profile_pic
+        
+        super().save(*args, **kwargs)
+class UserReview(models.Model):
+    """All user reviews/feedback - admin sees ALL of these"""
+    user = models.OneToOneField(  
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        related_name='review'  
+    )
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])  # 1-5 stars
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)  # So admin knows which are new
+    
+    class Meta:
+        ordering = ['-created_at']
+        # Add this to ensure only one review per user
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                name='unique_user_review'
+            )
+        ]
+    
+    def __str__(self):
+        return f"Review by {self.user.username} - {self.rating}★"
+class ReviewSurvey(models.Model):
+    """Optional survey data linked to user reviews"""
+    SATISFACTION_CHOICES = [
+        (5, 'Very Satisfied'),
+        (4, 'Satisfied'),
+        (3, 'Neutral'),
+        (2, 'Unsatisfied'),
+        (1, 'Very Unsatisfied'),
+    ]
+    
+    RECOMMEND_CHOICES = [
+        (1, 'Yes, definitely!'),
+        (0, 'Maybe'),
+        (-1, 'Not yet'),
+    ]
+    
+    review = models.OneToOneField(
+        'UserReview',
+        on_delete=models.CASCADE,
+        related_name='survey'
+    )
+    satisfaction = models.IntegerField(choices=SATISFACTION_CHOICES, null=True, blank=True)
+    favorite_features = models.JSONField(default=list, blank=True)  
+    recommend = models.IntegerField(choices=RECOMMEND_CHOICES, null=True, blank=True)
+    improvement = models.TextField(blank=True)
+    completed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Review Survey"
+        verbose_name_plural = "Review Surveys"
+    
+    def __str__(self):
+        return f"Survey for {self.review.user.username}"
 
 class HomePageStats(models.Model):
     """Dynamic stats for homepage"""
@@ -676,140 +719,6 @@ class HomePageStats(models.Model):
         return self.stat_name
     
 
-class DonationFunFact(models.Model):
-    """Interactive fun facts that users can explore"""
-    FACT_CATEGORIES = [
-        ('blood', 'Blood Science & Biology'),  # Updated label
-        ('donation', 'Donation Process & Impact'),  # Updated label
-        ('health', 'Health Benefits'),
-        ('myths', 'Myth Busters'),
-        ('fun', 'Fun Facts & History'),  # Added - used in fact_data.py
-        ('local', 'Kenyan Context'),  # Added - used in fact_data.py
-    ]
-    
-    category = models.CharField(max_length=20, choices=FACT_CATEGORIES)
-    title = models.CharField(max_length=200)
-    fact_text = models.TextField()
-    image_url = models.CharField(max_length=500, blank=True, null=True, 
-                                help_text="URL to an image (can be Unsplash, Pexels, etc.)")
-    is_verified = models.BooleanField(default=True)
-    
-    # Interactive elements
-    has_quiz = models.BooleanField(default=False)
-    quiz_question = models.TextField(blank=True, null=True)
-    correct_answer = models.CharField(max_length=200, blank=True, null=True)
-    wrong_answer_1 = models.CharField(max_length=200, blank=True, null=True)
-    wrong_answer_2 = models.CharField(max_length=200, blank=True, null=True)
-    explanation = models.TextField(blank=True, null=True)
-    
-    # Engagement metrics
-    likes = models.IntegerField(default=0)
-    shares = models.IntegerField(default=0)
-    times_viewed = models.IntegerField(default=0)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)  # Added - good practice
-    
-    def __str__(self):
-        return f"{self.get_category_display()}: {self.title}"
-    
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = "Donation Fun Fact"
-        verbose_name_plural = "Donation Fun Facts"
-class UserFactInteraction(models.Model):
-    """Track how users interact with facts"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    fact = models.ForeignKey(DonationFunFact, on_delete=models.CASCADE)
-    session_id = models.CharField(max_length=100, blank=True, null=True)
-    
-    INTERACTION_TYPES = [
-        ('view', 'Viewed'),
-        ('like', 'Liked'),
-        ('share', 'Shared'),
-        ('quiz_attempt', 'Quiz Attempted'),
-        ('quiz_correct', 'Quiz Correct'),
-        ('quiz_wrong', 'Quiz Wrong'),
-    ]
-    
-    interaction_type = models.CharField(max_length=20, choices=INTERACTION_TYPES)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    user_answer = models.CharField(max_length=500, blank=True, null=True)
-    
-    class Meta:
-        ordering = ['-timestamp']
-        verbose_name = "User Fact Interaction"
-        verbose_name_plural = "User Fact Interactions"
-    
-    def __str__(self):
-        user_display = self.user.username if self.user else f"Anonymous ({self.session_id[:8]}...)"
-        return f"{user_display} - {self.get_interaction_type_display()} - {self.fact.title}"
-
-class DailyFactChallenge(models.Model):
-    """Daily challenge for users"""
-    date = models.DateField(unique=True)
-    fact = models.ForeignKey(DonationFunFact, on_delete=models.CASCADE)
-    total_participants = models.IntegerField(default=0)
-    correct_answers = models.IntegerField(default=0)
-    
-    class Meta:
-        ordering = ['-date']
-        verbose_name = "Daily Fact Challenge"
-        verbose_name_plural = "Daily Fact Challenges"
-    
-    def __str__(self):
-        return f"Challenge: {self.date} - {self.fact.title}"
-    
-    @property
-    def accuracy_percentage(self):
-        if self.total_participants > 0:
-            return round((self.correct_answers / self.total_participants) * 100, 1)
-        return 0
-
-class QuizAttempt(models.Model):
-    """Track quiz attempts and scores - MISSING FROM YOUR MODELS"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    total_questions = models.IntegerField()
-    correct_answers = models.IntegerField()
-    score = models.DecimalField(max_digits=5, decimal_places=2)  # Percentage
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.score}% ({self.created_at})"
-    
-    class Meta:
-        ordering = ['-created_at']
-
-
-class FactContribution(models.Model):
-    """Allow users to suggest new facts - MISSING FROM YOUR MODELS"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    category = models.CharField(max_length=20, choices=DonationFunFact.FACT_CATEGORIES)
-    title = models.CharField(max_length=200)
-    fact_text = models.TextField()
-    source = models.URLField(blank=True, null=True, help_text="Source URL for verification")
-    
-    # Optional quiz elements
-    has_quiz = models.BooleanField(default=False)
-    quiz_question = models.TextField(blank=True, null=True)
-    correct_answer = models.CharField(max_length=200, blank=True, null=True)
-    wrong_answer_1 = models.CharField(max_length=200, blank=True, null=True)
-    wrong_answer_2 = models.CharField(max_length=200, blank=True, null=True)
-    
-    # Moderation
-    is_approved = models.BooleanField(default=False)
-    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, 
-                                    null=True, blank=True, related_name='reviewed_facts')
-    reviewed_at = models.DateTimeField(null=True, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"Contribution by {self.user.username}: {self.title}"
-    
-    class Meta:
-        ordering = ['-created_at']
-
 
 class BloodBagBarcode(models.Model):
     """Pre-generated barcodes for blood collection bags"""
@@ -818,8 +727,8 @@ class BloodBagBarcode(models.Model):
         ('available', 'Available'),
         ('assigned', 'Assigned to Donor'),
         ('collected', 'Blood Collected'),
-        ('tested', 'Tested - Safe'),  # More descriptive
-        ('discarded', 'Discarded - Unsafe'),  # More descriptive
+        ('tested', 'Tested - Safe'),
+        ('discarded', 'Discarded - Unsafe'),
     ]
     
     BAG_TYPE_CHOICES = [
@@ -887,7 +796,6 @@ class BloodBagBarcode(models.Model):
         related_name='blood_bag_barcode'
     )
     
-    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -904,6 +812,34 @@ class BloodBagBarcode(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['assigned_to_donor']),
         ]
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate barcode if not provided"""
+        if not self.barcode or self.barcode.strip() == '':
+            self.barcode = self.generate_barcode()
+        super().save(*args, **kwargs)
+    
+    def generate_barcode(self):
+        """Generate a unique barcode"""
+        import random
+        from datetime import datetime
+        
+        # Format: BLD-YYYYMMDD-XXXXX
+        date_part = datetime.now().strftime('%Y%m%d')
+        
+        # Try up to 10 times to generate a unique barcode
+        for _ in range(10):
+            random_part = ''.join([str(random.randint(0, 9)) for _ in range(5)])
+            barcode = f"BLD-{date_part}-{random_part}"
+            
+            # Check if barcode already exists
+            if not BloodBagBarcode.objects.filter(barcode=barcode).exists():
+                return barcode
+        
+        # If all attempts fail, add a timestamp to ensure uniqueness
+        import time
+        timestamp = int(time.time())[-6:]
+        return f"BLD-{date_part}-{timestamp}"
     
     def __str__(self):
         status_icon = {
@@ -927,7 +863,6 @@ class BloodBagBarcode(models.Model):
         self.assigned_at = timezone.now()
         self.save()
         
-        # Log the assignment
         logger.info(f"Barcode {self.barcode} assigned to donor {donor.id} by {user.username}")
     
     def mark_collected(self, user, blood_donation):
@@ -981,4 +916,3 @@ class BloodBagBarcode(models.Model):
             'discarded': '🗑️ Discarded - not usable',
         }
         return stages.get(self.status, self.status)
-

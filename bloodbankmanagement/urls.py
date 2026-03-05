@@ -116,6 +116,14 @@ urlpatterns = [
 
     # Profile image update
     path('update-profile-image/', blood_views.update_profile_image, name='update_profile_image'),
+    
+        path('submit-review/', blood_views.submit_review, name='submit_review'),
+    
+    # Admin review management
+    path('admin/reviews/', blood_views.admin_reviews_dashboard, name='admin_reviews_dashboard'),
+    path('admin/reviews/<int:review_id>/feature/', blood_views.feature_review_as_testimonial, name='feature_review'),
+    path('save-review-step/', blood_views.save_review_step, name='save_review_step'),
+    path('generate-initial-barcodes/', blood_views.generate_initial_barcodes, name='generate_initial_barcodes'),
 ]
 
 

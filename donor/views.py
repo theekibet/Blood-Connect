@@ -1393,12 +1393,16 @@ def donor_dashboard_view(request):
 # -------------------------------
 # DonateBloodView - COMPLETE UPDATED VERSION
 # -------------------------------
+# -------------------------------
+# DonateBloodView - COMPLETE UPDATED VERSION WITH REVIEW TRIGGER
+# -------------------------------
 @login_required(login_url='donor:donorlogin')
 @username_required
 def donate_blood_view(request):
     """
     View for donors to schedule blood donation appointments.
-    Now includes double-booking prevention with real-time availability checking.
+    Now includes double-booking prevention with real-time availability checking
+    and triggers review prompt after successful booking.
     """
     try:
         donor = Donor.objects.get(user=request.user)
@@ -1496,7 +1500,7 @@ def donate_blood_view(request):
             'active_donation': None,
             'bloodgroup_verified': donor.bloodgroup_verified,
             'verified_bloodgroup': donor.bloodgroup if donor.bloodgroup_verified else None,
-            'unsafe_reason': unsafe_reason,  # FIXED: Use the variable we created
+            'unsafe_reason': unsafe_reason,
             'is_unsafe': True,
             'has_unsafe_donation': True,
             'show_contact_banner': True,
@@ -1734,7 +1738,32 @@ def donate_blood_view(request):
                     logger.info(f"  - Date: {donation_datetime}")
                     logger.info(f"  - Status: {appointment.status}")
                     
+                    # ==========================================
+                    # SET SESSION FLAGS FOR REVIEW PROMPT
+                    # ==========================================
+                    request.session['just_donated'] = True
+                    request.session['donation_center_name'] = donation_center.name
+                    request.session['donation_date'] = donation_datetime.strftime('%B %d, %Y')
+                    request.session['donation_time'] = donation_datetime.strftime('%I:%M %p')
+                    
                     messages.success(request, "✅ Your blood donation appointment has been scheduled successfully!")
+                    
+                    # Check if user already has a review
+                    from blood.models import UserReview
+                    has_review = UserReview.objects.filter(user=request.user).exists()
+                    
+                    if not has_review:
+                        # Add a special message encouraging review
+                        from django.utils.safestring import mark_safe
+                        messages.info(
+                            request, 
+                            mark_safe(
+                                "🌟 We'd love to hear about your experience! "
+                                f"<a href='{reverse('submit_review')}' class='alert-link'>Click here to leave a review</a> "
+                                "and help others know what to expect."
+                            )
+                        )
+                    
                     return redirect('donor:donation-history')
                     
                 except Exception as e:
@@ -1969,10 +1998,8 @@ def donor_profile_view(request):
 # -------------------------------
 # Edit Profile View (EDITABLE - Profile Completion)
 # -------------------------------
-# -------------------------------
-# Edit Profile View (EDITABLE - Profile Completion)
-# -------------------------------
-@login_required(login_url='donor:donorlogin')
+
+@login_required(login_url='donorlogin')
 @username_required
 def donor_edit_profile_view(request):
     """
@@ -1980,6 +2007,7 @@ def donor_edit_profile_view(request):
     During onboarding, certain fields are required.
     Blood group is OPTIONAL.
     County is non-editable once set.
+    NOW SUPPORTS IMAGE CROPPING.
     """
     try:
         donor = Donor.objects.get(user=request.user)
@@ -2007,7 +2035,34 @@ def donor_edit_profile_view(request):
         if donor.county and 'county' not in post_data:
             post_data['county'] = donor.county
         
-        form = DonorProfileForm(post_data, request.FILES, instance=donor)
+        # ====== NEW: Handle cropped image from base64 ======
+        cropped_image_data = request.POST.get('cropped_image', '')
+        
+        # Create a mutable FILES dictionary
+        files = request.FILES.copy()
+        
+        if cropped_image_data and cropped_image_data.startswith('data:image'):
+            try:
+                # Extract base64 data
+                format, imgstr = cropped_image_data.split(';base64,')
+                ext = format.split('/')[-1]  # Get extension (jpeg, png, etc)
+                
+                # Decode base64 string
+                img_data = base64.b64decode(imgstr)
+                
+                # Create a file-like object
+                img_file = ContentFile(img_data, name=f'profile_{user.username}.{ext}')
+                
+                # Add to FILES
+                files['profile_pic'] = img_file
+                
+                logger.info(f"✅ Cropped image processed: {len(img_data)} bytes")
+            except Exception as e:
+                logger.error(f"❌ Error processing cropped image: {e}", exc_info=True)
+                messages.error(request, "Error processing image. Please try again.")
+        # ====== END NEW CODE ======
+        
+        form = DonorProfileForm(post_data, files, instance=donor)
         
         if form.is_valid():
             try:
@@ -2016,9 +2071,12 @@ def donor_edit_profile_view(request):
                     donor = form.save()
                     
                     # Handle profile picture removal
-                    if 'remove_profile_pic' in request.POST:
+                    if 'remove_profile_pic' in request.POST and request.POST.get('remove_profile_pic') == 'true':
+                        if donor.profile_pic:
+                            donor.profile_pic.delete(save=False)
                         donor.profile_pic = None
                         donor.save()
+                        logger.info(f"🗑️ Profile picture removed for {user.username}")
                     
                     # Check if profile is now complete
                     is_complete, missing = check_profile_completion(donor)

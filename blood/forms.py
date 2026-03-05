@@ -1,8 +1,8 @@
 from django import forms
 from .models import Contact, DonationCenter
-from .models import Stock
+from .models import Stock,ReviewSurvey
 import datetime
-from .models import StockUnit
+from .models import StockUnit,UserReview
 from django.core.exceptions import ValidationError
 
 from django.utils import timezone
@@ -159,3 +159,76 @@ class DonationCenterForm(forms.ModelForm):
             if exists:
                 raise ValidationError("A donation center with this name and city already exists.")
         return cleaned_data
+class UserReviewForm(forms.ModelForm):
+    class Meta:
+        model = UserReview
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.RadioSelect(attrs={'class': 'star-rating'}),
+            'comment': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Tell us about your experience with BloodConnect...'
+            }),
+        }
+class ReviewSurveyForm(forms.ModelForm):
+    SATISFACTION_CHOICES = [
+        (5, '😊 Very Satisfied'),
+        (4, '🙂 Satisfied'),
+        (3, '😐 Neutral'),
+        (2, '🙁 Unsatisfied'),
+        (1, '😞 Very Unsatisfied'),
+    ]
+    
+    FEATURE_CHOICES = [
+        ('dashboard', '📊 Donor Dashboard'),
+        ('booking', '📅 Appointment Booking'),
+        ('centers', '📍 Finding Donation Centers'),
+        ('chatbot', '🤖 AI Assistant'),
+        ('notifications', '🔔 Notifications'),
+        ('points', '🏆 Points & Rewards'),
+        ('mobile', '📱 Mobile Experience'),
+        ('support', '👥 Customer Support'),
+        ('other', '✨ Other'),
+    ]
+    
+    RECOMMEND_CHOICES = [
+        (1, '👍 Yes, definitely!'),
+        (0, '🤔 Maybe'),
+        (-1, '👎 Not yet'),
+    ]
+    
+    satisfaction = forms.ChoiceField(
+        choices=SATISFACTION_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),
+        label="How satisfied are you with BloodConnect?",
+        required=False
+    )
+    
+    favorite_features = forms.MultipleChoiceField(
+        choices=FEATURE_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'feature-checkbox'}),
+        required=False,
+        label="What do you like most? (Select all that apply)"
+    )
+    
+    recommend = forms.ChoiceField(
+        choices=RECOMMEND_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'recommend-radio'}),
+        label="Would you recommend BloodConnect to others?",
+        required=False
+    )
+    
+    improvement = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'e.g., "Faster booking process", "More donation centers", etc.'
+        }),
+        required=False,
+        label="One thing we could improve"
+    )
+    
+    class Meta:
+        model = ReviewSurvey
+        fields = ['satisfaction', 'favorite_features', 'recommend', 'improvement']

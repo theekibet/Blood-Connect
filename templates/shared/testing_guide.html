@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloodConnect System Testing Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .intro {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            border-left: 5px solid #dc3545;
+        }
+
+        .intro h2 {
+            color: #dc3545;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+
+        .intro p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        .step-section {
+            margin-bottom: 50px;
+        }
+
+        .step-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .step-number {
+            background: white;
+            color: #667eea;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-header h3 {
+            font-size: 1.6rem;
+        }
+
+        .step-content {
+            padding: 0 20px;
+        }
+
+        .credentials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .credentials-table thead {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .credentials-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .credentials-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .credentials-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .credentials-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .username {
+            font-family: 'Courier New', monospace;
+            background: #e7f3ff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: #0066cc;
+            font-weight: 600;
+        }
+
+        .password {
+            font-family: 'Courier New', monospace;
+            background: #fff3cd;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: #856404;
+            font-weight: 600;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .role-phlebo {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .role-lab {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .role-bloodbank {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 5px solid #0066cc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .info-box h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .warning-box h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .success-box h4 {
+            color: #155724;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .workflow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .workflow-step {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-step:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
+        }
+
+        .workflow-step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .workflow-step h5 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            padding-left: 20px;
+        }
+
+        .workflow-step p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .centre-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .centre-section h4 {
+            color: #dc3545;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .location-icon {
+            font-size: 1.5rem;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .quick-ref {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+
+        .quick-ref h3 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.6rem;
+        }
+
+        .quick-ref-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .quick-ref-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .quick-ref-card h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .footer {
+            background: #343a40;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .step-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .credentials-table {
+                font-size: 0.9rem;
+            }
+
+            .credentials-table th,
+            .credentials-table td {
+                padding: 10px;
+            }
+
+            .quick-ref-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🩸 BloodConnect System Testing Guide</h1>
+            <p>Complete End-to-End Testing Workflow</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Introduction -->
+            <div class="intro">
+                <h2>👋 Welcome, Testers!</h2>
+                <p>
+                    Thank you for helping test BloodConnect! This guide will walk you through testing the <strong>complete blood donation workflow</strong> 
+                    - from booking an appointment as a donor, to sample collection by a phlebotomist, lab testing, and finally adding blood to the blood bank inventory.
+                </p>
+                <p style="margin-top: 15px;">
+                    You'll be switching between different user roles to see how the entire system works together. Don't worry - this guide explains everything step by step!
+                </p>
+            </div>
+
+            <!-- Quick Overview -->
+            <div class="success-box">
+                <h4>🎯 What You'll Test</h4>
+                <ol style="padding-left: 20px; margin-top: 10px;">
+                    <li style="list-style: decimal;">Book an appointment as a <strong>Donor</strong></li>
+                    <li style="list-style: decimal;">Approve appointment & collect sample as a <strong>Phlebotomist</strong></li>
+                    <li style="list-style: decimal;">Test blood sample as a <strong>Lab Technologist</strong></li>
+                    <li style="list-style: decimal;">View blood added to inventory as a <strong>Blood Bank Technician</strong></li>
+                </ol>
+            </div>
+
+            <!-- Test Credentials Section -->
+            <div class="step-section">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <h3>Test User Credentials</h3>
+                </div>
+                <div class="step-content">
+                    <p style="margin-bottom: 20px;">Below are the pre-created test accounts organized by location. You'll use these to test different parts of the system.</p>
+
+                    <!-- Nairobi Centre -->
+                    <div class="centre-section">
+                        <h4><span class="location-icon">📍</span> Nairobi Centre</h4>
+                        <table class="credentials-table">
+                            <thead>
+                                <tr>
+                                    <th>Role</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="role-badge role-phlebo">Phlebotomist</span></td>
+                                    <td><span class="username">nairobiphlebotomist</span></td>
+                                    <td><span class="password">nairobiphlebotomist641@gmail.com</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="role-badge role-lab">Lab Technologist</span></td>
+                                    <td><span class="username">nairobilabtechnologist</span></td>
+                                    <td><span class="password">Nairobiphletobomist482@gmail.com</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="role-badge role-bloodbank">Blood Bank Tech</span></td>
+                                    <td><span class="username">nairobibloodbank</span></td>
+                                    <td><span class="password">Nairobibloodbank777@gmail.com</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mombasa Centre -->
+                    <div class="centre-section">
+                        <h4><span class="location-icon">📍</span> Mombasa Centre</h4>
+                        <table class="credentials-table">
+                            <thead>
+                                <tr>
+                                    <th>Role</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="role-badge role-phlebo">Phlebotomist</span></td>
+                                    <td><span class="username">mombasaphletobomist</span></td>
+                                    <td><span class="password">mombasaphletobomist223@gmail.com</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="role-badge role-lab">Lab Technologist</span></td>
+                                    <td><span class="username">mombasalabtechnologist</span></td>
+                                    <td><span class="password">Mombasaphletobomist480@gmail.com</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="role-badge role-bloodbank">Blood Bank Tech</span></td>
+                                    <td><span class="username">mombasabloodbank</span></td>
+                                    <td><span class="password">Mombasabloodbank904@gmail.com</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Kisumu Centre -->
+                    <div class="centre-section">
+                        <h4><span class="location-icon">📍</span> Kisumu Centre</h4>
+                        <table class="credentials-table">
+                            <thead>
+                                <tr>
+                                    <th>Role</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="role-badge role-phlebo">Phlebotomist</span></td>
+                                    <td><span class="username">kisumuphlebotomist</span></td>
+                                    <td><span class="password">kisumuphlebotomist928@gmail.com</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="role-badge role-lab">Lab Technologist</span></td>
+                                    <td><span class="username">kisumulabtechnologist</span></td>
+                                    <td><span class="password">Kisumuphletobomist484@gmail.com</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="role-badge role-bloodbank">Blood Bank Tech</span></td>
+                                    <td><span class="username">kisumubloodbank</span></td>
+                                    <td><span class="password">Kisumubloodbank333@gmail.com</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>⚠️ Important Note</h4>
+                        <p>Make sure to book appointments with phlebotomists from the <strong>same centre</strong> where you want to test. For example, if you book with <strong>nairobiphlebotomist</strong>, you'll test with the Nairobi lab technologist and blood bank technician.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step-by-Step Testing Workflow -->
+            <div class="step-section">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <h3>Complete Testing Workflow</h3>
+                </div>
+                <div class="step-content">
+                    <div class="workflow-steps">
+                        <!-- Step 1: Login as Donor -->
+                        <div class="workflow-step">
+                            <div class="workflow-step-number">1</div>
+                            <h5>🩸 Login as Donor (Use Your Own Account)</h5>
+                            <p>
+                                <strong>How to login:</strong><br>
+                                • Go to the homepage<br>
+                                • Click <strong>"Login"</strong> in the navigation<br>
+                                • Select <strong>"Donor Login"</strong> from the dropdown<br>
+                                • Enter your donor credentials<br><br>
+                                <strong>What to do:</strong><br>
+                                • Go to your donor dashboard<br>
+                                • Find <strong>"Donate Blood"</strong> in the sidebar<br>
+                                • Click <strong>"Book Appointment"</strong><br>
+                                • Choose a centre (Nairobi, Mombasa, or Kisumu)<br>
+                                • Select a phlebotomist from that centre<br>
+                                • Pick a date and time<br>
+                                • Submit the appointment request<br>
+                                • <strong>Note down which centre and phlebotomist you chose!</strong>
+                            </p>
+                        </div>
+
+                        <!-- Step 2: Approve as Phlebotomist -->
+                        <div class="workflow-step">
+                            <div class="workflow-step-number">2</div>
+                            <h5>💉 Approve Appointment as Phlebotomist</h5>
+                            <p>
+                                <strong>How to login:</strong><br>
+                                • Logout from donor account<br>
+                                • Go to homepage → Click <strong>"Login"</strong><br>
+                                • Select <strong>"Phlebotomist Login"</strong> from dropdown<br>
+                                • Use the credentials for the phlebotomist you booked with (see table above)<br><br>
+                                <strong>What to do:</strong><br>
+                                • Go to phlebotomist dashboard<br>
+                                • Find the appointment you just created<br>
+                                • Click <strong>"Approve"</strong> to accept the appointment<br>
+                                • Once approved, click <strong>"Collect Sample"</strong><br>
+                                • Fill in the sample collection details<br>
+                                • Mark the sample as collected<br>
+                                • The sample is now sent to the lab for testing!
+                            </p>
+                        </div>
+
+                        <!-- Step 3: Test Sample as Lab Tech -->
+                        <div class="workflow-step">
+                            <div class="workflow-step-number">3</div>
+                            <h5>🔬 Test Blood Sample as Lab Technologist</h5>
+                            <p>
+                                <strong>How to login:</strong><br>
+                                • Logout from phlebotomist account<br>
+                                • Go to homepage → Click <strong>"Login"</strong><br>
+                                • Select <strong>"Lab Technologist Login"</strong> from dropdown<br>
+                                • Use the lab technologist credentials for the SAME centre (see table above)<br><br>
+                                <strong>What to do:</strong><br>
+                                • Go to lab technologist dashboard<br>
+                                • Find the sample that was just collected<br>
+                                • Click to open sample details<br>
+                                • Perform the blood test<br>
+                                • Mark the sample as <strong>"SAFE"</strong> (to pass it to blood bank)<br>
+                                • If you mark it "UNSAFE", it won't be added to inventory<br>
+                                • Submit the test results
+                            </p>
+                        </div>
+
+                        <!-- Step 4: View in Blood Bank -->
+                        <div class="workflow-step">
+                            <div class="workflow-step-number">4</div>
+                            <h5>🏥 View Blood in Inventory as Blood Bank Technician</h5>
+                            <p>
+                                <strong>How to login:</strong><br>
+                                • Logout from lab technologist account<br>
+                                • Go to homepage → Click <strong>"Login"</strong><br>
+                                • Select <strong>"Blood Bank Technician Login"</strong> from dropdown<br>
+                                • Use the blood bank tech credentials for the SAME centre (see table above)<br><br>
+                                <strong>What to do:</strong><br>
+                                • Go to blood bank technician dashboard<br>
+                                • Navigate to <strong>"Blood Inventory"</strong> or <strong>"Stock Units"</strong><br>
+                                • Look for the newly added blood unit<br>
+                                • Verify it shows the correct blood type<br>
+                                • Check that it's organized in FIFO order (First In, First Out)<br>
+                                • The blood is now ready to be used for transfusions!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="success-box" style="margin-top: 30px;">
+                        <h4>🎉 Congratulations!</h4>
+                        <p>If you've completed all 4 steps, you've successfully tested the entire blood donation workflow from start to finish! This is exactly how the system will work in real-world usage.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How to Login Section -->
+            <div class="step-section">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <h3>How to Login to Different User Types</h3>
+                </div>
+                <div class="step-content">
+                    <div class="info-box">
+                        <h4>🔐 Login Steps</h4>
+                        <ol style="padding-left: 20px; margin-top: 10px;">
+                            <li style="list-style: decimal;">Go to the <strong>homepage</strong></li>
+                            <li style="list-style: decimal;">Click <strong>"Login"</strong> button in the navigation bar</li>
+                            <li style="list-style: decimal;">A dropdown menu will appear with these options:
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Donor Login</li>
+                                    <li>Phlebotomist Login</li>
+                                    <li>Lab Technologist Login</li>
+                                    <li>Blood Bank Technician Login</li>
+                                </ul>
+                            </li>
+                            <li style="list-style: decimal;">Click the appropriate login type</li>
+                            <li style="list-style: decimal;">Enter the username and password from the tables above</li>
+                            <li style="list-style: decimal;">Click login and you're in!</li>
+                        </ol>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>💡 Pro Tip</h4>
+                        <p>Keep this guide open in a separate tab or window so you can easily reference the usernames and passwords while testing!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testing Tips -->
+            <div class="step-section">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <h3>Testing Tips & Best Practices</h3>
+                </div>
+                <div class="step-content">
+                    <div class="quick-ref">
+                        <h3>✅ What to Look For While Testing</h3>
+                        <div class="quick-ref-grid">
+                            <div class="quick-ref-card">
+                                <h4>User Experience</h4>
+                                <ul>
+                                    <li>Are buttons easy to find?</li>
+                                    <li>Is navigation intuitive?</li>
+                                    <li>Do forms work properly?</li>
+                                    <li>Are error messages clear?</li>
+                                </ul>
+                            </div>
+                            <div class="quick-ref-card">
+                                <h4>Functionality</h4>
+                                <ul>
+                                    <li>Do appointments save correctly?</li>
+                                    <li>Can you approve/reject appointments?</li>
+                                    <li>Does sample collection work?</li>
+                                    <li>Are test results saved?</li>
+                                </ul>
+                            </div>
+                            <div class="quick-ref-card">
+                                <h4>Data Flow</h4>
+                                <ul>
+                                    <li>Does data move between roles correctly?</li>
+                                    <li>Is FIFO ordering maintained?</li>
+                                    <li>Are blood types tracked correctly?</li>
+                                    <li>Do timestamps show up properly?</li>
+                                </ul>
+                            </div>
+                            <div class="quick-ref-card">
+                                <h4>Mobile Testing</h4>
+                                <ul>
+                                    <li>Does it work on mobile phones?</li>
+                                    <li>Are buttons tap-friendly?</li>
+                                    <li>Is text readable?</li>
+                                    <li>Do images load properly?</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <h4>📝 Report Any Issues</h4>
+                        <p>If you encounter any bugs, errors, or confusing parts of the system, please note:</p>
+                        <ul style="margin-top: 10px;">
+                            <li>What you were trying to do</li>
+                            <li>Which user type you were logged in as</li>
+                            <li>What happened (error message, wrong behavior, etc.)</li>
+                            <li>Take screenshots if possible</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Reference -->
+            <div class="quick-ref" style="margin-top: 40px;">
+                <h3>📋 Quick Reference Chart</h3>
+                <table class="credentials-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Centre</th>
+                            <th>Phlebotomist</th>
+                            <th>Lab Technologist</th>
+                            <th>Blood Bank Tech</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>📍 Nairobi</strong></td>
+                            <td><span class="username">nairobiphlebotomist</span></td>
+                            <td><span class="username">nairobilabtechnologist</span></td>
+                            <td><span class="username">nairobibloodbank</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>📍 Mombasa</strong></td>
+                            <td><span class="username">mombasaphletobomist</span></td>
+                            <td><span class="username">mombasalabtechnologist</span></td>
+                            <td><span class="username">mombasabloodbank</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>📍 Kisumu</strong></td>
+                            <td><span class="username">kisumuphlebotomist</span></td>
+                            <td><span class="username">kisumulabtechnologist</span></td>
+                            <td><span class="username">kisumubloodbank</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>BloodConnect System Testing Guide</strong></p>
+            <p>Thank you for helping make BloodConnect better! 🩸</p>
+            <p style="margin-top: 15px; opacity: 0.7;">Your feedback is invaluable for improving the system.</p>
+        </div>
+    </div>
+</body>
+</html>

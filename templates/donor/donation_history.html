@@ -15,6 +15,70 @@
     </a>
   </div>
 
+  <!-- ========================================== -->
+  <!-- REVIEW PROMPT - Shows after successful donation -->
+  <!-- ========================================== -->
+  {% if request.session.just_donated %}
+    {% if not user.review %}
+    <div class="card mb-4 border-success review-prompt-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+              <i class="fas fa-star fa-2x text-success"></i>
+            </div>
+            <div>
+              <h5 class="mb-1">How was your donation experience?</h5>
+              <p class="text-muted mb-0">
+                <i class="fas fa-map-pin me-1"></i> {{ request.session.donation_center_name }}<br>
+                <i class="fas fa-calendar me-1"></i> {{ request.session.donation_date }} at {{ request.session.donation_time }}
+              </p>
+              <p class="mt-2 mb-0">
+                Your feedback helps us improve and encourages others to donate. 
+                Share your experience with the community!
+              </p>
+            </div>
+          </div>
+          <div class="text-end">
+            <a href="{% url 'submit_review' %}" class="btn btn-success btn-lg">
+              <i class="fas fa-pen me-2"></i>Write a Review
+            </a>
+            <button class="btn btn-outline-secondary btn-lg ms-2" onclick="dismissReviewPrompt()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+
+  <!-- ========================================== -->
+  <!-- EXISTING REVIEW CARD - Shows if user has already reviewed -->
+  <!-- ========================================== -->
+  {% if user.review %}
+  <div class="card mb-4 border-warning">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+            <i class="fas fa-star fa-2x text-warning"></i>
+          </div>
+          <div>
+            <h5 class="mb-1">You've already shared your feedback</h5>
+            <p class="text-muted mb-0">
+              Your review helps others in the community. Thank you!
+            </p>
+          </div>
+        </div>
+        <a href="{% url 'submit_review' %}" class="btn btn-outline-warning">
+          <i class="fas fa-edit me-2"></i>Edit Your Review
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {% if has_donations %}
     <!-- Stats Cards - Use your card classes -->
     <div class="row g-4 mb-4">
@@ -216,4 +280,30 @@
   {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Function to dismiss review prompt and clear session via AJAX
+function dismissReviewPrompt() {
+  // Hide the prompt card
+  document.querySelector('.review-prompt-card').style.display = 'none';
+  
+  // Optionally, make an AJAX call to clear the session flag
+  fetch('/donor/clear-review-prompt/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Review prompt dismissed');
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+}
+</script>
 {% endblock %}

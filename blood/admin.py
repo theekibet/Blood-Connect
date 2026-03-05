@@ -4,12 +4,13 @@ from django.utils import timezone
 from django.utils.html import format_html
 from .models import (
     Stock, DonationCenter, StockUnit,
-    BloodDriveEvent, Banner, Testimonial, HomePageStats,
-    DonationFunFact, UserFactInteraction, DailyFactChallenge,
-    QuizAttempt, FactContribution, BloodBagBarcode
+    BloodDriveEvent,  Testimonial, HomePageStats,
+    
+     BloodBagBarcode
 )
 from phlebotomist.models import Appointment
 from .models import HoneypotAttempt
+from .models import UserReview
 # Existing admin registrations
 admin.site.register(Stock)
 
@@ -110,13 +111,6 @@ class BloodDriveEventAdmin(admin.ModelAdmin):
     list_editable = ['is_active', 'display_order']
     date_hierarchy = 'event_date'
 
-@admin.register(Banner)
-class BannerAdmin(admin.ModelAdmin):
-    list_display = ['title', 'is_active', 'start_date', 'end_date', 'display_order']
-    list_filter = ['is_active']
-    search_fields = ['title']
-    list_editable = ['is_active', 'display_order']
-
 @admin.register(Testimonial)
 class TestimonialAdmin(admin.ModelAdmin):
     list_display = ['name', 'role', 'rating', 'is_featured', 'is_active', 'display_order']
@@ -129,71 +123,132 @@ class HomePageStatsAdmin(admin.ModelAdmin):
     list_display = ['stat_name', 'stat_value', 'icon_class', 'is_active', 'display_order']
     list_editable = ['stat_value', 'is_active', 'display_order']
 
-# Donation Fun Facts Section
-@admin.register(DonationFunFact)
-class DonationFunFactAdmin(admin.ModelAdmin):
-    list_display = ['title', 'category', 'has_quiz', 'likes', 'is_verified', 'created_at']
-    list_filter = ['category', 'has_quiz', 'is_verified']
-    search_fields = ['title']
-    list_editable = ['is_verified']
-    ordering = ['-created_at']
 
-@admin.register(UserFactInteraction)
-class UserFactInteractionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'fact', 'interaction_type', 'timestamp']
-    list_filter = ['interaction_type', 'timestamp']
-    search_fields = ['user__username']
 
-@admin.register(DailyFactChallenge)
-class DailyFactChallengeAdmin(admin.ModelAdmin):
-    list_display = ['date', 'fact']
-    list_filter = ['date']
-
-@admin.register(QuizAttempt)
-class QuizAttemptAdmin(admin.ModelAdmin):
-    list_display = ['user', 'score', 'created_at']
-    list_filter = ['created_at']
-    search_fields = ['user__username']
-
-@admin.register(FactContribution)
-class FactContributionAdmin(admin.ModelAdmin):
-    list_display = ['title', 'user', 'category', 'is_approved', 'created_at']
-    list_filter = ['is_approved', 'category']
-    search_fields = ['title', 'user__username']
-    list_editable = ['is_approved']
-    
-    actions = ['approve_contributions']
-    
-    def approve_contributions(self, request, queryset):
-        from django.utils import timezone
-        updated = queryset.update(
-            is_approved=True,
-            reviewed_by=request.user,
-            reviewed_at=timezone.now()
-        )
-        self.message_user(request, f"{updated} contribution(s) approved successfully.")
-    approve_contributions.short_description = "Approve selected contributions"
-
-# Blood Bag Barcodes
+# Blood Bag Barcodes@admin.register(BloodBagBarcode)
 @admin.register(BloodBagBarcode)
 class BloodBagBarcodeAdmin(admin.ModelAdmin):
-    list_display = ['barcode', 'bag_type', 'volume_ml', 'status', 'assigned_to_donor']
+    list_display = ['barcode', 'bag_type', 'volume_ml', 'status', 'assigned_to_donor', 'created_at']
     list_filter = ['status', 'bag_type']
     search_fields = ['barcode']
     readonly_fields = ['barcode', 'created_at']
     
-    actions = ['generate_barcodes']
+    # Disable manual addition
+    def has_add_permission(self, request):
+        return False  # This removes the "Add" button and prevents manual entry
     
-    def generate_barcodes(self, request, queryset):
+    # Allow editing existing barcodes
+    def has_change_permission(self, request, obj=None):
+        return True
+    
+    # Allow deletion if needed
+    def has_delete_permission(self, request, obj=None):
+        return True
+    
+    fieldsets = (
+        ('Barcode Information', {
+            'fields': ('barcode', 'bag_type', 'volume_ml', 'anticoagulant')
+        }),
+        ('Status', {
+            'fields': ('status',)
+        }),
+        ('Assignment Information', {
+            'fields': ('assigned_to_donor', 'assigned_by', 'assigned_at'),
+            'classes': ('collapse',),
+        }),
+        ('Collection Information', {
+            'fields': ('collected_by', 'collected_at', 'blood_donation'),
+            'classes': ('collapse',),
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    # Actions for generating different bag types
+    actions = [
+        'generate_single_10', 'generate_single_50', 'generate_single_100',
+        'generate_double_10', 'generate_double_50', 'generate_double_100',
+        'generate_triple_10', 'generate_triple_50', 'generate_triple_100',
+        'generate_pediatric_10', 'generate_pediatric_50', 'generate_pediatric_100'
+    ]
+    
+    # ===== SINGLE BAG GENERATION =====
+    def generate_single_10(self, request, queryset):
         from blood.utils.barcode_utils import generate_batch_barcodes
-        
-        count = 10
-        barcodes = generate_batch_barcodes(count=count, created_by=request.user)
-        self.message_user(
-            request, 
-            f"✅ Generated {len(barcodes)} new barcodes"
-        )
-    generate_barcodes.short_description = "Generate 10 new barcodes"
+        barcodes = generate_batch_barcodes(count=10, bag_type='single', created_by=request.user)
+        self.message_user(request, f"✅ Generated 10 Single Blood Bag barcodes")
+    generate_single_10.short_description = "Generate 10 Single Blood Bag barcodes"
+    
+    def generate_single_50(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=50, bag_type='single', created_by=request.user)
+        self.message_user(request, f"✅ Generated 50 Single Blood Bag barcodes")
+    generate_single_50.short_description = "Generate 50 Single Blood Bag barcodes"
+    
+    def generate_single_100(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=100, bag_type='single', created_by=request.user)
+        self.message_user(request, f"✅ Generated 100 Single Blood Bag barcodes")
+    generate_single_100.short_description = "Generate 100 Single Blood Bag barcodes"
+    
+    # ===== DOUBLE BAG GENERATION =====
+    def generate_double_10(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=10, bag_type='double', created_by=request.user)
+        self.message_user(request, f"✅ Generated 10 Double Blood Bag barcodes")
+    generate_double_10.short_description = "Generate 10 Double Blood Bag barcodes"
+    
+    def generate_double_50(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=50, bag_type='double', created_by=request.user)
+        self.message_user(request, f"✅ Generated 50 Double Blood Bag barcodes")
+    generate_double_50.short_description = "Generate 50 Double Blood Bag barcodes"
+    
+    def generate_double_100(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=100, bag_type='double', created_by=request.user)
+        self.message_user(request, f"✅ Generated 100 Double Blood Bag barcodes")
+    generate_double_100.short_description = "Generate 100 Double Blood Bag barcodes"
+    
+    # ===== TRIPLE BAG GENERATION =====
+    def generate_triple_10(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=10, bag_type='triple', created_by=request.user)
+        self.message_user(request, f"✅ Generated 10 Triple Blood Bag barcodes")
+    generate_triple_10.short_description = "Generate 10 Triple Blood Bag barcodes"
+    
+    def generate_triple_50(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=50, bag_type='triple', created_by=request.user)
+        self.message_user(request, f"✅ Generated 50 Triple Blood Bag barcodes")
+    generate_triple_50.short_description = "Generate 50 Triple Blood Bag barcodes"
+    
+    def generate_triple_100(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=100, bag_type='triple', created_by=request.user)
+        self.message_user(request, f"✅ Generated 100 Triple Blood Bag barcodes")
+    generate_triple_100.short_description = "Generate 100 Triple Blood Bag barcodes"
+    
+    # ===== PEDIATRIC BAG GENERATION =====
+    def generate_pediatric_10(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=10, bag_type='pediatric', created_by=request.user)
+        self.message_user(request, f"✅ Generated 10 Pediatric Blood Bag barcodes")
+    generate_pediatric_10.short_description = "Generate 10 Pediatric Blood Bag barcodes"
+    
+    def generate_pediatric_50(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=50, bag_type='pediatric', created_by=request.user)
+        self.message_user(request, f"✅ Generated 50 Pediatric Blood Bag barcodes")
+    generate_pediatric_50.short_description = "Generate 50 Pediatric Blood Bag barcodes"
+    
+    def generate_pediatric_100(self, request, queryset):
+        from blood.utils.barcode_utils import generate_batch_barcodes
+        barcodes = generate_batch_barcodes(count=100, bag_type='pediatric', created_by=request.user)
+        self.message_user(request, f"✅ Generated 100 Pediatric Blood Bag barcodes")
+    generate_pediatric_100.short_description = "Generate 100 Pediatric Blood Bag barcodes"
 @admin.register(HoneypotAttempt)
 class HoneypotAttemptAdmin(admin.ModelAdmin):
     list_display = ['ip', 'username', 'timestamp']
@@ -206,3 +261,26 @@ class HoneypotAttemptAdmin(admin.ModelAdmin):
     
     def has_change_permission(self, request, obj=None):
         return False 
+    
+
+@admin.register(UserReview)
+class UserReviewAdmin(admin.ModelAdmin):
+    list_display = ['user', 'rating', 'short_comment', 'created_at', 'is_read']
+    list_filter = ['rating', 'is_read', 'created_at']
+    search_fields = ['user__username', 'user__email', 'comment']
+    readonly_fields = ['created_at']
+    actions = ['mark_as_read', 'mark_as_unread']
+    
+    def short_comment(self, obj):
+        return obj.comment[:50] + "..." if len(obj.comment) > 50 else obj.comment
+    short_comment.short_description = "Comment"
+    
+    def mark_as_read(self, request, queryset):
+        queryset.update(is_read=True)
+        self.message_user(request, f"{queryset.count()} reviews marked as read.")
+    mark_as_read.short_description = "Mark selected as read"
+    
+    def mark_as_unread(self, request, queryset):
+        queryset.update(is_read=False)
+        self.message_user(request, f"{queryset.count()} reviews marked as unread.")
+    mark_as_unread.short_description = "Mark selected as unread"
