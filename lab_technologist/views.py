@@ -5,21 +5,24 @@ from django.contrib import messages
 from django.urls import reverse
 from .models import BloodTest, LabTechnologistProfile
 from donor.models import BloodDonate
-from .forms import BloodTestForm,LabTechnologistProfileForm
+from .forms import BloodTestForm, LabTechnologistProfileForm
 from blood.utils.stock_utils import add_stock
 from django.utils import timezone
 from datetime import timedelta
-from blood.models import StockUnit, StockTransaction 
+from blood.models import StockUnit, StockTransaction, BloodBagBarcode
 from django.db import transaction
 import logging
 import uuid
 import os
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-
+from .decorators import lab_tech_approved_required
 from django.db.models import Q 
 from .forms import LabTechnologistSignupForm
+
 logger = logging.getLogger(__name__)
+
+
 def signup_view(request):
     """Lab Technologist signup view"""
     
@@ -38,22 +41,27 @@ def signup_view(request):
                 logger.error(f"Signup error: {str(e)}", exc_info=True)
                 messages.error(request, f'Registration failed: {str(e)}')
         else:
-            # Form errors will be displayed in template
             messages.error(request, 'Please correct the errors below.')
     else:
         form = LabTechnologistSignupForm()
     
     return render(request, 'lab_technologist/signup.html', {'form': form})
+
+
 # ======================
 # LOGIN VIEW
 # ======================
 def login_view(request):
-    """Lab Technologist login view"""
+    """Lab Technologist login view with approval check"""
     
-    # If user is already logged in and is a lab tech, redirect to dashboard
+    # If user is already logged in and is a lab tech, check approval
     if request.user.is_authenticated:
         if hasattr(request.user, 'lab_tech_profile'):
-            return redirect('lab_technologist:dashboard')
+            profile = request.user.lab_tech_profile
+            if profile.is_approved:
+                return redirect('lab_technologist:dashboard')
+            else:
+                return redirect('lab_technologist:pending_approval')
         else:
             logout(request)
     
@@ -66,27 +74,58 @@ def login_view(request):
         if user is not None:
             # Check if user has lab tech profile
             try:
-                lab_tech_profile = LabTechnologistProfile.objects.get(user=user)
-                # TEMPORARILY DISABLED: Admin approval not required
+                profile = LabTechnologistProfile.objects.get(user=user)
+                
+                # CHECK IF APPROVED
+                if not profile.is_approved:
+                    messages.warning(
+                        request, 
+                        "Your account is pending admin approval. "
+                        "You will be notified once your account is activated."
+                    )
+                    return redirect('lab_technologist:pending_approval')
+                
+                # All checks passed - Login successful
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
                 return redirect('lab_technologist:dashboard')
+                
             except LabTechnologistProfile.DoesNotExist:
                 messages.error(request, "You don't have Lab Technologist access. Please check your credentials.")
         else:
             messages.error(request, "Invalid username or password.")
     
     return render(request, 'lab_technologist/login.html')
+
+
+def pending_approval(request):
+    """View shown to lab techs awaiting admin approval"""
+    # If user is already approved, redirect to dashboard
+    if request.user.is_authenticated:
+        try:
+            profile = request.user.lab_tech_profile
+            if profile.is_approved:
+                return redirect('lab_technologist:dashboard')
+        except:
+            pass
+    
+    context = {
+        'page_title': 'Account Pending Approval',
+    }
+    return render(request, 'lab_technologist/pending_approval.html', context)
+
+
 @login_required
 def lab_tech_profile(request):
     """View logged-in user's lab technologist profile"""
     try:
         profile = request.user.lab_tech_profile
-        # Fix: Use the correct URL name from urls.py
         return redirect('lab_technologist:lab_tech_profile_detail', pk=profile.pk)
     except LabTechnologistProfile.DoesNotExist:
         messages.error(request, "Lab Technologist profile not found.")
         return redirect('lab_technologist:dashboard')
+
+
 @login_required
 def lab_tech_profile_detail(request, pk):
     """View lab technologist profile details"""
@@ -163,10 +202,12 @@ def lab_tech_profile_edit(request, pk):
     }
     return render(request, 'lab_technologist/profile_edit.html', context)
 
+
 # ======================
 # DASHBOARD VIEW
 # ======================
 @login_required
+@lab_tech_approved_required 
 def dashboard(request):
     """Lab Technologist dashboard with barcode information"""
     
@@ -201,7 +242,7 @@ def dashboard(request):
     pending_tests_details = pending_tests_qs.select_related(
         'donor__user',
         'donation_center'
-    ).order_by('-date')[:10]  # Latest 10 pending tests
+    ).order_by('-date')[:10]
     
     # Annotate each pending test with its blood bag barcode
     from blood.models import BloodBagBarcode
@@ -323,9 +364,10 @@ def dashboard(request):
         'unsafe_count': unsafe_count,
         'today_tests': today_tests,
         'completion_rate': (safe_count / total_tests * 100) if total_tests > 0 else 0,
-        'greeting_data': greeting_data,  # Add greeting data to context
+        'greeting_data': greeting_data,
     }
     return render(request, 'lab_technologist/dashboard.html', context)
+
 
 def get_time_of_day():
     """Helper function to get time of day for greeting"""
@@ -336,7 +378,10 @@ def get_time_of_day():
         return "afternoon"
     else:
         return "evening"
+
+
 @login_required
+@lab_tech_approved_required 
 def pending_tests(request):
     """List all blood awaiting testing with barcode information"""
     
@@ -383,15 +428,19 @@ def pending_tests(request):
         pending_blood_with_barcode.append(donation_data)
     
     context = {
-        'pending_blood': pending_blood_with_barcode,  # Now using the list with barcode info
+        'pending_blood': pending_blood_with_barcode,
         'count': len(pending_blood_with_barcode),
         'center': center,
     }
     return render(request, 'lab_technologist/pending_tests.html', context)
 
 
+# ======================
+# PERFORM TEST VIEW - FIXED VERSION
+# ======================
 @login_required
 @transaction.atomic
+@lab_tech_approved_required 
 def perform_test(request, collection_id):
     """Perform test on a blood collection and set expiry ONLY if safe"""
     
@@ -412,6 +461,7 @@ def perform_test(request, collection_id):
             test.save()
             
             unsafe_reason = request.POST.get('unsafe_reason', '').strip()
+            component_type = request.POST.get('component_type', 'whole_blood')
             
             # ===== PERMANENTLY VERIFY DONOR'S BLOOD GROUP =====
             donor = blood.donor
@@ -424,14 +474,12 @@ def perform_test(request, collection_id):
             
             # ===== NOW HANDLE STOCK WITH EXPIRY DATE =====
             if test.result == 'safe':
-                # ===== CRITICAL: Calculate expiry date NOW =====
-                # Get component type (you may need to add this to your form)
-                component_type = request.POST.get('component_type', 'whole_blood')
+                # ===== CRITICAL: Calculate expiry date using our utility =====
+                from blood.utils.expiry_utils import calculate_expiry_date
                 
                 # Calculate expiry based on collection date
-                from blood.utils.expiry_utils import calculate_expiry_date
                 expiry_date = calculate_expiry_date(
-                    collection_date=blood.date.date(),  # Use collection date
+                    collection_date=blood.date.date(),
                     component_type=component_type
                 )
                 
@@ -440,7 +488,8 @@ def perform_test(request, collection_id):
                     bloodgroup=test.blood_group,
                     unit=blood.unit,
                     center=blood.donation_center,
-                    expiry_date=expiry_date,  # ← NOW set here, not at generation!
+                    expiry_date=expiry_date,
+                    component_type=component_type,  # Save component type
                     blood_donation=blood,
                     blood_bag_barcode=blood_bag,
                     barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",
@@ -448,13 +497,16 @@ def perform_test(request, collection_id):
                     safety_verified_by=request.user,
                     safety_verified_by_role='lab_tech',
                     safety_verified_at=timezone.now(),
-                    safety_notes=f"Tested safe on {timezone.now().date()}. Expires: {expiry_date}",
+                    safety_notes=f"Tested safe on {timezone.now().date()}. Component: {component_type}. Expires: {expiry_date}",
                     is_quarantined=False,
+                    added_to_inventory_by=request.user,
+                    added_to_inventory_by_role='lab_tech',
+                    added_to_inventory_at=timezone.now()
                 )
                 
                 # Update blood bag barcode status
                 if blood_bag:
-                    blood_bag.status = 'tested'  # Tested - Safe
+                    blood_bag.status = 'tested'
                     blood_bag.save()
                 
                 # Update blood donation status
@@ -466,18 +518,19 @@ def perform_test(request, collection_id):
                 
                 messages.success(
                     request, 
-                    f'✅ Blood marked SAFE. Added to inventory with barcode {stock_unit.barcode}. '
-                    f'Expires: {expiry_date} ({days_until} days from now)'
+                    f'✅ Blood marked SAFE. Added to inventory as {component_type}. '
+                    f'Barcode: {stock_unit.barcode}. Expires: {expiry_date} ({days_until} days)'
                 )
                 
             else:  # unsafe
                 # UNSAFE blood - NO EXPIRY DATE SET
-                # Create stock unit with zero units and no expiry (or set to None)
+                # Create stock unit with zero units and no expiry
                 stock_unit = StockUnit.objects.create(
                     bloodgroup=test.blood_group,
-                    unit=0,  # Zero units
+                    unit=0,
                     center=blood.donation_center,
-                    expiry_date=None,  # ← NO expiry for unsafe blood!
+                    expiry_date=None,
+                    component_type=component_type,  # Still save component type for record
                     blood_donation=blood,
                     blood_bag_barcode=blood_bag,
                     barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",
@@ -486,13 +539,16 @@ def perform_test(request, collection_id):
                     safety_verified_by_role='lab_tech',
                     safety_verified_at=timezone.now(),
                     unsafe_reason=unsafe_reason,
-                    safety_notes=f"UNSAFE: {unsafe_reason}. Discarded on {timezone.now().date()}",
-                    is_quarantined=True
+                    safety_notes=f"UNSAFE: {unsafe_reason}. Component: {component_type}. Discarded on {timezone.now().date()}",
+                    is_quarantined=True,
+                    added_to_inventory_by=request.user,
+                    added_to_inventory_by_role='lab_tech',
+                    added_to_inventory_at=timezone.now()
                 )
                 
                 # Update blood bag barcode status
                 if blood_bag:
-                    blood_bag.status = 'discarded'  # Discarded - Unsafe
+                    blood_bag.status = 'discarded'
                     blood_bag.save()
                 
                 # Update blood donation status
@@ -501,7 +557,7 @@ def perform_test(request, collection_id):
                 
                 messages.warning(
                     request, 
-                    f'⚠️ Blood marked UNSAFE and discarded. No expiry date set.'
+                    f'⚠️ Blood marked UNSAFE and discarded. Component: {component_type}. Reason: {unsafe_reason}'
                 )
             
             return redirect('lab_technologist:test_result', test_id=test.id)
@@ -525,7 +581,9 @@ def perform_test(request, collection_id):
         'bag_type': blood_bag.get_bag_type_display() if blood_bag else 'Standard',
     })
 
+
 @login_required
+@lab_tech_approved_required 
 def test_result(request, test_id):
     """View test result with barcode information"""
     
@@ -552,19 +610,27 @@ def test_result(request, test_id):
             blood_donation=test.blood_collection
         ).first()
     
+    # Get component type from stock unit
+    component_type = None
+    if stock_unit and stock_unit.component_type:
+        component_type = stock_unit.component_type
+    
     context = {
         'test': test,
         'blood_bag': blood_bag,
         'stock_unit': stock_unit,
         'barcode': blood_bag.barcode if blood_bag else (stock_unit.barcode if stock_unit else 'N/A'),
+        'component_type': component_type,
     }
     return render(request, 'lab_technologist/test_result.html', context)
+
 
 # ======================
 # MARK SAFE VIEW
 # ======================
 @login_required
 @transaction.atomic
+@lab_tech_approved_required 
 def mark_safe(request, test_id):
     """Manually mark blood as safe"""
     test = get_object_or_404(BloodTest, id=test_id)
@@ -578,7 +644,7 @@ def mark_safe(request, test_id):
             # Update existing stock unit
             existing_stock.safety_status = 'safe'
             existing_stock.is_quarantined = False
-            existing_stock.unit = blood.unit  # Restore units
+            existing_stock.unit = blood.unit
             existing_stock.safety_verified_by = request.user
             existing_stock.safety_verified_by_role = 'lab_tech'
             existing_stock.safety_verified_at = timezone.now()
@@ -603,7 +669,8 @@ def mark_safe(request, test_id):
                 bloodgroup=test.blood_group,
                 unit=blood.unit,
                 center=blood.donation_center,
-                expiry_date=timezone.now().date() + timedelta(days=46),
+                expiry_date=timezone.now().date() + timedelta(days=35),  # Default to whole blood
+                component_type='whole_blood',
                 blood_donation=blood,
                 blood_bag_barcode=blood_bag,
                 barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",
@@ -648,13 +715,9 @@ def mark_safe(request, test_id):
                 request_content_type__model='blooddonate'
             )
             appointment.status = 'completed'
-            appointment.completed_by = request.user
-            appointment.completed_by_role = 'lab_tech'
+            appointment.collected_by = request.user
+            appointment.collected_by_role = 'lab_tech'
             appointment.completed_at = timezone.now()
-            appointment.safety_status = 'safe'
-            appointment.safety_verified_by = request.user
-            appointment.safety_verified_by_role = 'lab_tech'
-            appointment.safety_verified_at = timezone.now()
             appointment.save()
         except Appointment.DoesNotExist:
             pass
@@ -674,6 +737,7 @@ def mark_safe(request, test_id):
 # ======================
 @login_required
 @transaction.atomic
+@lab_tech_approved_required 
 def mark_unsafe(request, test_id):
     """Manually mark blood as unsafe"""
     test = get_object_or_404(BloodTest, id=test_id)
@@ -689,12 +753,13 @@ def mark_unsafe(request, test_id):
             # Update existing stock unit to unsafe
             existing_stock.safety_status = 'unsafe'
             existing_stock.is_quarantined = True
-            existing_stock.unit = 0  # Zero out units
+            existing_stock.unit = 0
             existing_stock.unsafe_reason = reason
             existing_stock.safety_verified_by = request.user
             existing_stock.safety_verified_by_role = 'lab_tech'
             existing_stock.safety_verified_at = timezone.now()
             existing_stock.safety_notes = f"Manually marked unsafe: {reason}. Test ID: {test.id}"
+            existing_stock.expiry_date = None
             existing_stock.save()
             
             # Create deduction transaction
@@ -715,7 +780,8 @@ def mark_unsafe(request, test_id):
                 bloodgroup=test.blood_group,
                 unit=0,
                 center=blood.donation_center,
-                expiry_date=timezone.now().date() + timedelta(days=46),
+                expiry_date=None,
+                component_type='whole_blood',
                 blood_donation=blood,
                 blood_bag_barcode=blood_bag,
                 barcode=blood_bag.barcode if blood_bag else f"STK-{uuid.uuid4().hex[:10].upper()}",
@@ -760,13 +826,9 @@ def mark_unsafe(request, test_id):
                 request_content_type__model='blooddonate'
             )
             appointment.status = 'completed'
-            appointment.completed_by = request.user
-            appointment.completed_by_role = 'lab_tech'
+            appointment.collected_by = request.user
+            appointment.collected_by_role = 'lab_tech'
             appointment.completed_at = timezone.now()
-            appointment.safety_status = 'unsafe'
-            appointment.safety_verified_by = request.user
-            appointment.safety_verified_by_role = 'lab_tech'
-            appointment.safety_verified_at = timezone.now()
             appointment.save()
         except Appointment.DoesNotExist:
             pass
@@ -791,10 +853,12 @@ def mark_unsafe(request, test_id):
         messages.warning(request, f'⚠️ Blood marked as UNSAFE and quarantined. Reason: {reason}')
         return redirect('lab_technologist:test_result', test_id=test.id)
 
+
 # ======================
 # TEST HISTORY VIEW
 # ======================
 @login_required
+@lab_tech_approved_required 
 def test_history(request):
     """View test history with barcode information"""
     
@@ -845,18 +909,17 @@ def test_history(request):
     safe_percentage = (safe_count / total_tests * 100) if total_tests > 0 else 0
     unsafe_percentage = (unsafe_count / total_tests * 100) if total_tests > 0 else 0
     
-    # Create list with barcode information - ONLY include tests with valid IDs
+    # Create list with barcode information
     tests_with_barcode = []
     from blood.models import BloodBagBarcode
     
     for test in tests:
-        # Skip if test has no ID (shouldn't happen, but just in case)
         if not test.id:
             continue
             
         test_data = {
             'test': test,
-            'id': test.id,  # Explicitly include ID
+            'id': test.id,
             'donor_name': 'Unknown',
             'barcode': 'N/A'
         }
@@ -890,7 +953,10 @@ def test_history(request):
         'center': center,
     }
     return render(request, 'lab_technologist/test_history.html', context)
+
+
 @login_required
+@lab_tech_approved_required 
 def complete_test(request, test_id):
     """Lab tech completes testing and marks blood safe/unsafe"""
     
@@ -911,7 +977,7 @@ def complete_test(request, test_id):
                 center=donation.donation_center,
                 bloodgroup=test.blood_group,
                 units=donation.unit,
-                expiry_date=timezone.now().date() + timedelta(days=46),
+                expiry_date=timezone.now().date() + timedelta(days=35),
                 safety_status='safe',
                 safety_notes=f"Tested by lab: All markers negative"
             )

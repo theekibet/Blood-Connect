@@ -81,11 +81,11 @@
                                 {{ req.patient_name }}
                                 <br>
                                 <small class="text-muted">
-                                    {% if req.object.patient_age %}
-                                        Age: {{ req.object.patient_age }}
+                                    {% if req.patient_age %}
+                                        Age: {{ req.patient_age }}
                                     {% endif %}
-                                    {% if req.object.patient_gender %}
-                                        | {{ req.object.patient_gender }}
+                                    {% if req.patient_gender %}
+                                        | {{ req.patient_gender }}
                                     {% endif %}
                                 </small>
                             </td>
@@ -105,7 +105,7 @@
                             <td>
                                 {{ req.doctor_name }}
                                 <br>
-                                <small class="text-muted">{{ req.object.doctor_license|default:"" }}</small>
+                                <small class="text-muted">{{ req.doctor_license|default:"" }}</small>
                             </td>
                             <td>
                                 {{ req.created_at|date:"M d, Y" }}
@@ -124,7 +124,14 @@
                                     <br>
                                     <small class="text-muted">Need {{ req.units_requested }}ml, have {{ req.available_stock }}ml</small>
                                     <br>
-                                    <small>Shortage: {{ req.availability.shortage }}ml</small>
+                                    <small>Shortage: {{ req.shortage }}ml</small>
+                                {% endif %}
+                                
+                                {% if req.pending_stock > 0 %}
+                                    <br>
+                                    <small class="text-warning">
+                                        <i class="fas fa-clock"></i> {{ req.pending_stock }}ml pending verification
+                                    </small>
                                 {% endif %}
                             </td>
                             <td>
@@ -170,6 +177,7 @@
         <div class="d-flex flex-wrap gap-3">
             <span><span class="badge bg-success">Available</span> - Sufficient stock available</span>
             <span><span class="badge bg-danger">Insufficient</span> - Not enough stock</span>
+            <span><span class="badge bg-warning">Pending</span> - Stock awaiting verification</span>
         </div>
     </div>
 </div>
@@ -223,7 +231,98 @@ document.addEventListener('DOMContentLoaded', function() {
             row.style.backgroundColor = '#fff3f3';
         }
     });
+
+    // Add hover effect for better UX
+    requestRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            if (this.getAttribute('data-urgency') === 'emergency') {
+                this.style.backgroundColor = '#ffe6e6';
+            }
+        });
+        row.addEventListener('mouseleave', function() {
+            if (this.getAttribute('data-urgency') === 'emergency') {
+                this.style.backgroundColor = '#fff3f3';
+            }
+        });
+    });
 });
 </script>
 
+<style>
+/* Additional styles for better table display */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.stat-box {
+    background: white;
+    border-radius: 8px;
+    padding: 1.2rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.stat-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.stat-box h3 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+    color: #333;
+}
+
+.stat-box p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .stat-box {
+        padding: 0.8rem;
+    }
+    
+    .stat-box h3 {
+        font-size: 1.5rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        border-radius: 4px !important;
+        margin-bottom: 2px;
+    }
+}
+</style>
 {% endblock %}

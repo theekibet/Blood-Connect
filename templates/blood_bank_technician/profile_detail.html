@@ -6,125 +6,235 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-tint mr-2"></i>Blood Bank Technician Profile
-                    </h4>
-                    <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' profile.pk %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-edit"></i> Edit Profile
-                    </a>
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card shadow-lg border-0">
+                <!-- Card Header -->
+                <div class="card-header bg-gradient-primary text-white py-3 rounded-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-tint me-2"></i>Blood Bank Technician Profile
+                        </h4>
+                        <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' profile.pk %}" 
+                           class="btn btn-light btn-sm rounded-pill px-3">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </a>
+                    </div>
                 </div>
-                <div class="card-body">
+                
+                <div class="card-body p-4">
                     <!-- Messages -->
                     {% if messages %}
                         {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                {{ message }}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} fa-lg me-3"></i>
+                                    <div>{{ message }}</div>
+                                </div>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         {% endfor %}
                     {% endif %}
                     
                     <!-- Profile Picture Section -->
-                    <div class="text-center mb-4">
-                        {% if profile.profile_pic and profile.profile_pic.url %}
-                            <img src="{{ profile.profile_pic.url }}" 
-                                 alt="{{ profile.user.get_full_name }}" 
-                                
-                                 onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
-                        {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" 
-                                 alt="Default Profile" 
-                                >
-                        {% endif %}
-                        
-                        <div class="mt-2">
-                            {% if profile.is_active %}
-                                <span class="badge bg-success">
-                                    <i class="fas fa-check-circle"></i> Active
-                                </span>
+                    <div class="text-center mb-5">
+                        <div class="position-relative d-inline-block">
+                            {% if profile.profile_pic and profile.profile_pic.url %}
+                                <img src="{{ profile.profile_pic.url }}" 
+                                     alt="{{ profile.user.get_full_name }}" 
+                                     class="rounded-circle img-thumbnail border border-4 border-primary shadow"
+                                     style="width: 180px; height: 180px; object-fit: cover;"
+                                     onerror="this.onerror=null; this.src='{% static 'images/default-profile.png' %}';">
                             {% else %}
-                                <span class="badge bg-danger">
-                                    <i class="fas fa-exclamation-circle"></i> Inactive
-                                </span>
+                                <img src="{% static 'images/default-profile.png' %}" 
+                                     alt="Default Profile" 
+                                     class="rounded-circle img-thumbnail border border-4 border-secondary shadow"
+                                     style="width: 180px; height: 180px; object-fit: cover;">
                             {% endif %}
+                            
+                            <!-- Status Badge -->
+                            <div class="position-absolute bottom-0 end-0 mb-2 me-2">
+                                {% if profile.is_active %}
+                                    <span class="badge bg-success rounded-pill px-3 py-2 shadow">
+                                        <i class="fas fa-check-circle me-1"></i> Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger rounded-pill px-3 py-2 shadow">
+                                        <i class="fas fa-exclamation-circle me-1"></i> Inactive
+                                    </span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
 
-                    <div class="row">
+                    <!-- Profile Information Grid -->
+                    <div class="row g-4">
+                        <!-- Personal Information Column -->
                         <div class="col-md-6">
-                            <h5 class="border-bottom pb-2">
-                                <i class="fas fa-user-circle text-primary mr-2"></i>Personal Information
-                            </h5>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <th width="40%">Full Name:</th>
-                                    <td><strong>{{ profile.user.get_full_name|default:"Not provided" }}</strong></td>
-                                </tr>
-                                <tr>
-                                    <th>Username:</th>
-                                    <td>@{{ profile.user.username }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Email:</th>
-                                    <td>
-                                        {% if profile.user.email %}
-                                            <a href="mailto:{{ profile.user.email }}">{{ profile.user.email }}</a>
-                                        {% else %}
-                                            <span class="text-muted">Not provided</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Phone:</th>
-                                    <td>
-                                        {% if profile.phone %}
-                                            <a href="tel:{{ profile.phone }}">{{ profile.phone }}</a>
-                                        {% else %}
-                                            <span class="text-muted">Not provided</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Employee ID:</th>
-                                    <td><span class="badge bg-secondary">{{ profile.employee_id }}</span></td>
-                                </tr>
-                            </table>
+                            <div class="card h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <h5 class="border-bottom pb-3 mb-3 text-primary">
+                                        <i class="fas fa-user-circle me-2"></i>Personal Information
+                                    </h5>
+                                    
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td class="ps-0" width="40%">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user me-2"></i>Full Name:
+                                                </small>
+                                            </td>
+                                            <td class="fw-bold">
+                                                {{ profile.user.get_full_name|default:"<span class='text-muted'>Not provided</span>" }}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-at me-2"></i>Username:
+                                                </small>
+                                            </td>
+                                            <td class="fw-bold">
+                                                <span class="badge bg-secondary bg-opacity-10 text-dark px-3 py-2">
+                                                    @{{ profile.user.username }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-envelope me-2"></i>Email:
+                                                </small>
+                                            </td>
+                                            <td>
+                                                {% if profile.user.email %}
+                                                    <a href="mailto:{{ profile.user.email }}" class="text-decoration-none">
+                                                        <i class="fas fa-envelope me-1 text-primary"></i>
+                                                        {{ profile.user.email }}
+                                                    </a>
+                                                {% else %}
+                                                    <span class="text-muted">Not provided</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-phone me-2"></i>Phone:
+                                                </small>
+                                            </td>
+                                            <td>
+                                                {% if profile.phone %}
+                                                    <a href="tel:{{ profile.phone }}" class="text-decoration-none">
+                                                        <i class="fas fa-phone me-1 text-success"></i>
+                                                        {{ profile.phone }}
+                                                    </a>
+                                                {% else %}
+                                                    <span class="text-muted">Not provided</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-id-card me-2"></i>Employee ID:
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info text-dark px-3 py-2">
+                                                    <i class="fas fa-barcode me-1"></i>{{ profile.employee_id }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
+                        
+                        <!-- Work Information Column -->
                         <div class="col-md-6">
-                            <h5 class="border-bottom pb-2">
-                                <i class="fas fa-briefcase text-primary mr-2"></i>Work Information
-                            </h5>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <th width="40%">Center:</th>
-                                    <td>
-                                        {% if profile.center %}
-                                            <i class="fas fa-map-marker-alt text-danger mr-1"></i>{{ profile.center.name }}
-                                        {% else %}
-                                            <span class="text-muted">Not assigned</span>
+                            <div class="card h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <h5 class="border-bottom pb-3 mb-3 text-primary">
+                                        <i class="fas fa-briefcase me-2"></i>Work Information
+                                    </h5>
+                                    
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td class="ps-0" width="40%">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-hospital me-2"></i>Center:
+                                                </small>
+                                            </td>
+                                            <td>
+                                                {% if profile.center %}
+                                                    <div class="fw-bold">{{ profile.center.name }}</div>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-map-marker-alt me-1 text-danger"></i>
+                                                        {{ profile.center.city|default:"Location not specified" }}
+                                                    </small>
+                                                {% else %}
+                                                    <span class="text-muted">
+                                                        <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                                                        Not assigned
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar-alt me-2"></i>Member Since:
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">
+                                                    {{ profile.created_at|date:"F d, Y" }}
+                                                </span>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ profile.created_at|timesince }} ago
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        {% if profile.updated_at %}
+                                        <tr>
+                                            <td class="ps-0">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-sync-alt me-2"></i>Last Updated:
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ profile.updated_at|date:"M d, Y" }}
+                                                </small>
+                                            </td>
+                                        </tr>
                                         {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Member Since:</th>
-                                    <td><i class="fas fa-calendar-alt text-info mr-1"></i>{{ profile.created_at|date:"F d, Y" }}</td>
-                                </tr>
-                            </table>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <a href="{% url 'blood_bank_technician:dashboard' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
-                    </a>
+                
+                <!-- Card Footer -->
+                <div class="card-footer bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'blood_bank_technician:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Profile Type: <span class="badge bg-primary">{{ profile_type }}</span>
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 
 {% endblock %}

@@ -4,133 +4,143 @@
 
 {% block title %}Phlebotomist Login - BloodConnect{% endblock %}
 
-{% block auth_card_class %}phlebotomist{% endblock %}
-{% block auth_icon %}fas fa-user-nurse{% endblock %}
-{% block auth_title %}Phlebotomist Login{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-nurse me-2"></i>
+                        Phlebotomist Login
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Staff info alert -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-stethoscope fa-lg me-3"></i>
+                            <div>
+                                <strong>For Staff Only:</strong> 
+                                This login is for registered phlebotomists only
+                            </div>
+                        </div>
+                    </div>
 
-{% block auth_content %}
-<!-- Remove duplicate card structure - just put content directly here -->
+                    <!-- Login Form -->
+                    <form method="POST" action="{% url 'phlebotomist:phlebotomistlogin' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Username Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">
+                                <i class="fas fa-user-nurse me-1"></i> Username or Email
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-nurse"></i></span>
+                                {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username or email"|attr:"autofocus:autofocus" }}
+                            </div>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.username.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
 
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">
+                                <i class="fas fa-lock me-1"></i> Password
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password" }}
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                            <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+                            </div>
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.password.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
 
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
-<!-- Staff info alert (this is fine to keep inside content) -->
-<div class="alert alert-info mb-4">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-stethoscope fa-lg me-3"></i>
-        <div>
-            <strong>For  Staff Only:</strong> 
-            This login is for registered phlebotomists only
-        </div>
-    </div>
-</div>
+                        <!-- Remember Me Checkbox -->
+                        <div class="form-check mb-4">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                <i class="fas fa-check-circle me-1"></i> Remember this device
+                            </label>
+                        </div>
 
-<!-- Login Form -->
-<form method="POST" action="{% url 'phlebotomist:phlebotomistlogin' %}">
-    {% csrf_token %}
-    
-    <!-- Username Field -->
-    <div class="form-group mb-3">
-        <label for="{{ form.username.id_for_label }}" class="form-label">
-            <i class="fas fa-user-nurse me-1"></i> Username or Email
-        </label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-user-nurse"></i></span>
-            {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username or email"|attr:"autofocus:autofocus" }}
-        </div>
-        {% if form.username.errors %}
-            <div class="invalid-feedback d-block">
-                <i class="fas fa-exclamation-circle me-1"></i> {{ form.username.errors|striptags }}
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+                                <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login as Phlebotomist</span>
+                                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+
+                        <!-- Forgot Password Link -->
+                        <div class="text-center mt-3">
+                            <a href="javascript:void(0)" class="text-muted" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                                <i class="fas fa-key me-1"></i> Forgot password?
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Registration Card -->
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <i class="fas fa-user-plus fa-2x text-primary mb-3"></i>
+                        <h6 class="mb-2">New to Our Team?</h6>
+                        <p class="small text-muted mb-3">Join our healthcare professionals to manage blood donation related appointments.</p>
+                        <a href="{% url 'phlebotomist:phlebotomist_signup' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-user-nurse me-2"></i> Register as Phlebotomist
+                        </a>
+                    </div>
+                </div>
             </div>
-        {% endif %}
-    </div>
-
-    <!-- Password Field -->
-    <div class="form-group mb-3">
-        <label for="{{ form.password.id_for_label }}" class="form-label">
-            <i class="fas fa-lock me-1"></i> Password
-        </label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-            {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password"|attr:"type:password" }}
-            <button type="button" class="btn btn-outline-secondary password-toggle" onclick="togglePassword()" tabindex="0">
-                <i class="fa fa-eye" id="togglePasswordIcon"></i>
-            </button>
         </div>
-        <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
-            <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
-        </div>
-        {% if form.password.errors %}
-            <div class="invalid-feedback d-block">
-                <i class="fas fa-exclamation-circle me-1"></i> {{ form.password.errors|striptags }}
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Non-field errors -->
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            {% for error in form.non_field_errors %}
-                {{ error }}
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <!-- Remember Me Checkbox -->
-    <div class="form-check mb-4">
-        <input type="checkbox" class="form-check-input" id="remember" name="remember">
-        <label class="form-check-label" for="remember">
-            <i class="fas fa-check-circle me-1"></i> Remember this device
-        </label>
-    </div>
-
-    <!-- Submit Button -->
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary btn-lg w-100" id="loginBtn">
-            <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login as Phlebotomist</span>
-            <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-        </button>
-    </div>
-
-    <!-- Forgot Password Link -->
-    <div class="text-center mt-3">
-        <a href="javascript:void(0)" class="text-muted" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
-            <i class="fas fa-key me-1"></i> Forgot password?
-        </a>
-    </div>
-</form>
-
-<!-- Registration Card -->
-<div class="card border-primary mt-4">
-    <div class="card-body text-center p-4">
-        <i class="fas fa-user-plus fa-2x text-primary mb-3"></i>
-        <h6 class="mb-2">New to Our  Team?</h6>
-        <p class="small text-muted mb-3">Join our healthcare professionals to manage blood donation related appointments.</p>
-        <a href="{% url 'phlebotomist:phlebotomist_signup' %}" class="btn btn-outline-primary w-100">
-            <i class="fas fa-user-nurse me-2"></i> Register as Phlebotomist
-        </a>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Password visibility toggle
-    window.togglePassword = function() {
-        const passwordField = document.getElementById('{{ form.password.id_for_label }}');
-        const toggleIcon = document.getElementById('togglePasswordIcon');
-        
-        if (passwordField.type === 'password') {
-            passwordField.type = 'text';
-            toggleIcon.classList.remove('fa-eye');
-            toggleIcon.classList.add('fa-eye-slash');
-        } else {
-            passwordField.type = 'password';
-            toggleIcon.classList.remove('fa-eye-slash');
-            toggleIcon.classList.add('fa-eye');
-        }
-    };
+// Password visibility toggle
+function togglePassword() {
+    const passwordField = document.getElementById('{{ form.password.id_for_label }}');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+    }
+}
 
-    // Caps lock warning
+// Caps lock warning
+document.addEventListener('DOMContentLoaded', function() {
     const passwordField = document.getElementById('{{ form.password.id_for_label }}');
     const capsWarning = document.getElementById('capsWarning');
     

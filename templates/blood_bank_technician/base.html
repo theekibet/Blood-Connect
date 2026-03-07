@@ -1,73 +1,70 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Blood Bank Technician Dashboard - BloodConnect{% endblock %}
+{% block title %}Blood Bank Technician - BloodConnect{% endblock %}
 
-{% block nav_icon %}fas fa-tint{% endblock %}
-{% block app_name %}Blood Bank{% endblock %}
+<!-- These are for the shared base - they work -->
+{% block sidebar_bg %}#e67e22{% endblock %}
+{% block sidebar_hover %}#d35400{% endblock %}
+{% block sidebar_active %}#f39c12{% endblock %}
 
-{% block sidebar_icon %}fas fa-tint{% endblock %}
-{% block sidebar_title %}Blood Bank Panel{% endblock %}
+{% block extra_nav_items %}
+    <!-- Notifications Icon -->
+    <li class="nav-item me-2 position-relative">
+        <a class="nav-link" href="{% url 'utils:notifications' %}" title="Notifications">
+            <i class="fas fa-bell" style="color: white;"></i>
+            {% if unread_notifications_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ unread_notifications_count }}
+                    <span class="visually-hidden">unread notifications</span>
+                </span>
+            {% endif %}
+        </a>
+    </li>
 
-{% block user_role_label %}Blood Bank Technician{% endblock %}
-
-{% block auth_card_class %}blood-bank{% endblock %}
-{% block auth_icon %}fas fa-tint{% endblock %}
-{% block auth_title %}Blood Bank Technician Login{% endblock %}
-
-{% block notifications_url %}#{% endblock %}
+    <!-- Pending Requests Badge -->
+    {% with pending_count=pending_requests_count|default:0 %}
+        {% if pending_count > 0 %}
+        <li class="nav-item me-2 position-relative">
+            <a class="nav-link" href="{% url 'blood_bank_technician:pending_requests' %}" title="Pending Requests">
+                <i class="fas fa-clock" style="color: white;"></i>
+                <span class="pending-badge">{{ pending_count }}</span>
+            </a>
+        </li>
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Expiring Blood Badge -->
+    {% with expiring=expiring_count|default:0 %}
+        {% if expiring > 0 %}
+        <li class="nav-item me-2 position-relative">
+            <a class="nav-link" href="{% url 'blood_bank_technician:expiring_blood' %}" title="Expiring Soon">
+                <i class="fas fa-exclamation-triangle" style="color: white;"></i>
+                <span class="expiring-badge">{{ expiring }}</span>
+            </a>
+        </li>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
 
 {% block profile_menu %}
     {% if user.blood_bank_tech_profile %}
-        <a class="dropdown-item" href="{% url 'blood_bank_technician:blood_bank_tech_profile' %}">
-            <i class="fas fa-user-circle"></i> View Profile
-        </a>
-        <a class="dropdown-item" href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' user.blood_bank_tech_profile.pk %}">
-            <i class="fas fa-edit"></i> Edit Profile
-        </a>
+    <li><a class="dropdown-item" href="{% url 'blood_bank_technician:blood_bank_tech_profile' %}"><i class="fas fa-user-circle me-2"></i>View Profile</a></li>
+    <li><a class="dropdown-item" href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' user.blood_bank_tech_profile.pk %}"><i class="fas fa-edit me-2"></i>Edit Profile</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'utils:notifications' %}"><i class="fas fa-bell me-2"></i>Notifications
+        {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ unread_notifications_count }}</span>
+        {% endif %}
+    </a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
     {% endif %}
 {% endblock %}
 
-{% block profile_url %}{% url 'blood_bank_technician:blood_bank_tech_profile' %}{% endblock %}
-{% block edit_profile_url %}{% url 'blood_bank_technician:blood_bank_tech_profile_edit' user.blood_bank_tech_profile.pk %}{% endblock %}
-
-{% block extra_nav_items %}
-    <!-- Pending Requests Badge -->
-    {% if pending_requests_count > 0 %}
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'blood_bank_technician:pending_requests' %}" title="Pending Requests">
-            <div class="nav-icon">
-                <i class="fas fa-clock"></i>
-                <span class="notification-badge">{{ pending_requests_count }}</span>
-            </div>
-        </a>
-    </li>
-    {% endif %}
-    
-    <!-- Expiring Blood Badge -->
-    {% if expiring_count > 0 %}
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'blood_bank_technician:expiring_blood' %}" title="Expiring Soon">
-            <div class="nav-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span class="notification-badge">{{ expiring_count }}</span>
-            </div>
-        </a>
-    </li>
-    {% endif %}
-    
-    <!-- Chatbot Mobile Icon -->
-    <li class="nav-item d-lg-none">
-        <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
-            <div class="nav-icon">
-                <i class="fas fa-robot"></i>
-            </div>
-        </a>
-    </li>
-{% endblock %}
-
+<!-- ===== THE SIDEBAR MENU ===== -->
 {% block sidebar_menu %}
-    <!-- Dashboard -->
+    <!-- MAIN SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
         <a href="{% url 'blood_bank_technician:dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
@@ -76,7 +73,7 @@
         </a>
     </div>
 
-    <!-- Inventory Management -->
+    <!-- INVENTORY SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">INVENTORY</div>
         <a href="{% url 'blood_bank_technician:inventory' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}">
@@ -86,43 +83,63 @@
         <a href="{% url 'blood_bank_technician:pending_verification' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'pending_verification' %}active{% endif %}">
             <i class="fas fa-hourglass-half"></i>
             <span>Pending Verification</span>
-            {% if pending_verification_count > 0 %}
-                <span class="badge badge-warning ms-auto">{{ pending_verification_count }}</span>
-            {% endif %}
+            {% with pending_verification=pending_verification_count|default:0 %}
+                {% if pending_verification > 0 %}
+                    <span class="badge bg-warning ms-auto">{{ pending_verification }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
         <a href="{% url 'blood_bank_technician:expiring_blood' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'expiring_blood' %}active{% endif %}">
             <i class="fas fa-exclamation-triangle"></i>
             <span>Expiring Soon</span>
-            {% if expiring_count > 0 %}
-                <span class="badge badge-danger ms-auto">{{ expiring_count }}</span>
-            {% endif %}
+            {% with expiring=expiring_count|default:0 %}
+                {% if expiring > 0 %}
+                    <span class="badge bg-danger ms-auto">{{ expiring }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
         <a href="{% url 'blood_bank_technician:unsafe_blood' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'unsafe_blood' %}active{% endif %}">
             <i class="fas fa-exclamation-circle"></i>
             <span>Unsafe Blood</span>
-            {% if unsafe_count > 0 %}
-                <span class="badge badge-danger ms-auto">{{ unsafe_count }}</span>
-            {% endif %}
+            {% with unsafe=unsafe_count|default:0 %}
+                {% if unsafe > 0 %}
+                    <span class="badge bg-danger ms-auto">{{ unsafe }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
     </div>
 
-    <!-- Request Management -->
+    <!-- REQUESTS SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">REQUESTS</div>
         <a href="{% url 'blood_bank_technician:pending_requests' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}">
             <i class="fas fa-clock"></i>
             <span>Pending Requests</span>
-            {% if pending_requests_count > 0 %}
-                <span class="badge badge-warning ms-auto">{{ pending_requests_count }}</span>
-            {% endif %}
+            {% with pending=pending_requests_count|default:0 %}
+                {% if pending > 0 %}
+                    <span class="badge bg-warning ms-auto">{{ pending }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
         <a href="{% url 'blood_bank_technician:approved_requests' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'approved_requests' %}active{% endif %}">
             <i class="fas fa-check-circle"></i>
-            <span>Approved</span>
+            <span>Approved & Dispatched</span>
         </a>
     </div>
 
-    <!-- Profile Management -->
+    <!-- NOTIFICATIONS SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COMMUNICATION</div>
+        <a href="{% url 'utils:notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_notifications_count > 0 %}
+                <span class="badge bg-danger ms-auto">{{ unread_notifications_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- PROFILE SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">PROFILE</div>
         <a href="{% url 'blood_bank_technician:blood_bank_tech_profile' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'blood_bank_tech_profile' %}active{% endif %}">
@@ -134,107 +151,55 @@
             <span>Edit Profile</span>
         </a>
     </div>
+
+    <!-- ACCOUNT SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ACCOUNT</div>
+        <a href="{% url 'password_change' %}" class="sidebar-menu-item">
+            <i class="fas fa-key"></i>
+            <span>Change Password</span>
+        </a>
+        <a href="{% url 'logout' %}" class="sidebar-menu-item text-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </div>
 {% endblock %}
+
 
 {% block extra_css %}
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('✅ Blood Bank Technician base template loaded');
-        
-        // Image error handling for profile pictures
-        const profileImages = document.querySelectorAll('.profile-dropdown img');
-        profileImages.forEach(img => {
-            img.onerror = function() {
-                this.src = "{% static 'images/default-profile.png' %}";
-                this.onerror = null;
-            };
-        });
-        
-        // Update pending counts
-        {% if pending_requests_count > 0 %}
-        console.log('📊 Pending requests: {{ pending_requests_count }}');
-        const pendingBadge = document.querySelector('a[href*="pending_requests"] .badge');
-        if (pendingBadge) {
-            pendingBadge.textContent = "{{ pending_requests_count }}";
-        }
-        {% endif %}
-
-        {% if expiring_count > 0 %}
-        console.log('⚠️ Expiring units: {{ expiring_count }}');
-        const expiringBadge = document.querySelector('a[href*="expiring"] .badge');
-        if (expiringBadge) {
-            expiringBadge.textContent = "{{ expiring_count }}";
-        }
-        {% endif %}
-
-        {% if pending_verification_count > 0 %}
-        const verificationBadge = document.querySelector('a[href*="pending_verification"] .badge');
-        if (verificationBadge) {
-            verificationBadge.textContent = "{{ pending_verification_count }}";
-        }
-        {% endif %}
-
-        // Sidebar active state for mobile
-        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
-        sidebarLinks.forEach(link => {
-            if (link.classList.contains('active')) {
-                link.setAttribute('aria-current', 'page');
-            }
-        });
-        
-        // Blood type color coding
-        const bloodTypeElements = document.querySelectorAll('.blood-type');
-        bloodTypeElements.forEach(el => {
-            const bloodType = el.textContent.trim();
-            el.classList.remove('blood-type-a', 'blood-type-b', 'blood-type-ab', 'blood-type-o');
-            if (bloodType === 'A+') el.classList.add('blood-type-a');
-            else if (bloodType === 'A-') el.classList.add('blood-type-a');
-            else if (bloodType === 'B+') el.classList.add('blood-type-b');
-            else if (bloodType === 'B-') el.classList.add('blood-type-b');
-            else if (bloodType === 'AB+') el.classList.add('blood-type-ab');
-            else if (bloodType === 'AB-') el.classList.add('blood-type-ab');
-            else if (bloodType === 'O+') el.classList.add('blood-type-o');
-            else if (bloodType === 'O-') el.classList.add('blood-type-o');
-        });
-    });
-
-    // Real-time pending count update
-    function updatePendingCounts() {
-        fetch('/blood-bank/api/pending-counts/')
-            .then(response => response.json())
-            .then(data => {
-                // Update pending requests badge
-                const pendingBadge = document.querySelector('a[href*="pending_requests"] .badge');
-                if (pendingBadge && data.pending_requests > 0) {
-                    pendingBadge.textContent = data.pending_requests;
-                    pendingBadge.style.display = 'inline-block';
-                }
-                
-                // Update verification badge
-                const verificationBadge = document.querySelector('a[href*="pending_verification"] .badge');
-                if (verificationBadge && data.pending_verification > 0) {
-                    verificationBadge.textContent = data.pending_verification;
-                    verificationBadge.style.display = 'inline-block';
-                }
-                
-                // Update expiring badge
-                const expiringBadge = document.querySelector('a[href*="expiring"] .badge');
-                if (expiringBadge && data.expiring > 0) {
-                    expiringBadge.textContent = data.expiring;
-                    expiringBadge.style.display = 'inline-block';
-                }
-            })
-            .catch(error => console.error('Error updating counts:', error));
+<style>
+    /* Lab tech sidebar colors */
+    :root {
+        --sidebar-bg: #9b59b6;
+        --sidebar-hover: #8e44ad;
+        --sidebar-active: #f39c12;
     }
 
-    // Update every 30 seconds (optional)
-    // setInterval(updatePendingCounts, 30000);
-</script>
-{% endblock %}
-
-{% block scripts %}
-<!-- Additional blood bank-specific scripts can go here -->
+    /* Badge notification styling */
+    .badge-notification {
+        background: #f39c12;
+        color: #000;
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    /* Active menu item styling */
+    .sidebar-menu-item.active {
+        background: var(--sidebar-active) !important;
+        color: #000 !important;
+        font-weight: bold;
+        border-left: 4px solid white;
+    }
+    
+    .sidebar-menu-item.active i {
+        color: #000 !important;
+    }
+    
+    /* Hover effect for menu items */
+    .sidebar-menu-item:hover {
+        background: var(--sidebar-hover) !important;
+    }
+</style>
 {% endblock %}

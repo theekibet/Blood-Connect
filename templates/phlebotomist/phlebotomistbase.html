@@ -3,56 +3,57 @@
 
 {% block title %}Phlebotomist Dashboard - BloodConnect{% endblock %}
 
-{% block nav_icon %}fas fa-user-nurse{% endblock %}
-{% block app_name %}Phlebotomist Portal{% endblock %}
-
-{% block sidebar_icon %}fas fa-user-nurse{% endblock %}
-{% block sidebar_title %}Phlebotomist Panel{% endblock %}
-
-{% block user_role_label %}Phlebotomist{% endblock %}
-
-{% block auth_card_class %}phlebotomist{% endblock %}
-{% block auth_icon %}fas fa-user-nurse{% endblock %}
-{% block auth_title %}Phlebotomist Login{% endblock %}
-
-{% block profile_menu %}
-    <a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}">
-        <i class="fas fa-user-circle"></i> View Profile
-    </a>
-    <a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}">
-        <i class="fas fa-edit"></i> Edit Profile
-    </a>
-{% endblock %}
-
-{% block profile_url %}{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}{% endblock %}
-{% block edit_profile_url %}{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}{% endblock %}
-{% block notifications_url %}{% url 'phlebotomist:phlebotomist-notifications' %}{% endblock %}
+{% block sidebar_bg %}#3498db{% endblock %}
+{% block sidebar_hover %}#2980b9{% endblock %}
+{% block sidebar_active %}#f1c40f{% endblock %}
 
 {% block extra_nav_items %}
-    <!-- Notification Count Badge (if needed) -->
-    {% if unread_count > 0 %}
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'phlebotomist:phlebotomist-notifications' %}" title="Notifications">
-            <div class="nav-icon">
-                <i class="fas fa-bell"></i>
-                <span class="notification-badge">{{ unread_count }}</span>
-            </div>
+    <!-- Notifications Icon -->
+    <li class="nav-item me-2 position-relative">
+        <a class="nav-link" href="{% url 'utils:notifications' %}" title="Notifications">
+            <i class="fas fa-bell" style="color: white;"></i>
+            {% if unread_notifications_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ unread_notifications_count }}
+                    <span class="visually-hidden">unread notifications</span>
+                </span>
+            {% endif %}
         </a>
     </li>
-    {% endif %}
     
-    <!-- Chatbot Mobile Icon (visible only on mobile) -->
-    <li class="nav-item d-lg-none">
-        <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
-            <div class="nav-icon">
-                <i class="fas fa-robot"></i>
-            </div>
-        </a>
-    </li>
+    <!-- Pending Bookings Badge -->
+    {% with pending=pending_bookings_count|default:0 %}
+        {% if pending > 0 %}
+        <li class="nav-item me-2 position-relative">
+            <a class="nav-link" href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}?status=pending" title="Pending Bookings">
+                <i class="fas fa-calendar-clock" style="color: white;"></i>
+                <span class="pending-badge">{{ pending }}</span>
+            </a>
+        </li>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
+{% block profile_menu %}
+    {% if user.phlebotomist %}
+    <li><a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}"><i class="fas fa-user-circle me-2"></i>View Profile</a></li>
+    <li><a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}"><i class="fas fa-edit me-2"></i>Edit Profile</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}"><i class="fas fa-calendar-check me-2"></i>Donation Bookings</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'utils:notifications' %}">
+        <i class="fas fa-bell me-2"></i>Notifications
+        {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ unread_notifications_count }}</span>
+        {% endif %}
+    </a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+    {% endif %}
 {% endblock %}
 
 {% block sidebar_menu %}
-    <!-- Main Dashboard -->
+    <!-- MAIN -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
         <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-dashboard' %}active{% endif %}">
@@ -61,27 +62,31 @@
         </a>
     </div>
 
-    <!-- Appointments -->
+    <!-- APPOINTMENTS -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">APPOINTMENTS</div>
         <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-donation-bookings' %}active{% endif %}">
             <i class="fas fa-calendar-check"></i>
             <span>Donation Bookings</span>
-            {% if pending_bookings_count > 0 %}
-                <span class="badge badge-warning ms-auto">{{ pending_bookings_count }}</span>
-            {% endif %}
+            {% with pending=pending_bookings_count|default:0 %}
+                {% if pending > 0 %}
+                    <span class="badge bg-warning ms-auto">{{ pending }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
     </div>
 
-    <!-- Collections -->
+    <!-- COLLECTIONS -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">COLLECTIONS</div>
         <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}?status=pending" class="sidebar-menu-item">
             <i class="fas fa-hourglass-half"></i>
             <span>Pending Collections</span>
-            {% if pending_collections_count > 0 %}
-                <span class="badge badge-warning ms-auto">{{ pending_collections_count }}</span>
-            {% endif %}
+            {% with pending=pending_collections_count|default:0 %}
+                {% if pending > 0 %}
+                    <span class="badge bg-warning ms-auto">{{ pending }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
         <a href="{% url 'phlebotomist:phlebotomist-donation-bookings' %}?status=completed" class="sidebar-menu-item">
             <i class="fas fa-check-circle"></i>
@@ -89,7 +94,19 @@
         </a>
     </div>
 
-    <!-- Profile Management -->
+    <!-- NOTIFICATIONS -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COMMUNICATION</div>
+        <a href="{% url 'utils:notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_notifications_count > 0 %}
+                <span class="badge bg-danger ms-auto">{{ unread_notifications_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- PROFILE -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">PROFILE</div>
         <a href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-profile' %}active{% endif %}">
@@ -101,87 +118,54 @@
             <span>Edit Profile</span>
         </a>
     </div>
-
-    <!-- Notifications -->
+    
+    <!-- ACCOUNT -->
     <div class="sidebar-section">
-        <div class="sidebar-section-title">NOTIFICATIONS</div>
-        <a href="{% url 'phlebotomist:phlebotomist-notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'phlebotomist-notifications' %}active{% endif %}">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-            {% if unread_count > 0 %}
-                <span class="badge badge-danger ms-auto">{{ unread_count }}</span>
-            {% endif %}
+        <div class="sidebar-section-title">ACCOUNT</div>
+        <a href="{% url 'password_change' %}" class="sidebar-menu-item">
+            <i class="fas fa-key"></i>
+            <span>Change Password</span>
+        </a>
+        <a href="{% url 'logout' %}" class="sidebar-menu-item text-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
         </a>
     </div>
 {% endblock %}
 
 {% block extra_css %}
-<!-- Any phlebotomist-specific CSS can go here -->
-{% endblock %}
+<style>
+    /* Lab tech sidebar colors */
+    :root {
+        --sidebar-bg: #9b59b6;
+        --sidebar-hover: #8e44ad;
+        --sidebar-active: #f39c12;
+    }
 
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('✅ Phlebotomist base template loaded');
-        
-        // Update notification badge if needed
-        {% if unread_count > 0 %}
-        const notificationBadge = document.querySelector('.notification-badge');
-        if (notificationBadge) {
-            notificationBadge.textContent = "{{ unread_count }}";
-            notificationBadge.style.display = 'flex';
-        }
-        {% endif %}
-
-        // ========================================
-        // PHLEBOTOMIST-SPECIFIC CHATBOT INTEGRATION
-        // ========================================
-        const chatbotButton = document.getElementById('chatbotButton');
-        const chatbotContainer = document.getElementById('chatbotContainer');
-        
-        if (chatbotButton && chatbotContainer) {
-            // Add phlebotomist-specific context to chatbot when opened
-            chatbotButton.addEventListener('click', function() {
-                console.log('Phlebotomist opened chatbot');
-            });
-        }
-
-        // Sidebar active state for mobile
-        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
-        sidebarLinks.forEach(link => {
-            if (link.classList.contains('active')) {
-                link.setAttribute('aria-current', 'page');
-            }
-        });
-
-        // Auto-refresh for pending bookings count (optional)
-        function updatePendingCounts() {
-            fetch('/phlebotomist/api/pending-counts/')
-                .then(response => response.json())
-                .then(data => {
-                    // Update pending bookings badge
-                    const bookingsBadge = document.querySelector('a[href*="bookings"] .badge');
-                    if (bookingsBadge && data.pending_bookings > 0) {
-                        bookingsBadge.textContent = data.pending_bookings;
-                        bookingsBadge.style.display = 'inline-block';
-                    }
-                    
-                    // Update collections badge
-                    const collectionsBadge = document.querySelector('a[href*="pending"] .badge');
-                    if (collectionsBadge && data.pending_collections > 0) {
-                        collectionsBadge.textContent = data.pending_collections;
-                        collectionsBadge.style.display = 'inline-block';
-                    }
-                })
-                .catch(error => console.error('Error updating counts:', error));
-        }
-
-        // Uncomment to enable real-time updates every 30 seconds
-        // setInterval(updatePendingCounts, 30000);
-    });
-</script>
-{% endblock %}
-
-{% block scripts %}
-<!-- Additional phlebotomist-specific scripts can go here -->
+    /* Badge notification styling */
+    .badge-notification {
+        background: #f39c12;
+        color: #000;
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    /* Active menu item styling */
+    .sidebar-menu-item.active {
+        background: var(--sidebar-active) !important;
+        color: #000 !important;
+        font-weight: bold;
+        border-left: 4px solid white;
+    }
+    
+    .sidebar-menu-item.active i {
+        color: #000 !important;
+    }
+    
+    /* Hover effect for menu items */
+    .sidebar-menu-item:hover {
+        background: var(--sidebar-hover) !important;
+    }
+</style>
 {% endblock %}

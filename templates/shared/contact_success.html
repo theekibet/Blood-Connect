@@ -3,27 +3,54 @@
 
 {% block title %}Message Sent - BloodConnect{% endblock %}
 
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Success Card -->
+            <div class="card shadow border-success">
+                <div class="card-body text-center p-5">
+                    <!-- Success Icon -->
+                    <div class="mb-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4">
+                            <i class="fas fa-check-circle fa-4x text-success"></i>
+                        </div>
+                    </div>
 
-{% block auth_title %}Message Sent!{% endblock %}
+                    <!-- Success Message -->
+                    <h2 class="card-title mb-3">Thank You! 🎉</h2>
+                    <h4 class="text-success mb-3">Message Sent Successfully</h4>
+                    <p class="text-muted mb-4">
+                        We appreciate your feedback. Allan will respond as soon as possible.
+                    </p>
 
-{% block auth_content %}
-<div class="text-center">
-    <!-- Success Icon -->
-    <div class="mb-4">
-        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4">
-            <i class="fas fa-check-circle fa-4x text-success"></i>
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'home' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-home me-2"></i>Back to Home
+                        </a>
+                        <a href="{% url 'contact' %}" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Send Another Message
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fun Fact Card -->
+            <div class="card mt-4 border-info">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <i class="fas fa-heart text-danger fa-2x me-3"></i>
+                        <div>
+                            <h6 class="mb-1">Did You Know?</h6>
+                            <p class="small text-muted mb-0">
+                                One blood donation can save up to three lives. Thank you for being part of our life-saving community!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Success Message -->
-    <h4 class="mb-3">Thank you for your message!</h4>
-    <p class="text-muted mb-4">We appreciate your feedback, Allan will respond/act as soon as possible.</p>
-
-
-
 </div>
-{% endblock %}
-
-{% block extra_css %}
-
 {% endblock %}

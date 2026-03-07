@@ -7,8 +7,6 @@
 <!-- Any page-specific CSS can go here -->
 {% endblock %}
 
-{% block public_wrapper %}
-<!-- Override the auth wrapper - this is a public landing page -->
 {% block content %}
 
 <!-- Hero Section -->
@@ -22,8 +20,6 @@
                 <a href="{% url 'donor:donorsignup' %}" class="btn btn-secondary">
                     Become a Donor <i class="fas fa-heart"></i>
                 </a>
-                
-
             </div>
         </div>
         <div class="hero-image fade-in delay-3">
@@ -46,6 +42,13 @@
         {% endfor %}
     </div>
 </section>
+
+<div class="testing-float">
+    <div class="btn-tooltip">Testing Guide</div>
+    <a href="{% url 'testing_guide' %}" class="btn btn-primary">
+        <i class="fas fa-book"></i>
+    </a>
+</div>
 
 <!-- Features Section -->
 <section class="features-section">
@@ -220,7 +223,6 @@
     </div>
 </section>
 
-
 <!-- CTA Section -->
 <section class="cta-section">
     <div class="cta-container">
@@ -232,10 +234,6 @@
     </div>
 </section>
 
-<!-- NOTE: Chatbot intentionally NOT included on homepage -->
-<!-- Chatbot only appears for logged-in users in base.html -->
-
-{% endblock %}
 {% endblock %}
 
 {% block extra_js %}

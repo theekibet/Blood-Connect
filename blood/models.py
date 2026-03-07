@@ -76,8 +76,13 @@ class Stock(models.Model):
 class StockUnit(models.Model):
     """Individual blood unit in inventory - expiry set by lab tech after testing"""
     
-    BLOOD_GROUP_CHOICES = Stock.BLOOD_GROUP_CHOICES
-    
+    BLOOD_GROUP_CHOICES = [
+        ('A+', 'A+'), ('A-', 'A-'),
+        ('B+', 'B+'), ('B-', 'B-'),
+        ('AB+', 'AB+'), ('AB-', 'AB-'),
+        ('O+', 'O+'), ('O-', 'O-'),
+    ]
+
     SAFETY_STATUS_CHOICES = [
         ('pending', 'Pending Verification'),
         ('safe', 'Safe for Use'),
@@ -106,8 +111,8 @@ class StockUnit(models.Model):
     
     # ===== EXPIRY DATE - NULL for unsafe blood =====
     expiry_date = models.DateField(
-        null=True,  # ← CHANGED: Allow null for unsafe blood
-        blank=True,  # ← CHANGED: Allow blank for unsafe blood
+        null=True,
+        blank=True,
         help_text='When the blood expires. NULL for unsafe/discarded blood.'
     )
     
@@ -252,6 +257,28 @@ class StockUnit(models.Model):
             models.Index(fields=['bloodgroup']),
         ]
 
+    # ===== NEW METHOD #1: Set expiry from component =====
+    def set_expiry_from_component(self, collection_date=None):
+        """
+        Set expiry date based on component type and collection date
+        """
+        from blood.utils.expiry_utils import calculate_expiry_date
+        
+        # If no collection date provided, try to get from blood donation
+        if not collection_date and self.blood_donation:
+            collection_date = self.blood_donation.date
+            if hasattr(collection_date, 'date'):
+                collection_date = collection_date.date()
+        
+        if collection_date:
+            self.expiry_date = calculate_expiry_date(
+                collection_date, 
+                self.component_type
+            )
+            return True
+        return False
+
+    # ===== EXISTING METHODS (Keep these) =====
     def clean(self):
         # Unit validation
         if self.unit < 0:
@@ -410,7 +437,7 @@ class StockUnit(models.Model):
         base = f"{self.bloodgroup} - {self.unit}ml at {self.center.name}"
         
         # Add component type
-        component = self.get_component_type_display().split(' ')[0]  # Get just the type
+        component = self.get_component_type_display().split(' ')[0]
         
         # Add safety status
         safety = self.safety_status_display
@@ -466,39 +493,6 @@ class Contact(models.Model):
 
     def __str__(self):
         return self.name
-
- 
-# ------------------------
-# Notification Model
-# ------------------------
-# class Notification(models.Model):
-    title = models.CharField(max_length=100)
-    message = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    recipient_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    recipient_object_id = models.PositiveIntegerField(null=True, blank=True)
-    recipient = GenericForeignKey('recipient_content_type', 'recipient_object_id')
-
-    sender_content_type = models.ForeignKey(
-        ContentType, on_delete=models.CASCADE, related_name='sender_content_type', null=True, blank=True
-    )
-    sender_object_id = models.PositiveIntegerField(null=True, blank=True)
-    sender = GenericForeignKey('sender_content_type', 'sender_object_id')
-
-    read = models.BooleanField(default=False)
-
-    # 👉  for richer notifications
-    action = models.CharField(max_length=20, blank=True, null=True)  # e.g. approved, rejected, completed
-    reason = models.TextField(blank=True, null=True)  # phlebotomist’s reason if reject/cancel
-    appointment_date = models.DateTimeField(blank=True, null=True)
-    bloodgroup = models.CharField(max_length=10, blank=True, null=True)
-    unit = models.PositiveIntegerField(blank=True, null=True)
-
-    def __str__(self):
-        if self.recipient:
-            return f"{self.title} for {self.recipient}"
-        return f"{self.title} - No recipient specified"
 
 class StockTransaction(models.Model):
     TRANSACTION_CHOICES = [

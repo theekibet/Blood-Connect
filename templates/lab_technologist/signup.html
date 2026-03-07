@@ -4,257 +4,269 @@
 
 {% block title %}Lab Technologist Signup - BloodConnect{% endblock %}
 
-{% block auth_icon %}fas fa-flask{% endblock %}
-{% block auth_title %}Lab Technologist Registration{% endblock %}
-{% block auth_card_class %}lab-technologist{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-flask me-2"></i>
+                        Lab Technologist Registration
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Info Alert -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Your account will require admin approval before you can access the system.
+                    </div>
 
-{% block auth_content %}
-<div class="signup-container">
-
-
-                <!-- Messages already handled in base template -->
-
-                <!-- Signup Form Card -->
-
-                    <div class="card-body">
-                        <!-- Form errors summary -->
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                <ul class="mb-0">
-                                    {% for error in form.non_field_errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-
-                        <form method="post" enctype="multipart/form-data" id="signupForm">
-                            {% csrf_token %}
-                            
-                            <!-- Personal Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3">
-                                <i class="fas fa-user text-primary me-2"></i>Personal Information
-                            </h5>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
-                                        First Name <span class="text-danger">*</span>
-                                    </label>
-                                    {% if form.first_name.errors %}
-                                        {% render_field form.first_name class="form-control is-invalid" placeholder="Enter first name" %}
-                                        <div class="invalid-feedback">{{ form.first_name.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.first_name class="form-control" placeholder="Enter first name" %}
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
-                                        Last Name <span class="text-danger">*</span>
-                                    </label>
-                                    {% if form.last_name.errors %}
-                                        {% render_field form.last_name class="form-control is-invalid" placeholder="Enter last name" %}
-                                        <div class="invalid-feedback">{{ form.last_name.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.last_name class="form-control" placeholder="Enter last name" %}
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Account Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3 mt-4">
-                                <i class="fas fa-key text-primary me-2"></i>Account Information
-                            </h5>
-
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="{{ form.username.id_for_label }}" class="form-label">
-                                        Username <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% if form.username.errors %}
-                                            {% render_field form.username class="form-control is-invalid" placeholder="Choose username" %}
-                                            <div class="invalid-feedback">{{ form.username.errors|first }}</div>
-                                        {% else %}
-                                            {% render_field form.username class="form-control" placeholder="Choose username" %}
-                                        {% endif %}
-                                        <span class="validation-icon" id="usernameIcon"></span>
-                                    </div>
-                                    {% if form.username.help_text %}
-                                        <small class="text-muted">{{ form.username.help_text }}</small>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.email.id_for_label }}" class="form-label">
-                                        Email <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% if form.email.errors %}
-                                            {% render_field form.email class="form-control is-invalid" placeholder="Enter email address" type="email" %}
-                                            <div class="invalid-feedback">{{ form.email.errors|first }}</div>
-                                        {% else %}
-                                            {% render_field form.email class="form-control" placeholder="Enter email address" type="email" %}
-                                        {% endif %}
-                                        <span class="validation-icon" id="emailIcon"></span>
-                                    </div>
-                                    <small class="text-muted">Used for verification and communication</small>
-                                </div>
-                            </div>
-
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-6">
-                                    <label for="{{ form.password1.id_for_label }}" class="form-label">
-                                        Password <span class="text-danger">*</span>
-                                    </label>
-                                    {% if form.password1.errors %}
-                                        {% render_field form.password1 class="form-control is-invalid" placeholder="Enter password" %}
-                                        <div class="invalid-feedback">{{ form.password1.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.password1 class="form-control" placeholder="Enter password" %}
-                                    {% endif %}
-                                    <div id="passwordStrength" class="small mt-1"></div>
-                                    {% if form.password1.help_text %}
-                                        <small class="text-muted">{{ form.password1.help_text }}</small>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.password2.id_for_label }}" class="form-label">
-                                        Confirm Password <span class="text-danger">*</span>
-                                    </label>
-                                    {% if form.password2.errors %}
-                                        {% render_field form.password2 class="form-control is-invalid" placeholder="Confirm password" %}
-                                        <div class="invalid-feedback">{{ form.password2.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.password2 class="form-control" placeholder="Confirm password" %}
-                                    {% endif %}
-                                    <div id="matchFeedback" class="small mt-1"></div>
-                                </div>
-                            </div>
-
-                            <!-- Professional Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3 mt-4">
-                                <i class="fas fa-id-badge text-primary me-2"></i>Professional Information
-                            </h5>
-
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="{{ form.employee_id.id_for_label }}" class="form-label">
-                                        Employee ID <span class="text-danger">*</span>
-                                    </label>
-                                    {% if form.employee_id.errors %}
-                                        {% render_field form.employee_id class="form-control is-invalid" placeholder="Enter employee ID" %}
-                                        <div class="invalid-feedback">{{ form.employee_id.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.employee_id class="form-control" placeholder="Enter employee ID" %}
-                                    {% endif %}
-                                    <div id="employeeIdFeedback" class="small mt-1"></div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.center.id_for_label }}" class="form-label">
-                                        Donation Center
-                                    </label>
-                                    {% if form.center.errors %}
-                                        {% render_field form.center class="form-select is-invalid" %}
-                                        <div class="invalid-feedback">{{ form.center.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.center class="form-select" %}
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-6">
-                                    <label for="{{ form.phone.id_for_label }}" class="form-label">
-                                        Phone Number <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% if form.phone.errors %}
-                                            {% render_field form.phone class="form-control is-invalid" placeholder="Enter phone number" %}
-                                            <div class="invalid-feedback">{{ form.phone.errors|first }}</div>
-                                        {% else %}
-                                            {% render_field form.phone class="form-control" placeholder="Enter phone number" %}
-                                        {% endif %}
-                                        <span class="validation-icon" id="phoneIcon"></span>
-                                    </div>
-                                    <div id="phoneFeedback" class="small mt-1"></div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.qualification.id_for_label }}" class="form-label">
-                                        Qualification
-                                    </label>
-                                    {% if form.qualification.errors %}
-                                        {% render_field form.qualification class="form-control is-invalid" placeholder="Enter qualification" %}
-                                        <div class="invalid-feedback">{{ form.qualification.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.qualification class="form-control" placeholder="Enter qualification" %}
-                                    {% endif %}
-                                    <small class="text-muted">e.g., BSc Medical Laboratory Science</small>
-                                </div>
-                            </div>
-
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-6">
-                                    <label for="{{ form.license_number.id_for_label }}" class="form-label">
-                                        License Number
-                                    </label>
-                                    {% if form.license_number.errors %}
-                                        {% render_field form.license_number class="form-control is-invalid" placeholder="Enter license number" %}
-                                        <div class="invalid-feedback">{{ form.license_number.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.license_number class="form-control" placeholder="Enter license number" %}
-                                    {% endif %}
-                                    <small class="text-muted">Professional license number (if applicable)</small>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.profile_pic.id_for_label }}" class="form-label">
-                                        <i class="fas fa-camera me-2"></i>Profile Picture
-                                    </label>
-                                    {% if form.profile_pic.errors %}
-                                        {% render_field form.profile_pic class="form-control is-invalid" %}
-                                        <div class="invalid-feedback">{{ form.profile_pic.errors|first }}</div>
-                                    {% else %}
-                                        {% render_field form.profile_pic class="form-control" %}
-                                    {% endif %}
-                                    <small class="text-muted">Optional - Upload a professional photo</small>
-                                </div>
-                            </div>
-
-                            <!-- Terms and Conditions -->
-                            <div class="mt-4 p-3 bg-light rounded">
-                                <div class="form-check">
-                                    {% render_field form.terms class="form-check-input" id="termsCheck" %}
-                                    <label class="form-check-label" for="termsCheck">
-                                        I agree to the 
-                                        <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#termsModal">
-                                            terms and conditions
-                                        </a>
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {% if form.terms.errors %}
-                                        <div class="text-danger small mt-1">{{ form.terms.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Submit Buttons -->
-                            <div class="d-flex justify-content-between mt-4">
-                                <a href="{% url 'home' %}" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left me-2"></i>Back to Home
-                                </a>
-                                <button type="submit" id="submitBtn" class="btn btn-primary">
-                                    <i class="fas fa-user-plus me-2"></i>Register
-                                </button>
-                            </div>
-                        </form>
-
-                        <div class="text-center mt-4">
-                            <p class="mb-0">
-                                Already have an account? 
-                                <a href="{% url 'lab_technologist:login' %}" class="btn btn-link">
-                                    Login here <i class="fas fa-arrow-right ms-1"></i>
-                                </a>
-                            </p>
+                    <!-- Form errors summary -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
                         </div>
+                    {% endif %}
+
+                    <!-- Signup Form -->
+                    <form method="post" enctype="multipart/form-data" id="signupForm">
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user text-primary me-2"></i>Personal Information
+                        </h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                    First Name <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    {% render_field form.first_name class="form-control" placeholder="Enter first name" %}
+                                </div>
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.first_name.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                    Last Name <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    {% render_field form.last_name class="form-control" placeholder="Enter last name" %}
+                                </div>
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.last_name.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Account Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-key text-primary me-2"></i>Account Information
+                        </h5>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.username.id_for_label }}" class="form-label">
+                                    Username <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    {% render_field form.username class="form-control" placeholder="Choose username" %}
+                                </div>
+                                {% if form.username.errors %}
+                                    <div class="text-danger small mt-1">{{ form.username.errors|first }}</div>
+                                {% endif %}
+                                {% if form.username.help_text %}
+                                    <small class="text-muted">{{ form.username.help_text }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    Email <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    {% render_field form.email class="form-control" placeholder="Enter email address" type="email" %}
+                                </div>
+                                {% if form.email.errors %}
+                                    <div class="text-danger small mt-1">{{ form.email.errors|first }}</div>
+                                {% endif %}
+                                <small class="text-muted">Used for verification and communication</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label for="{{ form.password1.id_for_label }}" class="form-label">
+                                    Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    {% render_field form.password1 class="form-control" placeholder="Enter password" type="password" %}
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('password1')">
+                                        <i class="fa fa-eye" id="togglePasswordIcon1"></i>
+                                    </button>
+                                </div>
+                                <div id="passwordStrength" class="small mt-1"></div>
+                                {% if form.password1.errors %}
+                                    <div class="text-danger small mt-1">{{ form.password1.errors|first }}</div>
+                                {% endif %}
+                                {% if form.password1.help_text %}
+                                    <small class="text-muted">{{ form.password1.help_text }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.password2.id_for_label }}" class="form-label">
+                                    Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    {% render_field form.password2 class="form-control" placeholder="Confirm password" type="password" %}
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('password2')">
+                                        <i class="fa fa-eye" id="togglePasswordIcon2"></i>
+                                    </button>
+                                </div>
+                                <div id="matchFeedback" class="small mt-1"></div>
+                                {% if form.password2.errors %}
+                                    <div class="text-danger small mt-1">{{ form.password2.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Professional Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-id-badge text-primary me-2"></i>Professional Information
+                        </h5>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.employee_id.id_for_label }}" class="form-label">
+                                    Employee ID <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                                    {% render_field form.employee_id class="form-control" placeholder="Enter employee ID" %}
+                                </div>
+                                {% if form.employee_id.errors %}
+                                    <div class="text-danger small mt-1">{{ form.employee_id.errors|first }}</div>
+                                {% endif %}
+                                <div id="employeeIdFeedback" class="small mt-1"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.center.id_for_label }}" class="form-label">
+                                    Donation Center
+                                </label>
+                                {% render_field form.center class="form-select" %}
+                                {% if form.center.errors %}
+                                    <div class="text-danger small mt-1">{{ form.center.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                    Phone Number <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                    {% render_field form.phone class="form-control" placeholder="Enter phone number" %}
+                                </div>
+                                {% if form.phone.errors %}
+                                    <div class="text-danger small mt-1">{{ form.phone.errors|first }}</div>
+                                {% endif %}
+                                <div id="phoneFeedback" class="small mt-1"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.qualification.id_for_label }}" class="form-label">
+                                    Qualification
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                                    {% render_field form.qualification class="form-control" placeholder="Enter qualification" %}
+                                </div>
+                                {% if form.qualification.errors %}
+                                    <div class="text-danger small mt-1">{{ form.qualification.errors|first }}</div>
+                                {% endif %}
+                                <small class="text-muted">e.g., BSc Medical Laboratory Science</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label for="{{ form.license_number.id_for_label }}" class="form-label">
+                                    License Number
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-certificate"></i></span>
+                                    {% render_field form.license_number class="form-control" placeholder="Enter license number" %}
+                                </div>
+                                {% if form.license_number.errors %}
+                                    <div class="text-danger small mt-1">{{ form.license_number.errors|first }}</div>
+                                {% endif %}
+                                <small class="text-muted">Professional license number (if applicable)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.profile_pic.id_for_label }}" class="form-label">
+                                    <i class="fas fa-camera me-2"></i>Profile Picture
+                                </label>
+                                {% render_field form.profile_pic class="form-control" %}
+                                {% if form.profile_pic.errors %}
+                                    <div class="text-danger small mt-1">{{ form.profile_pic.errors|first }}</div>
+                                {% endif %}
+                                <small class="text-muted">Optional - Upload a professional photo</small>
+                            </div>
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <div class="form-check">
+                                {% render_field form.terms class="form-check-input" id="termsCheck" %}
+                                <label class="form-check-label" for="termsCheck">
+                                    I agree to the 
+                                    <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#termsModal">
+                                        terms and conditions
+                                    </a>
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {% if form.terms.errors %}
+                                    <div class="text-danger small mt-1">{{ form.terms.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Home
+                            </a>
+                            <button type="submit" id="submitBtn" class="btn btn-primary">
+                                <span id="submitBtnText"><i class="fas fa-user-plus me-2"></i>Register</span>
+                                <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Login Link -->
+                    <div class="text-center mt-4">
+                        <p class="mb-0">
+                            Already have an account? 
+                            <a href="{% url 'lab_technologist:login' %}" class="btn btn-link">
+                                Login here <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -282,6 +294,9 @@
                 
                 <h6>Data Privacy</h6>
                 <p>All donor and patient information must be kept confidential in accordance with medical ethics and data protection laws.</p>
+                
+                <h6>Admin Approval</h6>
+                <p>Your account requires admin approval before you can access the system. This usually takes 1-2 business days.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -290,68 +305,84 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-$(document).ready(function() {
+// Password toggle functionality
+function togglePassword(fieldId) {
+    const passwordField = document.getElementById('id_' + fieldId);
+    const icon = document.getElementById('togglePasswordIcon' + (fieldId === 'password1' ? '1' : '2'));
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
     // Password strength checker
     const passwordInput = document.getElementById('id_password1');
+    const strengthDiv = document.getElementById('passwordStrength');
+    
     if (passwordInput) {
         passwordInput.addEventListener('input', function() {
-            const strengthText = document.getElementById('passwordStrength');
             const value = this.value;
             
             if (!value) { 
-                strengthText.textContent = ""; 
+                strengthDiv.textContent = ""; 
                 return; 
             }
             
             if (value.length < 8) { 
-                strengthText.textContent = "⚠️ Too Short"; 
-                strengthText.style.color = "#dc3545"; 
+                strengthDiv.textContent = "⚠️ Too Short"; 
+                strengthDiv.style.color = "#dc3545"; 
             }
             else if (/[a-zA-Z]/.test(value) && /\d/.test(value)) { 
-                strengthText.textContent = "✓ Strong Password"; 
-                strengthText.style.color = "#28a745"; 
+                strengthDiv.textContent = "✓ Strong Password"; 
+                strengthDiv.style.color = "#28a745"; 
             }
             else { 
-                strengthText.textContent = "⚠️ Moderate - Add numbers and letters"; 
-                strengthText.style.color = "#ffc107"; 
+                strengthDiv.textContent = "⚠️ Moderate - Add numbers and letters"; 
+                strengthDiv.style.color = "#ffc107"; 
             }
         });
     }
 
     // Password match checker
-    const confirmInput = document.getElementById('id_password2');
-    if (confirmInput && passwordInput) {
-        confirmInput.addEventListener('input', checkPasswordMatch);
-        passwordInput.addEventListener('input', checkPasswordMatch);
-    }
-
+    const password1 = document.getElementById('id_password1');
+    const password2 = document.getElementById('id_password2');
+    const matchDiv = document.getElementById('matchFeedback');
+    
     function checkPasswordMatch() {
-        const matchFeedback = document.getElementById('matchFeedback');
-        const password = passwordInput.value;
-        const confirm = confirmInput.value;
-        
-        if (!confirm) {
-            matchFeedback.textContent = "";
-            return;
+        if (password2.value.length > 0) {
+            if (password1.value === password2.value) {
+                matchDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Passwords match</span>';
+                password2.classList.remove('is-invalid');
+                password2.classList.add('is-valid');
+            } else {
+                matchDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Passwords do not match</span>';
+                password2.classList.remove('is-valid');
+                password2.classList.add('is-invalid');
+            }
+        } else {
+            matchDiv.innerHTML = '';
         }
-        
-        if (confirm !== password) { 
-            matchFeedback.textContent = "✗ Passwords do not match!";
-            matchFeedback.style.color = "#dc3545"; 
-        }
-        else { 
-            matchFeedback.textContent = "✓ Passwords match!";
-            matchFeedback.style.color = "#28a745"; 
-        }
+    }
+    
+    if (password1 && password2 && matchDiv) {
+        password1.addEventListener('input', checkPasswordMatch);
+        password2.addEventListener('input', checkPasswordMatch);
     }
 
     // Enable submit button based on terms
     const termsCheck = document.getElementById('termsCheck');
     const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const submitSpinner = document.getElementById('submitSpinner');
     
     if (termsCheck && submitBtn) {
         termsCheck.addEventListener('change', function() {
@@ -360,6 +391,18 @@ $(document).ready(function() {
         
         // Initial state
         submitBtn.disabled = !termsCheck.checked;
+    }
+
+    // Form submission loading state
+    const form = document.getElementById('signupForm');
+    if (form) {
+        form.addEventListener('submit', function() {
+            if (!submitBtn.disabled) {
+                submitBtnText.classList.add('d-none');
+                submitSpinner.classList.remove('d-none');
+                submitBtn.disabled = true;
+            }
+        });
     }
 });
 </script>

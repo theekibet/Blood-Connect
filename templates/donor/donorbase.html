@@ -1,74 +1,58 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Donor Dashboard - BloodConnect{% endblock %}
-
-{% block nav_icon %}fas fa-hand-holding-heart{% endblock %}
-{% block app_name %}Donor Portal{% endblock %}
-
-{% block sidebar_icon %}fas fa-hand-holding-heart{% endblock %}
-{% block sidebar_title %}Donor Panel{% endblock %}
-
-{% block user_role_label %}Donor{% endblock %}
-
-{% block auth_card_class %}donor{% endblock %}
-{% block auth_icon %}fas fa-hand-holding-heart{% endblock %}
-{% block auth_title %}Donor Login{% endblock %}
-
-{% block profile_menu %}
-    <a class="dropdown-item" href="{% url 'donor:donor-profile' %}">
-        <i class="fas fa-user-circle"></i> View Profile
-    </a>
-    <a class="dropdown-item" href="{% url 'donor:donor-edit-profile' %}">
-        <i class="fas fa-edit"></i> Edit Profile
-    </a>
-    <div class="dropdown-divider"></div>
-    <a class="dropdown-item" href="{% url 'donor:volunteer' %}">
-        <i class="fas fa-hands-helping"></i> Volunteer Opportunities
-    </a>
-    <a class="dropdown-item" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
-        <i class="fas fa-robot"></i> Ask Assistant
-    </a>
-{% endblock %}
-
-{% block profile_url %}{% url 'donor:donor-profile' %}{% endblock %}
-{% block edit_profile_url %}{% url 'donor:donor-edit-profile' %}{% endblock %}
-{% block notifications_url %}{% url 'donor:donor-notifications' %}{% endblock %}
+{% block sidebar_bg %}#27ae60{% endblock %}
+{% block sidebar_hover %}#2ecc71{% endblock %}
+{% block sidebar_active %}#f39c12{% endblock %}
 
 {% block extra_nav_items %}
+    <!-- Notifications Icon -->
+    <li class="nav-item me-2 position-relative">
+        <a class="nav-link" href="{% url 'utils:notifications' %}" title="Notifications">
+            <i class="fas fa-bell" style="color: white;"></i>
+            {% if unread_notifications_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ unread_notifications_count }}
+                    <span class="visually-hidden">unread notifications</span>
+                </span>
+            {% endif %}
+        </a>
+    </li>
+    
     <!-- Rewards/Eligibility Icon -->
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'donor:donor-eligibility-status' %}" title="Rewards / Eligibility">
-            <div class="nav-icon">
-                <i class="fas fa-medal"></i>
-                {% if donor_eligibility_status and donor_eligibility_status.is_eligible %}
-                    <span class="status-badge eligible"></span>
-                {% endif %}
-            </div>
+    <li class="nav-item me-2">
+        <a class="nav-link" href="{% url 'donor:donor-eligibility-status' %}" title="Eligibility Status">
+            <i class="fas fa-medal" style="color: white;"></i>
         </a>
     </li>
     
     <!-- Impact Icon -->
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'donor:impact' %}" title="Our Collective Impact">
-            <div class="nav-icon">
-                <i class="fas fa-chart-line"></i>
-            </div>
-        </a>
-    </li>
-    
-    <!-- Chatbot Mobile Icon (visible only on mobile) -->
-    <li class="nav-item d-lg-none">
-        <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
-            <div class="nav-icon">
-                <i class="fas fa-robot"></i>
-            </div>
+    <li class="nav-item me-2">
+        <a class="nav-link" href="{% url 'donor:impact' %}" title="Our Impact">
+            <i class="fas fa-chart-line" style="color: white;"></i>
         </a>
     </li>
 {% endblock %}
 
+{% block profile_menu %}
+    <li><a class="dropdown-item" href="{% url 'donor:donor-profile' %}"><i class="fas fa-user-circle me-2"></i>View Profile</a></li>
+    <li><a class="dropdown-item" href="{% url 'donor:donor-edit-profile' %}"><i class="fas fa-edit me-2"></i>Edit Profile</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'donor:donation-history' %}"><i class="fas fa-history me-2"></i>Donation History</a></li>
+    <li><a class="dropdown-item" href="{% url 'donor:volunteer' %}"><i class="fas fa-hands-helping me-2"></i>Volunteer</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'utils:notifications' %}">
+        <i class="fas fa-bell me-2"></i>Notifications
+        {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ unread_notifications_count }}</span>
+        {% endif %}
+    </a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+{% endblock %}
+
 {% block sidebar_menu %}
-    <!-- Main Dashboard -->
+    <!-- MAIN -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
         <a href="{% url 'donor:donor-dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'donor-dashboard' %}active{% endif %}">
@@ -77,7 +61,7 @@
         </a>
     </div>
 
-    <!-- Donation Related -->
+    <!-- DONATION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">DONATION</div>
         <a href="{% url 'donor:donate-blood' %}" class="sidebar-menu-item {% if 'donate-blood' in request.path %}active{% endif %}">
@@ -94,7 +78,7 @@
         </a>
     </div>
 
-    <!-- Engagement -->
+    <!-- GET INVOLVED -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">GET INVOLVED</div>
         <a href="{% url 'donor:volunteer' %}" class="sidebar-menu-item {% if 'volunteer' in request.path %}active{% endif %}">
@@ -107,7 +91,7 @@
         </a>
     </div>
 
-    <!-- Resources -->
+    <!-- RESOURCES -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">RESOURCES</div>
         <a href="{% url 'donor:donor-resources' %}" class="sidebar-menu-item {% if 'resources' in request.path %}active{% endif %}">
@@ -124,7 +108,7 @@
         </a>
     </div>
 
-    <!-- Community -->
+    <!-- COMMUNITY -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">COMMUNITY</div>
         <a href="{% url 'donor:events' %}" class="sidebar-menu-item {% if 'events' in request.path %}active{% endif %}">
@@ -133,63 +117,62 @@
         </a>
     </div>
     
-    <!-- AI Assistant Link -->
+    <!-- NOTIFICATIONS -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COMMUNICATION</div>
+        <a href="{% url 'utils:notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_notifications_count > 0 %}
+                <span class="badge bg-danger ms-auto">{{ unread_notifications_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+    
+    <!-- AI ASSISTANT -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">ASSISTANT</div>
         <a href="#" onclick="document.getElementById('chatbotButton').click(); return false;" class="sidebar-menu-item">
             <i class="fas fa-robot"></i>
             <span>Ask AI Assistant</span>
-            <span class="badge badge-primary">New</span>
+            <span class="badge bg-primary ms-auto">New</span>
         </a>
     </div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Update notification badge
-        {% if donor_unread_notification_count > 0 %}
-        const notificationBadge = document.querySelector('.notification-badge');
-        if (notificationBadge) {
-            notificationBadge.textContent = "{{ donor_unread_notification_count }}";
-            notificationBadge.style.display = 'flex';
-        }
-        {% endif %}
-        
-        // Eligibility reminder (optional)
-        {% if donor_eligibility_status and donor_eligibility_status.can_donate_now %}
-        setTimeout(function() {
-            const chatbotContainer = document.getElementById('chatbotContainer');
-            if (chatbotContainer && !chatbotContainer.classList.contains('active')) {
-                const reminder = document.createElement('div');
-                reminder.className = 'alert alert-info alert-dismissible fade show';
-                reminder.style.position = 'fixed';
-                reminder.style.bottom = '80px';
-                reminder.style.right = '20px';
-                reminder.style.zIndex = '999';
-                reminder.style.maxWidth = '300px';
-                reminder.innerHTML = `
-                    <i class="fas fa-heart me-2"></i>
-                    <strong>You're eligible to donate!</strong>
-                    <p class="mb-0 mt-1 small">Schedule your next donation and save lives.</p>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                document.body.appendChild(reminder);
-                
-                setTimeout(() => {
-                    if (reminder.parentNode) reminder.remove();
-                }, 10000);
-            }
-        }, 3000);
-        {% endif %}
+{% block extra_css %}
+<style>
+    /* Lab tech sidebar colors */
+    :root {
+        --sidebar-bg: #9b59b6;
+        --sidebar-hover: #8e44ad;
+        --sidebar-active: #f39c12;
+    }
 
-        // Sidebar active state for mobile
-        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
-        sidebarLinks.forEach(link => {
-            if (link.classList.contains('active')) {
-                link.setAttribute('aria-current', 'page');
-            }
-        });
-    });
-</script>
+    /* Badge notification styling */
+    .badge-notification {
+        background: #f39c12;
+        color: #000;
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    /* Active menu item styling */
+    .sidebar-menu-item.active {
+        background: var(--sidebar-active) !important;
+        color: #000 !important;
+        font-weight: bold;
+        border-left: 4px solid white;
+    }
+    
+    .sidebar-menu-item.active i {
+        color: #000 !important;
+    }
+    
+    /* Hover effect for menu items */
+    .sidebar-menu-item:hover {
+        background: var(--sidebar-hover) !important;
+    }
+</style>
 {% endblock %}

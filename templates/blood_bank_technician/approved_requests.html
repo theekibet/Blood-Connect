@@ -12,12 +12,12 @@
         <ul class="nav nav-tabs">
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'blood_bank_technician:pending_requests' %}">
-                    <i class="fas fa-clock"></i> Pending
+                    <i class="fas fa-clock me-1"></i> Pending
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link active" href="{% url 'blood_bank_technician:approved_requests' %}">
-                    <i class="fas fa-check-circle"></i> Approved & Dispatched
+                    <i class="fas fa-check-circle me-1"></i> Approved & Dispatched
                 </a>
             </li>
         </ul>
@@ -47,8 +47,8 @@
             <div class="col-md-12">
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-primary active filter-btn" data-filter="all">All</button>
-                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="approved">Approved</button>
-                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="dispatched">Dispatched</button>
+                    <button type="button" class="btn btn-outline-success filter-btn" data-filter="approved">Approved</button>
+                    <button type="button" class="btn btn-outline-info filter-btn" data-filter="dispatched">Dispatched</button>
                 </div>
             </div>
         </div>
@@ -63,7 +63,7 @@
         {% if approved_requests %}
             <div class="table-responsive">
                 <table class="table table-hover" id="requests-table">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>Request #</th>
                             <th>Hospital</th>
@@ -87,16 +87,30 @@
                                 <strong>{{ req.hospital_name }}</strong>
                                 <br>
                                 <small class="text-muted">
-                                    <i class="fas fa-phone"></i> {{ req.hospital_phone }}
+                                    <i class="fas fa-phone me-1"></i> {{ req.hospital_phone }}
                                 </small>
                             </td>
                             <td>
                                 {{ req.patient_name }}
                                 <br>
-                                <small class="text-muted">{{ req.object.patient_age|default:"" }} {{ req.object.patient_gender|default:"" }}</small>
+                                <small class="text-muted">
+                                    {% if req.urgency == 'emergency' %}
+                                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                                    {% endif %}
+                                </small>
                             </td>
-                            <td><span class="badge bg-info">{{ req.blood_group }}</span></td>
-                            <td>{{ req.units_requested }} ml</td>
+                            <td>
+                                <span class="badge bg-info">{{ req.blood_group }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ req.units_requested }}</strong> ml
+                                {% if req.dispatch_count > 0 %}
+                                    <br>
+                                    <small class="text-success">
+                                        <i class="fas fa-check-circle"></i> {{ req.dispatch_count }} dispatched
+                                    </small>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if req.urgency == 'emergency' %}
                                     <span class="badge bg-danger">Emergency</span>
@@ -113,26 +127,35 @@
                                     <span class="badge bg-success">Dispatched</span>
                                 {% endif %}
                             </td>
-                            <td>{{ req.approved_at|date:"M d, Y H:i" }}</td>
-                            <td>{{ req.approved_by_name|default:"—" }}</td>
+                            <td>
+                                {{ req.approved_at|date:"M d, Y" }}
+                                <br>
+                                <small class="text-muted">{{ req.approved_at|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {{ req.approved_by_name|default:"—" }}
+                                <br>
+                                <small class="text-muted">ID: {{ req.approved_by.employee_id|default:"—" }}</small>
+                            </td>
                             <td>
                                 {% if req.status == 'approved' %}
                                     <a href="{% url 'blood_bank_technician:dispatch_request' req.id %}" 
-                                       class="btn btn-sm btn-success">
-                                        <i class="fas fa-truck"></i> Dispatch
+                                       class="btn btn-sm btn-success w-100 mb-1">
+                                        <i class="fas fa-truck me-1"></i> Dispatch
                                     </a>
                                 {% else %}
-                                    <span class="badge bg-success">✓ Dispatched</span>
+                                    <span class="badge bg-success d-block mb-1">
+                                        <i class="fas fa-check-circle"></i> Dispatched
+                                    </span>
                                     {% if req.dispatch_count > 0 %}
-                                        <br>
-                                        <small class="text-muted">
+                                        <small class="text-muted d-block text-center">
                                             {{ req.dispatch_count }} item(s)
                                         </small>
                                     {% endif %}
                                 {% endif %}
                                 <a href="{% url 'blood_bank_technician:request_detail' req.id %}" 
-                                   class="btn btn-sm btn-info mt-1">
-                                    <i class="fas fa-eye"></i> Details
+                                   class="btn btn-sm btn-info w-100">
+                                    <i class="fas fa-eye me-1"></i> Details
                                 </a>
                             </td>
                         </tr>
@@ -140,13 +163,39 @@
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination (if needed) -->
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
         {% else %}
             <div class="text-center py-5">
                 <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
                 <h5>No Approved Requests</h5>
                 <p class="text-muted">There are no approved or dispatched requests at the moment.</p>
                 <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-primary">
-                    View Pending Requests
+                    <i class="fas fa-clock me-2"></i>View Pending Requests
                 </a>
             </div>
         {% endif %}
@@ -183,6 +232,31 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // Add search functionality (optional)
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'form-control mt-3';
+    searchInput.placeholder = 'Search by request number, hospital, or patient...';
+    searchInput.id = 'tableSearch';
+    
+    const filterCard = document.querySelector('.card.mb-4 .card-body');
+    if (filterCard) {
+        filterCard.appendChild(searchInput);
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            requestRows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
 });
 </script>
 

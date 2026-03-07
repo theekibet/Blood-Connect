@@ -8,16 +8,11 @@
 {% block content %}
 <div class="row">
     <div class="col-md-8 mx-auto">
-        <div class="card mb-4">
+        <div class="card mb-4 shadow">
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0">
-                    <i class="fas fa-truck"></i> 
-                    Dispatch Blood Request #{{ request.id }}
-                    {% if request_type == 'patient' %}
-                        <span class="badge bg-light text-dark ms-2">Patient Request</span>
-                    {% else %}
-                        <span class="badge bg-light text-dark ms-2">Donor Request</span>
-                    {% endif %}
+                    <i class="fas fa-truck me-2"></i> 
+                    Dispatch Blood Request #{{ request.request_number }}
                 </h5>
             </div>
             <div class="card-body">
@@ -25,61 +20,67 @@
                 <div class="alert alert-info">
                     <div class="row">
                         <div class="col-md-6">
-                            <strong>Patient:</strong> 
-                            {% if request_type == 'patient' %}
-                                {{ request.get_full_name }}
-                            {% else %}
-                                {{ request.patient_first_name }} {{ request.patient_last_name }}
-                            {% endif %}
-                            <br>
-                            <strong>Blood Group:</strong> <span class="badge bg-info">{{ request.bloodgroup }}</span><br>
-                            <strong>Volume:</strong> {{ request.unit }} ml
+                            <strong>Patient:</strong> {{ patient_name }}<br>
+                            <strong>Blood Group:</strong> 
+                            <span class="badge bg-info">{{ request.blood_group }}</span><br>
+                            <strong>Volume Requested:</strong> {{ request.units_requested }} ml
                         </div>
                         <div class="col-md-6">
-                            <strong>Center:</strong> {{ request.donation_center.name }}<br>
+                            <strong>Hospital:</strong> {{ request.hospital.name }}<br>
                             <strong>Approved:</strong> {{ request.approved_at|date:"M d, Y H:i" }}<br>
                             <strong>Approved By:</strong> {{ request.approved_by.user.get_full_name|default:"Unknown" }}
                         </div>
                     </div>
-                    {% if request_type == 'donor' %}
                     <div class="row mt-2">
                         <div class="col-12">
                             <small class="text-muted">
-                                <i class="fas fa-info-circle"></i> 
-                                Request made by donor: {{ request.request_by_donor.user.get_full_name }}
+                                <i class="fas fa-info-circle me-1"></i>
+                                Request created: {{ request.created_at|date:"M d, Y H:i" }}
                             </small>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
 
                 <!-- Stock Units to Dispatch -->
-                <h6 class="mb-3"><i class="fas fa-boxes"></i> Stock Units to Dispatch</h6>
+                <h6 class="mb-3 fw-bold">
+                    <i class="fas fa-boxes me-2"></i>Stock Units to Dispatch
+                </h6>
                 
-                {% if deducted_units %}
+                {% if deducted_transactions %}
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
                                 <tr>
                                     <th>Barcode</th>
                                     <th>Blood Group</th>
-                                    <th>Volume</th>
+                                    <th>Volume (ml)</th>
+                                    <th>Component</th>
                                     <th>Expiry Date</th>
-                                    <th>Donor</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for tx in deducted_units %}
+                                {% for tx in deducted_transactions %}
                                 <tr>
-                                    <td><code>{{ tx.stockunit.barcode }}</code></td>
-                                    <td>{{ tx.stockunit.bloodgroup }}</td>
-                                    <td>{{ tx.quantity_deducted }} ml</td>
-                                    <td>{{ tx.stockunit.expiry_date|date:"M d, Y" }}</td>
                                     <td>
-                                        {% if tx.stockunit.blood_donation and tx.stockunit.blood_donation.donor %}
-                                            {{ tx.stockunit.blood_donation.donor.user.get_full_name }}
+                                        <code class="bg-light p-1 rounded">{{ tx.stockunit.barcode }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ tx.stockunit.bloodgroup }}</span>
+                                    </td>
+                                    <td>{{ tx.quantity_deducted }} ml</td>
+                                    <td>
+                                        <small>{{ tx.stockunit.get_component_type_display|truncatechars:20 }}</small>
+                                    </td>
+                                    <td>
+                                        {% if tx.stockunit.expiry_date %}
+                                            <span class="{% if tx.stockunit.expiry_date < today %}text-danger{% endif %}">
+                                                {{ tx.stockunit.expiry_date|date:"M d, Y" }}
+                                                {% if tx.stockunit.expiry_date < today %}
+                                                    <i class="fas fa-exclamation-circle text-danger ms-1" title="Expired"></i>
+                                                {% endif %}
+                                            </span>
                                         {% else %}
-                                            <span class="text-muted">Unknown</span>
+                                            <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -88,117 +89,156 @@
                         </table>
                         
                         <!-- Total Summary -->
-                        <div class="alert alert-success">
-                            <strong>Total:</strong> {{ deducted_units|length }} unit(s) | 
-                            <strong>Total Volume:</strong> 
-                            {% with total=0 %}
-                                {% for tx in deducted_units %}
-                                    {% if forloop.first %}
-                                        {% with total=tx.quantity_deducted %}
-                                            {{ total }} ml
-                                        {% endwith %}
-                                    {% endif %}
-                                {% endfor %}
-                            {% endwith %}
+                        <div class="alert alert-success d-flex justify-content-between align-items-center">
+                            <span>
+                                <strong>Total Units:</strong> {{ deducted_transactions|length }} 
+                                <span class="mx-2">|</span>
+                                <strong>Total Volume:</strong> 
+                                {% with total=0 %}
+                                    {% for tx in deducted_transactions %}
+                                        {% if forloop.first %}
+                                            {% with total=tx.quantity_deducted %}
+                                                {{ total }} ml
+                                            {% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endwith %}
+                            </span>
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-clock me-1"></i>Ready for pickup
+                            </span>
                         </div>
                     </div>
                 {% else %}
                     <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
+                        <i class="fas fa-exclamation-triangle me-2"></i>
                         No stock units found for this request. Please ensure the request has been approved and stock has been deducted.
                     </div>
                 {% endif %}
 
                 <!-- Dispatch Form -->
-                <form method="post">
+                <form method="post" class="mt-4">
                     {% csrf_token %}
-                    <input type="hidden" name="request_type" value="{{ request_type }}">
                     
-                    <h6 class="mb-3"><i class="fas fa-clipboard-check"></i> Dispatch Details</h6>
+                    <h6 class="mb-3 fw-bold">
+                        <i class="fas fa-clipboard-check me-2"></i>Dispatch Details
+                    </h6>
                     
-                    <div class="row mb-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label for="collected_by_name" class="form-label fw-bold">
-                                <i class="fas fa-user"></i> Collector's Full Name *
+                                <i class="fas fa-user me-1"></i>Collector's Full Name *
                             </label>
-                            <input type="text" class="form-control" id="collected_by_name" name="collected_by_name" 
-                                   placeholder="e.g., John Doe" required
-                                   {% if not deducted_units %}disabled{% endif %}>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="collected_by_name" 
+                                   name="collected_by_name" 
+                                   placeholder="e.g., John Doe" 
+                                   required
+                                   {% if not deducted_transactions %}disabled{% endif %}>
+                            <div class="form-text text-muted small">Full name of person collecting blood</div>
                         </div>
                         <div class="col-md-6">
                             <label for="collected_by_id" class="form-label fw-bold">
-                                <i class="fas fa-id-card"></i> Collector's ID/Staff Number *
+                                <i class="fas fa-id-card me-1"></i>Collector's ID/Staff Number *
                             </label>
-                            <input type="text" class="form-control" id="collected_by_id" name="collected_by_id" 
-                                   placeholder="e.g., NH12345" required
-                                   {% if not deducted_units %}disabled{% endif %}>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="collected_by_id" 
+                                   name="collected_by_id" 
+                                   placeholder="e.g., NH12345" 
+                                   required
+                                   {% if not deducted_transactions %}disabled{% endif %}>
+                            <div class="form-text text-muted small">Official ID or staff number</div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="collection_time" class="form-label fw-bold">
-                            <i class="fas fa-clock"></i> Collection Date & Time
+                        <label for="collected_by_phone" class="form-label fw-bold">
+                            <i class="fas fa-phone me-1"></i>Collector's Phone Number
                         </label>
-                        <input type="datetime-local" class="form-control" id="collection_time" name="collection_time" 
-                               value="{{ now|date:'Y-m-d\\TH:i' }}"
-                               {% if not deducted_units %}disabled{% endif %}>
-                        <div class="form-text text-muted">Leave blank to use current time</div>
+                        <input type="tel" 
+                               class="form-control" 
+                               id="collected_by_phone" 
+                               name="collected_by_phone" 
+                               placeholder="e.g., +1234567890"
+                               {% if not deducted_transactions %}disabled{% endif %}>
+                        <div class="form-text text-muted small">Optional contact number</div>
                     </div>
 
                     <div class="mb-3">
                         <label for="notes" class="form-label fw-bold">
-                            <i class="fas fa-notes-medical"></i> Additional Notes
+                            <i class="fas fa-notes-medical me-1"></i>Additional Notes
                         </label>
-                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                        <textarea class="form-control" 
+                                  id="notes" 
+                                  name="notes" 
+                                  rows="2" 
                                   placeholder="Any special instructions or observations..."
-                                  {% if not deducted_units %}disabled{% endif %}></textarea>
+                                  {% if not deducted_transactions %}disabled{% endif %}></textarea>
                     </div>
 
                     <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
+                        <i class="fas fa-exclamation-triangle me-2"></i>
                         <strong>Important:</strong> Verify collector's identification before handing over the blood units.
+                        <ul class="mb-0 mt-2 small">
+                            <li>Check ID matches the name entered</li>
+                            <li>Ensure cold chain is maintained during transport</li>
+                            <li>Provide handling instructions to collector</li>
+                        </ul>
                     </div>
 
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{% url 'blood_bank_technician:approved_requests' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Back
+                        <a href="{% url 'blood_bank_technician:approved_requests' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back
                         </a>
-                        <button type="submit" class="btn btn-success" 
+                        <button type="submit" 
+                                class="btn btn-success px-4" 
                                 onclick="return confirmDispatch()"
-                                {% if not deducted_units %}disabled{% endif %}>
-                            <i class="fas fa-check-circle"></i> Confirm Dispatch
+                                {% if not deducted_transactions %}disabled{% endif %}>
+                            <i class="fas fa-check-circle me-2"></i>Confirm Dispatch
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Dispatch History (if any) -->
-        {% if request.dispatches.exists %}
-        <div class="card">
+        <!-- Dispatch History -->
+        {% if dispatches %}
+        <div class="card shadow">
             <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="fas fa-history"></i> Dispatch History</h6>
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-history me-2"></i>Dispatch History
+                </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
                             <tr>
                                 <th>Date</th>
                                 <th>Dispatched By</th>
                                 <th>Collected By</th>
                                 <th>ID</th>
+                                <th>Phone</th>
                                 <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for dispatch in request.dispatches.all %}
+                            {% for dispatch in dispatches %}
                             <tr>
-                                <td>{{ dispatch.dispatch_date|date:"M d, Y H:i" }}</td>
+                                <td>{{ dispatch.collection_time|date:"M d, Y H:i" }}</td>
                                 <td>{{ dispatch.dispatched_by.user.get_full_name|default:"Unknown" }}</td>
                                 <td>{{ dispatch.collected_by_name }}</td>
-                                <td>{{ dispatch.collected_by_id }}</td>
-                                <td>{{ dispatch.notes|truncatechars:30 }}</td>
+                                <td><code>{{ dispatch.collected_by_id }}</code></td>
+                                <td>{{ dispatch.collected_by_phone|default:"—" }}</td>
+                                <td>
+                                    {% if dispatch.notes %}
+                                        <span title="{{ dispatch.notes }}">{{ dispatch.notes|truncatechars:20 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -212,65 +252,67 @@
 
 <script>
 function confirmDispatch() {
-    return confirm('Are you sure you want to dispatch this blood? This action cannot be undone.');
+    const name = document.getElementById('collected_by_name').value;
+    const id = document.getElementById('collected_by_id').value;
+    
+    if (!name || !id) {
+        alert('Please fill in both Collector Name and ID.');
+        return false;
+    }
+    
+    return confirm('⚠️ Are you sure you want to dispatch this blood? This action cannot be undone.');
 }
 
-// Enable/disable submit based on required fields
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const submitBtn = document.querySelector('button[type="submit"]');
-    const collectorName = document.getElementById('collected_by_name');
-    const collectorId = document.getElementById('collected_by_id');
-    const hasDeductedUnits = {{ deducted_units|length }} > 0;
+    const hasTransactions = {{ deducted_transactions|length }} > 0;
     
-    if (!hasDeductedUnits) {
-        // If no deducted units, show a message
+    if (!hasTransactions) {
         const alertDiv = document.createElement('div');
         alertDiv.className = 'alert alert-danger mt-3';
-        alertDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Cannot dispatch: No stock units have been deducted for this request. Please ensure the request has been properly approved.';
+        alertDiv.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Cannot dispatch: No stock units have been deducted for this request. Please ensure the request has been properly approved.';
         document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('form'));
     }
     
+    // Add loading state on form submit
     form.addEventListener('submit', function(e) {
-        if (!hasDeductedUnits) {
+        if (!hasTransactions) {
             e.preventDefault();
             return false;
         }
         
-        if (!collectorName.value || !collectorId.value) {
-            e.preventDefault();
-            alert('Please fill in all required fields (Collector Name and ID).');
-            return false;
-        }
-        
-        // Show loading state
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dispatching...';
+        // Disable submit button to prevent double submission
         submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
     });
 });
 
-// Preview functionality
-function previewDispatch() {
+// Real-time preview
+function updatePreview() {
     const name = document.getElementById('collected_by_name').value;
     const id = document.getElementById('collected_by_id').value;
-    const time = document.getElementById('collection_time').value;
+    const phone = document.getElementById('collected_by_phone').value;
     
+    let previewHtml = '';
     if (name && id) {
-        const previewHtml = `
+        previewHtml = `
             <div class="alert alert-info mt-3">
-                <h6>Dispatch Preview:</h6>
+                <h6 class="fw-bold"><i class="fas fa-eye me-2"></i>Dispatch Preview:</h6>
                 <p class="mb-1"><strong>Collector:</strong> ${name} (ID: ${id})</p>
-                <p class="mb-0"><strong>Time:</strong> ${time ? new Date(time).toLocaleString() : 'Now'}</p>
+                ${phone ? `<p class="mb-1"><strong>Phone:</strong> ${phone}</p>` : ''}
+                <p class="mb-0"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
             </div>
         `;
-        
-        // Remove any existing preview
-        const existingPreview = document.getElementById('dispatch-preview');
-        if (existingPreview) {
-            existingPreview.remove();
-        }
-        
-        // Add new preview
+    }
+    
+    // Update or remove preview
+    const existingPreview = document.getElementById('dispatch-preview');
+    if (existingPreview) {
+        existingPreview.remove();
+    }
+    
+    if (previewHtml) {
         const previewDiv = document.createElement('div');
         previewDiv.id = 'dispatch-preview';
         previewDiv.innerHTML = previewHtml;
@@ -278,10 +320,27 @@ function previewDispatch() {
     }
 }
 
-// Add preview on input change
-document.getElementById('collected_by_name').addEventListener('input', previewDispatch);
-document.getElementById('collected_by_id').addEventListener('input', previewDispatch);
-document.getElementById('collection_time').addEventListener('input', previewDispatch);
+// Add preview listeners
+document.getElementById('collected_by_name').addEventListener('input', updatePreview);
+document.getElementById('collected_by_id').addEventListener('input', updatePreview);
+document.getElementById('collected_by_phone').addEventListener('input', updatePreview);
 </script>
 
+<!-- Custom Styles -->
+<style>
+@media (max-width: 768px) {
+    .btn-success, .btn-outline-secondary {
+        width: 100%;
+        margin: 5px 0;
+    }
+    
+    .d-flex {
+        flex-direction: column;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+}
+</style>
 {% endblock %}

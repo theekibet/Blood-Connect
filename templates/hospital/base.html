@@ -3,25 +3,51 @@
 
 {% block title %}Hospital Portal - BloodConnect{% endblock %}
 
-{% block nav_icon %}fas fa-hospital{% endblock %}
-{% block app_name %}Hospital Portal{% endblock %}
-
-{% block notifications_url %}#{% endblock %}
-
-{% block user_role_label %}Hospital Staff{% endblock %}
-
-{% block profile_url %}{% url 'hospital:profile' %}{% endblock %}
-{% block edit_profile_url %}{% url 'hospital:profile' %}{% endblock %}
-
-{% block sidebar_icon %}fas fa-hospital{% endblock %}
-{% block sidebar_title %}Hospital Menu{% endblock %}
+{% block sidebar_bg %}#16a085{% endblock %}
+{% block sidebar_hover %}#1abc9c{% endblock %}
+{% block sidebar_active %}#f39c12{% endblock %}
 
 {% block extra_nav_items %}
-    <!-- Hospital-specific nav items can go here -->
+    <!-- Notifications Icon -->
+    <li class="nav-item me-2 position-relative">
+        <a class="nav-link" href="{% url 'utils:notifications' %}" title="Notifications">
+            <i class="fas fa-bell" style="color: white;"></i>
+            {% if unread_notifications_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ unread_notifications_count }}
+                    <span class="visually-hidden">unread notifications</span>
+                </span>
+            {% endif %}
+        </a>
+    </li>
+
+    <!-- Pending Requests Badge (if hospital user has this context) -->
+    {% with pending=pending_count|default:0 %}
+        {% if pending > 0 %}
+        <li class="nav-item me-2 position-relative">
+            <a class="nav-link" href="{% url 'hospital:request_list' %}?status=pending" title="Pending Requests">
+                <i class="fas fa-clock" style="color: white;"></i>
+                <span class="pending-badge">{{ pending }}</span>
+            </a>
+        </li>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
+{% block profile_menu %}
+    <li><a class="dropdown-item" href="{% url 'hospital:profile' %}"><i class="fas fa-id-card me-2"></i>Hospital Profile</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'utils:notifications' %}"><i class="fas fa-bell me-2"></i>Notifications
+        {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ unread_notifications_count }}</span>
+        {% endif %}
+    </a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-danger" href="{% url 'hospital:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
 {% endblock %}
 
 {% block sidebar_menu %}
-    <!-- Main Dashboard -->
+    <!-- MAIN -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
         <a href="{% url 'hospital:dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
@@ -30,7 +56,7 @@
         </a>
     </div>
 
-    <!-- Blood Requests -->
+    <!-- BLOOD REQUESTS -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">BLOOD REQUESTS</div>
         <a href="{% url 'hospital:request_list' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}">
@@ -43,15 +69,17 @@
         </a>
     </div>
 
-    <!-- Request Filters (Quick Links) -->
+    <!-- QUICK FILTERS -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">QUICK FILTERS</div>
         <a href="{% url 'hospital:request_list' %}?status=pending" class="sidebar-menu-item">
             <i class="fas fa-hourglass-half"></i>
             <span>Pending Requests</span>
-            {% if pending_count > 0 %}
-                <span class="badge badge-warning ms-auto">{{ pending_count }}</span>
-            {% endif %}
+            {% with pending=pending_count|default:0 %}
+                {% if pending > 0 %}
+                    <span class="badge bg-warning ms-auto">{{ pending }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
         <a href="{% url 'hospital:request_list' %}?status=approved" class="sidebar-menu-item">
             <i class="fas fa-check-circle"></i>
@@ -67,8 +95,20 @@
         </a>
     </div>
 
-    <!-- Administration (for admin users only) -->
-    {% if hospital_user.role == 'admin' %}
+    <!-- NOTIFICATIONS SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">COMMUNICATION</div>
+        <a href="{% url 'utils:notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_notifications_count > 0 %}
+                <span class="badge bg-danger ms-auto">{{ unread_notifications_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- ADMINISTRATION (for admin users only) -->
+    {% if hospital_user and hospital_user.role == 'admin' %}
     <div class="sidebar-section">
         <div class="sidebar-section-title">ADMINISTRATION</div>
         <a href="{% url 'hospital:dashboard_admin' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}">
@@ -78,62 +118,62 @@
         <a href="{% url 'hospital:user_management' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
             <i class="fas fa-users-cog"></i>
             <span>User Management</span>
-            {% if pending_users_count > 0 %}
-                <span class="badge badge-danger ms-auto">{{ pending_users_count }}</span>
-            {% endif %}
+            {% with pending_users=pending_users_count|default:0 %}
+                {% if pending_users > 0 %}
+                    <span class="badge bg-danger ms-auto">{{ pending_users }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
     </div>
     {% endif %}
+
+    <!-- ACCOUNT SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ACCOUNT</div>
+        <a href="{% url 'password_change' %}" class="sidebar-menu-item">
+            <i class="fas fa-key"></i>
+            <span>Change Password</span>
+        </a>
+        <a href="{% url 'hospital:logout' %}" class="sidebar-menu-item text-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </div>
 {% endblock %}
 
-{% block profile_menu %}
-    <a class="dropdown-item" href="{% url 'hospital:profile' %}">
-        <i class="fas fa-id-card"></i> Hospital Profile
-    </a>
-    {{ block.super }}
-{% endblock %}
+{% block extra_css %}
+<style>
+    /* Lab tech sidebar colors */
+    :root {
+        --sidebar-bg: #9b59b6;
+        --sidebar-hover: #8e44ad;
+        --sidebar-active: #f39c12;
+    }
 
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('✅ Hospital base template loaded');
-        
-        // Update notification badge if needed
-        {% if pending_count > 0 %}
-        const notificationBadge = document.querySelector('.notification-badge');
-        if (notificationBadge) {
-            notificationBadge.textContent = "{{ pending_count }}";
-            notificationBadge.style.display = 'flex';
-        }
-        {% endif %}
-
-        // Sidebar active state for mobile
-        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
-        sidebarLinks.forEach(link => {
-            if (link.classList.contains('active')) {
-                link.setAttribute('aria-current', 'page');
-            }
-        });
-
-        // Real-time pending requests count update
-        function updatePendingCount() {
-            fetch('/hospital/api/pending-count/')
-                .then(response => response.json())
-                .then(data => {
-                    const sidebarBadge = document.querySelector('a[href*="pending"] .badge');
-                    if (sidebarBadge && data.count > 0) {
-                        sidebarBadge.textContent = data.count;
-                        sidebarBadge.style.display = 'inline-block';
-                    }
-                    if (sidebarBadge && data.count === 0) {
-                        sidebarBadge.style.display = 'none';
-                    }
-                })
-                .catch(error => console.error('Error updating pending count:', error));
-        }
-
-        // Update every 30 seconds (optional)
-        // setInterval(updatePendingCount, 30000);
-    });
-</script>
+    /* Badge notification styling */
+    .badge-notification {
+        background: #f39c12;
+        color: #000;
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    /* Active menu item styling */
+    .sidebar-menu-item.active {
+        background: var(--sidebar-active) !important;
+        color: #000 !important;
+        font-weight: bold;
+        border-left: 4px solid white;
+    }
+    
+    .sidebar-menu-item.active i {
+        color: #000 !important;
+    }
+    
+    /* Hover effect for menu items */
+    .sidebar-menu-item:hover {
+        background: var(--sidebar-hover) !important;
+    }
+</style>
 {% endblock %}

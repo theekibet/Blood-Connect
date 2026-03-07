@@ -1,0 +1,45 @@
+{% extends 'lab_technologist/base.html' %}
+{% load static %}
+
+{% block title %}Pending Approval - Lab Technologist{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-white text-center py-4">
+                    <i class="fas fa-clock fa-4x mb-3"></i>
+                    <h3 class="mb-0">Account Pending Approval</h3>
+                </div>
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                        <h4>Registration Successful!</h4>
+                        <p class="lead">Thank you for registering as a Lab Technologist.</p>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Your account is currently pending approval from an administrator.</strong>
+                        <p class="mb-0 mt-2">You will be notified once your account is activated. This usually takes 1-2 business days.</p>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-center">
+                        <a href="{% url 'lab_technologist:login' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Login
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center py-3">
+                    <small class="text-muted">
+                        Need help? <a href="{% url 'contact' %}">Contact Support</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

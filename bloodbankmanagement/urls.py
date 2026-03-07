@@ -123,7 +123,10 @@ urlpatterns = [
     path('admin/reviews/', blood_views.admin_reviews_dashboard, name='admin_reviews_dashboard'),
     path('admin/reviews/<int:review_id>/feature/', blood_views.feature_review_as_testimonial, name='feature_review'),
     path('save-review-step/', blood_views.save_review_step, name='save_review_step'),
-    path('generate-initial-barcodes/', blood_views.generate_initial_barcodes, name='generate_initial_barcodes'),
+
+    path('testing-guide/', blood_views.testing_guide_view, name='testing_guide'),
+    
+    path('utils/', include('utils.urls')),
 ]
 
 

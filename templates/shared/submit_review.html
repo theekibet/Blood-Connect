@@ -1,4 +1,3 @@
-
 {% extends 'shared/base.html' %}
 {% load static %}
 
@@ -6,181 +5,265 @@
     {% if has_review %}Update Your Review{% else %}Share Your Feedback{% endif %} - BloodConnect
 {% endblock %}
 
-<!-- ===== ADD SIDEBAR MENU BASED ON USER ROLE ===== -->
-{% block sidebar_icon %}
-    {% if user_role == 'donor' %}
-        <i class="fas fa-tint"></i>
-    {% elif user_role == 'phlebotomist' %}
-        <i class="fas fa-user-nurse"></i>
-    {% elif user_role == 'hospital' %}
-        <i class="fas fa-hospital"></i>
-    {% elif user_role == 'admin' %}
-        <i class="fas fa-cog"></i>
-    {% else %}
-        <i class="fas fa-user"></i>
-    {% endif %}
-{% endblock %}
-
-{% block sidebar_title %}
-    {% if user_role == 'donor' %}
-        Donor Portal
-    {% elif user_role == 'phlebotomist' %}
-        Phlebotomist Portal
-    {% elif user_role == 'hospital' %}
-        Hospital Portal
-    {% elif user_role == 'admin' %}
-        Admin Portal
-    {% else %}
-        BloodConnect
-    {% endif %}
-{% endblock %}
-
-{% block sidebar_menu %}
-    <!-- Donor Sidebar Menu -->
-    {% if user_role == 'donor' %}
-    <div class="sidebar-menu-item">
-        <a href="{% url 'donor:donor-dashboard' %}" class="sidebar-link">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'donor:donor-profile' %}" class="sidebar-link">
-            <i class="fas fa-user-circle"></i>
-            <span>My Profile</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'donor:donation-history' %}" class="sidebar-link">
-            <i class="fas fa-history"></i>
-            <span>Donation History</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'donor:donor-eligibility' %}" class="sidebar-link">
-            <i class="fas fa-clipboard-check"></i>
-            <span>Eligibility</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'donor:events' %}" class="sidebar-link">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Blood Drives</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'donor:volunteer' %}" class="sidebar-link">
-            <i class="fas fa-hands-helping"></i>
-            <span>Volunteer</span>
-        </a>
-    </div>
+{% block extra_css %}
+<style>
+    /* Step Indicator Styling */
+    .step-indicator {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        opacity: 0.5;
+        transition: all 0.3s;
+    }
     
-    <!-- Phlebotomist Sidebar Menu -->
-    {% elif user_role == 'phlebotomist' %}
-    <div class="sidebar-menu-item">
-        <a href="{% url 'phlebotomist:phlebotomist-dashboard' %}" class="sidebar-link">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'phlebotomist:phlebotomist-appointments' %}" class="sidebar-link">
-            <i class="fas fa-calendar-check"></i>
-            <span>Appointments</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'phlebotomist:phlebotomist-collections' %}" class="sidebar-link">
-            <i class="fas fa-tint"></i>
-            <span>Collections</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}" class="sidebar-link">
-            <i class="fas fa-user-circle"></i>
-            <span>My Profile</span>
-        </a>
-    </div>
+    .step-indicator.active {
+        opacity: 1;
+    }
     
-    <!-- Hospital Sidebar Menu -->
-    {% elif user_role == 'hospital' %}
-    <div class="sidebar-menu-item">
-        <a href="{% url 'hospital:dashboard' %}" class="sidebar-link">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'hospital:request-blood' %}" class="sidebar-link">
-            <i class="fas fa-hand-holding-heart"></i>
-            <span>Request Blood</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'hospital:request-history' %}" class="sidebar-link">
-            <i class="fas fa-history"></i>
-            <span>Request History</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'hospital:profile' %}" class="sidebar-link">
-            <i class="fas fa-hospital"></i>
-            <span>Hospital Profile</span>
-        </a>
-    </div>
+    .step-indicator:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
     
-    <!-- Admin Sidebar Menu -->
-    {% elif user_role == 'admin' %}
-    <div class="sidebar-menu-item">
-        <a href="{% url 'admin-dashboard' %}" class="sidebar-link">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'admin_contacts' %}" class="sidebar-link">
-            <i class="fas fa-envelope"></i>
-            <span>Contact Messages</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'admin-post-notification' %}" class="sidebar-link">
-            <i class="fas fa-bell"></i>
-            <span>Send Notification</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="{% url 'admin_reviews_dashboard' %}" class="sidebar-link">
-            <i class="fas fa-star"></i>
-            <span>User Reviews</span>
-        </a>
-    </div>
-    <div class="sidebar-menu-item">
-        <a href="/{{ ADMIN_SECRET_URL }}/" class="sidebar-link">
-            <i class="fas fa-cog"></i>
-            <span>Django Admin</span>
-        </a>
-    </div>
-    {% endif %}
-{% endblock %}
+    .step-indicator.active:not(:last-child)::after {
+        background: #0d6efd;
+    }
+    
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        background: #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-weight: bold;
+        color: #495057;
+        position: relative;
+        z-index: 2;
+        transition: all 0.3s;
+    }
+    
+    .step-indicator.active .step-circle {
+        background: #0d6efd;
+        color: white;
+    }
+    
+    .step-indicator span {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .step-indicator.active span {
+        color: #0d6efd;
+        font-weight: 500;
+    }
 
-<!-- ===== ADD NOTIFICATIONS URL ===== -->
-{% block notifications_url %}
-    {% if user_role == 'donor' %}
-        {% url 'donor:donor-notifications' %}
-
-    {% elif user_role == 'hospital' %}
-        {% url 'hospital:notifications' %}
-    {% else %}
-        #
-    {% endif %}
+    /* Rating Stars Styling */
+    .rating-large {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        font-size: 3rem;
+    }
+    
+    .rating-large i {
+        cursor: pointer;
+        transition: transform 0.2s;
+        color: #ffc107;
+    }
+    
+    .rating-large i:hover {
+        transform: scale(1.2);
+    }
+    
+    .rating-preview i {
+        font-size: 2rem;
+        color: #ffc107;
+        margin: 0 0.2rem;
+    }
+    
+    /* Form Styling */
+    select.form-select,
+    textarea.form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem;
+        transition: all 0.3s;
+    }
+    
+    select.form-select:focus,
+    textarea.form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    select.form-select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+        appearance: none;
+    }
+    
+    /* Card Enhancements */
+    .card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-bottom: none;
+        padding: 1.5rem;
+    }
+    
+    .card-body {
+        padding: 2rem;
+    }
+    
+    /* Button Styling */
+    .btn {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-lg {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .btn-link {
+        text-decoration: none;
+    }
+    
+    .btn-link:hover {
+        transform: none;
+        box-shadow: none;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .step-indicator:not(:last-child)::after {
+            top: 15px;
+        }
+        
+        .step-circle {
+            width: 30px;
+            height: 30px;
+            font-size: 0.9rem;
+        }
+        
+        .step-indicator span {
+            font-size: 0.8rem;
+        }
+        
+        .rating-large {
+            font-size: 2rem;
+            gap: 0.5rem;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+    }
+    
+    /* Animation */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .card {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    /* Checkbox Group Styling */
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .checkbox-item {
+        flex: 1 0 calc(50% - 0.5rem);
+        min-width: 150px;
+    }
+    
+    .checkbox-item label {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .checkbox-item label:hover {
+        background: #e9ecef;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+        margin-right: 0.5rem;
+    }
+    
+    /* Radio Group Styling */
+    .radio-group {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .radio-item label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+    
+    /* Rating select styling */
+    select[name="rating"] {
+        font-size: 1.2rem;
+        padding: 0.5rem 2rem 0.5rem 1rem;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="row">
         <div class="col-lg-8 mx-auto">
-            <!-- Progress Steps (your existing progress steps) -->
+            <!-- Progress Steps -->
             <div class="mb-4">
                 <div class="d-flex justify-content-between">
                     <div class="step-indicator {% if step >= 1 %}active{% endif %}">
@@ -202,59 +285,69 @@
                 </div>
             </div>
 
-            <!-- Rest of your review form content (keep all your existing form code) -->
-            <form method="post" id="reviewForm">
-                {% csrf_token %}
-                
-                <!-- Step 1: Rating -->
-                {% if step == 1 %}
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0"><i class="fas fa-star me-2"></i>How was your experience?</h4>
-                    </div>
-                    <div class="card-body text-center py-5">
-                        <div class="rating-large mb-4">
-                            {{ form.rating }}
-                        </div>
-                        <div class="rating-preview mb-3" id="ratingPreview"></div>
-                        <button type="button" class="btn btn-primary btn-lg next-step">Continue →</button>
-                    </div>
+            <!-- Step 1: Rating -->
+            {% if step == 1 %}
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-star me-2"></i>How was your experience?</h4>
                 </div>
-                {% endif %}
+                <div class="card-body text-center py-5">
+                    <form method="post" id="step1Form">
+                        {% csrf_token %}
+                        <div class="rating-large mb-4">
+                            <i class="far fa-star" data-rating="1"></i>
+                            <i class="far fa-star" data-rating="2"></i>
+                            <i class="far fa-star" data-rating="3"></i>
+                            <i class="far fa-star" data-rating="4"></i>
+                            <i class="far fa-star" data-rating="5"></i>
+                        </div>
+                        {{ form.rating }}
+                        <div class="rating-preview mb-3" id="ratingPreview"></div>
+                        <button type="button" class="btn btn-primary btn-lg next-step" data-step="1">Continue →</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
 
-                <!-- Step 2: Written Review -->
-                {% if step == 2 %}
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0"><i class="fas fa-pen me-2"></i>Tell us more</h4>
-                    </div>
-                    <div class="card-body">
+            <!-- Step 2: Written Review -->
+            {% if step == 2 %}
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-pen me-2"></i>Tell us more</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="step2Form">
+                        {% csrf_token %}
                         <div class="mb-4">
                             <label class="form-label fw-bold">Your Review</label>
                             {{ form.comment }}
+                            <small class="text-muted">Share your experience to help others</small>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <button type="button" class="btn btn-outline-secondary prev-step">← Back</button>
-                            <button type="button" class="btn btn-primary next-step">Continue →</button>
+                            <button type="button" class="btn btn-outline-secondary prev-step" data-step="1">← Back</button>
+                            <button type="button" class="btn btn-primary next-step" data-step="2">Continue →</button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-                {% endif %}
+            </div>
+            {% endif %}
 
-                <!-- Step 3: Ask if they want to take survey -->
-                {% if step == 3 %}
-                <div class="card shadow">
-                    <div class="card-header bg-success text-white">
-                        <h4 class="mb-0"><i class="fas fa-question-circle me-2"></i>Help us improve!</h4>
+            <!-- Step 3: Ask if they want to take survey -->
+            {% if step == 3 %}
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-question-circle me-2"></i>Help us improve!</h4>
+                </div>
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-heart text-danger fa-4x mb-3"></i>
+                        <h3>Would you like to take a quick survey?</h3>
+                        <p class="text-muted">Your answers help us make BloodConnect better for everyone.</p>
+                        <p class="small text-muted">The survey takes less than 2 minutes.</p>
                     </div>
-                    <div class="card-body text-center py-5">
-                        <div class="mb-4">
-                            <i class="fas fa-heart text-danger fa-4x mb-3"></i>
-                            <h3>Would you like to take a quick survey?</h3>
-                            <p class="text-muted">Your answers help us make BloodConnect better for everyone.</p>
-                            <p class="small text-muted">The survey takes less than 2 minutes.</p>
-                        </div>
-                        
+                    
+                    <form method="post" id="step3Form">
+                        {% csrf_token %}
                         <div class="d-flex justify-content-center gap-3">
                             <button type="button" class="btn btn-success btn-lg" onclick="chooseSurvey('yes')">
                                 <i class="fas fa-check-circle me-2"></i>Yes, I'll help!
@@ -263,22 +356,26 @@
                                 <i class="fas fa-times-circle me-2"></i>No, thanks
                             </button>
                         </div>
-                        
-                        <div class="mt-4">
-                            <button type="button" class="btn btn-link prev-step">← Back to review</button>
-                        </div>
+                    </form>
+                    
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-link prev-step" data-step="2">← Back to review</button>
                     </div>
                 </div>
-                {% endif %}
+            </div>
+            {% endif %}
 
-                <!-- Step 4: Quick Survey -->
-                {% if step == 4 %}
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Quick Survey (Optional)</h4>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-4">You can skip any question you don't want to answer.</p>
+            <!-- Step 4: Quick Survey -->
+            {% if step == 4 %}
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Quick Survey (Optional)</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">You can skip any question you don't want to answer.</p>
+                    
+                    <form method="post" id="finalForm">
+                        {% csrf_token %}
                         
                         <div class="mb-4">
                             <label class="form-label fw-bold">How satisfied are you overall?</label>
@@ -287,12 +384,24 @@
                         
                         <div class="mb-4">
                             <label class="form-label fw-bold">What features do you like most?</label>
-                            {{ survey_form.favorite_features }}
+                            <div class="checkbox-group">
+                                {% for checkbox in survey_form.favorite_features %}
+                                    <div class="checkbox-item">
+                                        {{ checkbox }}
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                         
                         <div class="mb-4">
                             <label class="form-label fw-bold">Would you recommend us?</label>
-                            {{ survey_form.recommend }}
+                            <div class="radio-group">
+                                {% for radio in survey_form.recommend %}
+                                    <div class="radio-item">
+                                        {{ radio }}
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                         
                         <div class="mb-4">
@@ -301,15 +410,15 @@
                         </div>
                         
                         <div class="d-flex justify-content-between">
-                            <button type="button" class="btn btn-outline-secondary prev-step">← Back</button>
+                            <button type="button" class="btn btn-outline-secondary prev-step" data-step="3">← Back</button>
                             <button type="submit" class="btn btn-success" id="finalSubmit">
                                 <i class="fas fa-check-circle me-2"></i>Submit Feedback
                             </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-                {% endif %}
-            </form>
+            </div>
+            {% endif %}
 
             <!-- Helpful Tips Card -->
             <div class="card mt-4 border-success">
@@ -333,51 +442,86 @@
     </div>
 </div>
 
-<!-- Copy all your existing styles and scripts here -->
-<style>
-/* Your existing styles */
-</style>
-
 <script>
-// Your existing JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const currentStep = {{ step }};
-    const csrftoken = '{{ csrf_token }}';
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
     
-    // Rating select handler
+    // ===== RATING STARS HANDLER =====
+    const stars = document.querySelectorAll('.rating-large i');
     const ratingSelect = document.querySelector('select[name="rating"]');
-    if (ratingSelect) {
-        ratingSelect.addEventListener('change', function() {
-            updateStars(this.value);
+    const ratingPreview = document.getElementById('ratingPreview');
+    
+    if (stars.length > 0 && ratingSelect) {
+        // Set initial state
+        updateStars(ratingSelect.value);
+        
+        // Add click handlers
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = this.getAttribute('data-rating');
+                ratingSelect.value = rating;
+                updateStars(rating);
+            });
+            
+            star.addEventListener('mouseover', function() {
+                const rating = this.getAttribute('data-rating');
+                previewStars(rating);
+            });
+            
+            star.addEventListener('mouseout', function() {
+                updateStars(ratingSelect.value);
+            });
         });
     }
     
-    // Star preview
-    const ratingPreview = document.getElementById('ratingPreview');
-    if (ratingPreview && ratingSelect) {
-        function updateStars(value) {
+    function updateStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.className = 'fas fa-star';
+            } else {
+                star.className = 'far fa-star';
+            }
+        });
+        
+        if (ratingPreview) {
             ratingPreview.innerHTML = '';
             for (let i = 1; i <= 5; i++) {
                 const star = document.createElement('i');
-                star.className = i <= value ? 'fas fa-star' : 'far fa-star';
+                star.className = i <= rating ? 'fas fa-star' : 'far fa-star';
                 ratingPreview.appendChild(star);
             }
         }
-        updateStars(ratingSelect.value);
     }
     
+    function previewStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.className = 'fas fa-star';
+            } else {
+                star.className = 'far fa-star';
+            }
+        });
+    }
+    
+    // ===== STEP NAVIGATION =====
     // Next step buttons
     document.querySelectorAll('.next-step').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
+            const step = this.getAttribute('data-step');
             
-            if (currentStep === 1) {
+            if (step === '1') {
                 const rating = document.querySelector('select[name="rating"]').value;
+                if (!rating || rating === '0') {
+                    alert('Please select a rating');
+                    return;
+                }
                 saveStep(1, { rating: rating }).then(() => {
                     window.location.href = '?step=2';
                 });
             }
-            else if (currentStep === 2) {
+            else if (step === '2') {
                 const comment = document.querySelector('textarea[name="comment"]').value;
                 saveStep(2, { comment: comment }).then(() => {
                     window.location.href = '?step=3';
@@ -390,17 +534,18 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.prev-step').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = '?step=' + (currentStep - 1);
+            const step = this.getAttribute('data-step');
+            window.location.href = '?step=' + step;
         });
     });
     
-    // Survey choice
+    // ===== SURVEY CHOICE =====
     window.chooseSurvey = function(choice) {
         const formData = new FormData();
         formData.append('step', 3);
         formData.append('take_survey', choice);
         
-        fetch('{% url "submit_review" %}?step=3', {
+        fetch(window.location.href, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrftoken
@@ -416,18 +561,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.href = data.redirect;
                 }
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Something went wrong. Please try again.');
         });
     };
     
-    // Final submission
-    const finalSubmit = document.getElementById('finalSubmit');
-    if (finalSubmit) {
-        finalSubmit.addEventListener('click', function(e) {
+    // ===== FINAL SUBMISSION =====
+    const finalForm = document.getElementById('finalForm');
+    if (finalForm) {
+        finalForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const formData = new FormData(document.getElementById('reviewForm'));
+            const formData = new FormData(this);
             
-            fetch('{% url "submit_review" %}?step=4', {
+            fetch(window.location.href, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrftoken
@@ -448,6 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // ===== AJAX SAVE HELPER =====
     function saveStep(step, data) {
         const formData = new FormData();
         formData.append('step', step);
@@ -459,6 +609,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRFToken': csrftoken
             },
             body: formData
+        });
+    }
+    
+    // ===== AUTO-RESIZE TEXTAREA =====
+    const textarea = document.querySelector('textarea');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
     }
 });

@@ -1,98 +1,118 @@
-<!-- templates/lab_technologist/login.html -->
 {% extends 'shared/base.html' %}
 {% load static %}
 {% load widget_tweaks %}
 
 {% block title %}Lab Technologist Login - BloodConnect{% endblock %}
 
-{% block auth_icon %}fas fa-flask{% endblock %}
-{% block auth_title %}Lab Technologist Login{% endblock %}
-{% block auth_card_class %}lab-tech{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-flask me-2"></i>
+                        Lab Technologist Login
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Welcome message -->
+                    <p class="text-muted text-center mb-4">Laboratory Personnel Access Only</p>
 
-{% block auth_content %}
-<!-- Welcome message -->
-<p class="text-muted text-center mb-4">Laboratory Personnel Access Only</p>
+                    <!-- Form Errors -->
+                    {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Invalid username or password. Please try again.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
 
-<!-- Login Form -->
-<form method="post">
-    {% csrf_token %}
-    
-    {% if form.errors %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            Invalid username or password. Please try again.
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <!-- Login Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Username Field -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user me-2"></i>Username
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       required 
+                                       autofocus
+                                       placeholder="Enter your username">
+                            </div>
+                        </div>
+                        
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock me-2"></i>Password
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       name="password" 
+                                       required
+                                       placeholder="Enter your password">
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                            <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+                                <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login</span>
+                                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+                        
+                        <!-- Forgot Password -->
+                        <div class="text-center mt-3">
+                            <a href="javascript:void(0)" 
+                               class="text-secondary" 
+                               onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                                <i class="fas fa-key me-1"></i> Forgot password?
+                            </a>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Sign Up Link -->
+                        <div class="text-center">
+                            <p class="mb-2">Don't have an account?</p>
+                            <a href="{% url 'lab_technologist:signup' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-user-plus me-2"></i> Register as Lab Technologist
+                            </a>
+                        </div>
+                        
+                        <!-- Security Note -->
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Authorized laboratory personnel only
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-    {% endif %}
-    
-    <div class="mb-3">
-        <label for="username" class="form-label">
-            <i class="fas fa-user me-2"></i>Username
-        </label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-user"></i></span>
-            <input type="text" 
-                   class="form-control" 
-                   id="username" 
-                   name="username" 
-                   required 
-                   autofocus
-                   placeholder="Enter your username">
-        </div>
     </div>
-    
-    <div class="mb-3">
-        <label for="password" class="form-label">
-            <i class="fas fa-lock me-2"></i>Password
-        </label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-            <input type="password" 
-                   class="form-control" 
-                   id="password" 
-                   name="password" 
-                   required
-                   placeholder="Enter your password">
-            <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
-                <i class="fa fa-eye" id="togglePasswordIcon"></i>
-            </button>
-        </div>
-        <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
-            <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
-        </div>
-    </div>
-    
-    <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
-            <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login</span>
-            <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
-        </button>
-    </div>
-    
-    <div class="text-center mt-3">
-        <a href="javascript:void(0)" 
-           class="text-secondary" 
-           onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
-            <i class="fas fa-key me-1"></i> Forgot password?
-        </a>
-    </div>
-    
-    <hr class="my-4">
-    
-    <div class="text-center">
-        <p class="mb-2">Don't have an account?</p>
-        <a href="{% url 'lab_technologist:signup' %}" class="btn btn-outline-primary">
-            <i class="fas fa-user-plus me-2"></i> Register as Lab Technologist
-        </a>
-    </div>
-    
-    <div class="text-center mt-3">
-        <small class="text-muted">
-            <i class="fas fa-shield-alt me-1"></i>
-            Authorized laboratory personnel only
-        </small>
-    </div>
-</form>
+</div>
 
 <script>
 // Password visibility toggle

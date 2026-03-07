@@ -16,6 +16,7 @@ from django.db import transaction
 from hospital.models import HospitalBloodRequest, HospitalUser
 from django.conf import settings
 import os
+from .decorators import blood_bank_tech_approved_required
 from blood.utils.stock_utils import (
     deduct_stock_fifo, 
     check_stock_availability, 
@@ -26,7 +27,11 @@ from blood.utils.stock_utils import (
 )
 from .forms import BloodBankTechSignupForm
 import logging
+from blood.utils.expiry_utils import get_expiry_display
+
 logger = logging.getLogger(__name__)
+
+
 # ======================
 # SIGNUP VIEW
 # ======================
@@ -61,16 +66,38 @@ def signup_view(request):
     
     return render(request, 'blood_bank_technician/signup.html', {'form': form})
 
+
+def pending_approval(request):
+    """View shown to technicians awaiting admin approval"""
+    # If user is already approved, redirect to dashboard
+    if request.user.is_authenticated:
+        try:
+            profile = request.user.blood_bank_tech_profile
+            if profile.is_approved:
+                return redirect('blood_bank_technician:dashboard')
+        except:
+            pass
+    
+    context = {
+        'page_title': 'Account Pending Approval',
+    }
+    return render(request, 'blood_bank_technician/pending_approval.html', context)
+
+
 # ======================
 # LOGIN VIEW
 # ======================
 def login_view(request):
     """Blood Bank Technician login view"""
     
-    # If user is already logged in and is a blood bank tech, redirect to dashboard
+    # If user is already logged in and is a blood bank tech, check approval
     if request.user.is_authenticated:
         if hasattr(request.user, 'blood_bank_tech_profile'):
-            return redirect('blood_bank_technician:dashboard')
+            profile = request.user.blood_bank_tech_profile
+            if profile.is_approved:
+                return redirect('blood_bank_technician:dashboard')
+            else:
+                return redirect('blood_bank_technician:pending_approval')
         else:
             logout(request)
     
@@ -83,17 +110,30 @@ def login_view(request):
         if user is not None:
             # Check if user has blood bank tech profile
             try:
-                blood_bank_tech_profile = BloodBankTechProfile.objects.get(user=user)
-                # TEMPORARILY DISABLED: Admin approval not required
+                profile = BloodBankTechProfile.objects.get(user=user)
+                
+                # ✅ CHECK IF PROFILE IS APPROVED
+                if not profile.is_approved:
+                    messages.warning(
+                        request, 
+                        "Your account is pending admin approval. "
+                        "You will be notified once your account is activated."
+                    )
+                    return redirect('blood_bank_technician:pending_approval')
+                
+                # Login the user
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
                 return redirect('blood_bank_technician:dashboard')
+                
             except BloodBankTechProfile.DoesNotExist:
                 messages.error(request, "You don't have Blood Bank Technician access. Please check your credentials.")
         else:
             messages.error(request, "Invalid username or password.")
     
     return render(request, 'blood_bank_technician/login.html')
+
+
 @login_required
 def blood_bank_tech_profile(request):
     """View logged-in user's blood bank technician profile"""
@@ -103,6 +143,7 @@ def blood_bank_tech_profile(request):
     except BloodBankTechProfile.DoesNotExist:
         messages.error(request, "Blood Bank Technician profile not found.")
         return redirect('blood_bank_technician:dashboard')
+
 
 @login_required
 def blood_bank_tech_profile_detail(request, pk):
@@ -124,6 +165,7 @@ def blood_bank_tech_profile_detail(request, pk):
         'profile_type': 'Blood Bank Technician'
     }
     return render(request, 'blood_bank_technician/profile_detail.html', context)
+
 
 @login_required
 def blood_bank_tech_profile_edit(request, pk):
@@ -202,10 +244,13 @@ def blood_bank_tech_profile_edit(request, pk):
         'is_owner': is_owner,
     }
     return render(request, 'blood_bank_technician/profile_edit.html', context)
+
+
 # ======================
-# DASHBOARD VIEW - UPDATED WITH REAL STOCK DATA
+# DASHBOARD VIEW - UPDATED WITH COMPONENT TYPES
 # ======================
 @login_required
+@blood_bank_tech_approved_required
 def dashboard(request):
     """Blood Bank Technician dashboard - Shows real-time stock stats from StockUnit"""
     
@@ -272,7 +317,7 @@ def dashboard(request):
     total_expiring_units = expiring_soon.count()
     total_expiring_volume = expiring_soon.aggregate(total=Sum('unit'))['total'] or 0
     
-    # ===== INVENTORY BY BLOOD TYPE =====
+    # ===== INVENTORY BY BLOOD TYPE WITH COMPONENT BREAKDOWN =====
     inventory_by_type = {}
     for blood_type in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']:
         # Safe stock by blood type
@@ -288,6 +333,19 @@ def dashboard(request):
             batches=Count('id')
         )
         
+        # Get component breakdown for this blood type
+        component_breakdown = StockUnit.objects.filter(
+            center=center,
+            bloodgroup=blood_type,
+            safety_status='safe',
+            is_quarantined=False,
+            unit__gt=0,
+            expiry_date__gte=today
+        ).values('component_type').annotate(
+            units=Sum('unit'),
+            batches=Count('id')
+        ).order_by('component_type')
+        
         # Pending stock by blood type
         pending = StockUnit.objects.filter(
             center=center,
@@ -300,12 +358,13 @@ def dashboard(request):
             batches=Count('id')
         )
         
-        if safe['units'] or pending['units']:
+        if safe['units'] or pending['units'] or component_breakdown:
             inventory_by_type[blood_type] = {
                 'safe_units': safe['units'] or 0,
                 'safe_batches': safe['batches'] or 0,
                 'pending_units': pending['units'] or 0,
                 'pending_batches': pending['batches'] or 0,
+                'component_breakdown': list(component_breakdown),
             }
     
     # ===== PENDING BLOOD REQUESTS =====
@@ -375,14 +434,17 @@ def dashboard(request):
         'inventory_by_type': inventory_by_type,
         'recent_transactions': recent_transactions,
         'now': timezone.now(),
-        'greeting_data': greeting_data,  # Add greeting data to context
+        'greeting_data': greeting_data,
     }
     
     return render(request, 'blood_bank_technician/dashboard.html', context)
+
+
 # ======================
-# INVENTORY VIEW
+# INVENTORY VIEW - UPDATED WITH COMPONENT TYPES
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def inventory(request):
     """View safe blood inventory using StockUnit"""
     
@@ -395,6 +457,7 @@ def inventory(request):
     
     # Get filter parameters
     blood_type = request.GET.get('blood_type', '')
+    component = request.GET.get('component', '')
     sort_by = request.GET.get('sort', 'expiry_date')
     today = timezone.now().date()
     
@@ -411,6 +474,10 @@ def inventory(request):
     if blood_type:
         safe_stock = safe_stock.filter(bloodgroup=blood_type)
     
+    # Apply component filter
+    if component:
+        safe_stock = safe_stock.filter(component_type=component)
+    
     # Apply sorting
     if sort_by == 'expiry_date':
         safe_stock = safe_stock.order_by('expiry_date')
@@ -420,6 +487,8 @@ def inventory(request):
         safe_stock = safe_stock.order_by('-added_on')
     elif sort_by == 'volume':
         safe_stock = safe_stock.order_by('-unit')
+    elif sort_by == 'component_type':
+        safe_stock = safe_stock.order_by('component_type', 'expiry_date')
     
     # Group by blood type for summary cards
     by_blood_type = {}
@@ -449,10 +518,17 @@ def inventory(request):
         expiry_date__lte=today + timedelta(days=7)
     ).count()
     
+    # Get component type stats
+    component_stats = safe_stock.values('component_type').annotate(
+        count=Count('id'),
+        total_ml=Sum('unit')
+    ).order_by('component_type')
+    
     context = {
         'safe_stock': safe_stock,
         'by_blood_type': by_blood_type,
         'blood_type': blood_type,
+        'component': component,
         'sort_by': sort_by,
         'total_batches': total_batches,
         'total_volume': total_volume,
@@ -462,13 +538,18 @@ def inventory(request):
         'today': today,
         'center': center,
         'now': timezone.now(),
+        'component_stats': component_stats,
+        'get_expiry_display': get_expiry_display,
     }
     
     return render(request, 'blood_bank_technician/inventory.html', context)
+
+
 # ======================
 # PENDING VERIFICATION VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def pending_verification(request):
     """View blood units awaiting lab verification"""
     profile = request.user.blood_bank_tech_profile
@@ -484,7 +565,7 @@ def pending_verification(request):
         center=center,
         safety_status='pending',
         unit__gt=0,
-        expiry_date__gte=today  # Use today variable
+        expiry_date__gte=today
     ).select_related('blood_donation__donor__user')
     
     context = {
@@ -495,10 +576,13 @@ def pending_verification(request):
         'today': today,  
     }
     return render(request, 'blood_bank_technician/pending_verification.html', context)
+
+
 # ======================
 # UNSAFE BLOOD VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def unsafe_blood(request):
     """View quarantined/unsafe blood units"""
     
@@ -539,9 +623,10 @@ def unsafe_blood(request):
 
 
 # ======================
-# PENDING REQUESTS VIEW
+# PENDING REQUESTS VIEW - FIXED STOCK CHECK
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def pending_requests(request):
     """View pending blood requests from hospitals"""
     
@@ -564,9 +649,22 @@ def pending_requests(request):
     
     # Process and annotate requests
     pending_requests_list = []
+    emergency_count = 0
+    urgent_count = 0
+    routine_count = 0
     
     for req in hospital_requests:
+        # Use the check_stock_availability utility which ONLY counts SAFE stock
         availability = check_stock_availability(center, req.blood_group, req.units_requested)
+        
+        # Count by urgency
+        if req.urgency == 'emergency':
+            emergency_count += 1
+        elif req.urgency == 'urgent':
+            urgent_count += 1
+        else:
+            routine_count += 1
+        
         patient_name = f"{req.patient_first_name} {req.patient_last_name}"
         pending_requests_list.append({
             'id': req.id,
@@ -583,6 +681,8 @@ def pending_requests(request):
             'has_inventory': availability.get('can_fulfill', False),
             'available_stock': availability.get('safe_stock', 0),
             'available_batches': availability.get('available_batches', 0),
+            'pending_stock': availability.get('pending_stock', 0),  # Show pending stock too
+            'shortage': availability.get('shortage', 0),
         })
     
     # Sort by urgency and created_at
@@ -594,6 +694,9 @@ def pending_requests(request):
     context = {
         'pending_requests': pending_requests_list,
         'total_pending': len(pending_requests_list),
+        'emergency_count': emergency_count,
+        'urgent_count': urgent_count,
+        'routine_count': routine_count,
         'center': center,
     }
     
@@ -601,9 +704,10 @@ def pending_requests(request):
 
 
 # ======================
-# APPROVE REQUEST VIEW
+# APPROVE REQUEST VIEW - FIXED WITH PROPER STOCK CHECK
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def approve_request(request, request_id):
     """Approve a hospital blood request and deduct stock using FIFO"""
     
@@ -624,7 +728,13 @@ def approve_request(request, request_id):
     )
     patient_name = f"{blood_request.patient_first_name} {blood_request.patient_last_name}"
     
-    # Check availability)
+    # ===== USE check_stock_availability UTILITY =====
+    availability = check_stock_availability(center, blood_request.blood_group, blood_request.units_requested)
+    can_fulfill = availability.get('can_fulfill', False)
+    total_available = availability.get('safe_stock', 0)
+    pending_stock = availability.get('pending_stock', 0)
+    
+    # Get available units for display
     available_units = StockUnit.objects.filter(
         center=center,
         bloodgroup=blood_request.blood_group,
@@ -634,15 +744,13 @@ def approve_request(request, request_id):
         expiry_date__gte=today
     ).order_by('expiry_date', 'added_on')
     
-    total_available = available_units.aggregate(total=Sum('unit'))['total'] or 0
-    can_fulfill = total_available >= blood_request.units_requested
-    
     if request.method == 'POST':
         if not can_fulfill:
             messages.error(
                 request, 
-                f"Insufficient safe stock. Available: {total_available}ml, "
-                f"Required: {blood_request.units_requested}ml"
+                f"Insufficient SAFE stock. Available: {total_available}ml, "
+                f"Required: {blood_request.units_requested}ml. "
+                f"(Pending verification: {pending_stock}ml)"
             )
             return redirect('blood_bank_technician:pending_requests')
         
@@ -721,9 +829,11 @@ def approve_request(request, request_id):
         'patient_name': patient_name,
         'available_units': available_units,
         'total_available': total_available,
+        'pending_stock': pending_stock,
         'can_fulfill': can_fulfill,
         'center': center,
         'today': today,
+        'get_expiry_display': get_expiry_display,
     }
     
     return render(request, 'blood_bank_technician/approve_request.html', context)
@@ -733,6 +843,7 @@ def approve_request(request, request_id):
 # REJECT REQUEST VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def reject_request(request, request_id):
     """Reject a hospital blood request with reason"""
     
@@ -797,6 +908,7 @@ def reject_request(request, request_id):
 # APPROVED REQUESTS VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def approved_requests(request):
     """View approved requests ready for dispatch"""
     
@@ -846,8 +958,8 @@ def approved_requests(request):
     
     context = {
         'approved_requests': processed_requests,
-        'approved_count': len(processed_requests),  # FIXED: Changed from .count() to len()
-        'dispatched_count': sum(1 for r in processed_requests if r['status'] == 'dispatched'),
+        'approved_count': len([r for r in processed_requests if r['status'] == 'approved']),
+        'dispatched_count': len([r for r in processed_requests if r['status'] == 'dispatched']),
         'center': center,
     }
     
@@ -858,6 +970,7 @@ def approved_requests(request):
 # DISPATCH REQUEST VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def dispatch_request(request, request_id):
     """Record dispatch of approved blood request to hospital"""
     
@@ -966,6 +1079,7 @@ def dispatch_request(request, request_id):
 # REQUEST DETAIL VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def request_detail(request, request_id):
     """View details of a specific blood request"""
     
@@ -1004,36 +1118,10 @@ def request_detail(request, request_id):
 
 
 # ======================
-# HELPER FUNCTIONS
-# ======================
-def check_stock_availability(center, blood_group, required_units):
-    """Check if there's enough stock available for a request"""
-    today = timezone.now().date()
-    
-    available_stock = StockUnit.objects.filter(
-        center=center,
-        bloodgroup=blood_group,
-        safety_status='safe',
-        is_quarantined=False,
-        unit__gt=0,
-        expiry_date__gte=today
-    )
-    
-    total_available = available_stock.aggregate(total=Sum('unit'))['total'] or 0
-    available_batches = available_stock.count()
-    
-    return {
-        'can_fulfill': total_available >= required_units,
-        'safe_stock': total_available,
-        'available_batches': available_batches,
-        'required': required_units,
-        'shortage': max(0, required_units - total_available)
-    }
-
-# ======================
 # EXPIRING BLOOD VIEW
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def expiring_blood(request):
     """View safe blood expiring soon"""
     
@@ -1056,7 +1144,7 @@ def expiring_blood(request):
         expiry_date__lte=next_week
     ).select_related('blood_donation__donor__user').order_by('expiry_date')
     
-    # Group by blood type
+    # Group by blood type and component
     by_blood_type = {}
     total_ml = 0
     total_batches = 0
@@ -1066,10 +1154,24 @@ def expiring_blood(request):
         if bg not in by_blood_type:
             by_blood_type[bg] = {
                 'total_ml': 0,
-                'batches': []
+                'batches': [],
+                'by_component': {}
             }
+        
+        # Add to blood type totals
         by_blood_type[bg]['total_ml'] += unit.unit
         by_blood_type[bg]['batches'].append(unit)
+        
+        # Add component breakdown
+        comp = unit.get_component_type_display()
+        if comp not in by_blood_type[bg]['by_component']:
+            by_blood_type[bg]['by_component'][comp] = {
+                'count': 0,
+                'total_ml': 0
+            }
+        by_blood_type[bg]['by_component'][comp]['count'] += 1
+        by_blood_type[bg]['by_component'][comp]['total_ml'] += unit.unit
+        
         total_ml += unit.unit
         total_batches += 1
     
@@ -1081,14 +1183,17 @@ def expiring_blood(request):
         'today': today,
         'next_week': next_week,
         'center': center,
+        'get_expiry_display': get_expiry_display,
     }
     
     return render(request, 'blood_bank_technician/expiring_blood.html', context)
+
 
 # ======================
 # STOCK TRANSACTION HISTORY
 # ======================
 @login_required
+@blood_bank_tech_approved_required 
 def transaction_history(request):
     """View stock transaction history"""
     
@@ -1115,7 +1220,6 @@ def transaction_history(request):
     ).select_related(
         'stockunit',
         'user',
-        'blood_request__request_by_patient__user'
     ).order_by('-transaction_at')
     
     if transaction_type:
@@ -1142,3 +1246,5 @@ def transaction_history(request):
     }
     
     return render(request, 'blood_bank_technician/transaction_history.html', context)
+
+

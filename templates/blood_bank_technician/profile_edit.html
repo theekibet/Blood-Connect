@@ -1,4 +1,3 @@
-<!-- templates/blood_bank_technician/profile_edit.html -->
 {% extends 'blood_bank_technician/base.html' %}
 {% load static %}
 
@@ -8,15 +7,17 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Edit Blood Bank Technician Profile</h4>
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>Edit Blood Bank Technician Profile
+                    </h4>
                 </div>
                 <div class="card-body">
                     <!-- Show admin notice for regular users -->
                     {% if not is_superuser %}
                     <div class="alert alert-info alert-dismissible fade show" role="alert">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="fas fa-info-circle me-2"></i>
                         <strong>Note:</strong> The following fields are locked for editing:
                         <ul class="mb-0 mt-2">
                             <li>Email Address</li>
@@ -29,38 +30,54 @@
                     </div>
                     {% endif %}
 
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
                                 {{ form.non_field_errors }}
                             </div>
                         {% endif %}
                         
                         <!-- Profile Picture Section -->
-                        <h5 class="border-bottom pb-2">Profile Picture</h5>
-                        <div class="text-center mb-4">
+                        <h5 class="border-bottom pb-2 mb-4">
+                            <i class="fas fa-camera-retro text-primary me-2"></i>Profile Picture
+                        </h5>
+                        
+                        <div class="text-center mb-5">
                             <!-- Current Picture Display -->
-                            <div class="mb-3 position-relative d-inline-block">
+                            <div class="mb-4 position-relative d-inline-block">
                                 {% if profile.profile_pic and profile.profile_pic.url %}
-                                    <img src="{{ profile.profile_pic.url }}" alt="Current Profile Picture" 
+                                    <div class="position-relative">
+                                        <img src="{{ profile.profile_pic.url }}" 
+                                             alt="Current Profile Picture" 
+                                             class="img-thumbnail rounded-circle border border-3 border-primary shadow"
+                                             style="width: 150px; height: 150px; object-fit: cover;"
+                                             id="current-profile-pic">
                                         
-                                         id="current-profile-pic">
-                                    
-                                    <!-- Delete Picture Button -->
-                                    <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                                           
-                                            onclick="confirmDeletePicture()"
-                                            title="Delete current picture">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                    
-                                    <p class="text-muted mt-2">Current Picture</p>
+                                        <!-- Delete Picture Button -->
+                                        <button type="button" 
+                                                class="btn btn-danger btn-sm position-absolute rounded-circle"
+                                                style="top: 10px; right: 10px; width: 32px; height: 32px;"
+                                                onclick="confirmDeletePicture()"
+                                                title="Delete current picture">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-muted mt-2 small">
+                                        <i class="fas fa-info-circle me-1"></i>Current Picture
+                                    </p>
                                 {% else %}
-                                    <img src="{% static 'images/default-profile.png' %}" alt="Default Profile" 
-                                        >
-                                    <p class="text-muted mt-2">Default Picture</p>
+                                    <div class="position-relative">
+                                        <img src="{% static 'images/default-profile.png' %}" 
+                                             alt="Default Profile" 
+                                             class="img-thumbnail rounded-circle border border-3 border-secondary shadow"
+                                             style="width: 150px; height: 150px; object-fit: cover;">
+                                    </div>
+                                    <p class="text-muted mt-2 small">
+                                        <i class="fas fa-info-circle me-1"></i>Default Picture
+                                    </p>
                                 {% endif %}
                             </div>
                             
@@ -68,40 +85,67 @@
                             <input type="hidden" name="delete_picture" id="delete_picture" value="false">
                             
                             <!-- Upload New Picture -->
-                            <div class="mb-3">
-                                <label for="{{ form.profile_pic.id_for_label }}" class="form-label">Upload New Profile Picture</label>
-                                {{ form.profile_pic }}
+                            <div class="mb-3 text-start">
+                                <label for="{{ form.profile_pic.id_for_label }}" class="form-label fw-bold">
+                                    <i class="fas fa-cloud-upload-alt me-1"></i>Upload New Profile Picture
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-image"></i>
+                                    </span>
+                                    {{ form.profile_pic }}
+                                </div>
                                 {% if form.profile_pic.errors %}
-                                    <div class="text-danger">{{ form.profile_pic.errors }}</div>
+                                    <div class="text-danger small mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.profile_pic.errors }}
+                                    </div>
                                 {% endif %}
-                                <small class="text-muted">Leave empty to keep current picture. Allowed: JPG, PNG, GIF (max 5MB)</small>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Leave empty to keep current picture. Allowed: JPG, PNG, GIF (max 5MB)
+                                </small>
                             </div>
 
                             <!-- Picture Options -->
                             {% if profile.profile_pic %}
-                            <div class="form-check">
+                            <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" name="remove_picture" id="remove_picture">
-                                <label class="form-check-label text-danger" for="remove_picture">
-                                    <i class="fas fa-trash-alt"></i> Remove current picture (will revert to default)
+                                <label class="form-check-label text-danger fw-bold" for="remove_picture">
+                                    <i class="fas fa-trash-alt me-1"></i> Remove current picture (will revert to default)
                                 </label>
                             </div>
                             {% endif %}
                         </div>
                         
-                        <h5 class="border-bottom pb-2">Account Information</h5>
-                        <div class="row mb-3">
+                        <!-- Account Information -->
+                        <h5 class="border-bottom pb-2 mb-4">
+                            <i class="fas fa-user-circle text-primary me-2"></i>Account Information
+                        </h5>
+                        
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-                                {{ form.first_name }}
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label fw-bold">
+                                    <i class="fas fa-user me-1"></i>First Name
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                                    {{ form.first_name }}
+                                </div>
                                 {% if form.first_name.errors %}
-                                    <div class="text-danger">{{ form.first_name.errors }}</div>
+                                    <div class="text-danger small mt-1">{{ form.first_name.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-                                {{ form.last_name }}
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label fw-bold">
+                                    <i class="fas fa-user me-1"></i>Last Name
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                                    {{ form.last_name }}
+                                </div>
                                 {% if form.last_name.errors %}
-                                    <div class="text-danger">{{ form.last_name.errors }}</div>
+                                    <div class="text-danger small mt-1">{{ form.last_name.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -109,45 +153,64 @@
                         <!-- Email - Display differently based on user role -->
                         {% if is_superuser %}
                         <div class="mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
-                            {{ form.email }}
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-envelope me-1"></i>Email Address
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-envelope"></i></span>
+                                {{ form.email }}
+                            </div>
                             {% if form.email.errors %}
-                                <div class="text-danger">{{ form.email.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.email.errors }}</div>
                             {% endif %}
                         </div>
                         {% else %}
                         <div class="mb-3">
-                            <label class="form-label">Email</label>
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-envelope me-1"></i>Email Address
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input type="email" class="form-control" value="{{ profile.user.email }}" readonly disabled>
+                                <span class="input-group-text bg-light"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control bg-light" value="{{ profile.user.email }}" readonly disabled>
                             </div>
-                            <small class="text-muted">Email cannot be changed. Contact admin for updates.</small>
-                            <!-- Hidden field to maintain form submission -->
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-lock me-1"></i>Email cannot be changed. Contact admin for updates.
+                            </small>
                             <input type="hidden" name="email" value="{{ profile.user.email }}">
                         </div>
                         {% endif %}
                         
-                        <h5 class="border-bottom pb-2 mt-4">Professional Information</h5>
+                        <!-- Professional Information -->
+                        <h5 class="border-bottom pb-2 mb-4 mt-4">
+                            <i class="fas fa-briefcase text-primary me-2"></i>Professional Information
+                        </h5>
                         
                         <!-- Employee ID - Display differently based on user role -->
                         {% if is_superuser %}
                         <div class="mb-3">
-                            <label for="{{ form.employee_id.id_for_label }}" class="form-label">Employee ID</label>
-                            {{ form.employee_id }}
+                            <label for="{{ form.employee_id.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-id-card me-1"></i>Employee ID
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-id-card"></i></span>
+                                {{ form.employee_id }}
+                            </div>
                             {% if form.employee_id.errors %}
-                                <div class="text-danger">{{ form.employee_id.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.employee_id.errors }}</div>
                             {% endif %}
                         </div>
                         {% else %}
                         <div class="mb-3">
-                            <label class="form-label">Employee ID</label>
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-id-card me-1"></i>Employee ID
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
-                                <input type="text" class="form-control" value="{{ profile.employee_id }}" readonly disabled>
+                                <span class="input-group-text bg-light"><i class="fas fa-id-card"></i></span>
+                                <input type="text" class="form-control bg-light" value="{{ profile.employee_id }}" readonly disabled>
                             </div>
-                            <small class="text-muted">Employee ID cannot be changed. Contact admin for updates.</small>
-                            <!-- Hidden field to maintain form submission -->
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-lock me-1"></i>Employee ID cannot be changed. Contact admin for updates.
+                            </small>
                             <input type="hidden" name="employee_id" value="{{ profile.employee_id }}">
                         </div>
                         {% endif %}
@@ -155,96 +218,129 @@
                         <!-- Center - Display differently based on user role -->
                         {% if is_superuser %}
                         <div class="mb-3">
-                            <label for="{{ form.center.id_for_label }}" class="form-label">Center</label>
-                            {{ form.center }}
+                            <label for="{{ form.center.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-hospital me-1"></i>Assigned Center
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-hospital"></i></span>
+                                {{ form.center }}
+                            </div>
                             {% if form.center.errors %}
-                                <div class="text-danger">{{ form.center.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.center.errors }}</div>
                             {% endif %}
                         </div>
                         {% else %}
                         <div class="mb-3">
-                            <label class="form-label">Center</label>
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-hospital me-1"></i>Assigned Center
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-hospital"></i></span>
-                                <input type="text" class="form-control" 
+                                <span class="input-group-text bg-light"><i class="fas fa-hospital"></i></span>
+                                <input type="text" class="form-control bg-light" 
                                        value="{% if profile.center %}{{ profile.center }}{% else %}Not Assigned{% endif %}" 
                                        readonly disabled>
                             </div>
-                            <small class="text-muted">Center assignment can only be changed by administrator</small>
-                            <!-- Hidden field to maintain form submission - Using center_id -->
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-lock me-1"></i>Center assignment can only be changed by administrator
+                            </small>
                             <input type="hidden" name="center" value="{{ profile.center_id|default:'' }}">
                         </div>
                         {% endif %}
                         
                         <!-- Phone - Always editable -->
                         <div class="mb-3">
-                            <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+                            <label for="{{ form.phone.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-phone me-1"></i>Phone Number
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <span class="input-group-text bg-light"><i class="fas fa-phone"></i></span>
                                 {{ form.phone }}
                             </div>
                             {% if form.phone.errors %}
-                                <div class="text-danger">{{ form.phone.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
                             {% endif %}
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-info-circle me-1"></i>Format: +1234567890
+                            </small>
                         </div>
                         
                         <!-- Active Status - Display differently based on user role -->
                         {% if is_superuser %}
-                        <div class="mb-3 form-check">
-                            {{ form.is_active }}
-                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                Active Status
-                            </label>
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label fw-bold" for="{{ form.is_active.id_for_label }}">
+                                    <i class="fas fa-toggle-on me-1"></i>Active Status
+                                </label>
+                            </div>
                             {% if form.is_active.errors %}
-                                <div class="text-danger">{{ form.is_active.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
                             {% endif %}
                         </div>
                         {% else %}
-                        <div class="mb-3">
-                            <label class="form-label">Active Status</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-toggle-on me-1"></i>Active Status
+                            </label>
                             <div>
                                 {% if profile.is_active %}
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="badge bg-success px-3 py-2">
+                                        <i class="fas fa-check-circle me-1"></i>Active
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-danger">Inactive</span>
+                                    <span class="badge bg-danger px-3 py-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Inactive
+                                    </span>
                                 {% endif %}
                             </div>
-                            <small class="text-muted">Account status can only be changed by administrator</small>
-                            <!-- Hidden field to maintain form submission -->
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-lock me-1"></i>Account status can only be changed by administrator
+                            </small>
                             <input type="hidden" name="is_active" value="{% if profile.is_active %}on{% endif %}">
                         </div>
                         {% endif %}
                         
-                        <!-- System Information (Always Read-only) -->
-                        <h5 class="border-bottom pb-2 mt-4">System Information</h5>
+                        <!-- System Information -->
+                        <h5 class="border-bottom pb-2 mb-4 mt-4">
+                            <i class="fas fa-cogs text-primary me-2"></i>System Information
+                        </h5>
                         
-                        <div class="row">
+                        <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Created At</label>
+                                    <label class="form-label fw-bold small text-muted">
+                                        <i class="fas fa-calendar-plus me-1"></i>Created At
+                                    </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                                        <input type="text" class="form-control" value="{{ profile.created_at|date:'Y-m-d H:i'|default:'Not available' }}" readonly disabled>
+                                        <span class="input-group-text bg-light"><i class="fas fa-clock"></i></span>
+                                        <input type="text" class="form-control bg-light" 
+                                               value="{{ profile.created_at|date:'Y-m-d H:i'|default:'Not available' }}" 
+                                               readonly disabled>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Last Updated</label>
+                                    <label class="form-label fw-bold small text-muted">
+                                        <i class="fas fa-calendar-check me-1"></i>Last Updated
+                                    </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-sync-alt"></i></span>
-                                        <input type="text" class="form-control" value="{{ profile.updated_at|date:'Y-m-d H:i'|default:'Not available' }}" readonly disabled>
+                                        <span class="input-group-text bg-light"><i class="fas fa-sync-alt"></i></span>
+                                        <input type="text" class="form-control bg-light" 
+                                               value="{{ profile.updated_at|date:'Y-m-d H:i'|default:'Not available' }}" 
+                                               readonly disabled>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_detail' profile.pk %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <a href="{% url 'blood_bank_technician:blood_bank_tech_profile_detail' profile.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Save Changes
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Save Changes
                             </button>
                         </div>
                     </form>
@@ -254,39 +350,38 @@
     </div>
 </div>
 
-<!-- JavaScript for picture deletion -->
+<!-- JavaScript for picture handling -->
 <script>
-    function confirmDeletePicture() {
-        if (confirm('Are you sure you want to delete your profile picture? This will revert to the default image.')) {
-            document.getElementById('delete_picture').value = 'true';
-            // Optionally hide the current picture
-            const currentPic = document.getElementById('current-profile-pic');
-            if (currentPic) {
-                currentPic.style.opacity = '0.5';
-            }
-            alert('Picture will be deleted when you save changes.');
-        }
-    }
-
-    // Handle checkbox for removing picture
     document.addEventListener('DOMContentLoaded', function() {
+        // Get elements
+        const deletePictureInput = document.getElementById('delete_picture');
         const removeCheckbox = document.getElementById('remove_picture');
+        const profilePicInput = document.getElementById('{{ form.profile_pic.id_for_label }}');
+        const currentPic = document.getElementById('current-profile-pic');
+        const form = document.querySelector('form');
+        
+        // Handle remove picture checkbox
         if (removeCheckbox) {
             removeCheckbox.addEventListener('change', function() {
                 if (this.checked) {
                     if (confirm('Remove current picture? This will revert to default when you save.')) {
-                        document.getElementById('delete_picture').value = 'true';
+                        deletePictureInput.value = 'true';
+                        if (currentPic) {
+                            currentPic.classList.add('opacity-50');
+                        }
                     } else {
                         this.checked = false;
                     }
                 } else {
-                    document.getElementById('delete_picture').value = 'false';
+                    deletePictureInput.value = 'false';
+                    if (currentPic) {
+                        currentPic.classList.remove('opacity-50');
+                    }
                 }
             });
         }
 
-        // Preview new image before upload
-        const profilePicInput = document.getElementById('{{ form.profile_pic.id_for_label }}');
+        // Handle new image preview and validation
         if (profilePicInput) {
             profilePicInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
@@ -299,40 +394,45 @@
                     }
                     
                     // Check file type
-                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
                     if (!validTypes.includes(file.type)) {
-                        alert('Invalid file type! Please upload JPG, PNG, or GIF.');
+                        alert('Invalid file type! Please upload JPG, PNG, GIF, or WebP.');
                         this.value = '';
                         return;
                     }
                     
+                    // Preview image
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        // Show preview of new image
-                        const preview = document.getElementById('current-profile-pic');
-                        if (preview) {
-                            preview.src = e.target.result;
-                            preview.style.opacity = '1';
+                        if (currentPic) {
+                            currentPic.src = e.target.result;
+                            currentPic.classList.remove('opacity-50');
                         }
                     }
                     reader.readAsDataURL(file);
                     
-                    // If user selects new image, uncheck remove option
+                    // Uncheck remove option if new image selected
                     if (removeCheckbox) {
                         removeCheckbox.checked = false;
                     }
-                    document.getElementById('delete_picture').value = 'false';
+                    deletePictureInput.value = 'false';
                 }
             });
         }
 
-        // Warn users before leaving with unsaved changes
-        const form = document.querySelector('form');
+        // Warn before leaving with unsaved changes
         let formChanged = false;
         
         form.addEventListener('input', function() {
             formChanged = true;
         });
+        
+        // Also track checkbox changes
+        if (removeCheckbox) {
+            removeCheckbox.addEventListener('change', function() {
+                formChanged = true;
+            });
+        }
         
         window.addEventListener('beforeunload', function(e) {
             if (formChanged) {
@@ -345,10 +445,16 @@
             formChanged = false;
         });
     });
+
+    function confirmDeletePicture() {
+        if (confirm('Are you sure you want to delete your profile picture? This will revert to the default image.')) {
+            document.getElementById('delete_picture').value = 'true';
+            const currentPic = document.getElementById('current-profile-pic');
+            if (currentPic) {
+                currentPic.classList.add('opacity-50');
+            }
+            alert('Picture will be deleted when you save changes.');
+        }
+    }
 </script>
-
-<!-- Add Font Awesome if not already included -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-
 {% endblock %}

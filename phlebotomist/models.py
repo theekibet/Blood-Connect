@@ -13,7 +13,7 @@ class Phlebotomist(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE,
-        related_name='phlebotomist'  # Explicitly set related_name
+        related_name='phlebotomist'
     )
     profile_pic = models.ImageField(upload_to='phlebotomist_profiles/', null=True, blank=True)
     license_number = models.CharField(max_length=50, unique=True)
@@ -22,12 +22,12 @@ class Phlebotomist(models.Model):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='phlebotomists'  # Add related_name for reverse query
+        related_name='phlebotomists'
     )
     phone = models.CharField(max_length=15)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)  # Add for tracking updates
+    updated_at = models.DateTimeField(auto_now=True)
     
     # Additional useful fields
     qualification = models.CharField(max_length=200, blank=True, 
@@ -52,20 +52,16 @@ class Phlebotomist(models.Model):
         verbose_name = "Phlebotomist"
         verbose_name_plural = "phlebotomists"
         ordering = ['-created_at']
-        # Add database constraints
         constraints = [
-            # Ensure user is unique
             models.UniqueConstraint(
                 fields=['user'],
                 name='unique_phlebotomist_user'
             ),
-            # Ensure license_number is unique (already set, but explicit)
             models.UniqueConstraint(
                 fields=['license_number'],
                 name='unique_phlebotomist_license'
             ),
         ]
-        # Add indexes for frequently queried fields
         indexes = [
             models.Index(fields=['center', 'is_active']),
             models.Index(fields=['license_expiry']),
@@ -77,50 +73,51 @@ class Phlebotomist(models.Model):
         name = self.user.get_full_name() or self.user.username
         return f"Phlebotomist: {name} - {self.license_number}"
     
-def clean(self):
-    """
-    Validate that user doesn't have other profiles
-    """
-    from django.core.exceptions import ValidationError, ObjectDoesNotExist
-    from blood.utils.validators import validate_single_profile  
-    from datetime import date
-    
-    # Check if user exists before accessing it
-    try:
-        has_user = self.user is not None
-    except ObjectDoesNotExist:
-        # This catches the RelatedObjectDoesNotExist error
-        has_user = False
-    
-    # Skip validation if no user is assigned yet
-    if not has_user:
-        return
-    
-    # If we get here, user exists and is accessible
-    if not self.pk:
-        # For new instances, validate the user doesn't have other profiles
+    # ===== FIXED: Indentation corrected - these methods are INSIDE the class =====
+    def clean(self):
+        """
+        Validate that user doesn't have other profiles
+        """
+        from django.core.exceptions import ValidationError, ObjectDoesNotExist
+        from blood.utils.validators import validate_single_profile  
+        from datetime import date
+        
+        # Check if user exists before accessing it
         try:
-            validate_single_profile(
-                user=self.user,
-                current_profile_type='phlebotomist',
-                exclude_self=True
-            )
-        except ValidationError as e:
+            has_user = self.user is not None
+        except ObjectDoesNotExist:
+            # This catches the RelatedObjectDoesNotExist error
+            has_user = False
+        
+        # Skip validation if no user is assigned yet
+        if not has_user:
+            return
+        
+        # If we get here, user exists and is accessible
+        if not self.pk:
+            # For new instances, validate the user doesn't have other profiles
+            try:
+                validate_single_profile(
+                    user=self.user,
+                    current_profile_type='phlebotomist',
+                    exclude_self=True
+                )
+            except ValidationError as e:
+                raise ValidationError({
+                    'user': "This user already has a different profile. Each user can only have one role in the system."
+                })
+        
+        # Validate license expiry
+        if self.license_expiry and self.license_expiry < date.today():
             raise ValidationError({
-                'user': "This user already has a different profile. Each user can only have one role in the system."
+                'license_expiry': f"License has already expired on {self.license_expiry}. Please renew."
             })
-    
-    # Validate license expiry
-    if self.license_expiry and self.license_expiry < date.today():
-        raise ValidationError({
-            'license_expiry': f"License has already expired on {self.license_expiry}. Please renew."
-        })
-    
-    # Validate phone format
-    if self.phone and not self.phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
-        raise ValidationError({
-            'phone': "Phone number should contain only digits, spaces, +, or -"
-        })
+        
+        # Validate phone format
+        if self.phone and not self.phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+            raise ValidationError({
+                'phone': "Phone number should contain only digits, spaces, +, or -"
+            })
     
     def save(self, *args, **kwargs):
         """
@@ -169,7 +166,7 @@ def clean(self):
         """Get count of appointments for today"""
         if hasattr(self, 'appointment_set'):
             return self.appointment_set.filter(
-                appointment_date__date=date.today()
+                date__date=date.today()
             ).count()
         return 0
     
@@ -194,9 +191,9 @@ def clean(self):
         if hasattr(self, 'appointment_set'):
             end_date = date.today() + timedelta(days=days)
             return self.appointment_set.filter(
-                appointment_date__date__gte=date.today(),
-                appointment_date__date__lte=end_date
-            ).order_by('appointment_date')
+                date__date__gte=date.today(),
+                date__date__lte=end_date
+            ).order_by('date')
         return []
     
     def verify_donor_blood_group(self, donor, blood_group):
@@ -221,8 +218,7 @@ def clean(self):
         """Get all available phlebotomists, optionally filtered by center"""
         queryset = cls.objects.filter(
             is_active=True,
-            is_approved=True,
-            is_license_valid=True
+            is_approved=True
         )
         if center_id:
             queryset = queryset.filter(center_id=center_id)
@@ -246,13 +242,11 @@ def clean(self):
             is_active=True
         )
 
+
 class Appointment(models.Model):
     """
     Appointment model for tracking donor blood donation appointments.
     Links donors to phlebotomists at specific centers.
-    
-    UPDATED: Now properly handles both donor field AND GenericForeignKey to BloodDonate.
-    The donor field is for easy querying, while request points to the actual BloodDonate object.
     """
     
     # For donor donations - used for easy filtering/querying
@@ -264,7 +258,7 @@ class Appointment(models.Model):
         help_text="Donor associated with this appointment (for blood donations)"
     )
     
-    # GenericForeignKey to link to BloodDonate (or potentially other request types in future)
+    # GenericForeignKey to link to BloodDonate
     request_content_type = models.ForeignKey(
         ContentType, 
         on_delete=models.CASCADE, 
@@ -315,7 +309,94 @@ class Appointment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Tracking fields for status changes
+    # ===== NEW: BARCODE FIELD =====
+    barcode = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Blood bag barcode assigned to this donation"
+    )
+    
+    # ===== NEW: SAFETY TRACKING FIELD =====
+    sent_to_lab_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When this sample was sent to the lab for testing"
+    )
+    
+    # ===== NEW: REJECTION REASON FIELD =====
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for rejection (if applicable)"
+    )
+    
+    # ===== NEW: ROLE TRACKING FIELDS =====
+    approved_by_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('phlebotomist', 'Phlebotomist'),
+            ('system', 'System'),
+            ('admin', 'Admin'),
+        ],
+        null=True,
+        blank=True,
+        help_text="Role of the user who approved this appointment"
+    )
+    
+    rejected_by_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('phlebotomist', 'Phlebotomist'),
+            ('system', 'System'),
+            ('admin', 'Admin'),
+        ],
+        null=True,
+        blank=True,
+        help_text="Role of the user who rejected this appointment"
+    )
+    
+    collected_by_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('phlebotomist', 'Phlebotomist'),
+            ('system', 'System'),
+            ('admin', 'Admin'),
+        ],
+        null=True,
+        blank=True,
+        help_text="Role of the user who collected this blood sample"
+    )
+    
+    cancelled_by_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('phlebotomist', 'Phlebotomist'),
+            ('donor', 'Donor'),
+            ('system', 'System'),
+            ('admin', 'Admin'),
+        ],
+        null=True,
+        blank=True,
+        help_text="Role of the user who cancelled this appointment"
+    )
+    
+    status_changed_by_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('phlebotomist', 'Phlebotomist'),
+            ('lab_tech', 'Lab Technologist'),
+            ('blood_bank_tech', 'Blood Bank Technician'),
+            ('donor', 'Donor'),
+            ('system', 'System'),
+            ('admin', 'Admin'),
+        ],
+        null=True,
+        blank=True,
+        help_text="Role of the user who last changed the status"
+    )
+    
+    # Tracking fields for status changes (existing)
     approved_by = models.ForeignKey(
         'auth.User',
         on_delete=models.SET_NULL,
@@ -368,6 +449,7 @@ class Appointment(models.Model):
             models.Index(fields=['donor', 'status']),
             models.Index(fields=['phlebotomist', 'status']),
             models.Index(fields=['center', 'date']),
+            models.Index(fields=['barcode']),  # NEW: index for barcode lookups
         ]
         verbose_name = "Appointment"
         verbose_name_plural = "Appointments"
@@ -383,16 +465,7 @@ class Appointment(models.Model):
     def clean(self):
         """
         Validation rules for Appointment model.
-        
-        UPDATED: Now allows both donor AND request to be set simultaneously.
-        This is because:
-        - donor field is used for easy querying/filtering
-        - request (GenericFK) points to the actual BloodDonate object
-        - For blood donations, BOTH should be set
         """
-        # For blood donations, we should have BOTH donor and request
-        # The request points to BloodDonate, and donor is for easy access
-        
         # Check if we have at least one way to identify what this appointment is for
         if not self.donor and not self.request:
             raise ValidationError(

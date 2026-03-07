@@ -35,11 +35,6 @@ urlpatterns = [
     path('eligibility-status/', views.donor_eligibility_status_view, name='donor-eligibility-status'),
     path('save-location/', save_user_location, name='save-user-location'),
 
-    # ==========================================
-    # NOTIFICATIONS
-    # ==========================================
-    path('notifications/', views.donor_notifications_view, name='donor-notifications'),
-    path('mark-notification-read/<int:pk>/', views.mark_notification_read, name='mark-notification-read'),
 
     # ==========================================
     # VOLUNTEER OPPORTUNITIES

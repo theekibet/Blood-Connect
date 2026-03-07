@@ -348,7 +348,7 @@ class LabTechnologistProfileForm(forms.ModelForm):
 class BloodTestForm(forms.ModelForm):
     """
     Form for lab technologists to record blood test results.
-    Includes component type selection which determines expiry date.
+    NOW FIXED: Uses proper Boolean values (True/False) instead of strings.
     """
     
     COMPONENT_TYPES = [
@@ -359,12 +359,6 @@ class BloodTestForm(forms.ModelForm):
         ('cryo', '🧊 Cryoprecipitate (1 year)'),
     ]
     
-    TEST_RESULT_CHOICES = [
-        ('negative', 'Negative ✅'),
-        ('positive', 'Positive ❌'),
-        ('pending', 'Pending ⏳'),
-    ]
-    
     component_type = forms.ChoiceField(
         choices=COMPONENT_TYPES,
         initial='whole_blood',
@@ -373,40 +367,40 @@ class BloodTestForm(forms.ModelForm):
         help_text='Select blood component type - this determines expiry date'
     )
     
-    # Override test fields with better widgets and help text
-    hiv = forms.ChoiceField(
-        choices=TEST_RESULT_CHOICES,
-        initial='negative',
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='HIV-1/HIV-2 antibody test'
+    # FIXED: Use BooleanField with proper choices
+    hiv = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="HIV Positive"
     )
     
-    hepatitis_b = forms.ChoiceField(
-        choices=TEST_RESULT_CHOICES,
-        initial='negative',
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='HBsAg (Hepatitis B surface antigen)'
+    hepatitis_b = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="Hepatitis B Positive"
     )
     
-    hepatitis_c = forms.ChoiceField(
-        choices=TEST_RESULT_CHOICES,
-        initial='negative',
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='Anti-HCV antibody test'
+    hepatitis_c = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="Hepatitis C Positive"
     )
     
-    syphilis = forms.ChoiceField(
-        choices=TEST_RESULT_CHOICES,
-        initial='negative',
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='Syphilis serology (RPR/TPHA)'
+    syphilis = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="Syphilis Positive"
     )
     
-    malaria = forms.ChoiceField(
-        choices=TEST_RESULT_CHOICES,
-        initial='negative',
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='Malaria antigen/parasite test'
+    malaria = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="Malaria Positive"
     )
     
     # Additional optional tests
@@ -454,7 +448,7 @@ class BloodTestForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
         labels = {
-            'hiv': 'HIV Test',
+            'hiv': 'HIV',
             'hepatitis_b': 'Hepatitis B',
             'hepatitis_c': 'Hepatitis C',
             'syphilis': 'Syphilis',
@@ -471,35 +465,35 @@ class BloodTestForm(forms.ModelForm):
         
         # Add CSS classes for better styling
         for field_name, field in self.fields.items():
-            if not isinstance(field.widget, (forms.Select, forms.Textarea, forms.TextInput)):
-                continue
-            
+            if field_name not in ['hiv', 'hepatitis_b', 'hepatitis_c', 'syphilis', 'malaria']:
+                if not isinstance(field.widget, forms.CheckboxInput):
+                    field.widget.attrs['class'] = 'form-control'
+        
         # If this is an edit of an existing test, show the current values
         if self.instance and self.instance.pk:
             # Determine if any test was positive
             test_fields = ['hiv', 'hepatitis_b', 'hepatitis_c', 'syphilis', 'malaria']
-            has_positive = any(getattr(self.instance, field) == 'positive' for field in test_fields)
+            has_positive = any(getattr(self.instance, field) for field in test_fields)
             
             if has_positive:
                 # Find which test was positive
                 for field in test_fields:
-                    if getattr(self.instance, field) == 'positive':
+                    if getattr(self.instance, field):
                         self.fields['unsafe_reason'].initial = f"{field}_positive"
                         break
 
     def clean(self):
         cleaned_data = super().clean()
         
-        # Get test results
-        hiv = cleaned_data.get('hiv')
-        hepatitis_b = cleaned_data.get('hepatitis_b')
-        hepatitis_c = cleaned_data.get('hepatitis_c')
-        syphilis = cleaned_data.get('syphilis')
-        malaria = cleaned_data.get('malaria')
+        # Get test results (now Boolean values)
+        hiv = cleaned_data.get('hiv', False)
+        hepatitis_b = cleaned_data.get('hepatitis_b', False)
+        hepatitis_c = cleaned_data.get('hepatitis_c', False)
+        syphilis = cleaned_data.get('syphilis', False)
+        malaria = cleaned_data.get('malaria', False)
         
-        # Check if ANY test is positive
-        test_results = [hiv, hepatitis_b, hepatitis_c, syphilis, malaria]
-        any_positive = any(result == 'positive' for result in test_results)
+        # Check if ANY test is positive (True)
+        any_positive = hiv or hepatitis_b or hepatitis_c or syphilis or malaria
         
         # Get unsafe reason fields
         unsafe_reason = cleaned_data.get('unsafe_reason')
@@ -528,9 +522,8 @@ class BloodTestForm(forms.ModelForm):
         """Override save to handle unsafe reason"""
         instance = super().save(commit=False)
         
-        # Determine overall result based on tests
-        test_fields = ['hiv', 'hepatitis_b', 'hepatitis_c', 'syphilis', 'malaria']
-        any_positive = any(getattr(instance, field) == 'positive' for field in test_fields)
+        # Determine overall result based on tests (Boolean values)
+        any_positive = instance.hiv or instance.hepatitis_b or instance.hepatitis_c or instance.syphilis or instance.malaria
         
         if any_positive:
             instance.result = 'unsafe'

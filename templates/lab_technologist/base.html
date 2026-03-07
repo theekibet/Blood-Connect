@@ -1,60 +1,56 @@
 {% extends 'shared/base.html' %}
 {% load static %}
 
-{% block title %}Lab Technologist Dashboard - BloodConnect{% endblock %}
+{% block title %}Lab Technologist - BloodConnect{% endblock %}
 
-{% block nav_icon %}fas fa-flask{% endblock %}
-{% block app_name %}Lab Connect{% endblock %}
-
-{% block sidebar_icon %}fas fa-flask{% endblock %}
-{% block sidebar_title %}Lab Tech Panel{% endblock %}
-
-{% block user_role_label %}Lab Technologist{% endblock %}
-
-{% block auth_card_class %}lab-tech{% endblock %}
-{% block auth_icon %}fas fa-flask{% endblock %}
-{% block auth_title %}Lab Technologist Login{% endblock %}
-
-{% block profile_menu %}
-    {% if user.lab_tech_profile %}
-        <a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile' %}">
-            <i class="fas fa-user-circle"></i> View Profile
-        </a>
-        <a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}">
-            <i class="fas fa-edit"></i> Edit Profile
-        </a>
-    {% endif %}
-{% endblock %}
-
-{% block profile_url %}{% url 'lab_technologist:lab_tech_profile' %}{% endblock %}
-{% block edit_profile_url %}{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}{% endblock %}
-{% block notifications_url %}#{% endblock %}
+{% block sidebar_bg %}#9b59b6{% endblock %}
+{% block sidebar_hover %}#8e44ad{% endblock %}
+{% block sidebar_active %}#f39c12{% endblock %}
 
 {% block extra_nav_items %}
+    <!-- Notifications Icon -->
+    <li class="nav-item me-2 position-relative">
+        <a class="nav-link" href="{% url 'utils:notifications' %}" title="Notifications">
+            <i class="fas fa-bell" style="color: white;"></i>
+            {% if unread_notifications_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ unread_notifications_count }}
+                    <span class="visually-hidden">unread notifications</span>
+                </span>
+            {% endif %}
+        </a>
+    </li>
+
     <!-- Pending Tests Badge -->
-    {% if pending_tests_count > 0 %}
-    <li class="nav-item">
-        <a class="nav-link position-relative" href="{% url 'lab_technologist:pending_tests' %}" title="Pending Tests">
-            <div class="nav-icon">
-                <i class="fas fa-hourglass-half"></i>
-                <span class="notification-badge">{{ pending_tests_count }}</span>
-            </div>
-        </a>
-    </li>
-    {% endif %}
-    
-    <!-- Chatbot Mobile Icon (visible only on mobile) -->
-    <li class="nav-item d-lg-none">
-        <a class="nav-link" href="#" onclick="document.getElementById('chatbotButton').click(); return false;">
-            <div class="nav-icon">
-                <i class="fas fa-robot"></i>
-            </div>
-        </a>
-    </li>
+    {% with pending_count=pending_tests_count|default:0 %}
+        {% if pending_count > 0 %}
+        <li class="nav-item me-2">
+            <a class="nav-link position-relative" href="{% url 'lab_technologist:pending_tests' %}" title="Pending Tests">
+                <i class="fas fa-hourglass-half" style="color: white;"></i>
+                <span class="pending-badge">{{ pending_count }}</span>
+            </a>
+        </li>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
+{% block profile_menu %}
+    <li><a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile' %}"><i class="fas fa-user-circle me-2"></i>View Profile</a></li>
+    <li><a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}"><i class="fas fa-edit me-2"></i>Edit Profile</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'utils:notifications' %}"><i class="fas fa-bell me-2"></i>Notifications 
+        {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ unread_notifications_count }}</span>
+        {% endif %}
+    </a></li>
+    <li><a class="dropdown-item" href="{% url 'lab_technologist:pending_tests' %}"><i class="fas fa-hourglass-half me-2"></i>Pending Tests</a></li>
+    <li><a class="dropdown-item" href="{% url 'lab_technologist:test_history' %}"><i class="fas fa-history me-2"></i>Test History</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
 {% endblock %}
 
 {% block sidebar_menu %}
-    <!-- Main Dashboard -->
+    <!-- MAIN SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">MAIN</div>
         <a href="{% url 'lab_technologist:dashboard' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
@@ -63,15 +59,17 @@
         </a>
     </div>
 
-    <!-- Testing -->
+    <!-- TESTING SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">TESTING</div>
         <a href="{% url 'lab_technologist:pending_tests' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'pending_tests' %}active{% endif %}">
             <i class="fas fa-hourglass-half"></i>
             <span>Pending Tests</span>
-            {% if pending_tests_count > 0 %}
-                <span class="badge badge-warning ms-auto">{{ pending_tests_count }}</span>
-            {% endif %}
+            {% with pending_count=pending_tests_count|default:0 %}
+                {% if pending_count > 0 %}
+                    <span class="badge bg-warning ms-auto">{{ pending_count }}</span>
+                {% endif %}
+            {% endwith %}
         </a>
         <a href="{% url 'lab_technologist:test_history' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'test_history' %}active{% endif %}">
             <i class="fas fa-history"></i>
@@ -79,20 +77,19 @@
         </a>
     </div>
 
-    <!-- Results -->
+    <!-- NOTIFICATIONS SECTION -->
     <div class="sidebar-section">
-        <div class="sidebar-section-title">RESULTS</div>
-        <a href="{% url 'lab_technologist:test_history' %}?result=safe" class="sidebar-menu-item">
-            <i class="fas fa-check-circle"></i>
-            <span>Safe Results</span>
-        </a>
-        <a href="{% url 'lab_technologist:test_history' %}?result=unsafe" class="sidebar-menu-item">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span>Unsafe Results</span>
+        <div class="sidebar-section-title">COMMUNICATION</div>
+        <a href="{% url 'utils:notifications' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_notifications_count > 0 %}
+                <span class="badge bg-danger ms-auto">{{ unread_notifications_count }}</span>
+            {% endif %}
         </a>
     </div>
 
-    <!-- Profile Management -->
+    <!-- PROFILE SECTION -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">PROFILE</div>
         <a href="{% url 'lab_technologist:lab_tech_profile' %}" class="sidebar-menu-item {% if request.resolver_match.url_name == 'lab_tech_profile' %}active{% endif %}">
@@ -104,259 +101,54 @@
             <span>Edit Profile</span>
         </a>
     </div>
+
+    <!-- ACCOUNT SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ACCOUNT</div>
+        <a href="{% url 'password_change' %}" class="sidebar-menu-item">
+            <i class="fas fa-key"></i>
+            <span>Change Password</span>
+        </a>
+        <a href="{% url 'logout' %}" class="sidebar-menu-item text-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </div>
 {% endblock %}
 
 {% block extra_css %}
-<!-- Any lab tech-specific CSS can go here -->
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('✅ Lab Technologist base template loaded');
-        
-        // Update pending tests badge
-        {% if pending_tests_count > 0 %}
-        const notificationBadge = document.querySelector('.notification-badge');
-        if (notificationBadge) {
-            notificationBadge.textContent = "{{ pending_tests_count }}";
-            notificationBadge.style.display = 'flex';
-        }
-        {% endif %}
-        
-        // Image error handling for profile pictures
-        const profileImages = document.querySelectorAll('.profile-dropdown img');
-        profileImages.forEach(img => {
-            img.onerror = function() {
-                this.src = "{% static 'images/default-profile.png' %}";
-                this.onerror = null;
-            };
-        });
-
-        // Sidebar active state for mobile
-        const sidebarLinks = document.querySelectorAll('.sidebar-menu-item');
-        sidebarLinks.forEach(link => {
-            if (link.classList.contains('active')) {
-                link.setAttribute('aria-current', 'page');
-            }
-        });
-
-        // Real-time pending tests count update
-        function updatePendingTestsCount() {
-            fetch('/lab-tech/api/pending-tests-count/')
-                .then(response => response.json())
-                .then(data => {
-                    const badge = document.querySelector('.notification-badge');
-                    const sidebarBadge = document.querySelector('a[href*="pending_tests"] .badge');
-                    
-                    if (badge && data.count > 0) {
-                        badge.textContent = data.count;
-                        badge.style.display = 'flex';
-                    }
-                    
-                    if (sidebarBadge && data.count > 0) {
-                        sidebarBadge.textContent = data.count;
-                        sidebarBadge.style.display = 'inline-block';
-                    }
-                    
-                    if (sidebarBadge && data.count === 0) {
-                        sidebarBadge.style.display = 'none';
-                    }
-                })
-                .catch(error => console.error('Error updating pending tests:', error));
-        }
-
-        // Update counts every 30 seconds (optional)
-        // setInterval(updatePendingTestsCount, 30000);
-
-        // ========================================
-        // LAB TECH-SPECIFIC CHATBOT INTEGRATION
-        // ========================================
-        const chatbotButton = document.getElementById('chatbotButton');
-        
-        if (chatbotButton) {
-            chatbotButton.addEventListener('click', function() {
-                console.log('Lab Technologist opened chatbot');
-                // You could pre-populate with lab-specific context
-            });
-        }
-    });
-
-    // ========================================
-    // CHATBOT FUNCTIONALITY (if not in base template)
-    // ========================================
-    function initializeChatbot() {
-        const chatbotToggle = document.getElementById('chatbotToggle');
-        const chatbotContainer = document.getElementById('chatbotContainer');
-        const chatbotClose = document.getElementById('chatbotClose');
-        const chatbotInput = document.getElementById('chatbotInput');
-        const chatbotSend = document.getElementById('chatbotSend');
-        const chatbotMessages = document.getElementById('chatbotMessages');
-
-        if (!chatbotToggle || !chatbotContainer) return;
-
-        // Generate session ID
-        let sessionId = sessionStorage.getItem('chatbot_session_id');
-        if (!sessionId) {
-            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            sessionStorage.setItem('chatbot_session_id', sessionId);
-        }
-
-        // Toggle chatbot
-        chatbotToggle.addEventListener('click', function() {
-            chatbotContainer.classList.toggle('active');
-            chatbotToggle.classList.toggle('active');
-            if (chatbotContainer.classList.contains('active')) {
-                chatbotInput.focus();
-                if (window.innerWidth <= 768) {
-                    document.body.style.overflow = 'hidden';
-                }
-            } else {
-                document.body.style.overflow = '';
-            }
-        });
-
-        chatbotClose.addEventListener('click', function() {
-            chatbotContainer.classList.remove('active');
-            chatbotToggle.classList.remove('active');
-            document.body.style.overflow = '';
-        });
-
-        // Send message on button click
-        chatbotSend.addEventListener('click', function() {
-            const message = chatbotInput.value.trim();
-            if (message) {
-                sendMessage(message);
-            }
-        });
-
-        // Send message on Enter key
-        chatbotInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const message = chatbotInput.value.trim();
-                if (message) {
-                    sendMessage(message);
-                }
-            }
-        });
-
-        function sendMessage(message) {
-            // Clear input
-            chatbotInput.value = '';
-            
-            // Add user message
-            addMessage(message, 'user');
-            
-            // Show typing indicator
-            showTypingIndicator();
-            
-            // Disable input while processing
-            chatbotInput.disabled = true;
-            chatbotSend.disabled = true;
-            
-            // Get CSRF token
-            const csrftoken = getCookie('csrftoken');
-            
-            // Send to backend with lab tech context
-            fetch('/chatbot/api/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    message: message,
-                    session_id: sessionId,
-                    role: 'lab_technologist'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideTypingIndicator();
-                addMessage(data.reply || 'No response', 'bot');
-                chatbotInput.disabled = false;
-                chatbotSend.disabled = false;
-                chatbotInput.focus();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                hideTypingIndicator();
-                addMessage('Connection error. Please try again.', 'bot');
-                chatbotInput.disabled = false;
-                chatbotSend.disabled = false;
-            });
-        }
-
-        function addMessage(text, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chatbot-message ${type}`;
-            
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            
-            const avatar = type === 'bot' 
-                ? '<div class="message-avatar bot"><i class="fas fa-robot"></i></div>'
-                : '<div class="message-avatar user"><i class="fas fa-user"></i></div>';
-            
-            messageDiv.innerHTML = `
-                ${avatar}
-                <div class="message-content">
-                    <div class="message-bubble">${text.replace(/\n/g, '<br>')}</div>
-                    <div class="message-time">${timeString}</div>
-                </div>
-            `;
-            
-            chatbotMessages.appendChild(messageDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        function showTypingIndicator() {
-            const indicator = document.createElement('div');
-            indicator.className = 'chatbot-typing active';
-            indicator.id = 'typingIndicator';
-            indicator.innerHTML = `
-                <div class="message-avatar bot"><i class="fas fa-robot"></i></div>
-                <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            `;
-            chatbotMessages.appendChild(indicator);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        function hideTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
+<style>
+    /* Lab tech sidebar colors */
+    :root {
+        --sidebar-bg: #9b59b6;
+        --sidebar-hover: #8e44ad;
+        --sidebar-active: #f39c12;
     }
 
-    // Initialize chatbot if elements exist
-    if (document.getElementById('chatbotToggle') && !window.chatbotInitialized) {
-        window.chatbotInitialized = true;
-        initializeChatbot();
+    /* Badge notification styling */
+    .badge-notification {
+        background: #f39c12;
+        color: #000;
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
     }
-</script>
-{% endblock %}
-
-{% block scripts %}
-<!-- Additional lab tech-specific scripts can go here -->
+    
+    /* Active menu item styling */
+    .sidebar-menu-item.active {
+        background: var(--sidebar-active) !important;
+        color: #000 !important;
+        font-weight: bold;
+        border-left: 4px solid white;
+    }
+    
+    .sidebar-menu-item.active i {
+        color: #000 !important;
+    }
+    
+    /* Hover effect for menu items */
+    .sidebar-menu-item:hover {
+        background: var(--sidebar-hover) !important;
+    }
+</style>
 {% endblock %}

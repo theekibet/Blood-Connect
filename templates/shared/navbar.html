@@ -1,0 +1,96 @@
+{% load static %}
+<!-- Authenticated User Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background-color: var(--sidebar-bg);">
+    <div class="container-fluid">
+        <!-- Mobile Toggle Button -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Brand Logo -->
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-heartbeat"></i> BloodConnect
+        </a>
+        
+        <!-- Navbar Content -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <!-- Role-specific nav items from child templates -->
+                {% block extra_nav_items %}{% endblock %}
+                
+                <!-- User Profile Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" 
+                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <!-- Profile Picture or Initial -->
+                        {% if profile_pic_url %}
+                            <img src="{{ profile_pic_url }}" alt="Profile" class="rounded-circle me-2" 
+                                 style="width: 32px; height: 32px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-white text-dark d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 32px; height: 32px; font-weight: bold;">
+                                {{ user_initial }}
+                            </div>
+                        {% endif %}
+                        <span>{{ user.get_full_name|default:user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                        <!-- Role-specific profile menu items -->
+                        {% block profile_menu %}
+                            {% if user_role == 'donor' %}
+                                <li><a class="dropdown-item" href="{% url 'donor:donor-profile' %}">
+                                    <i class="fas fa-user-circle"></i> View Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'donor:donor-edit-profile' %}">
+                                    <i class="fas fa-edit"></i> Edit Profile</a></li>
+                            
+                            {% elif user_role == 'phlebotomist' %}
+                                <li><a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-profile' user.phlebotomist.id %}">
+                                    <i class="fas fa-user-circle"></i> View Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'phlebotomist:phlebotomist-profile-edit' user.phlebotomist.pk %}">
+                                    <i class="fas fa-edit"></i> Edit Profile</a></li>
+                            
+                            {% elif user_role == 'lab_tech' %}
+                                <li><a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile' %}">
+                                    <i class="fas fa-user-circle"></i> View Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'lab_technologist:lab_tech_profile_edit' user.lab_tech_profile.pk %}">
+                                    <i class="fas fa-edit"></i> Edit Profile</a></li>
+                            
+                            {% elif user_role == 'bb_tech' %}
+                                <li><a class="dropdown-item" href="{% url 'blood_bank_technician:blood_bank_tech_profile' %}">
+                                    <i class="fas fa-user-circle"></i> View Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'blood_bank_technician:blood_bank_tech_profile_edit' user.blood_bank_tech_profile.pk %}">
+                                    <i class="fas fa-edit"></i> Edit Profile</a></li>
+                            
+                            {% elif user_role == 'hospital' %}
+                                <li><a class="dropdown-item" href="{% url 'hospital:profile' %}">
+                                    <i class="fas fa-id-card"></i> Hospital Profile</a></li>
+                            
+                            {% elif user_role == 'admin' %}
+                                <li><a class="dropdown-item" href="/{{ ADMIN_SECRET_URL }}/">
+                                    <i class="fas fa-cog"></i> Admin Panel</a></li>
+                                <li><a class="dropdown-item" href="{% url 'password_change' %}">
+                                    <i class="fas fa-key"></i> Change Password</a></li>
+                            {% endif %}
+                        {% endblock %}
+                        
+                        <li><hr class="dropdown-divider"></li>
+                        
+                        <!-- Common Items -->
+                        <li><a class="dropdown-item" href="{% url 'password_change' %}">
+                            <i class="fas fa-key"></i> Change Password</a></li>
+                        
+                        <!-- Review Prompt (if user hasn't reviewed) -->
+                        {% if not has_review %}
+                        <li><a class="dropdown-item" href="{% url 'submit_review' %}">
+                            <i class="fas fa-star"></i> Submit a Review</a></li>
+                        {% endif %}
+                        
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

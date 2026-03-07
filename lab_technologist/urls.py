@@ -14,7 +14,7 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
-    
+    path('pending-approval/', views.pending_approval, name='pending_approval'),
     # Testing
     path('pending/', views.pending_tests, name='pending_tests'),
     path('perform/<int:collection_id>/', views.perform_test, name='perform_test'),

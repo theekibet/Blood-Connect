@@ -14,38 +14,61 @@
                 </div>
                 
                 <div class="card-body">
-                    <div class="alert alert-success">
+                    <div class="alert alert-info">
                         <strong>Request #{{ request.request_number }}</strong><br>
-                        Patient: {{ request.patient_full_name }}<br>
-                        Blood Group: {{ request.blood_group }} | Units: {{ request.units_requested }}ml
+                        <strong>Blood Group:</strong> {{ request.blood_group }}<br>
+                        <strong>Units:</strong> {{ request.units_requested }}ml<br>
+                        <strong>Dispatched:</strong> {{ request.dispatched_at|date:"M d, Y H:i" }}
                     </div>
                     
                     <form method="post">
                         {% csrf_token %}
                         
                         <div class="mb-3">
-                            <label for="received_by" class="form-label">Received by (Name)</label>
-                            <input type="text" name="received_by" id="received_by" class="form-control" 
-                                   value="{{ user.get_full_name }}" required>
+                            <label for="received_by" class="form-label fw-bold">
+                                <i class="fas fa-user me-2"></i>Received by (Name) *
+                            </label>
+                            <input type="text" 
+                                   name="received_by" 
+                                   id="received_by" 
+                                   class="form-control" 
+                                   value="{{ user.get_full_name|default:user.username }}" 
+                                   required>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="received_date" class="form-label">Date/Time Received</label>
-                            <input type="datetime-local" name="received_date" id="received_date" 
-                                   class="form-control" value="{{ request.dispatched_at|date:'Y-m-d\TH:i' }}" required>
+                            <label for="received_date" class="form-label fw-bold">
+                                <i class="fas fa-calendar-check me-2"></i>Date/Time Received
+                            </label>
+                            <input type="datetime-local" 
+                                   name="received_date" 
+                                   id="received_date" 
+                                   class="form-control" 
+                                   value="{{ now|date:'Y-m-d\\TH:i' }}">
+                            <small class="text-muted">Leave blank to use current time</small>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="notes" class="form-label">Notes</label>
-                            <textarea name="notes" id="notes" class="form-control" rows="2"></textarea>
+                            <label for="notes" class="form-label fw-bold">
+                                <i class="fas fa-notes-medical me-2"></i>Notes
+                            </label>
+                            <textarea name="notes" id="notes" class="form-control" rows="2" 
+                                      placeholder="Any observations about the delivery..."></textarea>
                         </div>
                         
-                        <div class="form-actions">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Verify:</strong> Please ensure you have received all 
+                            <strong>{{ request.units_requested }}ml</strong> of 
+                            <strong>{{ request.blood_group }}</strong> blood before confirming.
+                        </div>
+                        
+                        <div class="form-actions d-flex justify-content-between">
                             <a href="{% url 'hospital:request_detail' request.id %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Go Back
+                                <i class="fas fa-arrow-left me-2"></i>Back
                             </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-check me-2"></i>Confirm Delivery
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-check-circle me-2"></i>Confirm Delivery
                             </button>
                         </div>
                     </form>
@@ -54,4 +77,12 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('submitBtn').addEventListener('click', function(e) {
+    if (!confirm('Are you sure you want to confirm delivery of this blood?')) {
+        e.preventDefault();
+    }
+});
+</script>
 {% endblock %}

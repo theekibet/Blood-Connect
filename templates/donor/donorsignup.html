@@ -3,167 +3,195 @@
 
 {% block title %}Donor Signup - BloodConnect{% endblock %}
 
-{% block auth_icon %}fas fa-hand-holding-heart{% endblock %}
-{% block auth_title %}Donor Registration{% endblock %}
-{% block auth_card_class %}donor{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-hand-holding-heart me-2"></i>
+                        Donor Registration
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Info Alert -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Quick Registration!</strong> Just fill in your basic info to get started. 
+                        You'll complete your donor profile and choose a username after logging in.
+                    </div>
 
-{% block auth_content %}
-<div class="container">
-    <div class="alert alert-info mb-4">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Quick Registration!</strong> Just fill in your basic info to get started. 
-        You'll complete your donor profile and choose a username after logging in.
-    </div>
+                    <!-- Form Errors -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
 
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                {% for error in form.non_field_errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
+                    <!-- Form Warnings -->
+                    {% if form.warnings %}
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Note:</strong>
+                            <ul class="mb-0 mt-1">
+                                {% for warning in form.warnings %}
+                                    <li>{{ warning }}</li>
+                                {% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
 
-    <!-- Display form warnings (like email case warning) -->
-    {% if form.warnings %}
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Note:</strong>
-            <ul class="mb-0 mt-1">
-                {% for warning in form.warnings %}
-                    <li>{{ warning }}</li>
-                {% endfor %}
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    {% endif %}
+                    <!-- Signup Form -->
+                    <form method="POST" autocomplete="off" novalidate id="signupForm">
+                        {% csrf_token %}
 
-    <form method="POST" autocomplete="off" novalidate id="signupForm">
-        {% csrf_token %}
+                        <!-- Personal Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user text-primary me-2"></i>
+                            Personal Information
+                        </h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="id_first_name" class="form-label">
+                                    First Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="first_name" id="id_first_name" 
+                                       class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" 
+                                       value="{{ form.first_name.value|default:'' }}" 
+                                       placeholder="Enter first name" required>
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_last_name" class="form-label">
+                                    Last Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="last_name" id="id_last_name" 
+                                       class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" 
+                                       value="{{ form.last_name.value|default:'' }}" 
+                                       placeholder="Enter last name" required>
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-        <!-- Personal Information Section -->
-        <h5 class="border-bottom pb-2 mb-3">
-            <i class="fas fa-user text-primary me-2"></i>Personal Information
-        </h5>
-        
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label for="id_first_name" class="form-label">
-                    First Name <span class="text-danger">*</span>
-                </label>
-                <input type="text" name="first_name" id="id_first_name" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" 
-                       value="{{ form.first_name.value|default:'' }}" placeholder="Enter first name" required>
-                {% if form.first_name.errors %}
-                    <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
-                {% endif %}
+                        <!-- Account Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-key text-primary me-2"></i>
+                            Account Information
+                        </h5>
+
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">
+                                Email Address <span class="text-danger">*</span>
+                            </label>
+                            <div class="position-relative">
+                                <input type="email" name="email" id="id_email" 
+                                       class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                       value="{{ form.email.value|default:'' }}" 
+                                       placeholder="Enter email address" required>
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                                {% endif %}
+                                <span class="validation-icon" id="emailIcon"></span>
+                            </div>
+                            <!-- Email case warning will appear here dynamically -->
+                            <div id="emailCaseWarning" class="email-case-warning"></div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> This will be your temporary username. You'll choose a permanent username after login.
+                            </small>
+                            <div id="emailFeedback" class="small mt-1"></div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label for="id_password1" class="form-label">
+                                    Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" name="password1" id="id_password1" 
+                                       class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                                       placeholder="Enter password" required>
+                                {% if form.password1.errors %}
+                                    <div class="invalid-feedback">{{ form.password1.errors.0 }}</div>
+                                {% endif %}
+                                <div id="passwordStrength" class="small mt-1"></div>
+                                <small class="text-muted">At least 8 characters with letters and numbers</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_password2" class="form-label">
+                                    Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" name="password2" id="id_password2" 
+                                       class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                                       placeholder="Confirm password" required>
+                                {% if form.password2.errors %}
+                                    <div class="invalid-feedback">{{ form.password2.errors.0 }}</div>
+                                {% endif %}
+                                <div id="matchFeedback" class="small mt-1"></div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden location fields (optional) -->
+                        <input type="hidden" name="latitude" id="latitude">
+                        <input type="hidden" name="longitude" id="longitude">
+
+                        <!-- Terms and Conditions -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <div class="form-check mb-2">
+                                <input type="checkbox" name="terms_agreed" id="id_terms_agreed" 
+                                       class="form-check-input {% if form.terms_agreed.errors %}is-invalid{% endif %}" 
+                                       required>
+                                <label class="form-check-label" for="id_terms_agreed">
+                                    I agree to the 
+                                    <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#termsModal">
+                                        Terms and Conditions
+                                    </a>
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {% if form.terms_agreed.errors %}
+                                    <div class="invalid-feedback">{{ form.terms_agreed.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="alert alert-warning mt-2 mb-0 small">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <strong>Note:</strong> After registration, you'll choose your permanent username and complete your donor profile.
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Home
+                            </a>
+                            <button type="submit" id="submitBtn" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Login Link -->
+                    <div class="text-center mt-4">
+                        <p class="mb-0">
+                            Already have an account? 
+                            <a href="{% url 'donor:donorlogin' %}?user_type=donor" class="btn btn-link">
+                                Login here <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </p>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6">
-                <label for="id_last_name" class="form-label">
-                    Last Name <span class="text-danger">*</span>
-                </label>
-                <input type="text" name="last_name" id="id_last_name" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" 
-                       value="{{ form.last_name.value|default:'' }}" placeholder="Enter last name" required>
-                {% if form.last_name.errors %}
-                    <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
-                {% endif %}
-            </div>
         </div>
-
-        <!-- Account Information Section -->
-        <h5 class="border-bottom pb-2 mb-3 mt-4">
-            <i class="fas fa-key text-primary me-2"></i>Account Information
-        </h5>
-
-        <div class="mb-3">
-            <label for="id_email" class="form-label">
-                Email Address <span class="text-danger">*</span>
-            </label>
-            <div class="position-relative">
-                <input type="email" name="email" id="id_email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
-                       value="{{ form.email.value|default:'' }}" placeholder="Enter email address" required>
-                {% if form.email.errors %}
-                    <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
-                {% endif %}
-                <span class="validation-icon" id="emailIcon"></span>
-            </div>
-            <!-- Email case warning will appear here dynamically -->
-            <div id="emailCaseWarning" class="email-case-warning"></div>
-            <small class="text-muted">
-                <i class="fas fa-info-circle"></i> This will be your temporary username. You'll choose a permanent username after login.
-            </small>
-            <div id="emailFeedback" class="small mt-1"></div>
-        </div>
-
-        <div class="row g-3 mt-2">
-            <div class="col-md-6">
-                <label for="id_password1" class="form-label">
-                    Password <span class="text-danger">*</span>
-                </label>
-                <input type="password" name="password1" id="id_password1" class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
-                       placeholder="Enter password" required>
-                {% if form.password1.errors %}
-                    <div class="invalid-feedback">{{ form.password1.errors.0 }}</div>
-                {% endif %}
-                <div id="passwordStrength" class="small mt-1"></div>
-                <small class="text-muted">At least 8 characters with letters and numbers</small>
-            </div>
-            <div class="col-md-6">
-                <label for="id_password2" class="form-label">
-                    Confirm Password <span class="text-danger">*</span>
-                </label>
-                <input type="password" name="password2" id="id_password2" class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
-                       placeholder="Confirm password" required>
-                {% if form.password2.errors %}
-                    <div class="invalid-feedback">{{ form.password2.errors.0 }}</div>
-                {% endif %}
-                <div id="matchFeedback" class="small mt-1"></div>
-            </div>
-        </div>
-
-        <!-- Hidden location fields (optional) -->
-        <input type="hidden" name="latitude" id="latitude">
-        <input type="hidden" name="longitude" id="longitude">
-
-        <!-- Terms and Conditions -->
-        <div class="mt-4 p-3 bg-light rounded">
-            <div class="form-check mb-2">
-                <input type="checkbox" name="terms_agreed" id="id_terms_agreed" class="form-check-input {% if form.terms_agreed.errors %}is-invalid{% endif %}" required>
-                <label class="form-check-label" for="id_terms_agreed">
-                    I agree to the 
-                    <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#termsModal">
-                        Terms and Conditions
-                    </a>
-                    <span class="text-danger">*</span>
-                </label>
-                {% if form.terms_agreed.errors %}
-                    <div class="invalid-feedback">{{ form.terms_agreed.errors.0 }}</div>
-                {% endif %}
-            </div>
-            <div class="alert alert-warning mt-2 mb-0 small">
-                <i class="fas fa-exclamation-triangle me-1"></i>
-                <strong>Note:</strong> After registration, you'll choose your permanent username and complete your donor profile.
-            </div>
-        </div>
-
-        <!-- Submit Buttons -->
-        <div class="d-flex justify-content-between mt-4">
-            <a href="{% url 'home' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Home
-            </a>
-            <button type="submit" id="submitBtn" class="btn btn-primary">
-                <i class="fas fa-user-plus me-2"></i>Register
-            </button>
-        </div>
-    </form>
-
-    <div class="text-center mt-4">
-        <p class="mb-0">
-            Already have an account? 
-            <a href="{% url 'donor:donorlogin' %}?user_type=donor" class="btn btn-link">
-                Login here <i class="fas fa-arrow-right ms-1"></i>
-            </a>
-        </p>
     </div>
 </div>
 
@@ -322,5 +350,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 {% endblock %}

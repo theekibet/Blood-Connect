@@ -325,7 +325,7 @@ class HospitalBloodRequest(models.Model):
     ]
     urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='routine')
     
-    # Status tracking
+    # ===== UPDATED STATUS CHOICES with 'delivered' =====
     STATUS_CHOICES = [
         ('pending', 'Pending Review'),
         ('approved', 'Approved - Ready for Pickup'),
@@ -365,6 +365,39 @@ class HospitalBloodRequest(models.Model):
     )
     dispatched_at = models.DateTimeField(null=True, blank=True)
     
+    # ===== NEW: DELIVERY TRACKING FIELDS =====
+    delivered_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When the blood was delivered to the hospital"
+    )
+    
+    delivered_by = models.ForeignKey(
+        'hospital.HospitalUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delivered_requests',
+        help_text="Hospital staff who confirmed delivery"
+    )
+    
+    delivery_notes = models.TextField(
+        blank=True,
+        help_text="Notes about the delivery"
+    )
+    
+    received_by_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Name of hospital staff who received the blood"
+    )
+    
+    received_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the blood was received at the hospital"
+    )
+    
     # Rejection reason
     rejection_reason = models.TextField(blank=True)
     
@@ -376,6 +409,13 @@ class HospitalBloodRequest(models.Model):
         ordering = ['-created_at']
         verbose_name = "Hospital Blood Request"
         verbose_name_plural = "Hospital Blood Requests"
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['hospital', 'status']),
+            models.Index(fields=['blood_group']),
+            models.Index(fields=['request_number']),
+            models.Index(fields=['delivered_at']),  # NEW index for delivery queries
+        ]
     
     def __str__(self):
         return f"{self.request_number} - {self.hospital.name}"
@@ -410,3 +450,75 @@ class HospitalBloodRequest(models.Model):
     @property
     def is_partially_dispatched(self):
         return self.units_dispatched > 0 and self.units_dispatched < self.units_requested
+    
+    @property
+    def is_delivered(self):
+        """Check if blood has been delivered to hospital"""
+        return self.status == 'delivered' and self.delivered_at is not None
+    
+    @property
+    def delivery_status_display(self):
+        """Get human-readable delivery status with icon"""
+        if self.status == 'delivered':
+            return "✅ Delivered"
+        elif self.status == 'dispatched':
+            return "🚚 In Transit"
+        elif self.status == 'approved':
+            return "🟡 Ready for Pickup"
+        elif self.status == 'pending':
+            return "⏳ Pending Review"
+        elif self.status == 'rejected':
+            return "❌ Rejected"
+        elif self.status == 'cancelled':
+            return "🚫 Cancelled"
+        return self.status
+    
+    def get_timeline(self):
+        """Get timeline of request status changes"""
+        timeline = []
+        
+        timeline.append({
+            'status': 'created',
+            'date': self.created_at,
+            'description': 'Request created',
+            'icon': '📝',
+            'color': 'info'
+        })
+        
+        if self.approved_at:
+            timeline.append({
+                'status': 'approved',
+                'date': self.approved_at,
+                'description': f"Approved by {self.approved_by.user.get_full_name() if self.approved_by else 'Blood Bank'}",
+                'icon': '✅',
+                'color': 'success'
+            })
+        
+        if self.dispatched_at:
+            timeline.append({
+                'status': 'dispatched',
+                'date': self.dispatched_at,
+                'description': 'Dispatched from blood bank',
+                'icon': '🚚',
+                'color': 'primary'
+            })
+        
+        if self.delivered_at:
+            timeline.append({
+                'status': 'delivered',
+                'date': self.delivered_at,
+                'description': f"Received by {self.received_by_name}",
+                'icon': '🏥',
+                'color': 'success'
+            })
+        
+        if self.status == 'rejected' and self.rejection_reason:
+            timeline.append({
+                'status': 'rejected',
+                'date': self.updated_at,
+                'description': f"Rejected: {self.rejection_reason}",
+                'icon': '❌',
+                'color': 'danger'
+            })
+        
+        return timeline

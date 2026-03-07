@@ -2,161 +2,198 @@
 {% load static %}
 {% load widget_tweaks %}
 
-{% block title %}Admin Login{% endblock %}
+{% block title %}Admin Login - BloodConnect{% endblock %}
 
-{% block auth_card_class %}admin{% endblock %}
-{% block auth_icon %}fas fa-user-cog{% endblock %}
-{% block auth_title %}Admin Login{% endblock %}
-
-{% block auth_content %}
-<div class="auth-card admin">
-
-    
-    <div class="card-body">
-        <!-- Messages -->
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-cog me-2"></i>
+                        Admin Login
+                    </h4>
                 </div>
-            {% endfor %}
-        {% endif %}
+                
+                <div class="card-body">
+                    <!-- Welcome message -->
+                    <p class="text-muted text-center mb-4">Administrator Access Only</p>
 
-        <!-- Login Form -->
-        <form method="POST" autocomplete="on" aria-label="Admin Login Form">
-            {% csrf_token %}
-            
-            <!-- Username Field -->
-            <div class="form-group">
-                <label for="{{ form.username.id_for_label }}">
-                    <i class="fas fa-user mr-1"></i> Username
-                </label>
-                {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username"|attr:"autofocus:autofocus" }}
-                {% if form.username.errors %}
-                    <div class="error-message" role="alert">
-                        <i class="fas fa-exclamation-circle mr-1"></i> {{ form.username.errors|striptags }}
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Login Form -->
+                    <form method="POST" autocomplete="on">
+                        {% csrf_token %}
+                        
+                        <!-- Username Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">
+                                <i class="fas fa-user me-1"></i> Username
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username"|attr:"autofocus:autofocus" }}
+                            </div>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="fas fa-exclamation-circle me-1"></i> {{ form.username.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">
+                                <i class="fas fa-lock me-1"></i> Password
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password" }}
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                            <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+                            </div>
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="fas fa-exclamation-circle me-1"></i> {{ form.password.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+                                <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login</span>
+                                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+
+                        <!-- Forgot Password Link -->
+                        <div class="text-center mt-3">
+                            <a href="javascript:void(0)" class="text-muted small" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                                <i class="fas fa-key me-1"></i> Forgot password?
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Back Button -->
+                    <div class="text-center mt-4">
+                        <button onclick="history.back()" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-2"></i> Back
+                        </button>
                     </div>
-                {% endif %}
-            </div>
 
-            <!-- Password Field -->
-            <div class="form-group position-relative">
-                <label for="{{ form.password.id_for_label }}">
-                    <i class="fas fa-lock mr-1"></i> Password
-                </label>
-                {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password"|attr:"type:password" }}
-                <span class="show-password-toggle" tabindex="0" aria-label="Show or hide password" onclick="togglePassword()" onkeypress="if(event.key==='Enter'){togglePassword();}">
-                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
-                </span>
-                {% if form.password.errors %}
-                    <div class="error-message" role="alert">
-                        <i class="fas fa-exclamation-circle mr-1"></i> {{ form.password.errors|striptags }}
+                    <!-- Security Note -->
+                    <div class="text-center mt-4">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Authorized personnel only
+                        </small>
                     </div>
-                {% endif %}
-                <div id="capsWarning" class="capslock-warning">
-                    <i class="fas fa-exclamation-triangle"></i> Caps Lock is ON
                 </div>
             </div>
-
-            <!-- Non-field errors -->
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger d-flex align-items-center" role="alert">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
-                    {% for error in form.non_field_errors %}
-                        {{ error }}
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
-                <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i> Login</span>
-                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-            </button>
-        </form>
-
-        <!-- Back Button -->
-        <div class="text-center mt-4">
-            <button onclick="history.back()" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
         </div>
     </div>
 </div>
 
-
-
 <script>
-    // Show/hide password toggle
-    function togglePassword() {
-        const passwordField = document.querySelector('input[name="password"]');
-        const icon = document.getElementById('togglePasswordIcon');
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            passwordField.type = "password";
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
+// Show/hide password toggle
+function togglePassword() {
+    const passwordField = document.getElementById('{{ form.password.id_for_label }}');
+    const icon = document.getElementById('togglePasswordIcon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
+}
 
-    // Loading spinner on submit
-    document.querySelector('form').addEventListener('submit', function() {
-        document.getElementById('loginBtnText').classList.add('d-none');
-        document.getElementById('loginSpinner').classList.remove('d-none');
-        document.getElementById('loginBtn').disabled = true;
-    });
-
-    // CAPSLOCK detection
-    const passwordInput = document.querySelector('input[name="password"]');
+// CAPSLOCK detection
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
     const capsWarning = document.getElementById('capsWarning');
-
-    if (passwordInput) {
+    
+    if (passwordInput && capsWarning) {
         passwordInput.addEventListener('keyup', function(e) {
             if (e.getModifierState('CapsLock')) {
-                capsWarning.style.display = 'block';
+                capsWarning.classList.remove('d-none');
             } else {
-                capsWarning.style.display = 'none';
+                capsWarning.classList.add('d-none');
             }
         });
 
         passwordInput.addEventListener('blur', function() {
-            capsWarning.style.display = 'none';
+            capsWarning.classList.add('d-none');
+        });
+    }
+
+    // Loading spinner on submit
+    const form = document.querySelector('form');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginSpinner = document.getElementById('loginSpinner');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Client-side validation
+            const usernameField = document.getElementById('{{ form.username.id_for_label }}');
+            const passwordField = document.getElementById('{{ form.password.id_for_label }}');
+            
+            if (!usernameField.value.trim() || !passwordField.value.trim()) {
+                e.preventDefault();
+                alert('Please enter both username and password');
+                return false;
+            }
+            
+            // Show loading state
+            loginBtnText.classList.add('d-none');
+            loginSpinner.classList.remove('d-none');
+            loginBtn.disabled = true;
         });
     }
 
     // Auto-focus on username field
-    document.addEventListener('DOMContentLoaded', function() {
-        const usernameField = document.querySelector('input[name="username"]');
-        if (usernameField) {
-            usernameField.focus();
-        }
-    });
-
-    // Form validation
-    const form = document.querySelector('form');
-    form.addEventListener('submit', function(e) {
-        const username = document.querySelector('input[name="username"]').value.trim();
-        const password = document.querySelector('input[name="password"]').value.trim();
-        
-        if (!username || !password) {
-            e.preventDefault();
-            alert('Please enter both username and password');
-            return false;
-        }
-    });
+    const usernameField = document.getElementById('{{ form.username.id_for_label }}');
+    if (usernameField) {
+        usernameField.focus();
+    }
 
     // Auto-dismiss alerts after 5 seconds
     setTimeout(function() {
         document.querySelectorAll('.alert').forEach(function(alert) {
-            $(alert).alert('close');
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 300);
         });
     }, 5000);
+});
 </script>
 {% endblock %}

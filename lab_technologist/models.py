@@ -1,8 +1,10 @@
+# lab_technologist/models.py
+
 from datetime import date
 from django.db import models
 from donor.models import Donor
 from donor.models import BloodDonate
-from blood.models import DonationCenter  # Add this import
+from blood.models import DonationCenter  
 
 class BloodTest(models.Model):
     """Blood testing model for lab technologist"""
@@ -62,15 +64,65 @@ class BloodTest(models.Model):
             self.blood_collection.save()
         self.save()
     
+    def get_barcode(self):
+        """
+        Helper method to get barcode from related objects
+        Used by admin and templates
+        """
+        if not self.blood_collection:
+            return None
+            
+        # Try to get from blood bag barcode
+        try:
+            from blood.models import BloodBagBarcode
+            blood_bag = BloodBagBarcode.objects.filter(
+                blood_donation=self.blood_collection
+            ).first()
+            if blood_bag:
+                return blood_bag.barcode
+        except (ImportError, Exception):
+            pass
+            
+        # Try to get from stock unit
+        try:
+            from blood.models import StockUnit
+            stock_unit = StockUnit.objects.filter(
+                blood_donation=self.blood_collection
+            ).first()
+            if stock_unit:
+                return stock_unit.barcode
+        except (ImportError, Exception):
+            pass
+            
+        # Fallback - return donation ID as string
+        return f"DON-{self.blood_collection.id}"
+    
     def __str__(self):
-        return f"Test for {self.blood_collection.barcode} - {self.result}"
+        """Safe string representation - handles missing barcode gracefully"""
+        if self.blood_collection:
+            barcode = self.get_barcode()
+            if barcode:
+                return f"Test for {barcode} - {self.result}"
+            return f"Test for Donation #{self.blood_collection.id} - {self.result}"
+        return f"Test #{self.id} - {self.result}"
+    
+    class Meta:
+        verbose_name = "Blood Test"
+        verbose_name_plural = "Blood Tests"
+        ordering = ['-test_date']
+        indexes = [
+            models.Index(fields=['result']),
+            models.Index(fields=['test_date']),
+        ]
+
+
 class LabTechnologistProfile(models.Model):
-    """Lab Technologist profile"""
+    """Lab Technologist profile with admin approval"""
     
     user = models.OneToOneField(
         'auth.User',
         on_delete=models.CASCADE,
-        related_name='lab_tech_profile'  # This will be 'lab_tech_profile'
+        related_name='lab_tech_profile'
     )
     employee_id = models.CharField(max_length=50, unique=True)
     profile_pic = models.ImageField(upload_to='labtech_profiles/', null=True, blank=True)
@@ -79,23 +131,40 @@ class LabTechnologistProfile(models.Model):
         on_delete=models.SET_NULL, 
         null=True,
         blank=True,
-        related_name='lab_technologists'  # Added related_name for reverse query
+        related_name='lab_technologists'
     )
     phone = models.CharField(max_length=15)
     qualification = models.CharField(max_length=200, blank=True)
     license_number = models.CharField(max_length=50, blank=True)
     is_active = models.BooleanField(default=True)
     
-    # ADD THESE MISSING FIELDS
+    # ===== ADMIN APPROVAL FIELDS =====
+    is_approved = models.BooleanField(
+        default=False,
+        help_text="Whether admin has approved this lab technologist"
+    )
+    approved_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When admin approved this technologist"
+    )
+    approved_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_lab_techs',
+        help_text="Admin who approved this technologist"
+    )
+    # ===== END APPROVAL FIELDS =====
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Optional fields for specialization
     specialization = models.CharField(max_length=100, blank=True, 
                                       help_text="E.g., Hematology, Microbiology, Immunology")
     years_of_experience = models.PositiveIntegerField(default=0)
     
-    # Certification tracking
     certification_date = models.DateField(null=True, blank=True)
     certification_expiry = models.DateField(null=True, blank=True)
 
@@ -103,34 +172,31 @@ class LabTechnologistProfile(models.Model):
         verbose_name = "Lab Technologist"
         verbose_name_plural = "Lab Technologists"
         ordering = ['-created_at']
-        # Add database constraints
         constraints = [
-            # Ensure user is unique (already OneToOne, but adds explicit constraint)
             models.UniqueConstraint(
                 fields=['user'],
                 name='unique_labtech_user'
             ),
-            # Ensure employee_id is unique (already set, but explicit)
             models.UniqueConstraint(
                 fields=['employee_id'],
                 name='unique_labtech_employee_id'
             ),
-            # Ensure license_number is unique when provided
             models.UniqueConstraint(
                 fields=['license_number'],
                 name='unique_labtech_license',
                 condition=models.Q(license_number__isnull=False) & ~models.Q(license_number='')
             ),
         ]
-        # Add indexes for frequently queried fields
         indexes = [
             models.Index(fields=['center', 'is_active']),
             models.Index(fields=['specialization']),
             models.Index(fields=['certification_expiry']),
+            models.Index(fields=['is_approved']),  # ADDED for faster approval queries
         ]
 
     def __str__(self):
-        return f"Lab Tech: {self.user.get_full_name()} - {self.employee_id}"
+        status = "✅ Approved" if self.is_approved else "⏳ Pending"
+        return f"Lab Tech: {self.user.get_full_name()} - {self.employee_id} ({status})"
 
     def clean(self):
         """
@@ -140,11 +206,10 @@ class LabTechnologistProfile(models.Model):
         from django.core.exceptions import ValidationError
         from datetime import date
         
-        # IMPORTANT FIX: Skip validation during signup (when no user exists yet)
+        # Skip validation during signup (when no user exists yet)
         if not hasattr(self, 'user') or not self.user_id:
             return
         
-        # Call parent clean
         super().clean()
         
         # Skip profile validation during signup
@@ -197,7 +262,6 @@ class LabTechnologistProfile(models.Model):
         from django.core.exceptions import ValidationError
         import re
         
-        # Example: Basic alphanumeric validation (adjust based on your country's format)
         if not re.match(r'^[A-Z0-9-]+$', self.license_number.upper()):
             raise ValidationError({
                 'license_number': "License number should contain only uppercase letters, numbers, and hyphens"
@@ -205,9 +269,14 @@ class LabTechnologistProfile(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Override save to ensure validation runs
+        Override save to ensure validation runs and handle approval timestamp
         """
-        # IMPORTANT FIX: Only run full_clean if this is an existing profile
+        # Handle approval timestamp - if approved and no timestamp, set it now
+        if self.is_approved and not self.approved_at:
+            from django.utils import timezone
+            self.approved_at = timezone.now()
+        
+        # Only run full_clean if this is an existing profile
         if self.pk:
             self.full_clean()
         
@@ -219,9 +288,7 @@ class LabTechnologistProfile(models.Model):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        """
-        Handle cleanup when profile is deleted
-        """
+        """Handle cleanup when profile is deleted"""
         # Add any cleanup logic here if needed
         # For example, reassign pending tests to another tech
         super().delete(*args, **kwargs)
@@ -231,9 +298,16 @@ class LabTechnologistProfile(models.Model):
         return self.user.get_full_name() or self.user.username
 
     @property
+    def approval_status(self):
+        """Get human-readable approval status"""
+        if self.is_approved:
+            return f"Approved on {self.approved_at.strftime('%b %d, %Y')}" if self.approved_at else "Approved"
+        return "Pending Approval"
+
+    @property
     def is_available(self):
         """Check if technologist is available for work"""
-        return self.is_active and self.center is not None and self.certification_valid
+        return self.is_active and self.is_approved and self.center is not None and self.certification_valid
 
     @property
     def certification_valid(self):
@@ -254,9 +328,8 @@ class LabTechnologistProfile(models.Model):
 
     def get_tests_pending(self):
         """Get count of pending tests assigned to this technologist"""
-        # Assuming you have a BloodTest model in the same app
         if hasattr(self, 'bloodtest_set'):
-            return self.bloodtest_set.filter(status='pending').count()
+            return self.bloodtest_set.filter(result='pending').count()
         return 0
 
     def get_completed_tests_today(self):
@@ -264,20 +337,16 @@ class LabTechnologistProfile(models.Model):
         if hasattr(self, 'bloodtest_set'):
             from datetime import date
             return self.bloodtest_set.filter(
-                status='completed',
-                completed_at__date=date.today()
-            ).count()
+                test_date__date=date.today()
+            ).exclude(result='pending').count()
         return 0
 
     def can_perform_test(self, test_type):
         """Check if technologist can perform specific test type"""
-        # This could be expanded based on specialization
         if not self.is_available:
             return False
         
-        # If specialization is set, check if test_type matches
         if self.specialization and test_type:
-            # Simple matching - can be made more sophisticated
             return test_type.lower() in self.specialization.lower()
         
         return True
@@ -289,8 +358,17 @@ class LabTechnologistProfile(models.Model):
         return cls.objects.filter(
             center_id=center_id,
             is_active=True,
+            is_approved=True,
             certification_expiry__gte=date.today()
         )
+
+    @classmethod
+    def get_pending_approval(cls):
+        """Get all lab technologists awaiting approval"""
+        return cls.objects.filter(
+            is_approved=False,
+            is_active=True
+        ).order_by('-created_at')
 
     @classmethod
     def get_expiring_certifications(cls, days=30):
@@ -300,5 +378,6 @@ class LabTechnologistProfile(models.Model):
         return cls.objects.filter(
             certification_expiry__lte=expiry_threshold,
             certification_expiry__gte=date.today(),
-            is_active=True
+            is_active=True,
+            is_approved=True
         )

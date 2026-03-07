@@ -38,12 +38,12 @@ from django.db.models import Prefetch
 from django.contrib.auth.mixins import LoginRequiredMixin
 from functools import wraps
 from django.views.generic import ListView
-from blood.utils.notifications import create_notification
 from blood.utils.greetings import get_phlebotomist_greeting
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils.html import strip_tags
 from utils.models import Notification
+from utils.notification_service import NotificationService
 from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
@@ -52,13 +52,10 @@ from donor.models import BLOODGROUP_CHOICES
 
 logger = logging.getLogger(__name__)
 
-# Helper: Check if user is in PHLEBOTOMIST group
 def is_phlebotomist(user):
+    """Check if user is in PHLEBOTOMIST group"""
     return user.groups.filter(name='PHLEBOTOMIST').exists()
 
-# ---------------------------
-# Custom Decorator for Approved Phlebotomists
-# ---------------------------
 def phlebotomist_approved_required(view_func):
     """
     Decorator to ensure phlebotomist is approved before accessing views
@@ -73,19 +70,16 @@ def phlebotomist_approved_required(view_func):
             if not phlebotomist.is_approved:
                 messages.warning(
                     request, 
-                    "⏳ Your account is pending admin approval. You'll receive an email once approved."
+                    "Your account is pending admin approval. You'll receive an email once approved."
                 )
                 return redirect('phlebotomist:phlebotomist-pending-approval')
         except Phlebotomist.DoesNotExist:
-            messages.error(request, "❌ Phlebotomist profile not found.")
+            messages.error(request, "Phlebotomist profile not found.")
             return redirect('phlebotomist:phlebotomistlogin')
         
         return view_func(request, *args, **kwargs)
     return wrapper
 
-# ---------------------------
-# Phlebotomist Signup View (UPDATED - NO EMAIL VERIFICATION)
-# ---------------------------
 def phlebotomist_signup_view(request):
     """
     Handle phlebotomist registration.
@@ -95,46 +89,37 @@ def phlebotomist_signup_view(request):
         form = PhlebotomistSignupForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # Use the form's save method which handles both User and Phlebotomist creation
                 phlebotomist = form.save(commit=True)
                 user = phlebotomist.user
                 
-                # Add to PHLEBOTOMIST group
                 phlebotomist_group, _ = Group.objects.get_or_create(name="PHLEBOTOMIST")
                 phlebotomist_group.user_set.add(user)
                 
-                # Log the registration
                 logger.info(f"New phlebotomist registration: {user.username} - Pending admin approval")
                 
-                # Success message
                 messages.success(
                     request,
-                    f"🎉 Registration successful, {user.first_name}! "
+                    f"Registration successful, {user.first_name}! "
                     f"Your account has been created and is pending admin approval. "
                     f"You can login but access will be limited until approved."
                 )
                 return redirect('phlebotomist:phlebotomistlogin')
                 
             except Exception as e:
-                # Log the error for debugging
                 logger.error(f"Phlebotomist registration error: {str(e)}", exc_info=True)
-                messages.error(request, f"⚠️ Registration failed: {str(e)}")
+                messages.error(request, f"Registration failed: {str(e)}")
         else:
-            messages.error(request, "⚠️ Please correct the errors below.")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = PhlebotomistSignupForm()
     
     return render(request, "phlebotomist/phlebotomistsignup.html", {"form": form})
 
-# ---------------------------
-# Phlebotomist Login View (UPDATED - NO EMAIL VERIFICATION)
-# ---------------------------
 def phlebotomist_login_view(request):
     """
-    Handle phlebotomist login WITHOUT email verification requirement.
+    Handle phlebotomist login without email verification requirement.
     Only admin approval required.
     """
-    # If user is already authenticated and is a phlebotomist, redirect to dashboard
     if request.user.is_authenticated and request.user.groups.filter(name='PHLEBOTOMIST').exists():
         return redirect('phlebotomist:phlebotomist-dashboard')
     
@@ -146,47 +131,41 @@ def phlebotomist_login_view(request):
             user = authenticate(request, username=username, password=password)
             
             if user is not None:
-                # CHECK 1: Phlebotomist Profile Exists
                 if not hasattr(user, 'phlebotomist'):
                     messages.error(
                         request, 
-                        '❌ Phlebotomist profile not found. '
+                        'Phlebotomist profile not found. '
                         'Please contact support to complete your registration.'
                     )
                     return render(request, 'phlebotomist/phlebotomistlogin.html', {'form': form})
                 
-                # CHECK 2: Admin Approval Status
                 try:
                     phlebotomist = user.phlebotomist
                     
                     if not phlebotomist.is_approved:
-                        # Account pending approval - can login but limited access
                         login(request, user)
                         logger.info(f"Phlebotomist login (pending approval): {user.username} ({user.email})")
                         
                         messages.warning(
                             request,
-                            f"⚠️ Welcome, {user.get_full_name() or user.username}! "
+                            f"Welcome, {user.get_full_name() or user.username}! "
                             f"Your account is pending admin approval. "
                             f"Access is limited until approved."
                         )
                         return redirect('phlebotomist:phlebotomist-pending-approval')
                     
-                    # All checks passed - Login successful
                     login(request, user)
                     logger.info(f"Phlebotomist login successful: {user.username} ({user.email}) - Approved: {phlebotomist.is_approved}")
                     
-                    messages.success(request, f"✅ Welcome back, {user.get_full_name() or user.username}!")
+                    messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
                     return redirect('phlebotomist:phlebotomist-dashboard')
                     
                 except Phlebotomist.DoesNotExist:
-                    messages.error(request, "❌ Phlebotomist profile not found. Please contact support.")
+                    messages.error(request, "Phlebotomist profile not found. Please contact support.")
                     
             else:
-                # Authentication failed
-                messages.error(request, "❌ Invalid username or password.")
+                messages.error(request, "Invalid username or password.")
                 
-                # Provide helpful suggestions
                 messages.info(
                     request,
                     'Forgot your password? '
@@ -194,14 +173,12 @@ def phlebotomist_login_view(request):
                     f'Click here to reset it</a>'
                 )
         else:
-            messages.error(request, "⚠️ Please correct the errors below.")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = AuthenticationForm()
     
     return render(request, 'phlebotomist/phlebotomistlogin.html', {'form': form})
-# ---------------------------
-# Pending Approval View
-# ---------------------------
+
 def phlebotomist_pending_approval_view(request):
     """
     View for phlebotomists waiting for admin approval.
@@ -212,37 +189,30 @@ def phlebotomist_pending_approval_view(request):
     try:
         phlebotomist = request.user.phlebotomist
         
-        # If phlebotomist is already approved, redirect to dashboard
         if phlebotomist.is_approved:
             return redirect('phlebotomist:phlebotomist-dashboard')
         
-        # Use user's date_joined if phlebotomist model doesn't have registration_date
         registration_date = getattr(phlebotomist, 'registration_date', request.user.date_joined)
         
         context = {
             'phlebotomist': phlebotomist,
             'full_name': request.user.get_full_name() or request.user.username,
             'registration_date': registration_date,
-            # Removed all rejection_reason references
         }
         
         return render(request, 'phlebotomist/phlebotomist_pending_approval.html', context)
         
     except Phlebotomist.DoesNotExist:
-        messages.error(request, "❌ Phlebotomist profile not found.")
+        messages.error(request, "Phlebotomist profile not found.")
         return redirect('phlebotomist:phlebotomistlogin')
 
-# ---------------------------
-# Phlebotomist Dashboard View
-# ---------------------------
 @login_required(login_url='/phlebotomist/phlebotomistlogin/')
 @user_passes_test(is_phlebotomist, login_url='/phlebotomist/phlebotomistlogin/')
 def phlebotomist_dashboard(request):
-    # Fixed: Changed 'donation_center' to 'center' to match model field name
+    """Phlebotomist dashboard view"""
     phlebotomist = get_object_or_404(Phlebotomist.objects.select_related('center', 'user'), user=request.user)
     today = localdate()
 
-    # --- Appointment aggregates ---
     total_appointments = Appointment.objects.filter(phlebotomist=phlebotomist).count()
     today_appointments = Appointment.objects.filter(phlebotomist=phlebotomist, date__date=today).count()
 
@@ -253,14 +223,12 @@ def phlebotomist_dashboard(request):
 
     next_appointment = upcoming_appointments.first() if upcoming_appointments else None
 
-    # --- Generate personalized greeting ---
     greeting_data = get_phlebotomist_greeting(
         phlebotomist=phlebotomist,
         appointment_count=today_appointments,
         next_appointment=next_appointment
     )
 
-    # Weekly appointments chart data — ensure full week coverage with zeros for missing days
     week_start = today - timedelta(days=6)
     dates = [week_start + timedelta(days=i) for i in range(7)]
     date_counts = OrderedDict((d, 0) for d in dates)
@@ -279,15 +247,14 @@ def phlebotomist_dashboard(request):
     chart_labels = [d.strftime('%b %d') for d in date_counts.keys()]
     chart_data = list(date_counts.values())
 
-    # --- Blood stock section for phlebotomist's own center ---
     blood_stock_summary = None
     blood_stock_totals = []
 
-    if phlebotomist.center:  # Changed from phlebotomist.donation_center
-        blood_stock_summary = StockUnit.objects.filter(center=phlebotomist.center)  # Changed
+    if phlebotomist.center:
+        blood_stock_summary = StockUnit.objects.filter(center=phlebotomist.center)
 
         bloodgroup_qs = (
-            StockUnit.objects.filter(center=phlebotomist.center)  # Changed
+            StockUnit.objects.filter(center=phlebotomist.center)
             .values('bloodgroup')
             .annotate(
                 total_units=Sum('unit'),
@@ -300,7 +267,6 @@ def phlebotomist_dashboard(request):
         for group in bloodgroup_qs:
             blood_stock_totals.append(group)
 
-    # --- Other centers stock (summary with earliest expiry) ---
     all_centers = DonationCenter.objects.all().order_by('name')
     selected_center_id = request.GET.get('centre')
     other_centers_stock = None
@@ -309,7 +275,6 @@ def phlebotomist_dashboard(request):
     if selected_center_id:
         try:
             selected_center = DonationCenter.objects.get(id=selected_center_id)
-            # Aggregate total units and earliest expiry per blood group at selected center
             other_centers_stock = (
                 StockUnit.objects.filter(center=selected_center)
                 .values('bloodgroup')
@@ -323,7 +288,6 @@ def phlebotomist_dashboard(request):
             selected_center = None
             other_centers_stock = None
 
-    # --- Calculate additional metrics for context ---
     completed_appointments = Appointment.objects.filter(
         phlebotomist=phlebotomist,
         status='completed',
@@ -353,71 +317,49 @@ def phlebotomist_dashboard(request):
         'selected_center': selected_center,
         'other_centers_stock': other_centers_stock,
         'today_date': today,
-        'greeting_data': greeting_data,  # Add the greeting data to context
-        'current_date': today,  # For the shared greeting template
+        'greeting_data': greeting_data,
+        'current_date': today,
     }
     
     return render(request, 'phlebotomist/dashboard.html', context)
-
-# ----------------------------------
-# Donation Related Appointments
-# ------------------------------------
-logger = logging.getLogger(__name__)
 
 @login_required(login_url='/phlebotomist/phlebotomistlogin/')
 @user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
 def phlebotomist_donation_bookings(request):
     """
-    Updated view for phlebotomist to manage DONATION appointments.
-    Phlebotomists now only: approve, reject, cancel, and collect blood samples.
-    Safety verification moved to lab techs.
+    View for phlebotomist to manage DONATION appointments.
     """
     phlebotomist = request.user.phlebotomist
     center = phlebotomist.center
     
-    logger.info(f"🩺 Phlebotomist {phlebotomist.user.username} accessing donation bookings at {center.name if center else 'No Center'}")
+    logger.info(f"Phlebotomist {phlebotomist.user.username} accessing donation bookings at {center.name if center else 'No Center'}")
     
-    # Import here to avoid circular imports
     from donor.models import BloodDonate
     
     try:
         donation_content_type = ContentType.objects.get_for_model(BloodDonate)
-        logger.info(f"📋 BloodDonate ContentType ID: {donation_content_type.id}")
     except Exception as e:
-        logger.error(f"❌ Error getting BloodDonate ContentType: {e}")
+        logger.error(f"Error getting BloodDonate ContentType: {e}")
         donation_content_type = None
     
-    # ==========================================
-    # FILTERING LOGIC
-    # ==========================================
     filters = Q()
-    
-    # Filter by phlebotomist
     filters &= Q(phlebotomist=phlebotomist)
     
-    # Filter by center if phlebotomist is assigned to one
     if center:
         filters &= Q(center=center)
     
-    # Get status filter from request
     status_filter = request.GET.get('status', '').strip()
     if status_filter:
         filters &= Q(status=status_filter)
-        logger.info(f"📊 Applying status filter: {status_filter}")
     
-    # Get date filter
     date_filter = request.GET.get('date', '').strip()
     if date_filter:
         try:
             filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
             filters &= Q(date__date=filter_date)
-            logger.info(f"📅 Applying date filter: {date_filter}")
         except ValueError:
-            logger.warning(f"⚠️ Invalid date format: {date_filter}")
+            logger.warning(f"Invalid date format: {date_filter}")
     
-    # ==========================================
-    # QUERY CONSTRUCTION WITH OPTIMIZATION
-    # ==========================================
     if donation_content_type:
         donation_appointments = Appointment.objects.filter(
             filters,
@@ -432,24 +374,17 @@ def phlebotomist_donation_bookings(request):
         ).order_by('-date', '-created_at')
         
         total_appointments = donation_appointments.count()
-        logger.info(f"📈 Found {total_appointments} donation appointments")
     else:
         donation_appointments = Appointment.objects.none()
         total_appointments = 0
     
-    # ==========================================
-    # ENHANCED DATA PREPARATION
-    # ==========================================
     appointments_with_details = []
     
-    # Pre-fetch all related BloodDonate objects in one query
     appointment_ids = [app.id for app in donation_appointments]
     
-    # Get all related BloodDonate objects for these appointments
     blood_donations_dict = {}
     if appointment_ids:
         try:
-            # Get BloodDonate objects related to these appointments
             request_object_ids = [app.request_object_id for app in donation_appointments if app.request_object_id]
             if request_object_ids:
                 blood_donations = BloodDonate.objects.filter(
@@ -460,18 +395,15 @@ def phlebotomist_donation_bookings(request):
                     'donation_center'
                 )
                 
-                # Create a dictionary mapping BloodDonate ID to the object
                 blood_donations_by_id = {bd.id: bd for bd in blood_donations}
                 
-                # Map appointment IDs to BloodDonate objects
                 for app in donation_appointments:
                     if app.request_object_id and app.request_object_id in blood_donations_by_id:
                         blood_donations_dict[app.id] = blood_donations_by_id[app.request_object_id]
                     
         except Exception as e:
-            logger.error(f"❌ Error fetching blood donations: {e}")
+            logger.error(f"Error fetching blood donations: {e}")
     
-    # Get StockUnit safety information for these blood donations
     stock_units_dict = {}
     if blood_donations_dict:
         from blood.models import StockUnit
@@ -486,16 +418,12 @@ def phlebotomist_donation_bookings(request):
                 stock_units_dict[su.blood_donation_id] = su
                 
         except Exception as e:
-            logger.error(f"❌ Error fetching stock units: {e}")
+            logger.error(f"Error fetching stock units: {e}")
     
-    # Pre-fetch user information for related fields (if needed)
-    # Since we can't use select_related for these, we'll fetch them when needed
     from django.contrib.auth.models import User
     
-    # Create a cache for user objects to avoid multiple queries
     user_cache = {}
     
-    # Collect all user IDs that might be referenced
     user_ids = set()
     for appointment in donation_appointments:
         if hasattr(appointment, 'approved_by_id') and appointment.approved_by_id:
@@ -509,15 +437,14 @@ def phlebotomist_donation_bookings(request):
         if hasattr(appointment, 'status_changed_by_id') and appointment.status_changed_by_id:
             user_ids.add(appointment.status_changed_by_id)
     
-    # Fetch all referenced users in one query
     if user_ids:
         users = User.objects.filter(id__in=user_ids).select_related(
-    'phlebotomist', 
-    'donor', 
-    'hospitaluser', 
-    'lab_tech_profile', 
-    'blood_bank_tech_profile'
-)
+            'phlebotomist', 
+            'donor', 
+            'hospitaluser', 
+            'lab_tech_profile', 
+            'blood_bank_tech_profile'
+        )
         user_cache = {user.id: user for user in users}
     
     for appointment in donation_appointments:
@@ -526,14 +453,11 @@ def phlebotomist_donation_bookings(request):
         donor_details = {}
         blood_donate_details = {}
         
-        # Get BloodDonate object from our pre-fetched dictionary
         blood_donate = blood_donations_dict.get(appointment.id)
         
-        # Get associated StockUnit if exists
         if blood_donate:
             stock_unit = stock_units_dict.get(blood_donate.id)
         
-        # Get comprehensive donor details
         if appointment.donor:
             donor = appointment.donor
             user = donor.user
@@ -560,9 +484,7 @@ def phlebotomist_donation_bookings(request):
                 'safety_rating': 'high',
             }
         
-        # Get BloodDonate details
         if blood_donate:
-            # Calculate safety metrics from StockUnit if available
             expiry_date = None
             safety_status = 'pending'
             is_quarantined = False
@@ -582,14 +504,12 @@ def phlebotomist_donation_bookings(request):
                 if stock_unit.expiry_date:
                     expiry_date = stock_unit.expiry_date
             
-            # Get donation center details safely
             donation_center_name = 'Not Assigned'
             donation_center_address = 'N/A'
             
             if blood_donate.donation_center:
                 donation_center_name = blood_donate.donation_center.name
                 
-                # Safely get address components
                 address_parts = []
                 if hasattr(blood_donate.donation_center, 'city'):
                     address_parts.append(blood_donate.donation_center.city)
@@ -603,7 +523,6 @@ def phlebotomist_donation_bookings(request):
                 if address_parts:
                     donation_center_address = ', '.join(filter(None, address_parts))
             
-            # Determine safety flags
             safety_flags = []
             if safety_status == 'unsafe':
                 safety_flags.append('unsafe')
@@ -636,7 +555,6 @@ def phlebotomist_donation_bookings(request):
                 'is_quarantined': is_quarantined,
             }
         
-        # Appointment status analysis
         appointment_status = appointment.status
         status_analysis = {
             'can_approve': appointment_status == 'pending',
@@ -646,14 +564,12 @@ def phlebotomist_donation_bookings(request):
             'requires_safety_check': False,
         }
         
-        # Get user information for related fields from cache
         approved_by_user = user_cache.get(appointment.approved_by_id) if hasattr(appointment, 'approved_by_id') else None
         rejected_by_user = user_cache.get(appointment.rejected_by_id) if hasattr(appointment, 'rejected_by_id') else None
         collected_by_user = user_cache.get(appointment.collected_by_id) if hasattr(appointment, 'collected_by_id') else None
         cancelled_by_user = user_cache.get(appointment.cancelled_by_user_id) if hasattr(appointment, 'cancelled_by_user_id') else None
         status_changed_by_user = user_cache.get(appointment.status_changed_by_id) if hasattr(appointment, 'status_changed_by_id') else None
         
-        # Compile all data
         appointments_with_details.append({
             'appointment': appointment,
             'blood_donate': blood_donate,
@@ -668,7 +584,6 @@ def phlebotomist_donation_bookings(request):
                 appointment.status in ['cancelled', 'rejected']
             ),
             'time_since_created': (timezone.now() - appointment.created_at).days if appointment.created_at else 0,
-            # Add user info to context if needed in template
             'approved_by_user': approved_by_user,
             'rejected_by_user': rejected_by_user,
             'collected_by_user': collected_by_user,
@@ -676,9 +591,6 @@ def phlebotomist_donation_bookings(request):
             'status_changed_by_user': status_changed_by_user,
         })
     
-    # ==========================================
-    # APPLY BLOOD GROUP FILTER (if any)
-    # ==========================================
     blood_group_filter = request.GET.get('blood_group', '').strip()
     if blood_group_filter and appointments_with_details:
         filtered_appointments = []
@@ -688,9 +600,6 @@ def phlebotomist_donation_bookings(request):
                 filtered_appointments.append(item)
         appointments_with_details = filtered_appointments
     
-    # ==========================================
-    # STATISTICS & ANALYTICS
-    # ==========================================
     status_counts = donation_appointments.aggregate(
         total=Count('id'),
         pending=Count('id', filter=Q(status='pending')),
@@ -701,7 +610,6 @@ def phlebotomist_donation_bookings(request):
         rejected=Count('id', filter=Q(status='rejected')),
     )
     
-    # Safety statistics - get from StockUnit model
     safety_stats = {
         'pending_verification': 0,
         'safe_units': 0,
@@ -709,7 +617,6 @@ def phlebotomist_donation_bookings(request):
         'quarantined': 0,
     }
     
-    # Count safety status from stock units
     from blood.models import StockUnit
     for item in appointments_with_details:
         if item.get('stock_unit'):
@@ -725,7 +632,6 @@ def phlebotomist_donation_bookings(request):
             if getattr(su, 'is_quarantined', False):
                 safety_stats['quarantined'] += 1
     
-    # Blood group distribution
     blood_group_stats = {}
     for item in appointments_with_details:
         bg = item.get('blood_donate_details', {}).get('bloodgroup')
@@ -735,9 +641,6 @@ def phlebotomist_donation_bookings(request):
             else:
                 blood_group_stats[bg] = 1
     
-    # ==========================================
-    # TEMPLATE CONTEXT
-    # ==========================================
     from donor.models import BLOODGROUP_CHOICES
     
     context = {
@@ -774,7 +677,6 @@ def phlebotomist_donation_bookings(request):
             ('safe', 'Safe'),
             ('unsafe', 'Unsafe'),
         ],
-        # For dashboard cards
         'metrics': {
             'today_appointments': donation_appointments.filter(date__date=timezone.now().date()).count(),
             'tomorrow_appointments': donation_appointments.filter(
@@ -792,45 +694,97 @@ def phlebotomist_donation_bookings(request):
     }
     
     logger.info(f"""
-    📊 DONATION BOOKINGS SUMMARY:
-    • Total: {status_counts.get('total', 0)}
-    • Pending: {status_counts.get('pending', 0)}
-    • Approved: {status_counts.get('approved', 0)}
-    • Collected: {status_counts.get('collected', 0)}
-    • Completed: {status_counts.get('completed', 0)}
-    • Safe Units: {safety_stats.get('safe_units', 0)}
-    • Unsafe Units: {safety_stats.get('unsafe_units', 0)}
-    • Quarantined: {safety_stats.get('quarantined', 0)}
+    DONATION BOOKINGS SUMMARY:
+    Total: {status_counts.get('total', 0)}
+    Pending: {status_counts.get('pending', 0)}
+    Approved: {status_counts.get('approved', 0)}
+    Collected: {status_counts.get('collected', 0)}
+    Completed: {status_counts.get('completed', 0)}
+    Safe Units: {safety_stats.get('safe_units', 0)}
+    Unsafe Units: {safety_stats.get('unsafe_units', 0)}
+    Quarantined: {safety_stats.get('quarantined', 0)}
     """)
     
     return render(request, 'phlebotomist/phlebotomist_donation_bookings.html', context)
-# ----------------------------------
-# UPDATE DONATION APPOINTMENT STATUS
-# ------------------------------------
-logger = logging.getLogger(__name__)
 
-def create_appointment_notification(appointment, phlebotomist_user, action, reason=None):
-    donor = getattr(appointment.request, 'donor', None)
-    if not donor:
+def send_appointment_notification(appointment, phlebotomist_user, action, reason=None):
+    """Send notification about appointment status change to donor"""
+    
+    if not appointment.donor:
         logger.warning(f"Appointment {appointment.id} has no donor linked for notification")
         return
-
-    title = "Donation Appointment Update"
-    message = (
-        f"Your donation appointment on {appointment.date.strftime('%b %d, %Y')} "
-        f"has been {action.upper()} by Phlebotomist {phlebotomist_user.get_full_name()}."
-    )
-    if reason:
-        message += f" Reason: {reason}"
-
-    Notification.objects.create(
+    
+    donor_user = appointment.donor.user
+    
+    if action == 'approved':
+        title = "Donation Appointment Approved"
+        message = (
+            f"Your donation appointment scheduled for "
+            f"{appointment.date.strftime('%B %d, %Y at %I:%M %p')} has been approved. "
+            f"Please arrive on time for your donation."
+        )
+    elif action == 'rejected':
+        title = "Donation Appointment Rejected"
+        message = (
+            f"Your donation appointment scheduled for "
+            f"{appointment.date.strftime('%B %d, %Y at %I:%M %p')} has been rejected. "
+        )
+        if reason:
+            message += f" Reason: {reason}"
+    elif action == 'collected':
+        title = "Blood Donation Completed"
+        message = (
+            f"Thank you for your blood donation on {timezone.now().date()}! "
+            f"Your sample has been sent to the lab for testing. "
+            f"You will be notified once test results are available."
+        )
+    elif action == 'cancelled':
+        title = "Donation Appointment Cancelled"
+        message = (
+            f"Your donation appointment scheduled for "
+            f"{appointment.date.strftime('%B %d, %Y at %I:%M %p')} has been cancelled. "
+        )
+        if reason:
+            message += f" Reason: {reason}"
+    else:
+        title = f"Donation Appointment {action.capitalize()}"
+        message = (
+            f"Your donation appointment status has been updated to {action}. "
+            f"Please check your dashboard for details."
+        )
+    
+    NotificationService.send_to_user(
+        recipient_user=donor_user,
+        sender_user=phlebotomist_user,
         title=title,
-        message=message,
-        recipient_content_type=ContentType.objects.get_for_model(donor),
-        recipient_object_id=donor.id,
-        sender_content_type=ContentType.objects.get_for_model(phlebotomist_user),
-        sender_object_id=phlebotomist_user.id,
+        message=message
     )
+
+def notify_lab_techs_about_new_sample(blood_donation, phlebotomist_user):
+    """Notify lab technicians about new blood sample for testing"""
+    
+    from lab_technologist.models import LabTechnologistProfile
+    
+    center = blood_donation.donation_center or getattr(phlebotomist_user, 'phlebotomist', None).center
+    
+    if center:
+        lab_techs = LabTechnologistProfile.objects.filter(
+            center=center,
+            is_active=True,
+            is_approved=True
+        ).select_related('user')
+        
+        for lab_tech in lab_techs:
+            NotificationService.send_to_user(
+                recipient_user=lab_tech.user,
+                sender_user=phlebotomist_user,
+                title="New Blood Sample for Testing",
+                message=(
+                    f"Blood sample from donor {blood_donation.donor.user.get_full_name() if blood_donation.donor else 'Unknown'} "
+                    f"({blood_donation.unit}ml) needs testing. "
+                    f"Donation ID: {blood_donation.id}"
+                )
+            )
 
 @login_required(login_url='/phlebotomist/phlebotomistlogin/')
 @user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
@@ -840,9 +794,7 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
     PHASE 1: Phlebotomist collects blood but DOES NOT verify safety
     Safety verification moved to Lab Technologist
     """
-    logger.info(f"=== PHASE 1: Processing donation appointment {appointment_id} ===")
-    logger.info(f"POST data: {dict(request.POST)}")
-    logger.info(f"User: {request.user}")
+    logger.info(f"Processing donation appointment {appointment_id}")
 
     try:
         phlebotomist = request.user.phlebotomist
@@ -854,7 +806,6 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                 id=appointment_id
             )
 
-            # Auto-assign phlebotomist if needed
             if not appointment.phlebotomist:
                 appointment.phlebotomist = phlebotomist
                 appointment.save(update_fields=['phlebotomist'])
@@ -864,7 +815,6 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'error': 'This appointment is already assigned to another phlebotomist.'
                 }, status=403)
 
-            # Get linked donation request
             donation = getattr(appointment, 'request', None)
             if not donation or not isinstance(donation, BloodDonate):
                 return JsonResponse({
@@ -872,9 +822,8 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'error': 'This appointment is not linked to a valid blood donation.'
                 }, status=400)
 
-            # Validate action
             action = (request.POST.get('action') or '').strip().lower()
-            valid_actions = ['approve', 'reject', 'collect', 'cancelled']  # Changed 'completed' to 'collect'
+            valid_actions = ['approve', 'reject', 'collect', 'cancelled']
             
             if action not in valid_actions:
                 return JsonResponse({
@@ -882,7 +831,6 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'error': f"Invalid action '{action}'. Valid: {', '.join(valid_actions)}"
                 }, status=400)
 
-            # Prevent double-finalizing
             if appointment.status in ['completed', 'cancelled', 'rejected', 'collected'] or \
                donation.status in ['completed', 'cancelled', 'rejected', 'collected']:
                 return JsonResponse({
@@ -890,20 +838,15 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'error': f'This donation already has a final status: {appointment.status}.'
                 }, status=400)
 
-            # Reason for reject/cancel
             reason = (request.POST.get('reason') or '').strip()
 
-            # =======================
-            # ACTION: APPROVE
-            # =======================
             if action == 'approve':
-                if getattr(donation, 'approved_by', None):
+                if getattr(donation, 'approved_by_phlebotomist', None):
                     return JsonResponse({
                         'success': False,
                         'error': 'This donation has already been approved.'
                     }, status=400)
 
-                # Update appointment
                 appointment.status = 'approved'
                 appointment.approved_by = phlebotomist.user
                 appointment.approved_by_role = 'phlebotomist'
@@ -913,14 +856,14 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                 appointment.status_changed_at = now
                 appointment.save()
 
-                # Update donation
                 donation.status = 'approved'
+                donation.approved_by_phlebotomist = phlebotomist.user
+                donation.approved_at_phlebotomist = now
                 donation.save()
 
-                # Create notification
-                create_appointment_notification(appointment, phlebotomist.user, 'approved')
+                send_appointment_notification(appointment, phlebotomist.user, 'approved')
 
-                logger.info(f"✅ Phlebotomist {phlebotomist.user.username} approved donation {donation.id}")
+                logger.info(f"Phlebotomist {phlebotomist.user.username} approved donation {donation.id}")
 
                 return JsonResponse({
                     'success': True,
@@ -931,9 +874,6 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'operation_type': 'donation_approval'
                 })
 
-            # =======================
-            # ACTION: REJECT
-            # =======================
             elif action == 'reject':
                 if not reason:
                     return JsonResponse({
@@ -941,7 +881,6 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                         'error': 'Reason is required for rejection.'
                     }, status=400)
 
-                # Update appointment
                 appointment.status = 'rejected'
                 appointment.rejected_by = phlebotomist.user
                 appointment.rejected_by_role = 'phlebotomist'
@@ -952,15 +891,15 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                 appointment.status_changed_at = now
                 appointment.save()
 
-                # Update donation
                 donation.status = 'rejected'
                 donation.rejection_reason = reason
+                donation.rejected_by = 'phlebotomist'
+                donation.rejected_at = now
                 donation.save()
 
-                # Create notification
-                create_appointment_notification(appointment, phlebotomist.user, 'rejected', reason)
+                send_appointment_notification(appointment, phlebotomist.user, 'rejected', reason)
 
-                logger.info(f"✅ Phlebotomist {phlebotomist.user.username} rejected donation {donation.id}")
+                logger.info(f"Phlebotomist {phlebotomist.user.username} rejected donation {donation.id}")
 
                 return JsonResponse({
                     'success': True,
@@ -971,26 +910,35 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'operation_type': 'donation_rejection'
                 })
 
-            # =======================
-            # ACTION: COLLECT (formerly completed)
-            # =======================
             elif action == 'collect':
-                # ----- Validation -----
                 if appointment.status != 'approved':
                     return JsonResponse({
                         'success': False,
                         'error': 'Donation must be approved before collection.'
                     }, status=400)
 
-                # ----- Get form values -----
                 new_bg = request.POST.get('bloodgroup', '').strip()
                 new_unit = request.POST.get('unit', '').strip()
                 collection_notes = request.POST.get('collection_notes', '').strip()
+                barcode_id = request.POST.get('barcode_id', '').strip()
 
-                # Validate blood group for first-time donors
+                blood_bag = None
+                if barcode_id:
+                    try:
+                        blood_bag = BloodBagBarcode.objects.get(id=barcode_id, status='assigned')
+                        if blood_bag.assigned_to_donor != donation.donor:
+                            return JsonResponse({
+                                'success': False,
+                                'error': 'This barcode is assigned to a different donor.'
+                            }, status=400)
+                    except BloodBagBarcode.DoesNotExist:
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Invalid or unassigned barcode.'
+                        }, status=400)
+
                 donor = donation.donor
                 
-                # Validate unit amount
                 units_value = None
                 if new_unit:
                     try:
@@ -1006,39 +954,27 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                             'error': 'Units must be a valid number.'
                         }, status=400)
                 else:
-                    units_value = 450  # Default
+                    units_value = 450
 
-                # ----- Apply updates -----
                 if new_bg and new_bg != donation.bloodgroup:
                     donation.bloodgroup = new_bg
 
                 donation.unit = units_value
 
-                # ==========================================
-                # FIRST DONATION — RECORD BLOOD GROUP (but don't verify yet)
-                # ==========================================
                 if donor and not donor.bloodgroup_verified and new_bg:
-                    # Store the blood group but don't mark as verified yet
-                    # Lab will verify during testing
                     donor.bloodgroup = new_bg
                     donor.save(update_fields=['bloodgroup'])
                     
                     logger.info(
-                        f"📝 Recorded blood group for donor {donor.id}: {new_bg} "
+                        f"Recorded blood group for donor {donor.id}: {new_bg} "
                         f"(awaiting lab verification)"
                     )
 
-                # ==========================================
-                # UPDATE TO COLLECTED STATUS (not completed)
-                # ==========================================
-                
-                # Update donation status to 'collected'
                 donation.status = 'collected'
-                donation.collected_by = phlebotomist.user
-                donation.collected_at = now
+                donation.collected_by_phlebotomist = phlebotomist.user
+                donation.collected_at_phlebotomist = now
                 donation.save()
 
-                # Update appointment
                 appointment.status = 'collected'
                 appointment.collected_by = phlebotomist.user
                 appointment.collected_by_role = 'phlebotomist'
@@ -1047,54 +983,29 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                 appointment.status_changed_by = phlebotomist.user
                 appointment.status_changed_by_role = 'phlebotomist'
                 appointment.status_changed_at = now
+                
+                if blood_bag:
+                    appointment.barcode = blood_bag.barcode
+                    blood_bag.mark_collected(phlebotomist.user, donation)
+                
                 appointment.save()
 
                 logger.info(
-                    f"✅ Phlebotomist {phlebotomist.user.username} collected donation {donation.id} - "
+                    f"Phlebotomist {phlebotomist.user.username} collected donation {donation.id} - "
                     f"awaiting lab testing"
                 )
 
-                # ==========================================
-                # NOTIFY LAB TECH THAT BLOOD NEEDS TESTING
-                # ==========================================
                 try:
-                    from lab_technologist.models import LabTechnologistProfile
-                    center = donation.donation_center or phlebotomist.donation_center
-                    
-                    if center:
-                        lab_techs = LabTechnologistProfile.objects.filter(
-                            center=center,
-                            is_active=True
-                        )
-                        
-                        for lab_tech in lab_techs:
-                            Notification.objects.create(
-                                title="New Blood Sample for Testing",
-                                message=(
-                                    f"Blood sample from donor {donor.user.get_full_name() if donor else 'Unknown'} "
-                                    f"({units_value}ml) needs testing. "
-                                    f"Collection barcode: {appointment.barcode}"
-                                ),
-                                recipient_content_type=ContentType.objects.get_for_model(lab_tech.user),
-                                recipient_object_id=lab_tech.user.id,
-                                sender_content_type=ContentType.objects.get_for_model(phlebotomist.user),
-                                sender_object_id=phlebotomist.user.id,
-                            )
+                    notify_lab_techs_about_new_sample(donation, phlebotomist.user)
                 except Exception as e:
                     logger.error(f"Failed to notify lab techs: {e}")
 
-                # ==========================================
-                # CREATE NOTIFICATION FOR DONOR
-                # ==========================================
-                create_appointment_notification(appointment, phlebotomist.user, 'collected')
+                send_appointment_notification(appointment, phlebotomist.user, 'collected')
 
-                # ==========================================
-                # BUILD RESPONSE
-                # ==========================================
                 response = {
                     'success': True,
                     'status': 'collected',
-                    'barcode': appointment.barcode,
+                    'barcode': blood_bag.barcode if blood_bag else appointment.barcode,
                     'action_by': phlebotomist.user.get_full_name(),
                     'operation_type': 'donation_collection',
                     'when': now.strftime("%b %d, %Y %I:%M %p"),
@@ -1104,16 +1015,12 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     ),
                 }
 
-                # Include blood group info if provided
                 if new_bg:
                     response['bloodgroup_recorded'] = True
                     response['recorded_bloodgroup'] = new_bg
 
                 return JsonResponse(response)
 
-            # =======================
-            # ACTION: CANCELLED
-            # =======================
             elif action == 'cancelled':
                 if not reason:
                     return JsonResponse({
@@ -1121,9 +1028,7 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                         'error': 'Reason is required for cancellation.'
                     }, status=400)
 
-                # Update appointment
                 appointment.status = 'cancelled'
-                appointment.cancelled_by = 'phlebotomist'
                 appointment.cancelled_by_user = phlebotomist.user
                 appointment.cancelled_by_role = 'phlebotomist'
                 appointment.cancelled_at = now
@@ -1132,15 +1037,15 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                 appointment.status_changed_at = now
                 appointment.save()
 
-                # Update donation
                 donation.status = 'cancelled'
                 donation.cancellation_reason = reason
+                donation.cancelled_by = 'phlebotomist'
+                donation.cancelled_at = now
                 donation.save()
 
-                # Create notification
-                create_appointment_notification(appointment, phlebotomist.user, 'cancelled', reason)
+                send_appointment_notification(appointment, phlebotomist.user, 'cancelled', reason)
 
-                logger.info(f"✅ Phlebotomist {phlebotomist.user.username} cancelled donation {donation.id}")
+                logger.info(f"Phlebotomist {phlebotomist.user.username} cancelled donation {donation.id}")
 
                 return JsonResponse({
                     'success': True,
@@ -1151,7 +1056,6 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
                     'operation_type': 'donation_cancellation'
                 })
 
-            # Should never reach here
             return JsonResponse({'success': False, 'error': f'Unhandled action: {action}'}, status=400)
 
     except Appointment.DoesNotExist:
@@ -1162,228 +1066,13 @@ def phlebotomist_update_donation_appointment_status(request, appointment_id):
 
     except Exception as e:
         logger.error(
-            f"❌ Unexpected error updating appointment {appointment_id}: {str(e)}",
+            f"Unexpected error updating appointment {appointment_id}: {str(e)}",
             exc_info=True
         )
         return JsonResponse({
             'success': False,
             'error': f"Unexpected error: {str(e)}"
         }, status=500)
-
-# ---------------------------
-# Phlebotomist Profile View
-# ---------------------------
-@login_required(login_url='/phlebotomist/phlebotomistlogin/')
-@user_passes_test(is_phlebotomist, login_url='/phlebotomist/phlebotomistlogin/')
-def phlebotomist_profile_view(request, pk):
-    """
-    View phlebotomist's profile page and allow profile update via POST if desired.
-    """
-    phlebotomist = get_object_or_404(Phlebotomist, pk=pk)
-
-    if request.method == 'POST':
-        form = PhlebotomistForm(request.POST, request.FILES, instance=phlebotomist)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Profile updated successfully.")
-            return redirect('phlebotomist-profile', pk=phlebotomist.pk)
-        else:
-            messages.error(request, "Please correct the errors below.")
-    else:
-        form = PhlebotomistForm(instance=phlebotomist)
-
-    context = {
-        'phlebotomist': phlebotomist,
-        'form': form,
-    }
-    return render(request, 'phlebotomist/phlebotomist_profile.html', context)
-
-# ---------------------------
-# Edit Profile View
-# ---------------------------
-@login_required(login_url='/phlebotomist/phlebotomistlogin/')
-@user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
-def phlebotomist_profile_edit_view(request, pk):
-    """
-    Allow a phlebotomist to edit their own profile (User + Phlebotomist models).
-    """
-    phlebotomist = get_object_or_404(Phlebotomist, pk=pk)
-    
-    # Ensure only profile owner can edit
-    if request.user != phlebotomist.user:
-        messages.error(request, "You are not authorized to edit this profile.")
-        return redirect('phlebotomist:phlebotomist-profile', pk=phlebotomist.pk)  # FIXED: Added namespace
-    
-    # Store original read-only values for integrity check
-    original_license_number = phlebotomist.license_number
-    original_donation_center = phlebotomist.center
-    
-    if request.method == "POST":
-        user_form = PhlebotomistUserForm(request.POST, instance=phlebotomist.user)
-        phlebotomist_form = PhlebotomistForm(request.POST, request.FILES, instance=phlebotomist)
-        
-        # Handle profile picture removal
-        if 'clear_profile_pic' in request.POST:
-            if phlebotomist.profile_pic:
-                phlebotomist.profile_pic.delete(save=False)
-                phlebotomist.profile_pic = None
-        
-        if user_form.is_valid() and phlebotomist_form.is_valid():
-            try:
-                with transaction.atomic():
-                    # Save user form
-                    user_form.save()
-                    
-                    # Save phlebotomist form but restore read-only fields
-                    phlebotomist_instance = phlebotomist_form.save(commit=False)
-                    
-                    # SECURITY: Restore read-only fields to prevent tampering
-                    phlebotomist_instance.license_number = original_license_number
-                    phlebotomist_instance.center = original_donation_center
-                    
-                    phlebotomist_instance.save()
-                    
-                    messages.success(request, "Profile updated successfully.")
-                    return redirect('phlebotomist:phlebotomist-profile', pk=phlebotomist.pk)  # FIXED: Added namespace
-            except Exception as e:
-                messages.error(request, f"An error occurred while saving: {str(e)}")
-        else:
-            messages.error(request, "Please correct the errors below.")
-    else:
-        user_form = PhlebotomistUserForm(instance=phlebotomist.user)
-        phlebotomist_form = PhlebotomistForm(instance=phlebotomist)
-    
-    context = {
-        "user_form": user_form,
-        "phlebotomist_form": phlebotomist_form,
-        "phlebotomist": phlebotomist,
-    }
-    return render(request, "phlebotomist/phlebotomist_profile_edit.html", context)
-
-# ---------------------------
-# Notifications View
-# ---------------------------
-@login_required(login_url='/phlebotomist/phlebotomistlogin/')
-@user_passes_test(is_phlebotomist, login_url='/phlebotomist/phlebotomistlogin/')
-def phlebotomist_notifications_view(request):
-    phlebotomist = get_object_or_404(Phlebotomist, user=request.user)
-    phlebotomist_ct = ContentType.objects.get_for_model(Phlebotomist)
-
-    notifications = Notification.objects.filter(
-        recipient_content_type=phlebotomist_ct,
-        recipient_object_id=phlebotomist.id
-    ).order_by('-created_at')
-
-    unread_count = notifications.filter(read=False).count()
-
-    return render(request, 'phlebotomist/phlebotomist_notifications.html', {
-        'notifications': notifications,
-        'unread_count': unread_count,
-    })
-    
-# ---------------------------
-# Mark Notifications Read
-# ---------------------------
-@login_required(login_url='/phlebotomist/phlebotomistlogin/')
-@user_passes_test(is_phlebotomist, login_url='/phlebotomist/phlebotomistlogin/')
-def mark_phlebotomist_notification_read(request, pk):
-    phlebotomist = get_object_or_404(Phlebotomist, user=request.user)
-    phlebotomist_ct = ContentType.objects.get_for_model(Phlebotomist)
-
-    notification = get_object_or_404(
-        Notification,
-        id=pk,
-        recipient_content_type=phlebotomist_ct,
-        recipient_object_id=phlebotomist.id
-    )
-    notification.read = True
-    notification.save()
-
-    return redirect('phlebotomist-notifications')
-
-# ----------------------------------
-# Ajax Booked Time Slots
-# ------------------------------------
-
-@login_required(login_url='/phlebotomist/phlebotomistlogin/')
-def ajax_booked_timeslots(request):
-    """
-    Returns booked time slots for a specific phlebotomist on a given date.
-    Now includes better validation and returns times in both 12h and 24h formats.
-    """
-    phlebotomist_id = request.GET.get('phlebotomist_id')
-    date_str = request.GET.get('date')  # Expected format 'YYYY-MM-DD'
-    
-    logger.info(f"🔍 Checking booked times - Phlebotomist ID: {phlebotomist_id}, Date: {date_str}")
-    
-    if not phlebotomist_id or not date_str:
-        logger.warning("⚠️ Missing phlebotomist_id or date parameter")
-        return JsonResponse({
-            'booked_times': [],
-            'booked_times_24h': [],
-            'message': 'Missing parameters'
-        })
-
-    try:
-        phlebotomist = Phlebotomist.objects.filter(id=phlebotomist_id).first()
-        if not phlebotomist:
-            logger.warning(f"⚠️ Phlebotomist not found with ID: {phlebotomist_id}")
-            return JsonResponse({
-                'booked_times': [],
-                'booked_times_24h': [],
-                'message': 'Phlebotomist not found'
-            })
-
-        # Parse the date
-        try:
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except ValueError:
-            logger.warning(f"⚠️ Invalid date format: {date_str}")
-            return JsonResponse({
-                'booked_times': [],
-                'booked_times_24h': [],
-                'message': 'Invalid date format'
-            })
-
-        # Get all appointments for this phlebotomist on this date
-        # Include all non-cancelled/non-rejected appointments
-        appointments = Appointment.objects.filter(
-            phlebotomist=phlebotomist,
-            date__date=date_obj,
-        ).exclude(
-            status__in=['cancelled', 'rejected']
-        ).values_list('date', flat=True)
-
-        # Format booked times for display
-        booked_times = []
-        booked_times_24h = []
-        
-        for appt in appointments:
-            # Store both formats for flexibility
-            time_12h = appt.strftime('%I:%M %p')  # 12-hour format with AM/PM
-            time_24h = appt.strftime('%H:%M')     # 24-hour format
-            
-            booked_times.append(time_12h)
-            booked_times_24h.append(time_24h)
-            
-            logger.debug(f"📅 Booked time: {time_12h} ({time_24h})")
-
-        logger.info(f"✅ Found {len(booked_times)} booked times for phlebotomist {phlebotomist_id} on {date_obj}")
-        
-        return JsonResponse({
-            'booked_times': booked_times,
-            'booked_times_24h': booked_times_24h,
-            'message': 'Success',
-            'phlebotomist_name': phlebotomist.user.get_full_name() or phlebotomist.user.username
-        })
-
-    except Exception as e:
-        logger.error(f"❌ Error in ajax_booked_timeslots: {str(e)}", exc_info=True)
-        return JsonResponse({
-            'booked_times': [],
-            'booked_times_24h': [],
-            'message': f'Error: {str(e)}'
-        })
 
 @login_required
 @user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
@@ -1392,13 +1081,16 @@ def select_barcode_for_donation(request, appointment_id):
     View for phlebotomist to select a pre-generated barcode for a donation
     """
     phlebotomist = request.user.phlebotomist
-    appointment = get_object_or_404(Appointment, id=appointment_id, phlebotomist=phlebotomist, status='approved')
+    appointment = get_object_or_404(
+        Appointment, 
+        id=appointment_id, 
+        phlebotomist=phlebotomist, 
+        status='approved'
+    )
     
-    # Get available barcodes
     from blood.utils.barcode_utils import get_available_barcodes
     available_barcodes = get_available_barcodes(limit=50)
     
-    # Get recently used barcodes at this center
     recent_barcodes = BloodBagBarcode.objects.filter(
         collected_by=phlebotomist.user
     ).order_by('-collected_at')[:10]
@@ -1420,16 +1112,30 @@ def assign_barcode_to_donor(request, appointment_id, barcode_id):
     Assign a barcode to a donor before collection
     """
     phlebotomist = request.user.phlebotomist
-    appointment = get_object_or_404(Appointment, id=appointment_id, phlebotomist=phlebotomist)
-    barcode = get_object_or_404(BloodBagBarcode, id=barcode_id, status='available')
+    appointment = get_object_or_404(
+        Appointment, 
+        id=appointment_id, 
+        phlebotomist=phlebotomist
+    )
+    barcode = get_object_or_404(
+        BloodBagBarcode, 
+        id=barcode_id, 
+        status='available'
+    )
     
-    # Assign barcode to donor
     barcode.assign_to_donor(appointment.donor, phlebotomist.user)
     
-    messages.success(request, f"Barcode {barcode.barcode} assigned to {appointment.donor.user.get_full_name()}")
+    messages.success(
+        request, 
+        f"Barcode {barcode.barcode} assigned to {appointment.donor.user.get_full_name()}"
+    )
     
-    # Redirect to collection form with pre-selected barcode
-    return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
+    return redirect(
+        'phlebotomist:collect_with_barcode', 
+        appointment_id=appointment.id, 
+        barcode_id=barcode.id
+    )
+
 @login_required
 @user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
 def collect_with_barcode(request, appointment_id, barcode_id):
@@ -1437,43 +1143,44 @@ def collect_with_barcode(request, appointment_id, barcode_id):
     Enhanced collection form with comprehensive clinical data
     """
     phlebotomist = request.user.phlebotomist
-    appointment = get_object_or_404(Appointment, id=appointment_id, phlebotomist=phlebotomist, status='approved')
-    barcode = get_object_or_404(BloodBagBarcode, id=barcode_id, assigned_to_donor=appointment.donor)
+    appointment = get_object_or_404(
+        Appointment, 
+        id=appointment_id, 
+        phlebotomist=phlebotomist, 
+        status='approved'
+    )
+    barcode = get_object_or_404(
+        BloodBagBarcode, 
+        id=barcode_id, 
+        assigned_to_donor=appointment.donor
+    )
     
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # ===== BASIC COLLECTION DATA =====
                 bloodgroup = request.POST.get('bloodgroup')
                 unit = request.POST.get('unit')
                 collection_notes = request.POST.get('collection_notes', '')
                 
-                # ===== ENHANCED CLINICAL DATA =====
-                # Vital Signs
                 temperature = request.POST.get('temperature')
                 pulse = request.POST.get('pulse')
                 bp_systolic = request.POST.get('bp_systolic')
                 bp_diastolic = request.POST.get('bp_diastolic')
                 haemoglobin = request.POST.get('haemoglobin')
                 
-                # Donation Details
                 donation_type = request.POST.get('donation_type', 'whole_blood')
                 bleed_time_start = request.POST.get('bleed_time_start')
                 bleed_time_end = request.POST.get('bleed_time_end')
                 bleed_completion = request.POST.get('bleed_completion', 'complete')
                 
-                # Arm/Vein Details
                 arm_used = request.POST.get('arm_used')
                 vein_quality = request.POST.get('vein_quality')
                 attempts_count = request.POST.get('attempts_count', 1)
                 phlebotomist_notes = request.POST.get('phlebotomist_notes', '')
                 
-                # Adverse Events
                 adverse_event = request.POST.get('adverse_event', 'none')
                 adverse_event_details = request.POST.get('adverse_event_details', '')
                 
-                # ===== VALIDATION =====
-                # Validate unit
                 if not unit:
                     messages.error(request, "Units are required.")
                     return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
@@ -1487,78 +1194,10 @@ def collect_with_barcode(request, appointment_id, barcode_id):
                     messages.error(request, "Invalid unit value.")
                     return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
                 
-                # Validate blood group for first-time donors
                 if not bloodgroup and not appointment.donor.bloodgroup_verified:
                     messages.error(request, "Blood group is required for first-time donors.")
                     return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
                 
-                # Validate vital signs
-                validation_errors = []
-                
-                if temperature:
-                    try:
-                        temp = float(temperature)
-                        if temp < 35 or temp > 40:
-                            validation_errors.append("Temperature must be between 35°C and 40°C")
-                    except ValueError:
-                        validation_errors.append("Invalid temperature value")
-                
-                if pulse:
-                    try:
-                        p = int(pulse)
-                        if p < 40 or p > 120:
-                            validation_errors.append("Pulse must be between 40 and 120 bpm")
-                    except ValueError:
-                        validation_errors.append("Invalid pulse value")
-                
-                if bp_systolic and bp_diastolic:
-                    try:
-                        sys = int(bp_systolic)
-                        dia = int(bp_diastolic)
-                        if sys < 70 or sys > 200:
-                            validation_errors.append("Systolic pressure must be between 70 and 200 mmHg")
-                        if dia < 40 or dia > 120:
-                            validation_errors.append("Diastolic pressure must be between 40 and 120 mmHg")
-                        if sys <= dia:
-                            validation_errors.append("Systolic pressure must be greater than diastolic pressure")
-                    except ValueError:
-                        validation_errors.append("Invalid blood pressure values")
-                
-                if haemoglobin:
-                    try:
-                        hb = float(haemoglobin)
-                        if hb < 5 or hb > 20:
-                            validation_errors.append("Haemoglobin must be between 5 and 20 g/dL")
-                    except ValueError:
-                        validation_errors.append("Invalid haemoglobin value")
-                
-                if validation_errors:
-                    for error in validation_errors:
-                        messages.error(request, error)
-                    return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
-                
-                # Validate bleed times
-                if bleed_time_start and bleed_time_end:
-                    from datetime import datetime
-                    today = datetime.now().date()
-                    start = datetime.strptime(f"{today} {bleed_time_start}", "%Y-%m-%d %H:%M")
-                    end = datetime.strptime(f"{today} {bleed_time_end}", "%Y-%m-%d %H:%M")
-                    
-                    if end <= start:
-                        # Check if it might be next day
-                        if end <= start:
-                            # Try adding a day to end time
-                            from datetime import timedelta
-                            end = end + timedelta(days=1)
-                    
-                    duration = (end - start).total_seconds() / 60
-                    if duration < 5:
-                        messages.error(request, f"Bleed duration ({duration:.1f} minutes) is too short. Minimum is 5 minutes.")
-                        return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
-                    elif duration > 20:
-                        messages.warning(request, f"Bleed duration ({duration:.1f} minutes) is longer than usual. Please confirm.")
-                
-                # ===== CREATE BLOOD DONATION RECORD =====
                 blood_donation = BloodDonate.objects.create(
                     donor=appointment.donor,
                     donation_center=appointment.center,
@@ -1568,7 +1207,6 @@ def collect_with_barcode(request, appointment_id, barcode_id):
                     bloodgroup=bloodgroup if bloodgroup else appointment.donor.bloodgroup,
                     unit=unit,
                     
-                    # Enhanced fields - using individual blood pressure fields
                     donation_type=donation_type,
                     temperature=float(temperature) if temperature else None,
                     pulse=int(pulse) if pulse else None,
@@ -1587,29 +1225,25 @@ def collect_with_barcode(request, appointment_id, barcode_id):
                     collection_notes=collection_notes,
                 )
                 
-                # ===== UPDATE BARCODE =====
                 barcode.status = 'collected'
                 barcode.collected_by = phlebotomist.user
                 barcode.collected_at = timezone.now()
                 barcode.blood_donation = blood_donation
                 barcode.save()
                 
-                # ===== UPDATE APPOINTMENT =====
                 appointment.status = 'completed'
                 appointment.collected_by = phlebotomist.user
+                appointment.collected_by_role = 'phlebotomist'
                 appointment.collected_at = timezone.now()
                 appointment.sent_to_lab_at = timezone.now()
+                appointment.request_content_type = ContentType.objects.get_for_model(BloodDonate)
                 appointment.request_object_id = blood_donation.id
-                from django.contrib.contenttypes.models import ContentType
-                blood_donate_ct = ContentType.objects.get_for_model(BloodDonate)
-                appointment.request_content_type = blood_donate_ct
+                appointment.barcode = barcode.barcode
                 appointment.save()
                 
-                # ===== UPDATE DONOR =====
                 donor = appointment.donor
                 donor.last_donation_date = timezone.now().date()
                 
-                # Store last readings if available
                 if haemoglobin:
                     donor.last_haemoglobin = float(haemoglobin)
                 if bp_systolic and bp_diastolic:
@@ -1620,53 +1254,31 @@ def collect_with_barcode(request, appointment_id, barcode_id):
                 
                 donor.save()
                 
-                # ===== CREATE NOTIFICATION FOR DONOR =====
-                from django.contrib.contenttypes.models import ContentType
-                from utils.models import Notification
-                
-                # Get content types for generic foreign keys
-                donor_content_type = ContentType.objects.get_for_model(donor)
-                user_content_type = ContentType.objects.get_for_model(phlebotomist.user)
-                
-                # Create notification for donor using GenericForeignKey fields
-                Notification.objects.create(
+                NotificationService.send_to_user(
+                    recipient_user=donor.user,
+                    sender_user=phlebotomist.user,
                     title="Blood Donation Completed",
                     message=(
                         f"Thank you for your blood donation on {timezone.now().date()}! "
                         f"Volume: {unit}ml | Blood Group: {blood_donation.bloodgroup} | "
                         f"Barcode: {barcode.barcode}. Your sample has been sent to the lab for testing. "
                         f"You will be notified once test results are available."
-                    ),
-                    recipient_content_type=donor_content_type,
-                    recipient_object_id=donor.id,
-                    sender_content_type=user_content_type,
-                    sender_object_id=phlebotomist.user.id,
-                    is_read=False
+                    )
                 )
                 
-                # Log the successful collection
-                logger.info(f"✅ Blood collection completed - Donation ID: {blood_donation.id}, "
-                           f"Donor: {donor.user.username}, Phlebotomist: {phlebotomist.user.username}")
+                logger.info(f"Blood collection completed - Donation ID: {blood_donation.id}")
                 
                 messages.success(
                     request, 
-                    f"✅ Blood collection completed successfully for {donor.user.get_full_name()}! "
+                    f"Blood collection completed successfully for {donor.user.get_full_name()}! "
                     f"Sample sent to lab for testing."
                 )
                 return redirect('phlebotomist:phlebotomist-donation-bookings')
                 
         except Exception as e:
-            logger.error(f"❌ Error in collect_with_barcode: {str(e)}", exc_info=True)
+            logger.error(f"Error in collect_with_barcode: {str(e)}", exc_info=True)
             messages.error(request, f"Error during collection: {str(e)}")
             return redirect('phlebotomist:collect_with_barcode', appointment_id=appointment.id, barcode_id=barcode.id)
-    
-    # GET request - show the form
-    # Pre-populate with donor's last readings if available
-    initial_data = {}
-    if hasattr(appointment.donor, 'last_haemoglobin') and appointment.donor.last_haemoglobin:
-        initial_data['last_haemoglobin'] = appointment.donor.last_haemoglobin
-    if hasattr(appointment.donor, 'last_blood_pressure') and appointment.donor.last_blood_pressure:
-        initial_data['last_blood_pressure'] = appointment.donor.last_blood_pressure
     
     context = {
         'appointment': appointment,
@@ -1674,36 +1286,170 @@ def collect_with_barcode(request, appointment_id, barcode_id):
         'donor': appointment.donor,
         'phlebotomist': phlebotomist,
         'now': timezone.now(),
-        'initial_data': initial_data,
-        # Pass bag type info from barcode
         'bag_type': barcode.bag_type if hasattr(barcode, 'bag_type') else 'single',
         'bag_volume': barcode.volume_ml if hasattr(barcode, 'volume_ml') else 450,
     }
     return render(request, 'phlebotomist/collect_with_barcode.html', context)
-# -------------------------------
-# Get Phlebotomists By Centre
-# -------------------------------
+
+@login_required(login_url='/phlebotomist/phlebotomistlogin/')
+@user_passes_test(is_phlebotomist, login_url='/phlebotomist/phlebotomistlogin/')
+def phlebotomist_profile_view(request, pk):
+    """
+    View phlebotomist's profile page
+    """
+    phlebotomist = get_object_or_404(Phlebotomist, pk=pk)
+
+    if request.method == 'POST':
+        form = PhlebotomistForm(request.POST, request.FILES, instance=phlebotomist)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect('phlebotomist-profile', pk=phlebotomist.pk)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = PhlebotomistForm(instance=phlebotomist)
+
+    context = {
+        'phlebotomist': phlebotomist,
+        'form': form,
+    }
+    return render(request, 'phlebotomist/phlebotomist_profile.html', context)
+
+@login_required(login_url='/phlebotomist/phlebotomistlogin/')
+@user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
+def phlebotomist_profile_edit_view(request, pk):
+    """
+    Allow a phlebotomist to edit their own profile
+    """
+    phlebotomist = get_object_or_404(Phlebotomist, pk=pk)
+    
+    if request.user != phlebotomist.user:
+        messages.error(request, "You are not authorized to edit this profile.")
+        return redirect('phlebotomist:phlebotomist-profile', pk=phlebotomist.pk)
+    
+    original_license_number = phlebotomist.license_number
+    original_donation_center = phlebotomist.center
+    
+    if request.method == "POST":
+        user_form = PhlebotomistUserForm(request.POST, instance=phlebotomist.user)
+        phlebotomist_form = PhlebotomistForm(request.POST, request.FILES, instance=phlebotomist)
+        
+        if 'clear_profile_pic' in request.POST:
+            if phlebotomist.profile_pic:
+                phlebotomist.profile_pic.delete(save=False)
+                phlebotomist.profile_pic = None
+        
+        if user_form.is_valid() and phlebotomist_form.is_valid():
+            try:
+                with transaction.atomic():
+                    user_form.save()
+                    
+                    phlebotomist_instance = phlebotomist_form.save(commit=False)
+                    phlebotomist_instance.license_number = original_license_number
+                    phlebotomist_instance.center = original_donation_center
+                    
+                    phlebotomist_instance.save()
+                    
+                    messages.success(request, "Profile updated successfully.")
+                    return redirect('phlebotomist:phlebotomist-profile', pk=phlebotomist.pk)
+            except Exception as e:
+                messages.error(request, f"An error occurred while saving: {str(e)}")
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        user_form = PhlebotomistUserForm(instance=phlebotomist.user)
+        phlebotomist_form = PhlebotomistForm(instance=phlebotomist)
+    
+    context = {
+        "user_form": user_form,
+        "phlebotomist_form": phlebotomist_form,
+        "phlebotomist": phlebotomist,
+    }
+    return render(request, "phlebotomist/phlebotomist_profile_edit.html", context)
+
+@login_required(login_url='/phlebotomist/phlebotomistlogin/')
+def ajax_booked_timeslots(request):
+    """
+    Returns booked time slots for a specific phlebotomist on a given date.
+    """
+    phlebotomist_id = request.GET.get('phlebotomist_id')
+    date_str = request.GET.get('date')
+    
+    if not phlebotomist_id or not date_str:
+        return JsonResponse({
+            'booked_times': [],
+            'booked_times_24h': [],
+            'message': 'Missing parameters'
+        })
+
+    try:
+        phlebotomist = Phlebotomist.objects.filter(id=phlebotomist_id).first()
+        if not phlebotomist:
+            return JsonResponse({
+                'booked_times': [],
+                'booked_times_24h': [],
+                'message': 'Phlebotomist not found'
+            })
+
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({
+                'booked_times': [],
+                'booked_times_24h': [],
+                'message': 'Invalid date format'
+            })
+
+        appointments = Appointment.objects.filter(
+            phlebotomist=phlebotomist,
+            date__date=date_obj,
+        ).exclude(
+            status__in=['cancelled', 'rejected']
+        ).values_list('date', flat=True)
+
+        booked_times = []
+        booked_times_24h = []
+        
+        for appt in appointments:
+            time_12h = appt.strftime('%I:%M %p')
+            time_24h = appt.strftime('%H:%M')
+            
+            booked_times.append(time_12h)
+            booked_times_24h.append(time_24h)
+
+        return JsonResponse({
+            'booked_times': booked_times,
+            'booked_times_24h': booked_times_24h,
+            'message': 'Success',
+            'phlebotomist_name': phlebotomist.user.get_full_name() or phlebotomist.user.username
+        })
+
+    except Exception as e:
+        logger.error(f"Error in ajax_booked_timeslots: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'booked_times': [],
+            'booked_times_24h': [],
+            'message': f'Error: {str(e)}'
+        })
+
 def get_phlebotomists_by_center(request):
     center_id = request.GET.get('center_id')
     if not center_id:
         return JsonResponse({'phlebotomists': []})
 
-    # FIX: Use 'center_id' instead of 'donation_center_id'
     phlebotomists = Phlebotomist.objects.filter(
-        center_id=center_id,  # Changed from donation_center_id
-        is_approved=True  # Only approved phlebotomists
+        center_id=center_id,
+        is_approved=True
     ).select_related('user')
 
     phlebotomist_data = []
     for phlebotomist in phlebotomists:
-        # Get name from User model
         full_name = phlebotomist.user.get_full_name().strip()
         
-        # Fallback to username if no full name
         if not full_name:
             full_name = phlebotomist.user.username
         
-        # Get specialization display
         specialization = phlebotomist.get_specialization_display() if phlebotomist.specialization else 'General Phlebotomist'
         
         phlebotomist_data.append({
@@ -1715,10 +1461,8 @@ def get_phlebotomists_by_center(request):
             'license': phlebotomist.license_number or '',
         })
 
-    print(f"✅ Center {center_id} - Found {len(phlebotomist_data)} phlebotomists")
-    print(f"📤 Sending data: {phlebotomist_data}")  # Debug line
-    
     return JsonResponse({'phlebotomists': phlebotomist_data})
+
 @login_required(login_url='/phlebotomist/phlebotomistlogin/')
 @user_passes_test(lambda u: hasattr(u, 'phlebotomist'), login_url='/phlebotomist/phlebotomistlogin/')
 def phlebotomist_appointment_details(request, appointment_id):
@@ -1727,7 +1471,6 @@ def phlebotomist_appointment_details(request, appointment_id):
     """
     phlebotomist = request.user.phlebotomist
     
-    # Get the appointment
     appointment = get_object_or_404(
         Appointment.objects.select_related(
             'donor',
@@ -1740,7 +1483,6 @@ def phlebotomist_appointment_details(request, appointment_id):
         phlebotomist=phlebotomist
     )
     
-    # Get the blood donation if exists
     blood_donation = None
     stock_unit = None
     
@@ -1763,7 +1505,6 @@ def phlebotomist_appointment_details(request, appointment_id):
                     'safety_verified_by'
                 ).first()
     
-    # Get donor details
     donor_details = {}
     if appointment.donor:
         donor = appointment.donor
@@ -1782,7 +1523,6 @@ def phlebotomist_appointment_details(request, appointment_id):
             'total_donations': getattr(donor, 'total_donations', 0),
         }
     
-    # Get blood donation details
     blood_details = {}
     if blood_donation:
         blood_details = {
@@ -1795,7 +1535,8 @@ def phlebotomist_appointment_details(request, appointment_id):
             'donation_type': getattr(blood_donation, 'donation_type', 'whole_blood'),
             'temperature': getattr(blood_donation, 'temperature', None),
             'pulse': getattr(blood_donation, 'pulse', None),
-            'blood_pressure': getattr(blood_donation, 'blood_pressure', None),
+            'blood_pressure_systolic': getattr(blood_donation, 'blood_pressure_systolic', None),
+            'blood_pressure_diastolic': getattr(blood_donation, 'blood_pressure_diastolic', None),
             'haemoglobin': getattr(blood_donation, 'haemoglobin', None),
             'bleed_time_start': getattr(blood_donation, 'bleed_time_start', None),
             'bleed_time_end': getattr(blood_donation, 'bleed_time_end', None),
@@ -1807,7 +1548,6 @@ def phlebotomist_appointment_details(request, appointment_id):
             'adverse_event_details': getattr(blood_donation, 'adverse_event_details', ''),
         }
     
-    # Get stock unit details
     stock_details = {}
     if stock_unit:
         stock_details = {
@@ -1821,10 +1561,8 @@ def phlebotomist_appointment_details(request, appointment_id):
             'safety_notes': getattr(stock_unit, 'safety_notes', ''),
             'safety_verified_by': stock_unit.safety_verified_by.get_full_name() if stock_unit.safety_verified_by else None,
             'safety_verified_at': getattr(stock_unit, 'safety_verified_at', None),
-            'test_results': getattr(stock_unit, 'test_results', {}),
         }
     
-    # Get action history - FIXED: Removed references to *_role fields
     action_history = []
     
     if appointment.approved_by:
@@ -1832,7 +1570,7 @@ def phlebotomist_appointment_details(request, appointment_id):
             'action': 'Approved',
             'by': appointment.approved_by.get_full_name() or appointment.approved_by.username,
             'at': getattr(appointment, 'approved_at', None),
-            'role': 'phlebotomist',  # Default role since field doesn't exist
+            'role': getattr(appointment, 'approved_by_role', 'phlebotomist'),
         })
     
     if appointment.collected_by:
@@ -1840,7 +1578,7 @@ def phlebotomist_appointment_details(request, appointment_id):
             'action': 'Collected',
             'by': appointment.collected_by.get_full_name() or appointment.collected_by.username,
             'at': getattr(appointment, 'collected_at', None),
-            'role': 'phlebotomist',  # Default role since field doesn't exist
+            'role': getattr(appointment, 'collected_by_role', 'phlebotomist'),
         })
     
     if appointment.rejected_by:
@@ -1849,7 +1587,7 @@ def phlebotomist_appointment_details(request, appointment_id):
             'by': appointment.rejected_by.get_full_name() or appointment.rejected_by.username,
             'at': getattr(appointment, 'rejected_at', None),
             'reason': getattr(appointment, 'rejection_reason', 'No reason provided'),
-            'role': 'phlebotomist',  # Default role since field doesn't exist
+            'role': getattr(appointment, 'rejected_by_role', 'phlebotomist'),
         })
     
     if hasattr(appointment, 'cancelled_by_user') and appointment.cancelled_by_user:
@@ -1858,12 +1596,10 @@ def phlebotomist_appointment_details(request, appointment_id):
             'by': appointment.cancelled_by_user.get_full_name() or appointment.cancelled_by_user.username,
             'at': getattr(appointment, 'cancelled_at', None),
             'reason': getattr(appointment, 'cancellation_reason', 'No reason provided'),
-            'role': 'phlebotomist',  # Default role since field doesn't exist
+            'role': getattr(appointment, 'cancelled_by_role', 'phlebotomist'),
         })
     
-    # Also check for status_changed_by
     if hasattr(appointment, 'status_changed_by') and appointment.status_changed_by:
-        # Only add if not already captured by specific actions
         if appointment.status not in [a['action'].lower() for a in action_history if 'action' in a]:
             action_history.append({
                 'action': appointment.status.title(),
@@ -1883,3 +1619,4 @@ def phlebotomist_appointment_details(request, appointment_id):
     }
     
     return render(request, 'phlebotomist/appointment_details.html', context)
+

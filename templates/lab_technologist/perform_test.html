@@ -51,7 +51,7 @@
                             {% endif %}
                         </td>
                     </tr>
-                    <!-- BARCODE SECTION - UPDATED to show pre-generated barcode -->
+                    <!-- BARCODE SECTION -->
                     <tr>
                         <th>Blood Bag Barcode</th>
                         <td>
@@ -72,7 +72,6 @@
                             {% endif %}
                         </td>
                     </tr>
-                    <!-- Optional: Show if this barcode has been used before -->
                     {% if blood.blood_bag_barcode %}
                     <tr>
                         <th>Barcode Status</th>
@@ -94,6 +93,37 @@
                 
                 <form method="post">
                     {% csrf_token %}
+                    
+                    <!-- ===== NEW: COMPONENT TYPE SELECTION ===== -->
+                    <div class="mb-4 p-3 bg-light rounded">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-flask me-2"></i>Blood Component Type
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <select name="component_type" id="component_type" class="form-select" required>
+                                    <option value="">-- Select Component Type --</option>
+                                    <option value="whole_blood" selected>🩸 Whole Blood (35 days)</option>
+                                    <option value="rbc">🔴 Packed Red Blood Cells (42 days)</option>
+                                    <option value="platelets">🟡 Platelets (5 days) - Requires Agitation</option>
+                                    <option value="ffp">❄️ Fresh Frozen Plasma (1 year)</option>
+                                    <option value="cryo">🧊 Cryoprecipitate (1 year)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="alert alert-info py-2 mb-0">
+                                    <small>
+                                        <i class="fas fa-info-circle"></i>
+                                        <span id="expiryPreview">Select component to see expiry</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-clock text-warning"></i>
+                            <strong>Note:</strong> Expiry date is calculated automatically based on component type and collection date.
+                        </div>
+                    </div>
                     
                     <div class="mb-3">
                         <label for="{{ form.blood_group.id_for_label }}" class="form-label">Blood Group *</label>
@@ -159,20 +189,29 @@
                     </div>
                     
                     <!-- Unsafe Reason Field (Hidden by default, shown via JavaScript) -->
-                    <div id="unsafe-reason-container" class="mb-3">
+                    <div id="unsafe-reason-container" class="mb-3" style="display: none;">
                         <label for="unsafe_reason" class="form-label text-danger fw-bold">
                             <i class="fas fa-exclamation-triangle"></i> Reason for Unsafe Result *
                         </label>
                         <select name="unsafe_reason" id="unsafe_reason" class="form-control">
                             <option value="">-- Select Reason --</option>
-                            <option value="contamination">Contamination Detected</option>
                             <option value="hiv_positive">HIV Positive</option>
                             <option value="hepatitis_b_positive">Hepatitis B Positive</option>
                             <option value="hepatitis_c_positive">Hepatitis C Positive</option>
                             <option value="syphilis_positive">Syphilis Positive</option>
                             <option value="malaria_positive">Malaria Positive</option>
+                            <option value="multiple_markers">Multiple Disease Markers</option>
+                            <option value="contamination">Contamination Detected</option>
+                            <option value="hemolysis">Hemolysis Detected</option>
+                            <option value="lipemic">Lipemic Sample</option>
                             <option value="other">Other</option>
                         </select>
+                    </div>
+                    
+                    <!-- Other Reason Field (Hidden by default) -->
+                    <div id="other-reason-container" class="mb-3" style="display: none;">
+                        <label for="unsafe_reason_other" class="form-label">Specify Other Reason</label>
+                        <input type="text" name="unsafe_reason_other" id="unsafe_reason_other" class="form-control" placeholder="Please specify...">
                     </div>
                     
                     <div class="alert alert-info">
@@ -214,7 +253,47 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const unsafeReasonContainer = document.getElementById('unsafe-reason-container');
     const unsafeReasonSelect = document.getElementById('unsafe_reason');
+    const otherReasonContainer = document.getElementById('other-reason-container');
+    const otherReasonInput = document.getElementById('unsafe_reason_other');
     const submitBtn = document.getElementById('submitBtn');
+    const componentSelect = document.getElementById('component_type');
+    const expiryPreview = document.getElementById('expiryPreview');
+    
+    // Collection date from template
+    const collectionDate = new Date("{{ blood.date|date:'Y-m-d' }}");
+    
+    // Function to calculate and preview expiry date
+    function updateExpiryPreview() {
+        const component = componentSelect.value;
+        if (!component) {
+            expiryPreview.textContent = 'Select component to see expiry';
+            return;
+        }
+        
+        let days = 35; // default
+        switch(component) {
+            case 'whole_blood': days = 35; break;
+            case 'rbc': days = 42; break;
+            case 'platelets': days = 5; break;
+            case 'ffp': days = 365; break;
+            case 'cryo': days = 365; break;
+        }
+        
+        const expiryDate = new Date(collectionDate);
+        expiryDate.setDate(expiryDate.getDate() + days);
+        
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        expiryPreview.innerHTML = `Expires: <strong>${expiryDate.toLocaleDateString(undefined, options)}</strong> (${days} days)`;
+    }
+    
+    // Add event listener to component select
+    if (componentSelect) {
+        componentSelect.addEventListener('change', updateExpiryPreview);
+        // Initial call if a value is selected
+        if (componentSelect.value) {
+            updateExpiryPreview();
+        }
+    }
     
     // Function to check if any marker is positive
     function checkForUnsafe() {
@@ -232,7 +311,22 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             unsafeReasonContainer.style.display = 'none';
             unsafeReasonSelect.required = false;
+            otherReasonContainer.style.display = 'none';
+            otherReasonInput.required = false;
         }
+    }
+    
+    // Show/hide other reason field based on unsafe reason selection
+    if (unsafeReasonSelect) {
+        unsafeReasonSelect.addEventListener('change', function() {
+            if (this.value === 'other') {
+                otherReasonContainer.style.display = 'block';
+                otherReasonInput.required = true;
+            } else {
+                otherReasonContainer.style.display = 'none';
+                otherReasonInput.required = false;
+            }
+        });
     }
     
     // Add event listeners to all checkboxes
@@ -242,8 +336,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Initial check
+    checkForUnsafe();
+    
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
+        // Validate component type
+        if (!componentSelect.value) {
+            e.preventDefault();
+            alert('Please select a blood component type.');
+            componentSelect.focus();
+            return;
+        }
+        
         const anyPositive = [
             hivCheck?.checked,
             hepBCheck?.checked,
@@ -260,6 +365,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 unsafeReasonSelect.focus();
                 return;
             }
+            
+            if (reason === 'other') {
+                const otherText = otherReasonInput.value.trim();
+                if (!otherText) {
+                    e.preventDefault();
+                    alert('Please specify the other reason.');
+                    otherReasonInput.focus();
+                    return;
+                }
+            }
         }
         
         // Final confirmation
@@ -269,5 +384,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<style>
+    #unsafe-reason-container {
+        border-left: 4px solid #dc3545;
+        padding-left: 15px;
+        background-color: #fff8f8;
+    }
+    #other-reason-container {
+        border-left: 4px solid #ffc107;
+        padding-left: 15px;
+    }
+    .form-check-input:checked {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+</style>
 
 {% endblock %}

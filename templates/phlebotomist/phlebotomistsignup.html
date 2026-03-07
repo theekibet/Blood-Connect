@@ -4,220 +4,230 @@
 
 {% block title %}Phlebotomist Signup - BloodConnect{% endblock %}
 
-{% block auth_icon %}fas fa-user-md{% endblock %}
-{% block auth_title %}Phlebotomist Registration{% endblock %}
-{% block auth_card_class %}phlebotomist{% endblock %}
-
-{% block auth_content %}
-<div class="signup-container">
-                <!-- Messages already handled in base template -->
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-md me-2"></i>
+                        Phlebotomist Registration
+                    </h4>
+                </div>
                 
-                <!-- Signup Form Card -->
+                <div class="card-body">
+                    <!-- Info Alert -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Your account will require admin approval before you can access the system.
+                    </div>
 
-                    <div class="card-body">
-                        <form method="POST" enctype="multipart/form-data" autocomplete="off" id="signupForm">
-                            {% csrf_token %}
-                            
-                            <!-- Personal Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3">
-                                <i class="fas fa-user text-primary me-2"></i>Personal Information
-                            </h5>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        First Name <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% render_field form.first_name class="form-control" placeholder="Enter first name" %}
-                                        <span class="validation-icon" id="firstNameIcon"></span>
-                                    </div>
-                                    {% if form.first_name.help_text %}
-                                        <small class="text-muted">{{ form.first_name.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.first_name.errors %}
-                                        <div class="text-danger small mt-1">{{ form.first_name.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Last Name <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% render_field form.last_name class="form-control" placeholder="Enter last name" %}
-                                        <span class="validation-icon" id="lastNameIcon"></span>
-                                    </div>
-                                    {% if form.last_name.help_text %}
-                                        <small class="text-muted">{{ form.last_name.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.last_name.errors %}
-                                        <div class="text-danger small mt-1">{{ form.last_name.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Account Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3 mt-4">
-                                <i class="fas fa-key text-primary me-2"></i>Account Information
-                            </h5>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Username <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% render_field form.username class="form-control" placeholder="Choose username" %}
-                                        <span class="validation-icon" id="usernameIcon"></span>
-                                    </div>
-                                    {% if form.username.help_text %}
-                                        <small class="text-muted">{{ form.username.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.username.errors %}
-                                        <div class="text-danger small mt-1">{{ form.username.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Email <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="position-relative">
-                                        {% render_field form.email class="form-control" placeholder="Enter email address" type="email" %}
-                                        <span class="validation-icon" id="emailIcon"></span>
-                                    </div>
-                                    {% if form.email.help_text %}
-                                        <small class="text-muted">{{ form.email.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.email.errors %}
-                                        <div class="text-danger small mt-1">{{ form.email.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Password <span class="text-danger">*</span>
-                                    </label>
-                                    {% render_field form.password1 class="form-control" placeholder="Enter password" %}
-                                    <div id="passwordStrength" class="mt-1 small"></div>
-                                    {% if form.password1.help_text %}
-                                        <small class="text-muted">{{ form.password1.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.password1.errors %}
-                                        <div class="text-danger small mt-1">{{ form.password1.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Confirm Password <span class="text-danger">*</span>
-                                    </label>
-                                    {% render_field form.password2 class="form-control" placeholder="Confirm password" %}
-                                    <div id="matchFeedback" class="small mt-1"></div>
-                                    {% if form.password2.help_text %}
-                                        <small class="text-muted">{{ form.password2.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.password2.errors %}
-                                        <div class="text-danger small mt-1">{{ form.password2.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Professional Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3 mt-4">
-                                <i class="fas fa-id-badge text-primary me-2"></i>Professional Information
-                            </h5>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        License Number <span class="text-danger">*</span>
-                                    </label>
-                                    {% render_field form.license_number class="form-control" placeholder="Enter license number" %}
-                                    {% if form.license_number.help_text %}
-                                        <small class="text-muted">{{ form.license_number.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.license_number.errors %}
-                                        <div class="text-danger small mt-1">{{ form.license_number.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Donation Center
-                                    </label>
-                                    {% render_field form.donation_center class="form-select" %}
-                                    {% if form.donation_center.help_text %}
-                                        <small class="text-muted">{{ form.donation_center.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.donation_center.errors %}
-                                        <div class="text-danger small mt-1">{{ form.donation_center.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-6">
-                                    <label class="form-label">
-                                        Phone Number <span class="text-danger">*</span>
-                                    </label>
-                                    {% render_field form.phone class="form-control" placeholder="Enter phone number" %}
-                                    {% if form.phone.help_text %}
-                                        <small class="text-muted">{{ form.phone.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.phone.errors %}
-                                        <div class="text-danger small mt-1">{{ form.phone.errors|first }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Optional Information Section -->
-                            <h5 class="border-bottom pb-2 mb-3 mt-4">
-                                <i class="fas fa-image text-primary me-2"></i>Optional Information
-                            </h5>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Profile Picture</label>
-                                {% render_field form.profile_pic class="form-control" %}
-                                <small class="text-muted">Upload a professional photo (optional)</small>
-                                {% if form.profile_pic.errors %}
-                                    <div class="text-danger small mt-1">{{ form.profile_pic.errors|first }}</div>
-                                {% endif %}
-                            </div>
-
-                            <!-- Terms and Conditions -->
-                            <div class="form-check mt-4 p-3 bg-light rounded">
-                                {% render_field form.terms class="form-check-input" id="termsCheck" %}
-                                <label class="form-check-label" for="termsCheck">
-                                    I agree to the terms and conditions and understand that my account requires admin approval
+                    <!-- Signup Form -->
+                    <form method="POST" enctype="multipart/form-data" autocomplete="off" id="signupForm">
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user text-primary me-2"></i>Personal Information
+                        </h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    First Name <span class="text-danger">*</span>
                                 </label>
-                                {% if form.terms.errors %}
-                                    <div class="text-danger small mt-1">{{ form.terms.errors|first }}</div>
+                                <div class="position-relative">
+                                    {% render_field form.first_name class="form-control" placeholder="Enter first name" %}
+                                    <span class="validation-icon" id="firstNameIcon"></span>
+                                </div>
+                                {% if form.first_name.help_text %}
+                                    <small class="text-muted">{{ form.first_name.help_text }}</small>
+                                {% endif %}
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.first_name.errors|first }}</div>
                                 {% endif %}
                             </div>
-
-                            <!-- Submit Buttons -->
-                            <div class="d-flex justify-content-between mt-4">
-                                <a href="{% url 'home' %}" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left me-2"></i>Back to Home
-                                </a>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-user-plus me-2"></i>Register
-                                </button>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Last Name <span class="text-danger">*</span>
+                                </label>
+                                <div class="position-relative">
+                                    {% render_field form.last_name class="form-control" placeholder="Enter last name" %}
+                                    <span class="validation-icon" id="lastNameIcon"></span>
+                                </div>
+                                {% if form.last_name.help_text %}
+                                    <small class="text-muted">{{ form.last_name.help_text }}</small>
+                                {% endif %}
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.last_name.errors|first }}</div>
+                                {% endif %}
                             </div>
-                        </form>
-
-                        <div class="text-center mt-4">
-                            <p class="mb-0">
-                                Already have an account? 
-                                <a href="{% url 'phlebotomist:phlebotomistlogin' %}" class="btn btn-link">
-                                    Login here <i class="fas fa-arrow-right ms-1"></i>
-                                </a>
-                            </p>
                         </div>
+
+                        <!-- Account Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-key text-primary me-2"></i>Account Information
+                        </h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Username <span class="text-danger">*</span>
+                                </label>
+                                <div class="position-relative">
+                                    {% render_field form.username class="form-control" placeholder="Choose username" %}
+                                    <span class="validation-icon" id="usernameIcon"></span>
+                                </div>
+                                {% if form.username.help_text %}
+                                    <small class="text-muted">{{ form.username.help_text }}</small>
+                                {% endif %}
+                                {% if form.username.errors %}
+                                    <div class="text-danger small mt-1">{{ form.username.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Email <span class="text-danger">*</span>
+                                </label>
+                                <div class="position-relative">
+                                    {% render_field form.email class="form-control" placeholder="Enter email address" type="email" %}
+                                    <span class="validation-icon" id="emailIcon"></span>
+                                </div>
+                                {% if form.email.help_text %}
+                                    <small class="text-muted">{{ form.email.help_text }}</small>
+                                {% endif %}
+                                {% if form.email.errors %}
+                                    <div class="text-danger small mt-1">{{ form.email.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Password <span class="text-danger">*</span>
+                                </label>
+                                {% render_field form.password1 class="form-control" placeholder="Enter password" %}
+                                <div id="passwordStrength" class="mt-1 small"></div>
+                                {% if form.password1.help_text %}
+                                    <small class="text-muted">{{ form.password1.help_text }}</small>
+                                {% endif %}
+                                {% if form.password1.errors %}
+                                    <div class="text-danger small mt-1">{{ form.password1.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                {% render_field form.password2 class="form-control" placeholder="Confirm password" %}
+                                <div id="matchFeedback" class="small mt-1"></div>
+                                {% if form.password2.help_text %}
+                                    <small class="text-muted">{{ form.password2.help_text }}</small>
+                                {% endif %}
+                                {% if form.password2.errors %}
+                                    <div class="text-danger small mt-1">{{ form.password2.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Professional Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-id-badge text-primary me-2"></i>Professional Information
+                        </h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    License Number <span class="text-danger">*</span>
+                                </label>
+                                {% render_field form.license_number class="form-control" placeholder="Enter license number" %}
+                                {% if form.license_number.help_text %}
+                                    <small class="text-muted">{{ form.license_number.help_text }}</small>
+                                {% endif %}
+                                {% if form.license_number.errors %}
+                                    <div class="text-danger small mt-1">{{ form.license_number.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Donation Center
+                                </label>
+                                {% render_field form.donation_center class="form-select" %}
+                                {% if form.donation_center.help_text %}
+                                    <small class="text-muted">{{ form.donation_center.help_text }}</small>
+                                {% endif %}
+                                {% if form.donation_center.errors %}
+                                    <div class="text-danger small mt-1">{{ form.donation_center.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Phone Number <span class="text-danger">*</span>
+                                </label>
+                                {% render_field form.phone class="form-control" placeholder="Enter phone number" %}
+                                {% if form.phone.help_text %}
+                                    <small class="text-muted">{{ form.phone.help_text }}</small>
+                                {% endif %}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger small mt-1">{{ form.phone.errors|first }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Optional Information Section -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-image text-primary me-2"></i>Optional Information
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Profile Picture</label>
+                            {% render_field form.profile_pic class="form-control" %}
+                            <small class="text-muted">Upload a professional photo (optional)</small>
+                            {% if form.profile_pic.errors %}
+                                <div class="text-danger small mt-1">{{ form.profile_pic.errors|first }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="form-check mt-4 p-3 bg-light rounded">
+                            {% render_field form.terms class="form-check-input" id="termsCheck" %}
+                            <label class="form-check-label" for="termsCheck">
+                                I agree to the terms and conditions and understand that my account requires admin approval
+                            </label>
+                            {% if form.terms.errors %}
+                                <div class="text-danger small mt-1">{{ form.terms.errors|first }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Home
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Login Link -->
+                    <div class="text-center mt-4">
+                        <p class="mb-0">
+                            Already have an account? 
+                            <a href="{% url 'phlebotomist:phlebotomistlogin' %}" class="btn btn-link">
+                                Login here <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </p>
                     </div>
                 </div>
             </div>

@@ -23,7 +23,7 @@ urlpatterns = [
     path('expiring/', views.expiring_blood, name='expiring_blood'),
     path('unsafe-blood/', views.unsafe_blood, name='unsafe_blood'),
     path('pending-verification/', views.pending_verification, name='pending_verification'),
-    
+    path('pending-approval/', views.pending_approval, name='pending_approval'),
     # Hospital Request management - UPDATED: removed request_type, using uuid
     path('requests/pending/', views.pending_requests, name='pending_requests'),
     path('requests/approved/', views.approved_requests, name='approved_requests'),

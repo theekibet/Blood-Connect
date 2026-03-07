@@ -1,0 +1,42 @@
+<!-- Sidebar - Single Source with Dynamic Menu -->
+<div class="sidebar">
+    <!-- User Info Section -->
+    <div class="sidebar-header p-3 text-center border-bottom">
+        <!-- Profile Picture or Initial -->
+        <div class="mb-2">
+            {% if profile_pic_url %}
+                <img src="{{ profile_pic_url }}" alt="Profile" class="profile-sidebar-image">
+            {% else %}
+                <div class="profile-sidebar-placeholder">
+                    {{ user_initial }}
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- User Name -->
+        <h6 class="text-white mb-0">{{ user.get_full_name|default:user.username }}</h6>
+        
+        <!-- Role Badge -->
+        <small class="text-white-50 d-block">
+            <i class="fas {% if user_role == 'donor' %}fa-hand-holding-heart{% elif user_role == 'phlebotomist' %}fa-user-nurse{% elif user_role == 'lab_tech' %}fa-flask{% elif user_role == 'bb_tech' %}fa-tint{% elif user_role == 'hospital' %}fa-hospital{% elif user_role == 'admin' %}fa-user-shield{% endif %} me-1"></i>
+            {{ user_role_label|default:user_role|title }}
+        </small>
+    </div>
+    
+    <!-- Menu (Defined in child templates) -->
+    <div class="sidebar-menu">
+        {% block sidebar_menu %}
+        <!-- This block will be filled by role-specific base templates -->
+        {% endblock %}
+    </div>
+    
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer p-3 text-center border-top">
+        <small class="text-white-50">
+            <i class="fas fa-heartbeat"></i> BloodConnect
+        </small>
+    </div>
+</div>
+
+<!-- Sidebar Overlay for Mobile -->
+<div class="sidebar-overlay"></div>

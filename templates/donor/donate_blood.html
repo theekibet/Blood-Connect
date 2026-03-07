@@ -315,14 +315,14 @@
               
               <div class="col-md-6 mb-3">
                 <label for="{{ donation_form.phlebotomist.id_for_label }}" class="form-label">
-                  <i class="fas fa-user-nurse"></i> Preferred Nurse
+                  <i class="fas fa-user-nurse"></i> Preferred Phlebotomist
                 </label>
                 {{ donation_form.phlebotomist|add_class:"form-select" }}
                 {% if donation_form.phlebotomist.errors %}
                   <div class="text-danger">{{ donation_form.phlebotomist.errors }}</div>
                 {% endif %}
                 <small class="form-text text-muted" id="phlebotomistHelp">
-                  Select a nurse to see available times
+                  Select a phlebotomist to see available times
                 </small>
               </div>
             </div>
@@ -348,7 +348,7 @@
                   <select name="{{ donation_form.appointment_time.name }}" 
                           id="{{ donation_form.appointment_time.id_for_label }}" 
                           class="form-select time-slot-selector">
-                    <option value="" class="time-slot-option default-option">⏰ Select date and nurse first</option>
+                    <option value="" class="time-slot-option default-option">⏰ Select date and phlebotomist first</option>
                   </select>
                   
                   <!-- Availability Status Badge -->
@@ -567,9 +567,9 @@
       availabilityStatus.innerHTML = '<span class="badge bg-info"><i class="fas fa-spinner fa-spin"></i> Checking availability...</span>';
       
       if (!phlebotomistId || !selectedDate) {
-        appointmentTime.innerHTML = '<option value="" class="time-slot-option default-option">👆 Select nurse and date first</option>';
+        appointmentTime.innerHTML = '<option value="" class="time-slot-option default-option">👆 Select phlebotomist and date first</option>';
         appointmentTime.disabled = true;
-        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select nurse and date to see available times</span>';
+        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select phlebotomist and date to see available times</span>';
         updateSummary();
         return;
       }
@@ -681,16 +681,16 @@
       
       if (centerId) {
         // Show loading state
-        phlebotomistSelect.innerHTML = '<option value="" class="time-slot-option loading-option">⏳ <span class="loading-spinner"></span> Loading nurses...</option>';
+        phlebotomistSelect.innerHTML = '<option value="" class="time-slot-option loading-option">⏳ <span class="loading-spinner"></span> Loading phlebotomists...</option>';
         phlebotomistSelect.disabled = true;
         
         // Clear time slots when center changes
-        appointmentTime.innerHTML = '<option value="" class="time-slot-option default-option">👆 Select nurse and date first</option>';
+        appointmentTime.innerHTML = '<option value="" class="time-slot-option default-option">👆 Select phlebotomist and date first</option>';
         appointmentTime.disabled = true;
-        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select nurse and date to see available times</span>';
+        availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select phlebotomist and date to see available times</span>';
         
         const url = `${getPhlebotomistsUrl}?center_id=${centerId}`;
-        console.log(`🔍 Fetching nurses from: ${url}`);
+        console.log(`🔍 Fetching phlebotomists from: ${url}`);
         
         fetch(url)
           .then(response => {
@@ -700,10 +700,10 @@
             return response.json();
           })
           .then(data => {
-            console.log('📦 Nurses response:', data);
+            console.log('📦 Phlebotomists response:', data);
             
             // Clear current options
-            phlebotomistSelect.innerHTML = '<option value="">-- Select Nurse --</option>';
+            phlebotomistSelect.innerHTML = '<option value="">-- Select Phlebotomist --</option>';
             
             if (data.phlebotomists && data.phlebotomists.length > 0) {
               // Add each phlebotomist as an option
@@ -722,21 +722,21 @@
               
               phlebotomistSelect.disabled = false;
               document.getElementById('phlebotomistHelp').innerHTML = '<i class="fas fa-check-circle text-success"></i> ' + 
-                data.phlebotomists.length + ' nurses available';
-              console.log(`✅ Added ${data.phlebotomists.length} nurses`);
+                data.phlebotomists.length + ' phlebotomists available';
+              console.log(`✅ Added ${data.phlebotomists.length} phlebotomists`);
             } else {
               // No phlebotomists found
-              phlebotomistSelect.innerHTML = '<option value="">😕 No nurses available at this center</option>';
+              phlebotomistSelect.innerHTML = '<option value="">😕 No phlebotomists available at this center</option>';
               phlebotomistSelect.disabled = true;
               document.getElementById('phlebotomistHelp').innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i> No nurses at this center';
-              console.log('⚠️ No nurses found for this center');
+              console.log('⚠️ No phlebotomists found for this center');
             }
             
             updateSummary();
           })
           .catch(error => {
-            console.error('❌ Error fetching nurses:', error);
-            phlebotomistSelect.innerHTML = '<option value="">❌ Error loading nurses</option>';
+            console.error('❌ Error fetching phlebotomists:', error);
+            phlebotomistSelect.innerHTML = '<option value="">❌ Error loading phlebotomist</option>';
             phlebotomistSelect.disabled = true;
             document.getElementById('phlebotomistHelp').innerHTML = '<i class="fas fa-exclamation-circle text-danger"></i> Error loading nurses';
             updateSummary();
@@ -745,7 +745,7 @@
         // No center selected
         phlebotomistSelect.innerHTML = '<option value="">👆 Select a center first</option>';
         phlebotomistSelect.disabled = true;
-        appointmentTime.innerHTML = '<option value="">👆 Select nurse and date first</option>';
+        appointmentTime.innerHTML = '<option value="">👆 Select phlebotomist and date first</option>';
         appointmentTime.disabled = true;
         availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a center first</span>';
         document.getElementById('phlebotomistHelp').innerHTML = 'Select a center first';
@@ -793,7 +793,7 @@
         let summaryHtml = `
           <div class="row">
             <div class="col-sm-6"><strong>🏥 Center:</strong> ${center}</div>
-            <div class="col-sm-6"><strong>👨‍⚕️ Nurse:</strong> ${phlebotomist}</div>
+            <div class="col-sm-6"><strong>👨‍⚕️ Phlebotomist:</strong> ${phlebotomist}</div>
             <div class="col-sm-6 mt-2"><strong>📅 Date:</strong> ${formattedDate}</div>
             <div class="col-sm-6 mt-2"><strong>⏰ Time:</strong> ${time}</div>
             <div class="col-sm-6 mt-2"><strong>💉 Volume:</strong> ${unit}</div>
@@ -819,7 +819,7 @@
     
     if (phlebotomistSelect) {
       phlebotomistSelect.addEventListener('change', function() {
-        console.log('👨‍⚕️ Nurse selected:', this.value);
+        console.log('👨‍⚕️ Phlebotomist selected:', this.value);
         // Clear time selection when phlebotomist changes
         appointmentTime.value = '';
         updateAvailableTimes(); // Check times when phlebotomist changes
@@ -842,9 +842,9 @@
           updateAvailableTimes();
         } else {
           // If no phlebotomist selected, just show message
-          appointmentTime.innerHTML = '<option value="">👆 Select a nurse first</option>';
+          appointmentTime.innerHTML = '<option value="">👆 Select a phlebotomist first</option>';
           appointmentTime.disabled = true;
-          availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a nurse to see available times</span>';
+          availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a phlebotomist to see available times</span>';
         }
         updateSummary();
       });
@@ -895,7 +895,7 @@
         
         if (!phlebotomistSelect || !phlebotomistSelect.value) {
           e.preventDefault();
-          alert('❌ Please select a nurse');
+          alert('❌ Please select a phlebotomist');
           if (phlebotomistSelect) phlebotomistSelect.focus();
           return false;
         }
@@ -945,7 +945,7 @@
     // Initialize: Disable selects until choices are made
     phlebotomistSelect.innerHTML = '<option value="">👆 Select a center first</option>';
     phlebotomistSelect.disabled = true;
-    appointmentTime.innerHTML = '<option value="">👆 Select nurse and date first</option>';
+    appointmentTime.innerHTML = '<option value="">👆 Select phlebotomist and date first</option>';
     appointmentTime.disabled = true;
     availabilityStatus.innerHTML = '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> Select a center to begin</span>';
     

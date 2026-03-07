@@ -1719,37 +1719,7 @@ def save_review_step(request):
     
     return JsonResponse({'status': 'error'}, status=400)
 
-from blood.utils.barcode_utils import generate_batch_barcodes
-from .models import BloodBagBarcode
-def generate_initial_barcodes(request):
-    """Simple one-time view to generate initial barcodes"""
-    # Security: Only allow if no barcodes exist
-    if BloodBagBarcode.objects.exists():
-        return HttpResponse("Barcodes already exist! No action taken.")
-    
-    count = 50
-    barcodes = []
-    
-    for i in range(count):
-        # Generate unique barcode
-        date_part = datetime.now().strftime('%Y%m%d')
-        random_part = ''.join([str(random.randint(0, 9)) for _ in range(5)])
-        barcode_str = f"BLD-{date_part}-{random_part}"
-        
-        # Ensure uniqueness
-        while BloodBagBarcode.objects.filter(barcode=barcode_str).exists():
-            random_part = ''.join([str(random.randint(0, 9)) for _ in range(5)])
-            barcode_str = f"BLD-{date_part}-{random_part}"
-        
-        # Create barcode
-        barcode = BloodBagBarcode.objects.create(
-            barcode=barcode_str,
-            bag_type='single',
-            volume_ml=450,
-            anticoagulant='cpd',
-            status='available',
-            created_by=None
-        )
-        barcodes.append(barcode)
-    
-    return HttpResponse(f"✅ Generated {len(barcodes)} initial barcodes! You can now use the admin actions.")
+
+def testing_guide_view(request):
+    """View to display the system testing guide"""
+    return render(request, 'shared/testing_guide.html')

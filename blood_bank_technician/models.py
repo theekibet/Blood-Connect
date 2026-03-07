@@ -23,6 +23,26 @@ class BloodBankTechProfile(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
+    # ===== ADD THESE APPROVAL FIELDS =====
+    is_approved = models.BooleanField(
+        default=False,
+        help_text="Whether admin has approved this technician"
+    )
+    approved_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When admin approved this technician"
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_blood_bank_techs',
+        help_text="Admin who approved this technician"
+    )
+    # ===== END ADDED FIELDS =====
+    
     class Meta:
         verbose_name = 'Blood Bank Technician Profile'
         verbose_name_plural = 'Blood Bank Technician Profiles'
@@ -35,7 +55,8 @@ class BloodBankTechProfile(models.Model):
         ]
     
     def __str__(self):
-        return f"Blood Bank Tech: {self.user.get_full_name()} - {self.employee_id}"
+        status = "✅ Approved" if self.is_approved else "⏳ Pending"
+        return f"Blood Bank Tech: {self.user.get_full_name()} - {self.employee_id} ({status})"
     
     def clean(self):
         """

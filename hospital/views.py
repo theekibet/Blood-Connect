@@ -468,13 +468,52 @@ def confirm_delivery(request, request_id):
     )
     
     if request.method == 'POST':
+        received_by = request.POST.get('received_by')
+        received_date = request.POST.get('received_date')
+        notes = request.POST.get('notes', '')
+        
+        if not received_by:
+            messages.error(request, 'Please enter who received the blood.')
+            return render(request, 'hospital/confirm_delivery.html', {'request': blood_request})
+        
+        # Update request status
         blood_request.status = 'delivered'
+        blood_request.delivered_at = timezone.now()
+        blood_request.delivered_by = hospital_user
+        blood_request.delivery_notes = notes
+        blood_request.received_by_name = received_by
+        blood_request.received_at = received_date if received_date else timezone.now()
         blood_request.save()
         
-        messages.success(request, f"Blood delivered for request #{blood_request.request_number}")
+        # Create notification for blood bank tech
+        from utils.models import Notification
+        from django.contrib.contenttypes.models import ContentType
+        
+        if blood_request.approved_by and blood_request.approved_by.user:
+            Notification.objects.create(
+                title="Blood Delivery Confirmed",
+                message=(
+                    f"Hospital {hospital.name} has confirmed receipt of blood for "
+                    f"request #{blood_request.request_number}. "
+                    f"Received by: {received_by}"
+                ),
+                recipient_content_type=ContentType.objects.get_for_model(blood_request.approved_by.user),
+                recipient_object_id=blood_request.approved_by.user.id,
+                sender_content_type=ContentType.objects.get_for_model(request.user),
+                sender_object_id=request.user.id,
+            )
+        
+        messages.success(
+            request, 
+            f"✅ Blood delivery confirmed for request #{blood_request.request_number}. "
+            f"Thank you for confirming receipt."
+        )
         return redirect('hospital:request_detail', request_id=blood_request.id)
     
-    return render(request, 'hospital/confirm_delivery.html', {'request': blood_request})
+    return render(request, 'hospital/confirm_delivery.html', {
+        'request': blood_request,
+        'now': timezone.now(),
+    })
 
 
 @login_required

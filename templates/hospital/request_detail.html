@@ -19,6 +19,7 @@
     
     <div class="row">
         <div class="col-lg-8">
+            <!-- Request Details Card -->
             <div class="card shadow mb-4 fade-in">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center bg-primary text-white">
                     <h5 class="mb-0">
@@ -28,13 +29,33 @@
                 </div>
                 
                 <div class="card-body">
+                    <!-- Status Banner -->
+                    <div class="alert {% if request.status == 'pending' %}alert-warning{% elif request.status == 'approved' %}alert-primary{% elif request.status == 'dispatched' %}alert-info{% elif request.status == 'delivered' %}alert-success{% elif request.status == 'rejected' %}alert-danger{% endif %} mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas {% if request.status == 'pending' %}fa-clock{% elif request.status == 'approved' %}fa-check-circle{% elif request.status == 'dispatched' %}fa-truck{% elif request.status == 'delivered' %}fa-check-double{% elif request.status == 'rejected' %}fa-times-circle{% endif %} fa-2x me-3"></i>
+                            <div>
+                                <strong>Current Status:</strong> {{ request.get_status_display }}
+                                {% if request.status == 'delivered' %}
+                                    <br>
+                                    <small>Delivered on {{ request.delivered_at|date:"M d, Y H:i" }} by {{ request.received_by_name }}</small>
+                                {% elif request.status == 'dispatched' %}
+                                    <br>
+                                    <small>Dispatched on {{ request.dispatched_at|date:"M d, Y H:i" }}</small>
+                                {% elif request.status == 'approved' %}
+                                    <br>
+                                    <small>Approved on {{ request.approved_at|date:"M d, Y H:i" }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <h6 class="text-primary">Patient Information</h6>
                             <table class="table table-sm">
                                 <tr>
                                     <th>Name:</th>
-                                    <td>{{ request.patient_full_name }}</td>
+                                    <td><strong>{{ request.patient_full_name }}</strong></td>
                                 </tr>
                                 <tr>
                                     <th>Age:</th>
@@ -71,7 +92,7 @@
                                     <td>
                                         {% if request.urgency == 'emergency' %}
                                             <span class="badge bg-danger">Emergency</span>
-                                        {% elif req.urgency == 'urgent' %}
+                                        {% elif request.urgency == 'urgent' %}
                                             <span class="badge bg-warning text-dark">Urgent</span>
                                         {% else %}
                                             <span class="badge bg-info">Routine</span>
@@ -98,26 +119,8 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <h6 class="text-primary">Request Status</h6>
+                            <h6 class="text-primary">Request Timeline</h6>
                             <table class="table table-sm">
-                                <tr>
-                                    <th>Status:</th>
-                                    <td>
-                                        {% if request.status == 'pending' %}
-                                            <span class="badge bg-warning text-dark">Pending Review</span>
-                                        {% elif request.status == 'approved' %}
-                                            <span class="badge bg-primary">Approved</span>
-                                        {% elif request.status == 'dispatched' %}
-                                            <span class="badge bg-info">Dispatched</span>
-                                        {% elif request.status == 'delivered' %}
-                                            <span class="badge bg-success">Delivered</span>
-                                        {% elif request.status == 'rejected' %}
-                                            <span class="badge bg-danger">Rejected</span>
-                                        {% elif request.status == 'cancelled' %}
-                                            <span class="badge bg-secondary">Cancelled</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
                                 <tr>
                                     <th>Created:</th>
                                     <td>{{ request.created_at|date:"Y-m-d H:i:s" }}</td>
@@ -134,40 +137,94 @@
                                     <td>{{ request.dispatched_at|date:"Y-m-d H:i:s" }}</td>
                                 </tr>
                                 {% endif %}
+                                {% if request.delivered_at %}
+                                <tr>
+                                    <th>Delivered:</th>
+                                    <td>{{ request.delivered_at|date:"Y-m-d H:i:s" }}</td>
+                                </tr>
+                                {% endif %}
                             </table>
                         </div>
                     </div>
                     
+                    <!-- ===== NEW: DELIVERY CONFIRMATION SECTION ===== -->
+                    {% if request.status == 'delivered' %}
+                    <div class="card mt-3 border-success">
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <h6 class="mb-0">Delivery Confirmation Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Delivered at:</th>
+                                            <td>{{ request.delivered_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Received by:</th>
+                                            <td><strong>{{ request.received_by_name }}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Confirmed by:</th>
+                                            <td>{{ request.delivered_by.user.get_full_name|default:"Unknown" }}</td>
+                                        </tr>
+                                        {% if request.delivery_notes %}
+                                        <tr>
+                                            <th>Notes:</th>
+                                            <td>{{ request.delivery_notes }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     {% if request.rejection_reason %}
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger mt-3">
                         <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Rejection Reason</h6>
                         <p class="mb-0">{{ request.rejection_reason }}</p>
                     </div>
                     {% endif %}
                     
+                    <!-- Action Buttons -->
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{% url 'hospital:request_list' %}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-2"></i>Back to List
                         </a>
                         
-                        {% if request.status == 'pending' %}
-                        <a href="{% url 'hospital:cancel_request' request.id %}" class="btn btn-warning">
-                            <i class="fas fa-times me-2"></i>Cancel Request
-                        </a>
-                        {% endif %}
-                        
-                        {% if request.status == 'dispatched' %}
-                        <a href="{% url 'hospital:confirm_delivery' request.id %}" class="btn btn-success">
-                            <i class="fas fa-check-double me-2"></i>Confirm Delivery
-                        </a>
-                        {% endif %}
+                        <div>
+                            {% if request.status == 'pending' %}
+                            <a href="{% url 'hospital:cancel_request' request.id %}" class="btn btn-warning">
+                                <i class="fas fa-times me-2"></i>Cancel Request
+                            </a>
+                            {% endif %}
+                            
+                            {% if request.status == 'dispatched' %}
+                            <a href="{% url 'hospital:confirm_delivery' request.id %}" class="btn btn-success">
+                                <i class="fas fa-check-double me-2"></i>Confirm Delivery
+                            </a>
+                            {% endif %}
+                            
+                            <!-- Print Button -->
+                            <button onclick="window.print()" class="btn btn-outline-primary">
+                                <i class="fas fa-print me-2"></i>Print
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="col-lg-4">
-            <!-- Status Timeline -->
+            <!-- Status Timeline Card -->
             <div class="card shadow mb-4 fade-in">
                 <div class="card-header py-3 bg-info text-white">
                     <h6 class="mb-0">
@@ -175,57 +232,27 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="timeline">
-                        <div class="timeline-item {% if request.created_at %}completed{% endif %}">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h6>Request Created</h6>
-                                <small>{{ request.created_at|date:"Y-m-d H:i" }}</small>
+                    {% with timeline=request.get_timeline %}
+                        {% for event in timeline %}
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <div class="timeline-icon me-3">
+                                    <span class="badge bg-{{ event.color }} p-2">
+                                        <i class="fas {{ event.icon }}"></i>
+                                    </span>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1">{{ event.description }}</h6>
+                                    <small class="text-muted">{{ event.date|date:"M d, Y H:i" }}</small>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="timeline-item {% if request.status != 'pending' %}completed{% elif request.status == 'pending' %}current{% endif %}">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h6>Under Review</h6>
-                                <small>Blood bank review</small>
-                            </div>
-                        </div>
-                        
-                        <div class="timeline-item {% if request.approved_at %}completed{% endif %}">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h6>Approved</h6>
-                                {% if request.approved_at %}
-                                <small>{{ request.approved_at|date:"Y-m-d H:i" }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="timeline-item {% if request.dispatched_at %}completed{% endif %}">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h6>Dispatched</h6>
-                                {% if request.dispatched_at %}
-                                <small>{{ request.dispatched_at|date:"Y-m-d H:i" }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="timeline-item {% if request.status == 'delivered' %}completed{% endif %}">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h6>Delivered</h6>
-                                {% if request.status == 'delivered' %}
-                                <small>Completed</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+                        {% endfor %}
+                    {% endwith %}
                 </div>
             </div>
             
-            <!-- Hospital Info -->
+            <!-- Hospital Info Card -->
             <div class="card shadow mb-4 fade-in">
                 <div class="card-header py-3 bg-success text-white">
                     <h6 class="mb-0">
@@ -243,10 +270,17 @@
                     <p class="mb-0">
                         <i class="fas fa-envelope me-2"></i>{{ request.hospital.email }}
                     </p>
+                    {% if request.hospital.has_blood_storage %}
+                    <p class="mt-2 mb-0">
+                        <span class="badge bg-success">
+                            <i class="fas fa-thermometer-half me-1"></i>Has Blood Storage
+                        </span>
+                    </p>
+                    {% endif %}
                 </div>
             </div>
             
-            <!-- Dispatches -->
+            <!-- Dispatches Card -->
             {% if dispatches %}
             <div class="card shadow mb-4 fade-in">
                 <div class="card-header py-3 bg-primary text-white">
@@ -264,8 +298,13 @@
                                     <p class="mb-0 small">
                                         <i class="fas fa-user me-1"></i>{{ dispatch.collected_by_name }}
                                     </p>
+                                    <p class="mb-0 small text-muted">
+                                        <i class="fas fa-barcode me-1"></i>{{ dispatch.stock_unit.barcode }}
+                                    </p>
                                 </div>
-                                <span class="badge bg-success">Delivered</span>
+                                <span class="badge bg-success">
+                                    {% if request.status == 'delivered' %}Delivered{% else %}Dispatched{% endif %}
+                                </span>
                             </div>
                         </div>
                         {% endfor %}
@@ -273,7 +312,67 @@
                 </div>
             </div>
             {% endif %}
+            
+            <!-- Quick Actions Card -->
+            <div class="card shadow mb-4 fade-in">
+                <div class="card-header py-3 bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if request.status == 'pending' %}
+                            <a href="{% url 'hospital:cancel_request' request.id %}" class="btn btn-warning">
+                                <i class="fas fa-times me-2"></i>Cancel Request
+                            </a>
+                        {% endif %}
+                        
+                        {% if request.status == 'dispatched' %}
+                            <a href="{% url 'hospital:confirm_delivery' request.id %}" class="btn btn-success">
+                                <i class="fas fa-check-double me-2"></i>Confirm Delivery
+                            </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'hospital:create_request' %}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i>New Request
+                        </a>
+                        
+                        <a href="{% url 'hospital:request_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list me-2"></i>All Requests
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+.timeline-item {
+    position: relative;
+}
+.timeline-item:not(:last-child):before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 40px;
+    bottom: -10px;
+    width: 2px;
+    background: #e9ecef;
+}
+.timeline-icon {
+    width: 40px;
+    text-align: center;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add print functionality
+    window.print = function() {
+        window.print();
+    };
+});
+</script>
 {% endblock %}

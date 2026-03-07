@@ -2,596 +2,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}BloodConnect{% endblock %}</title>
     
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-    
-    <!-- Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    
-    <!-- Main Universal Stylesheet -->
+    <!-- Core CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
-
-    <link rel="icon" href="{% static 'app/img/favicon.ico' %}">
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% if not user.is_authenticated %}auth-page{% else %}dashboard-page{% endif %} {% if is_onboarding %}onboarding-mode{% endif %}">
-
-{% if user.is_authenticated %}
-    <!-- Only show Navbar if not in onboarding mode -->
-    {% if not is_onboarding %}
-        <!-- Navbar -->
-        <nav class="navbar">
-            <div class="container">
-                <a class="navbar-brand" href="/">
-                    <i class="{% block nav_icon %}fas fa-home{% endblock %}"></i>
-                    <span>{% block app_name %}BloodConnect{% endblock %}</span>
-                </a>
-                
-                <div class="navbar-items">
-                    <!-- Report Bug - Added for authenticated users -->
-                    <div class="nav-item">
-                        <a class="nav-link" href="#" onclick="reportBug(); return false;" title="Report a Bug">
-                            <div class="nav-icon">
-                                <i class="fas fa-bug"></i>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- ===== REVIEW STAR ICON - Universal for all authenticated users ===== -->
-                    {% if user.is_authenticated %}
-                    <div class="nav-item">
-                        <a class="nav-link" href="{{ review_url }}" title="{% if has_review %}Edit your review{% else %}Write a review{% endif %}">
-                            <div class="nav-icon">
-                                <i class="fas fa-star {% if has_review %}text-warning{% endif %}"></i>
-                                {% if has_review %}
-                                    <span class="status-badge eligible" style="background: #28a745; width: 8px; height: 8px; top: 2px; right: 2px;"></span>
-                                {% endif %}
-                            </div>
-                        </a>
-                    </div>
-                    {% endif %}
-                    <!-- ===== END REVIEW STAR ICON ===== -->
-
-                    <!-- Role-Specific Navbar Icons from Context Processor -->
-                    {% for icon in navbar_icons %}
-                        <div class="nav-item">
-                            <a class="nav-link" href="{{ icon.url }}" title="{{ icon.title }}">
-                                <div class="nav-icon">
-                                    <i class="{{ icon.icon }}"></i>
-                                    {% if icon.badge %}
-                                        <span class="status-badge eligible"></span>
-                                    {% endif %}
-                                    {% if icon.badge_count %}
-                                        <span class="notification-badge">{{ icon.badge_count }}</span>
-                                    {% endif %}
-                                </div>
-                            </a>
-                        </div>
-                    {% endfor %}
-                    
-                    <!-- Extra Nav Items Block (for app-specific additions) -->
-                    {% block extra_nav_items %}{% endblock %}
-                    
-                    <!-- Theme Switcher -->
-                    {% include 'shared/theme_switcher.html' %}
-                    
-                    <!-- Notification Bell -->
-                    <div class="nav-item">
-                        <a class="nav-link" href="{% block notifications_url %}#{% endblock %}">
-                            <div class="nav-icon">
-                                <i class="fas fa-bell"></i>
-                                {% if notification_count > 0 %}
-                                    <span class="notification-badge">{{ notification_count }}</span>
-                                {% endif %}
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Profile Dropdown - Using Context Processor -->
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <div class="profile-dropdown">
-                                <!-- Profile Picture Container -->
-                                <div class="profile-image-container" id="profileImageContainer">
-                                    {% if profile_pic_url %}
-                                        <img src="{{ profile_pic_url }}" 
-                                             alt="{{ user.get_full_name }}" 
-                                             class="profile-image" 
-                                             data-initial="{{ user_initial }}"
-                                             onerror="handleProfileImageError(this)">
-                                    {% else %}
-                                        <div class="avatar-placeholder">
-                                            {{ user_initial }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                        </a>
-                        
-                        <!-- Dropdown Menu - From Context Processor -->
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <div class="dropdown-item-text">
-                                <strong>{{ user.get_full_name|default:user.username }}</strong><br>
-                                <small class="text-muted">{{ user_role|title }}</small>
-                            </div>
-                            <div class="dropdown-divider"></div>
-                            
-                            <!-- Add Review Option in Dropdown -->
-                            <a class="dropdown-item" href="{{ review_url }}">
-                                <i class="fas fa-star {% if has_review %}text-warning{% else %}text-muted{% endif %}"></i> 
-                                {% if has_review %}Edit Your Review{% else %}Write a Review{% endif %}
-                            </a>
-                            
-                            <div class="dropdown-divider"></div>
-                            
-                            <!-- Profile Menu Items from Context Processor -->
-                            {% for item in profile_menu_items %}
-                                {% if item.divider %}
-                                    <div class="dropdown-divider"></div>
-                                {% else %}
-                                    <a class="dropdown-item" href="{{ item.url }}">
-                                        <i class="{{ item.icon }}"></i> {{ item.text }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
-                            
-                            <!-- Change Password (controlled by context processor) -->
-                            {% if show_change_password %}
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'password_change' %}">
-                                    <i class="fas fa-key"></i> Change Password
-                                </a>
-                            {% endif %}
-                            
-                            <!-- Report Bug in Dropdown (optional) -->
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="#" onclick="reportBug(); return false;">
-                                <i class="fas fa-bug text-warning"></i> Report a Bug
-                            </a>
-                            
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Sidebar (only show if not onboarding) -->
+<body>
+    <!-- Navigation Bar -->
+    {% if user.is_authenticated %}
+        {% include 'shared/navbar.html' %}
+    {% else %}
+        {% include 'shared/public_navbar.html' %}
+    {% endif %}
+    
+    <!-- Sidebar (Only for authenticated users) -->
+    {% if user.is_authenticated %}
         <div class="sidebar">
-            <div class="sidebar-header">
-                <h4>
-                    <i class="{% block sidebar_icon %}{% endblock %}"></i>
-                    <span>{% block sidebar_title %}{% endblock %}</span>
-                </h4>
+            <!-- User Info Section -->
+            <div class="sidebar-header p-3 text-center border-bottom">
+                <!-- Profile Picture or Initial -->
+                <div class="mb-2">
+                    {% if profile_pic_url %}
+                        <img src="{{ profile_pic_url }}" alt="Profile" class="profile-sidebar-image">
+                    {% else %}
+                        <div class="profile-sidebar-placeholder">
+                            {{ user_initial }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- User Name -->
+                <h6 class="text-white mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                
+                <!-- Role Badge -->
+                <small class="text-white-50 d-block">
+                    <i class="fas {% if user_role == 'donor' %}fa-hand-holding-heart{% elif user_role == 'phlebotomist' %}fa-user-nurse{% elif user_role == 'lab_tech' %}fa-flask{% elif user_role == 'bb_tech' %}fa-tint{% elif user_role == 'hospital' %}fa-hospital{% elif user_role == 'admin' %}fa-user-shield{% endif %} me-1"></i>
+                    {{ user_role_label|default:user_role|title }}
+                </small>
             </div>
             
+            <!-- Menu (Defined in child templates) -->
             <div class="sidebar-menu">
                 {% block sidebar_menu %}
-                <!-- Sidebar menu will be defined by each app -->
+                <!-- This block will be filled by role-specific base templates -->
+                <div class="p-3 text-center text-white-50">
+                    <small>No menu defined</small>
+                </div>
                 {% endblock %}
             </div>
             
-            <div class="sidebar-footer">
-                <small>© {% now "Y" %} BloodConnect</small>
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer p-3 text-center border-top">
+                <small class="text-white-50">
+                    <i class="fas fa-heartbeat"></i> BloodConnect
+                </small>
             </div>
         </div>
+        
+        <!-- Sidebar Overlay for Mobile -->
+        <div class="sidebar-overlay"></div>
     {% endif %}
-
-    <!-- Main Content - Adjusts based on onboarding mode -->
-    <div class="main-content {% if is_onboarding %}onboarding-content{% endif %}">
+    
+    <!-- Main Content -->
+    <div class="main-content {% if not user.is_authenticated %}public-content{% endif %}">
         <!-- Messages -->
         {% if messages %}
-            <div class="messages-container">
+            <div class="container mt-3">
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
             </div>
         {% endif %}
-
-        <!-- Onboarding Progress Bar (shown during onboarding) -->
-        {% if is_onboarding %}
-            <div class="onboarding-progress-container mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">
-                        <i class="fas fa-rocket text-primary me-2"></i>
-                        {{ onboarding_greeting|default:"Complete Your Setup" }}
-                    </h4>
-                    <span class="badge badge-primary px-3 py-2">{{ onboarding_progress }}% Complete</span>
-                </div>
-                
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                         role="progressbar" 
-                         style="width: {{ onboarding_progress }}%"
-                         aria-valuenow="{{ onboarding_progress }}" 
-                         aria-valuemin="0" 
-                         aria-valuemax="100">
-                    </div>
-                </div>
-                
-                <div class="onboarding-steps">
-                    <div class="onboarding-step {% if onboarding_progress >= 0 %}completed{% endif %}">
-                        <div class="step-indicator">1</div>
-                        <span class="step-label">Account</span>
-                    </div>
-                    <div class="onboarding-step {% if onboarding_progress >= 25 %}completed{% endif %}">
-                        <div class="step-indicator">2</div>
-                        <span class="step-label">Username</span>
-                    </div>
-                    <div class="onboarding-step {% if onboarding_progress >= 50 %}completed{% endif %}">
-                        <div class="step-indicator">3</div>
-                        <span class="step-label">Profile</span>
-                    </div>
-                    <div class="onboarding-step {% if onboarding_progress >= 100 %}completed{% endif %}">
-                        <div class="step-indicator">4</div>
-                        <span class="step-label">Dashboard</span>
-                    </div>
-                </div>
-                
-                {% if onboarding_next %}
-                    <div class="mt-3 p-3 bg-light rounded">
-                        <i class="fas fa-arrow-right text-primary me-2"></i>
-                        <strong>Next:</strong> {{ onboarding_next }}
-                    </div>
-                {% endif %}
-            </div>
-        {% endif %}
-
+        
+        <!-- Page Content -->
         {% block content %}{% endblock %}
     </div>
-
-    <!-- Mobile Menu Toggle - Only show if not onboarding -->
-    {% if not is_onboarding %}
-        <button class="mobile-menu-toggle d-lg-none" onclick="toggleSidebar()">
-            <i class="fas fa-bars"></i>
-        </button>
+    
+    <!-- Chatbot (Only for authenticated users) -->
+    {% if user.is_authenticated %}
+        {% block chatbot %}
+        <!-- Include chatbot if you have one -->
+        {% endblock %}
     {% endif %}
-
-    <!-- Mobile Menu Overlay -->
-    <div class="mobile-menu-overlay" onclick="toggleSidebar()"></div>
-
-    <!-- ===== CHATBOT - Only for authenticated users (NOT on homepage) and NOT during onboarding ===== -->
-    {% if request.path != '/' and request.path != '/index/' and not is_onboarding %}
-        <button class="chatbot-button" id="chatbotButton">
-            <i class="fas fa-comments"></i>
-            <span class="chatbot-notification"></span>
-        </button>
-
-        <div class="chatbot-container" id="chatbotContainer">
-            <div class="chatbot-header">
-                <div class="chatbot-header-content">
-                    <div class="chatbot-avatar">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="chatbot-header-text">
-                        <h3>BloodConnect Assistant</h3>
-                        <p>Online • Here to help</p>
-                    </div>
-                </div>
-                <button class="chatbot-close" id="chatbotClose">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="chatbot-messages" id="chatbotMessages"></div>
-
-            <div class="chatbot-typing" id="chatbotTyping">
-                <div class="message-avatar bot">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            </div>
-
-            <div class="chatbot-input-container">
-                <div class="chatbot-input-wrapper">
-                    <input 
-                        type="text" 
-                        class="chatbot-input" 
-                        id="chatbotInput" 
-                        placeholder="Ask me anything..."
-                        autocomplete="off"
-                    >
-                    <button class="chatbot-send-btn" id="chatbotSend">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+    
+    <!-- Public Footer (Only for non-authenticated users) -->
+    {% if not user.is_authenticated %}
+        {% include 'shared/public_footer.html' %}
     {% endif %}
-    <!-- ===== END CHATBOT ===== -->
-
-{% else %}
-    <!-- Public Navbar -->
-    {% include 'shared/public_navbar.html' %}
-
-    <!-- This block allows pages to choose between auth wrapper or full public content -->
-    {% block public_wrapper %}
-        <!-- Default: Auth Content Wrapper (for login/signup pages) -->
-        <div class="auth-wrapper">
-            <div class="auth-card {% block auth_card_class %}{% endblock %}">
-                <div class="card-header">
-                    <i class="{% block auth_icon %}{% endblock %}"></i>
-                    <h4>{% block auth_title %}{% endblock %}</h4>
-                </div>
-                <div class="card-body">
-                    <!-- Messages -->
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    {% block auth_content %}{% endblock %}
-                </div>
-            </div>
-        </div>
-    {% endblock %}
-
-    <!-- Public Footer -->
-    {% include 'shared/public_footer.html' %}
-{% endif %}
-
-<!-- Scripts -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-
-<!-- Theme Switcher Script -->
-<script>
-// Theme management
-document.addEventListener('DOMContentLoaded', function() {
-    // Check for saved theme preference
-    const savedTheme = getCookie('theme') || 'light';
-    applyTheme(savedTheme);
-    updateThemeButton(savedTheme);
     
-    // Theme switcher click handlers
-    document.querySelectorAll('.theme-option').forEach(option => {
-        option.addEventListener('click', function(e) {
-            e.preventDefault();
-            const theme = this.dataset.theme;
-            setTheme(theme);
+    <!-- Core JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Global JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile sidebar toggle
+            const toggleBtn = document.querySelector('.navbar-toggler');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
+            }
+            
+            // Auto-dismiss messages after 5 seconds
+            setTimeout(function() {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 300);
+                });
+            }, 5000);
         });
-    });
-    
-    function setTheme(theme) {
-        // Save to cookie (expires in 1 year)
-        document.cookie = `theme=${theme}; path=/; max-age=31536000`;
-        applyTheme(theme);
-        updateThemeButton(theme);
-    }
-    
-    function applyTheme(theme) {
-        if (theme === 'dark') {
-            document.body.classList.add('dark-mode');
-        } else if (theme === 'light') {
-            document.body.classList.remove('dark-mode');
-        } else {
-            // Auto - follow system preference
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.body.classList.add('dark-mode');
-            } else {
-                document.body.classList.remove('dark-mode');
-            }
-        }
-    }
-    
-    function updateThemeButton(theme) {
-        const button = document.querySelector('#themeDropdown i');
-        const text = document.querySelector('#themeDropdown span');
         
-        if (!button) return;
-        
-        if (theme === 'dark') {
-            button.className = 'fas fa-moon';
-            if (text) text.textContent = 'Dark';
-        } else if (theme === 'light') {
-            button.className = 'fas fa-sun';
-            if (text) text.textContent = 'Light';
-        } else {
-            button.className = 'fas fa-desktop';
-            if (text) text.textContent = 'System';
-        }
-    }
-    
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-    
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-        if (getCookie('theme') === 'auto') {
-            if (e.matches) {
-                document.body.classList.add('dark-mode');
-            } else {
-                document.body.classList.remove('dark-mode');
-            }
-        }
-    });
-});
-
-// Report bug function
-function reportBug() {
-    alert('Bug reporting feature coming soon! Allan Kibe is aware of the numerous bugs for now! Stay put, Na uvae sweater.');
-    return false;
-}
-</script>
-
-<script>
-    // Global function to handle profile image errors
-    window.handleProfileImageError = function(img) {
-        console.log('Profile image failed to load:', img.src);
-        const container = img.parentElement;
-        const initial = img.getAttribute('data-initial') || 'U';
-        
-        // Hide the broken image
-        img.style.display = 'none';
-        
-        // Remove any existing placeholder
-        const existingPlaceholder = container.querySelector('.avatar-placeholder');
-        if (existingPlaceholder) {
-            existingPlaceholder.remove();
-        }
-        
-        // Create new placeholder
-        const placeholder = document.createElement('div');
-        placeholder.className = 'avatar-placeholder';
-        placeholder.textContent = initial;
-        placeholder.style.display = 'flex';
-        placeholder.style.width = '40px';
-        placeholder.style.height = '40px';
-        placeholder.style.borderRadius = '50%';
-        placeholder.style.background = 'linear-gradient(135deg, var(--blood-red), var(--blood-red-dark))';
-        placeholder.style.color = 'white';
-        placeholder.style.alignItems = 'center';
-        placeholder.style.justifyContent = 'center';
-        placeholder.style.fontWeight = 'bold';
-        placeholder.style.fontSize = '1.2rem';
-        container.appendChild(placeholder);
-    };
-
-    // Toggle sidebar on mobile
-    function toggleSidebar() {
-        document.querySelector('.sidebar').classList.toggle('active');
-        const overlay = document.querySelector('.mobile-menu-overlay');
-        if (overlay) overlay.classList.toggle('active');
-        document.body.classList.toggle('sidebar-open');
-    }
-    
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', function(event) {
-        const sidebar = document.querySelector('.sidebar');
-        const toggle = document.querySelector('.mobile-menu-toggle');
-        const overlay = document.querySelector('.mobile-menu-overlay');
-        
-        if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
-            if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
-                sidebar.classList.remove('active');
-                if (overlay) overlay.classList.remove('active');
-                document.body.classList.remove('sidebar-open');
-            }
-        }
-    });
-    
-    // Auto-dismiss alerts after 5 seconds
-    setTimeout(function() {
-        document.querySelectorAll('.alert').forEach(function(alert) {
-            alert.classList.remove('show');
-            setTimeout(() => alert.remove(), 300);
-        });
-    }, 5000);
-    
-    // Handle broken profile images (fallback for any images not caught by onerror)
-    document.addEventListener('DOMContentLoaded', function() {
-        const profileImages = document.querySelectorAll('.profile-image');
-        profileImages.forEach(img => {
-            // If image is already broken, trigger the handler
-            if (img.complete && img.naturalHeight === 0) {
-                window.handleProfileImageError(img);
-            }
-        });
-    });
-    
-    // ========================================
-    // CHATBOT FUNCTIONALITY
-    // ========================================
-    {% if user.is_authenticated and request.path != '/' and request.path != '/index/' %}
-    (function() {
-        console.log('🤖 CHATBOT: Initializing...');
-        
-        const chatbotButton = document.getElementById('chatbotButton');
-        const chatbotContainer = document.getElementById('chatbotContainer');
-        const chatbotClose = document.getElementById('chatbotClose');
-        const chatbotMessages = document.getElementById('chatbotMessages');
-        const chatbotInput = document.getElementById('chatbotInput');
-        const chatbotSend = document.getElementById('chatbotSend');
-        const chatbotTyping = document.getElementById('chatbotTyping');
-
-        const CHATBOT_API_URL = '/chatbot/api/';
-
-        // Generate unique session ID
-        function generateSessionId() {
-            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        let sessionId = localStorage.getItem('chatbot_session_id');
-        if (!sessionId) {
-            sessionId = generateSessionId();
-            localStorage.setItem('chatbot_session_id', sessionId);
-        }
-
-        // Add message to chat
-        function addMessage(content, type = 'bot') {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chatbot-message ${type}`;
-
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = `message-avatar ${type}`;
-            avatarDiv.innerHTML = type === 'bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
-
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-
-            // Convert markdown-style formatting to HTML
-            let formattedContent = content
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/\n/g, '<br>');
-
-            contentDiv.innerHTML = formattedContent;
-
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(contentDiv);
-
-            chatbotMessages.appendChild(messageDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        // Show/hide typing indicator
-        function showTyping(show) {
-            if (chatbotTyping) {
-                if (show) {
-                    chatbotTyping.classList.add('active');
-                } else {
-                    chatbotTyping.classList.remove('active');
-                }
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            }
-        }
-
-        // Get CSRF token
-        function getCSRFToken() {
-            const name = 'csrftoken';
+        // CSRF Token helper
+        function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
@@ -605,180 +140,8 @@ function reportBug() {
             }
             return cookieValue;
         }
-
-        // Send message to chatbot API
-        async function sendMessage(message) {
-            if (!message.trim()) return;
-
-            addMessage(message, 'user');
-            chatbotInput.value = '';
-            if (chatbotSend) chatbotSend.disabled = true;
-
-            showTyping(true);
-
-            try {
-                const response = await fetch(CHATBOT_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        session_id: sessionId,
-                        role: '{{ user_role }}'
-                    })
-                });
-
-                const data = await response.json();
-                showTyping(false);
-
-                if (data.error) {
-                    addMessage('Sorry, I encountered an error. Please try again.', 'bot');
-                } else {
-                    addMessage(data.reply, 'bot');
-                }
-            } catch (error) {
-                console.error('Chatbot error:', error);
-                showTyping(false);
-                addMessage('Sorry, I\'m having trouble connecting. Please try again later.', 'bot');
-            }
-
-            if (chatbotSend) chatbotSend.disabled = false;
-        }
-
-        // Quick action suggestions based on user role
-        function addQuickActions() {
-            const quickActionsDiv = document.createElement('div');
-            quickActionsDiv.className = 'quick-actions';
-
-            let actions = [];
-            
-            {% if user_role == 'donor' %}
-                actions = [
-                    'My profile',
-                    'Check my eligibility',
-                    'My donation history',
-                    'How many points do I have?'
-                ];
-            {% elif user_role == 'phlebotomist' %}
-                actions = [
-                    'Today\'s appointments',
-                    'Pending approvals',
-                    'Blood stock at my center',
-                    'Critical alerts'
-                ];
-            {% elif user_role == 'lab_tech' %}
-                actions = [
-                    'Pending tests',
-                    'My recent tests',
-                    'Testing queue',
-                    'Blood group verifications'
-                ];
-            {% elif user_role == 'bb_tech' %}
-                actions = [
-                    'Current stock levels',
-                    'Pending hospital requests',
-                    'Expiring blood',
-                    'Critical alerts'
-                ];
-            {% elif user_role == 'hospital' %}
-                actions = [
-                    'My recent requests',
-                    'Request status',
-                    'Pending requests',
-                    'Serving centre stock'
-                ];
-            {% elif user_role == 'admin' %}
-                actions = [
-                    'System statistics',
-                    'Pending approvals',
-                    'Blood stock overview',
-                    'Recent activities'
-                ];
-            {% else %}
-                actions = [
-                    'My profile',
-                    'Help',
-                    'What can you do?',
-                    'FAQs'
-                ];
-            {% endif %}
-
-            actions.forEach(action => {
-                const btn = document.createElement('button');
-                btn.className = 'quick-action-btn';
-                btn.textContent = action;
-                btn.onclick = () => {
-                    sendMessage(action);
-                    quickActionsDiv.remove();
-                };
-                quickActionsDiv.appendChild(btn);
-            });
-
-            chatbotMessages.appendChild(quickActionsDiv);
-        }
-
-        // Initialize chatbot with greeting
-        function initChatbot() {
-            addMessage('Hello! How can I help you today?', 'bot');
-            addQuickActions();
-        }
-
-        // Toggle chatbot
-        if (chatbotButton && chatbotContainer) {
-            chatbotButton.addEventListener('click', function() {
-                chatbotContainer.classList.add('active');
-                chatbotButton.style.display = 'none';
-
-                if (chatbotMessages.children.length === 0) {
-                    initChatbot();
-                }
-
-                if (chatbotInput) chatbotInput.focus();
-            });
-        }
-
-        if (chatbotClose && chatbotContainer) {
-            chatbotClose.addEventListener('click', function() {
-                chatbotContainer.classList.remove('active');
-                if (chatbotButton) chatbotButton.style.display = 'flex';
-            });
-        }
-
-        // Send message handlers
-        if (chatbotSend && chatbotInput) {
-            chatbotSend.addEventListener('click', function() {
-                sendMessage(chatbotInput.value);
-            });
-
-            chatbotInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendMessage(chatbotInput.value);
-                }
-            });
-
-            chatbotInput.addEventListener('input', function() {
-                if (chatbotSend) {
-                    chatbotSend.disabled = chatbotInput.value.trim() === '';
-                }
-            });
-        }
-
-        // Prevent chatbot from closing when clicking inside
-        if (chatbotContainer) {
-            chatbotContainer.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-        }
-    })();
-    {% endif %}
-    // ========================================
-    // END CHATBOT FUNCTIONALITY
-    // ========================================
-</script>
-
-{% block extra_js %}{% endblock %}
-
+    </script>
+    
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

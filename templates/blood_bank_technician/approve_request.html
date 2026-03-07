@@ -8,10 +8,10 @@
 {% block content %}
 <div class="row">
     <div class="col-md-8 mx-auto">
-        <div class="card mb-4">
+        <div class="card mb-4 shadow">
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0">
-                    <i class="fas fa-check-circle"></i> 
+                    <i class="fas fa-check-circle me-2"></i> 
                     Approve Blood Request #{{ request.request_number }}
                 </h5>
             </div>
@@ -22,7 +22,8 @@
                         <div class="col-md-6">
                             <strong>Hospital:</strong> {{ request.hospital.name }}<br>
                             <strong>Patient:</strong> {{ patient_name }}<br>
-                            <strong>Blood Group:</strong> <span class="badge bg-info">{{ request.blood_group }}</span><br>
+                            <strong>Blood Group:</strong> 
+                            <span class="badge bg-info">{{ request.blood_group }}</span><br>
                             <strong>Volume Needed:</strong> {{ request.units_requested }} ml
                         </div>
                         <div class="col-md-6">
@@ -46,7 +47,7 @@
                     <div class="col-md-4">
                         <div class="card bg-light">
                             <div class="card-body text-center">
-                                <h6>Available Stock</h6>
+                                <h6 class="text-muted">Available Stock</h6>
                                 <h3 class="text-success">{{ total_available }} ml</h3>
                                 <small class="text-muted">{{ available_units.count }} batch(es)</small>
                             </div>
@@ -55,7 +56,7 @@
                     <div class="col-md-4">
                         <div class="card bg-light">
                             <div class="card-body text-center">
-                                <h6>Required</h6>
+                                <h6 class="text-muted">Required</h6>
                                 <h3 class="text-warning">{{ request.units_requested }} ml</h3>
                             </div>
                         </div>
@@ -63,9 +64,9 @@
                     <div class="col-md-4">
                         <div class="card bg-light">
                             <div class="card-body text-center">
-                                <h6>After Approval</h6>
+                                <h6 class="text-muted">After Approval</h6>
                                 <h3 class="{% if total_available >= request.units_requested %}text-success{% else %}text-danger{% endif %}">
-                                    {{ total_available|add:"-request.units_requested" }} ml
+                                    {{ total_available|add:"0"|add:request.units_requested|add:"-request.units_requested"|safe }}
                                 </h3>
                                 <small class="text-muted">remaining in stock</small>
                             </div>
@@ -74,12 +75,12 @@
                 </div>
                 
                 <h5 class="card-title mt-4 mb-3">
-                    <i class="fas fa-boxes"></i> Available Stock Units
+                    <i class="fas fa-boxes me-2"></i>Available Stock Units
                 </h5>
                 
                 {% if can_fulfill %}
                     <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
+                        <i class="fas fa-check-circle me-2"></i>
                         Found <strong>{{ available_units.count }}</strong> available unit(s) of <strong>{{ request.blood_group }}</strong> totaling <strong>{{ total_available }}ml</strong>.
                         {% if available_units.count == 1 %}
                             <br>This will use the single available unit.
@@ -109,11 +110,13 @@
                                     <td><strong>{{ unit.unit }}ml</strong></td>
                                     <td>{{ unit.expiry_date|date:"M d, Y" }}</td>
                                     <td>
-                                        {% with days_left=unit.expiry_date|timeuntil:today %}
-                                            {% if unit.expiry_date <= today|date:"Y-m-d"|add:"7 days" %}
-                                                <span class="badge bg-warning">{{ days_left }}</span>
+                                        {% with days_left=unit.days_until_expiry %}
+                                            {% if days_left <= 0 %}
+                                                <span class="badge bg-dark">Expired</span>
+                                            {% elif days_left <= 7 %}
+                                                <span class="badge bg-warning">{{ days_left }} days</span>
                                             {% else %}
-                                                <span class="badge bg-success">{{ days_left }}</span>
+                                                <span class="badge bg-success">{{ days_left }} days</span>
                                             {% endif %}
                                         {% endwith %}
                                     </td>
@@ -139,7 +142,7 @@
                     
                     <!-- FIFO Explanation -->
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="fas fa-info-circle me-2"></i>
                         <strong>FIFO (First In, First Out) Selection:</strong>
                         <ul class="mb-0 mt-2">
                             <li>Units are selected based on <strong>earliest expiry date</strong> (oldest first)</li>
@@ -154,10 +157,10 @@
                         
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success btn-lg flex-grow-1">
-                                <i class="fas fa-check-circle"></i> Confirm Approval & Deduct Stock
+                                <i class="fas fa-check-circle me-2"></i>Confirm Approval & Deduct Stock
                             </button>
                             <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-times"></i> Cancel
+                                <i class="fas fa-times me-2"></i>Cancel
                             </a>
                         </div>
                     </form>
@@ -171,11 +174,16 @@
                         </p>
                         <hr>
                         <p class="mb-0">
-                            <strong>Shortage:</strong> {{ request.units_requested|add:"-total_available" }}ml
+                            <strong>Shortage:</strong> {{ request.units_requested|add:"-"|add:total_available }}ml
                         </p>
+                        {% if pending_stock > 0 %}
+                            <p class="mt-2 mb-0 text-warning">
+                                <i class="fas fa-clock me-2"></i> {{ pending_stock }}ml pending verification
+                            </p>
+                        {% endif %}
                         {% if available_units.count == 0 %}
                             <p class="mt-2 mb-0 text-muted">
-                                <i class="fas fa-info-circle"></i> No safe stock available for this blood type.
+                                <i class="fas fa-info-circle me-2"></i> No safe stock available for this blood type.
                             </p>
                         {% endif %}
                     </div>
@@ -183,10 +191,10 @@
                     <div class="d-flex gap-2">
                         <a href="{% url 'blood_bank_technician:reject_request' request.id %}" 
                            class="btn btn-danger btn-lg flex-grow-1">
-                            <i class="fas fa-times-circle"></i> Reject Request
+                            <i class="fas fa-times-circle me-2"></i>Reject Request
                         </a>
                         <a href="{% url 'blood_bank_technician:pending_requests' %}" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-arrow-left"></i> Back
+                            <i class="fas fa-arrow-left me-2"></i>Back
                         </a>
                     </div>
                 {% endif %}
@@ -213,26 +221,36 @@ document.addEventListener('DOMContentLoaded', function() {
                         `Stock after approval: ${availableVol - requiredVol}ml remaining\n\n` +
                         `Are you sure you want to approve this request? Stock will be deducted from inventory using FIFO method.`)) {
                 e.preventDefault();
-                return;
+                return false;
             }
             
             // Show loading state
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Approval...';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Approval...';
                 submitBtn.disabled = true;
             }
         });
     }
     
     // Add tooltips for better UX
-    const badges = document.querySelectorAll('.badge');
+    const badges = document.querySelectorAll('.badge.bg-warning');
     badges.forEach(badge => {
-        if (badge.classList.contains('bg-warning')) {
-            badge.setAttribute('title', 'This unit expires within 7 days');
-        }
+        badge.setAttribute('title', 'This unit expires within 7 days');
     });
 });
 </script>
 
+<style>
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin: 5px 0;
+    }
+}
+</style>
 {% endblock %}

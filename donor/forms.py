@@ -13,6 +13,7 @@ from datetime import datetime,timedelta
 from donor.models import BLOODGROUP_CHOICES
 from donor.models import KENYAN_COUNTIES
 from datetime import datetime, timedelta, time as datetime_time
+
 # ADD THIS NEW FORM (replace the deleted ones)
 GENDER_CHOICES = [
     ('', '--------- Select Gender ---------'),
@@ -24,6 +25,7 @@ BOOLEAN_CHOICES = [
     (True, 'Yes'),
     (False, 'No'),
 ]
+
 class DonorSignupForm(forms.Form):
     """
     Simplified signup form - only collects essential information.
@@ -163,6 +165,8 @@ class UsernameSelectionForm(forms.Form):
                 raise ValidationError("This username is already taken. Please try another.")
         
         return username
+
+
 # -------------------------------
 # DonorLogin
 # -------------------------------
@@ -190,6 +194,7 @@ class DonorLoginForm(forms.Form):
             'autocomplete': 'current-password'
         })
     )
+
 
 # -------------------------------
 # DonorProfile
@@ -542,23 +547,24 @@ class DonorEligibilityForm(forms.ModelForm):
         help_text='Travel to certain areas may require a waiting period.'
     )
     
-    # Additional travel details (conditional)
+    # ===== FIXED: Travel details fields that match template =====
     travel_destination = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control', 
-            'placeholder': 'Where did you travel?'
+            'placeholder': 'Which countries did you visit?'
         }),
-        label="Travel destination"
+        label="Travel destination(s)"
     )
     
-    travel_duration = forms.IntegerField(
+    travel_return_date = forms.DateField(
         required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control', 
-            'placeholder': 'Duration in days'
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
         }),
-        label="Duration of stay (days)"
+        label="Date of return",
+        help_text="When did you return from your travel?"
     )
     
     pregnant = forms.TypedChoiceField(
@@ -652,15 +658,24 @@ class DonorEligibilityForm(forms.ModelForm):
         good_health = cleaned_data.get('good_health')
         travel_history = cleaned_data.get('travel_history')
         travel_destination = cleaned_data.get('travel_destination')
+        travel_return_date = cleaned_data.get('travel_return_date')
         recent_surgery = cleaned_data.get('recent_surgery')
         recent_tattoo = cleaned_data.get('recent_tattoo')
         
         # Validate travel details if travel_history is True
         if travel_history:
             if not travel_destination:
-                self.add_error('travel_destination', 'Please specify your travel destination.')
-            if not cleaned_data.get('travel_duration'):
-                self.add_error('travel_duration', 'Please specify the duration of your stay.')
+                self.add_error('travel_destination', 'Please specify your travel destination(s).')
+            
+            if not travel_return_date:
+                self.add_error('travel_return_date', 'Please specify when you returned.')
+            else:
+                # Check if travel was within last 3 months (standard deferral period)
+                three_months_ago = date.today() - timedelta(days=90)
+                if travel_return_date > three_months_ago:
+                    # This is informational, not an error
+                    cleaned_data['recent_travel'] = True
+                    cleaned_data['travel_alert'] = "Travel within last 3 months may affect eligibility."
 
         if good_health is False:
             self.add_error('good_health', "You must be in good health to donate.")
@@ -694,6 +709,7 @@ class DonorEligibilityForm(forms.ModelForm):
         today = date.today()
         return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
     
+
 # -------------------------------
 # BloodDonate
 # -------------------------------

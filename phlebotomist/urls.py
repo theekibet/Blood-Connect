@@ -12,8 +12,7 @@ urlpatterns = [
     path('login/', views.phlebotomist_login_view, name='phlebotomistlogin'),  
     path('dashboard/', views.phlebotomist_dashboard, name='phlebotomist-dashboard'),
     path('profile/<int:pk>/', views.phlebotomist_profile_view, name='phlebotomist-profile'),
-    path('notifications/', views.phlebotomist_notifications_view, name='phlebotomist-notifications'),
-    path('notifications/read/<int:pk>/', views.mark_phlebotomist_notification_read, name='mark-phlebotomist-notification-read'),
+
     
     # Fixed: update-status/ with hyphen (matches your JavaScript)
     path(

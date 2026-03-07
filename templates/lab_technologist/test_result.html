@@ -41,6 +41,10 @@
                                         <strong>Expires:</strong> {{ stock_unit.expiry_date|date:"M d, Y" }}
                                         ({{ stock_unit.days_until_expiry }} days remaining)
                                     </span>
+                                    <span class="mt-1 d-block">
+                                        <i class="fas fa-flask me-1"></i>
+                                        <strong>Component:</strong> {{ stock_unit.get_component_type_display }}
+                                    </span>
                                 {% elif test.result == 'unsafe' %}
                                     <br>
                                     <span class="mt-2 d-block">
@@ -52,7 +56,7 @@
                         </div>
                     </div>
                     
-                    <!-- BARCODE INFORMATION - NEW SECTION -->
+                    <!-- BARCODE INFORMATION -->
                     <div class="card bg-light mb-4">
                         <div class="card-body">
                             <h6 class="card-title">
@@ -65,7 +69,7 @@
                                         <tr>
                                             <th width="40%">Barcode:</th>
                                             <td>
-                                                <code class="bg-dark text-light p-1 rounded">{{ blood_bag.barcode|default:"N/A" }}</code>
+                                                <code class="bg-dark text-light p-1 rounded">{{ blood_bag.barcode|default:stock_unit.barcode|default:"N/A" }}</code>
                                             </td>
                                         </tr>
                                         <tr>
@@ -74,7 +78,7 @@
                                         </tr>
                                         <tr>
                                             <th>Volume:</th>
-                                            <td>{{ blood_bag.volume_ml|default:450 }} ml</td>
+                                            <td>{{ blood_bag.volume_ml|default:stock_unit.unit|default:450 }} ml</td>
                                         </tr>
                                     </table>
                                 </div>
@@ -88,7 +92,7 @@
                                             <th>Bag Status:</th>
                                             <td>
                                                 <span class="badge {% if blood_bag.status == 'tested' %}bg-success{% elif blood_bag.status == 'discarded' %}bg-danger{% else %}bg-warning{% endif %}">
-                                                    {{ blood_bag.get_status_display }}
+                                                    {{ blood_bag.get_status_display|default:"Unknown" }}
                                                 </span>
                                             </td>
                                         </tr>
@@ -120,8 +124,10 @@
                                     <td>
                                         {% if component_type %}
                                             <span class="badge bg-info">{{ component_type }}</span>
+                                        {% elif stock_unit and stock_unit.component_type %}
+                                            <span class="badge bg-info">{{ stock_unit.get_component_type_display }}</span>
                                         {% else %}
-                                            {{ stock_unit.get_component_type_display|default:"Whole Blood" }}
+                                            <span class="text-muted">Not specified</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -291,6 +297,12 @@
                                             <th>Volume:</th>
                                             <td>{{ stock_unit.unit }} ml</td>
                                         </tr>
+                                        <tr>
+                                            <th>Component Type:</th>
+                                            <td>
+                                                <span class="badge bg-info">{{ stock_unit.get_component_type_display }}</span>
+                                            </td>
+                                        </tr>
                                     </table>
                                 </div>
                                 <div class="col-md-6">
@@ -319,30 +331,41 @@
                             </div>
                             
                             <!-- Expiry Progress Bar -->
-                            {% if stock_unit.days_until_expiry %}
-                            <div class="mt-3">
-                                <label class="form-label">Expiry Timeline:</label>
-                                <div class="progress" style="height: 10px;">
-                                    {% with total_days=stock_unit.days_until_expiry %}
-                                        {% if component_expiry_days %}
-                                            {% with percentage=total_days|div:component_expiry_days|mul:100 %}
-                                                <div class="progress-bar {% if total_days < 7 %}bg-danger{% elif total_days < 14 %}bg-warning{% else %}bg-success{% endif %}" 
-                                                     style="width: {{ percentage }}%"></div>
-                                            {% endwith %}
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                                <small class="text-muted">
-                                    {% if stock_unit.days_until_expiry < 7 %}
-                                        ⚠️ Expiring soon! Use within {{ stock_unit.days_until_expiry }} days.
-                                    {% elif stock_unit.days_until_expiry < 14 %}
-                                        🟡 {{ stock_unit.days_until_expiry }} days until expiry.
-                                    {% else %}
-                                        🟢 Fresh unit - {{ stock_unit.days_until_expiry }} days until expiry.
-                                    {% endif %}
-                                </small>
-                            </div>
-                            {% endif %}
+<!-- Expiry Progress Bar - FIXED VERSION (no div/mul filters) -->
+{% if stock_unit.days_until_expiry %}
+<div class="mt-3">
+    <label class="form-label">Expiry Timeline:</label>
+    <div class="progress" style="height: 10px;">
+        {% with total_days=stock_unit.days_until_expiry %}
+            {% if stock_unit.component_type == 'whole_blood' %}
+                {% with percentage=total_days|floatformat:0 %}
+                    <div class="progress-bar {% if total_days < 7 %}bg-danger{% elif total_days < 14 %}bg-warning{% else %}bg-success{% endif %}" 
+                         style="width: {% widthratio total_days 35 100 %}%"></div>
+                {% endwith %}
+            {% elif stock_unit.component_type == 'rbc' %}
+                <div class="progress-bar {% if total_days < 7 %}bg-danger{% elif total_days < 14 %}bg-warning{% else %}bg-success{% endif %}" 
+                     style="width: {% widthratio total_days 42 100 %}%"></div>
+            {% elif stock_unit.component_type == 'platelets' %}
+                <div class="progress-bar {% if total_days < 2 %}bg-danger{% elif total_days < 4 %}bg-warning{% else %}bg-success{% endif %}" 
+                     style="width: {% widthratio total_days 5 100 %}%"></div>
+            {% else %}
+                <!-- FFP, Cryo, etc. (365 days) -->
+                <div class="progress-bar {% if total_days < 30 %}bg-danger{% elif total_days < 90 %}bg-warning{% else %}bg-success{% endif %}" 
+                     style="width: {% widthratio total_days 365 100 %}%"></div>
+            {% endif %}
+        {% endwith %}
+    </div>
+    <small class="text-muted">
+        {% if stock_unit.days_until_expiry < 7 %}
+            ⚠️ Expiring soon! Use within {{ stock_unit.days_until_expiry }} days.
+        {% elif stock_unit.days_until_expiry < 14 %}
+            🟡 {{ stock_unit.days_until_expiry }} days until expiry.
+        {% else %}
+            🟢 Fresh unit - {{ stock_unit.days_until_expiry }} days until expiry.
+        {% endif %}
+    </small>
+</div>
+{% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -360,6 +383,9 @@
                                 <strong>This blood unit has been QUARANTINED and DISCARDED.</strong>
                                 <p class="mb-0 mt-2">
                                     <strong>Reason:</strong> {{ stock_unit.unsafe_reason|default:"Tested positive for disease markers" }}
+                                </p>
+                                <p class="mb-0 mt-2">
+                                    <strong>Component Type:</strong> {{ stock_unit.get_component_type_display }}
                                 </p>
                                 {% if stock_unit.safety_notes %}
                                 <p class="mb-0 mt-2">

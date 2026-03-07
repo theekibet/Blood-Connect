@@ -1,0 +1,103 @@
+<!-- Chatbot Component -->
+{% if user.is_authenticated %}
+<div id="chatbotContainer" class="chatbot-container" style="display: none;">
+    <div class="chatbot-header">
+        <h6><i class="fas fa-robot me-2"></i>BloodConnect Assistant</h6>
+        <button type="button" class="btn-close btn-close-white" id="chatbotClose"></button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages">
+        <div class="chatbot-message bot">
+            <div class="message-avatar bot"><i class="fas fa-robot"></i></div>
+            <div class="message-content">
+                <div class="message-bubble">Hello! How can I help you today?</div>
+                <div class="message-time">Just now</div>
+            </div>
+        </div>
+    </div>
+    <div class="chatbot-input">
+        <input type="text" id="chatbotInput" placeholder="Type your message...">
+        <button id="chatbotSend"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<!-- Chatbot Toggle Button -->
+<button id="chatbotButton" class="chatbot-toggle" title="Open Assistant">
+    <i class="fas fa-robot"></i>
+</button>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatbotButton = document.getElementById('chatbotButton');
+    const chatbotContainer = document.getElementById('chatbotContainer');
+    const chatbotClose = document.getElementById('chatbotClose');
+    const chatbotInput = document.getElementById('chatbotInput');
+    const chatbotSend = document.getElementById('chatbotSend');
+    const chatbotMessages = document.getElementById('chatbotMessages');
+
+    if (chatbotButton && chatbotContainer) {
+        // Toggle chatbot
+        chatbotButton.addEventListener('click', function() {
+            chatbotContainer.style.display = 'block';
+            chatbotButton.style.display = 'none';
+            if (chatbotInput) chatbotInput.focus();
+        });
+
+        if (chatbotClose) {
+            chatbotClose.addEventListener('click', function() {
+                chatbotContainer.style.display = 'none';
+                chatbotButton.style.display = 'flex';
+            });
+        }
+
+        // Send message function (placeholder)
+        function sendMessage() {
+            const message = chatbotInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chatbot-message user';
+            userDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-bubble">${message}</div>
+                    <div class="message-time">Just now</div>
+                </div>
+                <div class="message-avatar user"><i class="fas fa-user"></i></div>
+            `;
+            chatbotMessages.appendChild(userDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            // Clear input
+            chatbotInput.value = '';
+
+            // Simulate bot response (replace with actual AJAX call)
+            setTimeout(() => {
+                const botDiv = document.createElement('div');
+                botDiv.className = 'chatbot-message bot';
+                botDiv.innerHTML = `
+                    <div class="message-avatar bot"><i class="fas fa-robot"></i></div>
+                    <div class="message-content">
+                        <div class="message-bubble">Thanks for your message. A representative will respond shortly.</div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                `;
+                chatbotMessages.appendChild(botDiv);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            }, 1000);
+        }
+
+        if (chatbotSend) {
+            chatbotSend.addEventListener('click', sendMessage);
+        }
+
+        if (chatbotInput) {
+            chatbotInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+    }
+});
+</script>
+{% endif %}

@@ -4,99 +4,111 @@
 
 {% block title %}Donor Login - BloodConnect{% endblock %}
 
-{% block auth_icon %}fas fa-hand-holding-heart{% endblock %}
-{% block auth_title %}Donor Login{% endblock %}
-{% block auth_card_class %}donor{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <!-- Main Card -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-hand-holding-heart me-2"></i>
+                        Donor Login
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Welcome message -->
+                    <p class="text-muted text-center mb-4">Welcome back! Please login to your account</p>
 
-{% block auth_content %}
-<!-- Remove the duplicate auth-card div, card-header, and messages -->
-<!-- Just put the form directly here since base.html provides the wrapper -->
+                    <!-- Login Form -->
+                    <form method="POST" action="{% url 'donor:donorlogin' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Username Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">
+                                <i class="fas fa-user me-1"></i> Username or Email
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username or email"|attr:"autofocus:autofocus" }}
+                                {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.username.errors|striptags }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-<!-- Welcome message (this is fine to keep) -->
-<p class="text-muted text-center mb-4">Welcome back! Please login to your account</p>
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">
+                                <i class="fas fa-lock me-1"></i> Password
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password" }}
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                                    <i class="fa fa-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                            <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
+                            </div>
+                            {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.password.errors|striptags }}
+                            </div>
+                            {% endif %}
+                        </div>
 
-<!-- Login Form -->
-<form method="POST" action="{% url 'donor:donorlogin' %}">
-    {% csrf_token %}
-    
-    <!-- Username Field -->
-    <div class="form-group mb-3">
-        <label for="{{ form.username.id_for_label }}" class="form-label">
-            <i class="fas fa-user me-1"></i> Username or Email
-        </label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-user"></i></span>
-            {{ form.username|attr:"class:form-control"|attr:"placeholder:Enter your username or email"|attr:"autofocus:autofocus" }}
-        </div>
-        {% if form.username.errors %}
-            <div class="invalid-feedback d-block">
-                <i class="fas fa-exclamation-circle me-1"></i> {{ form.username.errors|striptags }}
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if next %}
+                            <input type="hidden" name="next" value="{{ next }}">
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+                                <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login as Donor</span>
+                                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+
+                        <!-- Forgot Password Link -->
+                        <div class="text-center mt-3">
+                            <a href="javascript:void(0)" class="text-muted" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
+                                <i class="fas fa-key me-1"></i> Forgot password?
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Registration Link -->
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="mb-0">
+                            Don't have a donor account?
+                            <a href="{% url 'donor:donorsignup' %}" class="btn btn-link text-success">
+                                <i class="fas fa-user-plus me-1"></i> Register as Donor
+                            </a>
+                        </p>
+                    </div>
+                </div>
             </div>
-        {% endif %}
-    </div>
-
-    <!-- Password Field -->
-    <div class="form-group mb-3">
-        <label for="{{ form.password.id_for_label }}" class="form-label">
-            <i class="fas fa-lock me-1"></i> Password
-        </label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-            {{ form.password|attr:"class:form-control"|attr:"placeholder:Enter your password"|attr:"type:password" }}
-            <button type="button" class="btn btn-outline-secondary password-toggle" onclick="togglePassword()" tabindex="0">
-                <i class="fa fa-eye" id="togglePasswordIcon"></i>
-            </button>
         </div>
-        <div id="capsWarning" class="capslock-warning mt-1 small text-warning d-none">
-            <i class="fas fa-exclamation-triangle me-1"></i> Caps Lock is ON
-        </div>
-        {% if form.password.errors %}
-            <div class="invalid-feedback d-block">
-                <i class="fas fa-exclamation-circle me-1"></i> {{ form.password.errors|striptags }}
-            </div>
-        {% endif %}
     </div>
-
-    <!-- Non-field errors -->
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            {% for error in form.non_field_errors %}
-                {{ error }}
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    {% if next %}
-        <input type="hidden" name="next" value="{{ next }}">
-    {% endif %}
-
-    <!-- Submit Button -->
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary btn-lg w-100" id="loginBtn">
-            <span id="loginBtnText"><i class="fas fa-sign-in-alt me-2"></i>Login as Donor</span>
-            <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-        </button>
-    </div>
-
-    <!-- Forgot Password Link -->
-    <div class="text-center mt-3">
-        <a href="javascript:void(0)" class="text-muted" onclick="alert('Password reset functionality is currently unavailable. Please contact support.'); return false;">
-            <i class="fas fa-key me-1"></i> Forgot password?
-        </a>
-    </div>
-
-    <!-- Registration Link -->
-    <div class="text-center mt-4 pt-3 border-top">
-        <p class="mb-0">
-            Don't have a donor account?
-            <a href="{% url 'donor:donorsignup' %}" class="text-success fw-bold">
-                <i class="fas fa-user-plus me-1"></i> Register as Donor
-            </a>
-        </p>
-    </div>
-
-</form>
+</div>
 
 <script>
 // Password visibility toggle
